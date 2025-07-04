@@ -72,10 +72,17 @@
   min-height: 120px;
   animation: slideUp 0.22s cubic-bezier(.4,1.4,.6,1) 1;
   will-change: transform;
-  max-height: 80vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  height: 92vh;
+}
+@media (min-width: 768px) {
+  .modal-sheet {
+    max-width: 700px;
+    height: 90vh;
+    max-height: 90vh;
+  }
 }
 @keyframes slideUp {
   from { transform: translateY(100%); }

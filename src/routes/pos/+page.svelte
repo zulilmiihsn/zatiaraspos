@@ -151,6 +151,12 @@ function addToCart() {
 function handleImgError(id: string) {
   imageError = { ...imageError, [id]: true };
 }
+
+function goToBayar() {
+  localStorage.setItem('pos_cart', JSON.stringify(cart));
+  showCartModal = false;
+  goto('/pos/bayar');
+}
 </script>
 
 <div class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden">
@@ -191,33 +197,29 @@ function handleImgError(id: string) {
     {#if cart.length > 0}
       <div class="fixed left-0 right-0 bottom-16 flex items-center justify-between bg-white border-t-2 border-gray-100 shadow-md px-6 py-3 z-20 rounded-t-lg min-h-[56px] text-base font-medium text-gray-900 cursor-pointer" on:click={openCartModal}>
         <div>{cart.length} item di keranjang</div>
-        <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600" on:click|stopPropagation={openCartModal}>Bayar</button>
+        <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600" on:click|stopPropagation={goToBayar}>Bayar</button>
       </div>
     {/if}
 
     {#if showCartModal}
-      <div class="fixed inset-0 bg-black/20 z-[200] flex items-end justify-center">
-        <div class="w-full max-w-[480px] mx-auto bg-white rounded-t-2xl shadow-lg pb-safe min-h-[120px] max-h-[80vh] flex flex-col animate-slideUp will-change-transform border-b-0" style="border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;">
-          <div class="flex items-center justify-between px-6 pt-6 pb-2 text-lg font-semibold text-pink-400">
-            <span>Keranjang</span>
-            <button class="bg-transparent border-none text-2xl text-gray-400 cursor-pointer" on:click={closeCartModal}>✕</button>
-          </div>
-          <div class="flex-1 overflow-y-auto px-6 py-2 min-h-0">
-            {#each cart as item, idx}
-              <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-3 shadow-sm">
-                <div class="flex flex-col min-w-0">
-                  <div class="text-base font-semibold text-gray-900 mb-0.5 truncate">{item.qty}x {item.product.name}</div>
-                  {#if item.addOns && item.addOns.length > 0}
-                    <div class="text-sm text-pink-400 font-medium">+ {item.addOns.map(a => a.name).join(', ')}</div>
-                  {/if}
-                </div>
-                <button class="bg-[#ff5fa2] text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={() => removeCartItem(idx)}>Hapus</button>
+      <ModalSheet open={showCartModal} title="Keranjang" on:close={closeCartModal}>
+        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0">
+          {#each cart as item, idx}
+            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-3 shadow-sm">
+              <div class="flex flex-col min-w-0">
+                <div class="text-base font-semibold text-gray-900 mb-0.5 truncate">{item.qty}x {item.product.name}</div>
+                {#if item.addOns && item.addOns.length > 0}
+                  <div class="text-sm text-pink-400 font-medium">+ {item.addOns.map(a => a.name).join(', ')}</div>
+                {/if}
               </div>
-            {/each}
-          </div>
-          <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-t-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={closeCartModal}>Bayar</button>
+              <button class="bg-[#ff5fa2] text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={() => removeCartItem(idx)}>Hapus</button>
+            </div>
+          {/each}
         </div>
-      </div>
+        <div slot="footer">
+          <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={goToBayar}>Bayar</button>
+        </div>
+      </ModalSheet>
     {/if}
 
     <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
