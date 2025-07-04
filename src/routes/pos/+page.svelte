@@ -28,14 +28,14 @@ const products = [
     id: 1,
     name: 'Jus Alpukat',
     price: 18000,
-    image: '/img/jus-alpukat.jpg',
+    image: '',
     category: 'buah',
   },
   {
     id: 2,
     name: 'Jus Mangga',
     price: 15000,
-    image: '/img/jus-mangga.jpg',
+    image: '',
     category: 'buah',
   },
   {
@@ -135,16 +135,30 @@ function toggleAddOn(id) {
 }
 
 function addToCart() {
-  cart = [
-    ...cart,
-    {
-      product: selectedProduct,
-      addOns: addOns.filter(a => selectedAddOns.includes(a.id)),
-      sugar: selectedSugar,
-      ice: selectedIce,
-      qty,
-    },
-  ];
+  // Cek apakah item dengan kombinasi sama sudah ada di cart
+  const addOnsSelected = addOns.filter(a => selectedAddOns.includes(a.id));
+  const existingIdx = cart.findIndex(item =>
+    item.product.id === selectedProduct.id &&
+    JSON.stringify(item.addOns.map(a => a.id).sort()) === JSON.stringify(addOnsSelected.map(a => a.id).sort()) &&
+    item.sugar === selectedSugar &&
+    item.ice === selectedIce
+  );
+  if (existingIdx !== -1) {
+    // Jika sudah ada, tambahkan qty
+    cart = cart.map((item, idx) => idx === existingIdx ? { ...item, qty: item.qty + qty } : item);
+  } else {
+    // Jika belum ada, tambahkan item baru
+    cart = [
+      ...cart,
+      {
+        product: selectedProduct,
+        addOns: addOnsSelected,
+        sugar: selectedSugar,
+        ice: selectedIce,
+        qty,
+      },
+    ];
+  }
   showModal = false;
 }
 
@@ -156,6 +170,57 @@ function goToBayar() {
   localStorage.setItem('pos_cart', JSON.stringify(cart));
   showCartModal = false;
   goto('/pos/bayar');
+}
+
+function incQty() {
+  if (qty < 99) qty++;
+}
+function decQty() {
+  if (qty > 1) qty--;
+}
+
+$: totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+$: totalHarga = cart.reduce((sum, item) => sum + (item.qty * item.product.price + item.addOns.reduce((a, b) => a + (b.price * item.qty), 0)), 0);
+
+let cartPreviewX = 0;
+let cartPreviewStartX = 0;
+let cartPreviewDragging = false;
+let cartPreviewRef;
+let cartPreviewWidth = 0;
+let showSnackbar = false;
+let snackbarMsg = '';
+let prevCartLength = 0;
+
+function handleCartPreviewTouchStart(e) {
+  if (e.touches.length !== 1) return;
+  cartPreviewDragging = true;
+  cartPreviewStartX = e.touches[0].clientX;
+  cartPreviewWidth = cartPreviewRef?.offsetWidth || 1;
+}
+function handleCartPreviewTouchMove(e) {
+  if (!cartPreviewDragging) return;
+  const deltaX = e.touches[0].clientX - cartPreviewStartX;
+  cartPreviewX = Math.min(0, deltaX); // hanya ke kiri
+}
+function handleCartPreviewTouchEnd() {
+  if (!cartPreviewDragging) return;
+  cartPreviewDragging = false;
+  if (Math.abs(cartPreviewX) > cartPreviewWidth * 0.6) {
+    cart = [];
+    cartPreviewX = -cartPreviewWidth;
+    showSnackbar = true;
+    snackbarMsg = 'Keranjang dikosongkan';
+    setTimeout(() => { showSnackbar = false; }, 1800);
+  } else {
+    cartPreviewX = 0;
+  }
+}
+
+$: {
+  if (prevCartLength === 0 && cart.length > 0 && !cartPreviewDragging) {
+    cartPreviewX = 0;
+  }
+  prevCartLength = cart.length;
 }
 </script>
 
@@ -195,9 +260,21 @@ function goToBayar() {
     </div>
 
     {#if cart.length > 0}
-      <div class="fixed left-0 right-0 bottom-16 flex items-center justify-between bg-white border-t-2 border-gray-100 shadow-md px-6 py-3 z-20 rounded-t-lg min-h-[56px] text-base font-medium text-gray-900 cursor-pointer" on:click={openCartModal}>
-        <div>{cart.length} item di keranjang</div>
-        <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600" on:click|stopPropagation={goToBayar}>Bayar</button>
+      <div
+        bind:this={cartPreviewRef}
+        class="fixed left-0 right-0 bottom-16 flex items-center justify-between bg-white border-t-2 border-gray-100 shadow-md px-6 py-3 z-20 rounded-t-lg min-h-[56px] text-base font-medium text-gray-900"
+        style="transform: translateX({cartPreviewX}px); transition: {cartPreviewDragging ? 'none' : 'transform 0.25s cubic-bezier(.4,0,.2,1)'}; touch-action: pan-y;"
+        on:touchstart={handleCartPreviewTouchStart}
+        on:touchmove={handleCartPreviewTouchMove}
+        on:touchend={handleCartPreviewTouchEnd}
+      >
+        <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" on:click={openCartModal} style="min-width:0;">
+          <div class="text-sm text-gray-500 truncate">{totalQty} item pesanan</div>
+          <div class="font-bold text-pink-500 text-lg truncate">Rp {totalHarga.toLocaleString('id-ID')}</div>
+        </div>
+        <div class="flex items-center justify-center ml-4">
+          <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600 flex items-center justify-center" on:click|stopPropagation={goToBayar}>Bayar</button>
+        </div>
       </div>
     {/if}
 
@@ -220,6 +297,10 @@ function goToBayar() {
           <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={goToBayar}>Bayar</button>
         </div>
       </ModalSheet>
+    {/if}
+
+    {#if showSnackbar}
+      <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-gray-900 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
     {/if}
 
     <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
@@ -280,5 +361,14 @@ function goToBayar() {
   width: 0 !important;
   height: 0 !important;
   background: transparent !important;
+}
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(16px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+.animate-fadeInOut {
+  animation: fadeInOut 1.8s cubic-bezier(.4,0,.2,1);
 }
 </style> 

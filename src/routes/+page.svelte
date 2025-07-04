@@ -46,7 +46,7 @@ let itemTerjual = null;
   </div>
   <div class="flex-1 min-h-0 overflow-y-auto">
     <main class="flex flex-col min-h-full bg-white">
-      <div class="flex flex-col gap-5 px-3 py-4">
+      <div class="px-4 py-4">
         <!-- Metrik Utama -->
         <div class="flex flex-col gap-3 w-full">
           <div class="grid grid-cols-2 gap-3 md:gap-6">
