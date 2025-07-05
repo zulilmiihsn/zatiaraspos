@@ -15,6 +15,7 @@ import Lock from 'lucide-svelte/icons/lock';
 import Tag from 'lucide-svelte/icons/tag';
 import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
+import { fly } from 'svelte/transition';
 
 let currentUser = null;
 let userRole = '';
@@ -102,6 +103,60 @@ let croppedImage: string|null = null;
 let showCropperDialog = false;
 let cropperDialogImage = '';
 
+let touchStartX = 0;
+let touchEndX = 0;
+let ignoreSwipe = false;
+
+// State untuk modal hapus kategori
+let showDeleteKategoriModal = false;
+let kategoriIdToDelete: number|null = null;
+
+// State untuk modal edit/detail kategori
+let showKategoriDetailModal = false;
+let kategoriDetail = null;
+let menuIdsInKategori: number[] = [];
+let menuIdsNonKategori: number[] = [];
+
+// Tambahkan state untuk input nama kategori
+let kategoriDetailName = '';
+
+// State untuk search kategori
+let searchKategoriKeyword = '';
+
+// State untuk tab ekstra
+let searchEkstra = '';
+let showDeleteEkstraModal = false;
+let ekstraIdToDelete = null;
+
+function handleTabTouchStart(e: TouchEvent) {
+  const target = e.target as HTMLElement;
+  if (target.closest('button, [tabindex], input, select, textarea, [role="button"], [data-kategori-box]')) {
+    ignoreSwipe = true;
+    return;
+  }
+  ignoreSwipe = false;
+  touchStartX = e.touches[0].clientX;
+}
+function handleTabTouchMove(e: TouchEvent) {
+  if (ignoreSwipe) return;
+  touchEndX = e.touches[0].clientX;
+}
+function handleTabTouchEnd() {
+  if (ignoreSwipe) return;
+  const delta = touchEndX - touchStartX;
+  if (Math.abs(delta) > 40) {
+    if (delta < 0) {
+      // Swipe kiri: next tab
+      if (activeTab === 'menu') activeTab = 'kategori';
+      else if (activeTab === 'kategori') activeTab = 'ekstra';
+    } else {
+      // Swipe kanan: prev tab
+      if (activeTab === 'ekstra') activeTab = 'kategori';
+      else if (activeTab === 'kategori') activeTab = 'menu';
+    }
+  }
+}
+
 onMount(() => {
   currentUser = auth.getCurrentUser();
   userRole = currentUser?.role || '';
@@ -155,30 +210,60 @@ function cancelDeleteMenu() {
 }
 
 // Kategori functions
-function openKategoriForm(kategori = null) {
-  showKategoriForm = true;
-  if (kategori) {
-    editKategoriId = kategori.id;
-    kategoriForm = { ...kategori, menuIds: kategori.menuIds || [] };
+function openKategoriForm(kat) {
+  kategoriDetail = kat;
+  showKategoriDetailModal = true;
+  kategoriDetailName = kat.name;
+  // Menu yang sudah masuk kategori
+  menuIdsInKategori = kat.menuIds ? [...kat.menuIds] : [];
+  // Menu non-kategorized: kategori kosong atau tidak terdaftar di kategori manapun
+  menuIdsNonKategori = menus
+    .filter(m => !m.kategori || !kategoriList.some(k => k.menuIds && k.menuIds.includes(m.id)))
+    .map(m => m.id)
+    .filter(id => !menuIdsInKategori.includes(id));
+}
+
+function closeKategoriDetailModal() {
+  showKategoriDetailModal = false;
+  kategoriDetail = null;
+}
+
+function toggleMenuInKategori(id) {
+  if (menuIdsInKategori.includes(id)) {
+    menuIdsInKategori = menuIdsInKategori.filter(mid => mid !== id);
+    if (!menus.find(m => m.id === id)?.kategori || !kategoriList.some(k => k.menuIds && k.menuIds.includes(id))) {
+      menuIdsNonKategori = [id, ...menuIdsNonKategori];
+    }
   } else {
-    editKategoriId = null;
-    kategoriForm = { name: '', menuIds: [] };
+    menuIdsNonKategori = menuIdsNonKategori.filter(mid => mid !== id);
+    menuIdsInKategori = [id, ...menuIdsInKategori];
   }
 }
 
-function saveKategori() {
-  if (editKategoriId) {
-    kategoriList = kategoriList.map(k => k.id === editKategoriId ? { ...kategoriForm, id: editKategoriId } : k);
-  } else {
-    kategoriList = [...kategoriList, { ...kategoriForm, id: Date.now() }];
+function saveKategoriDetail() {
+  if (kategoriDetail) {
+    kategoriList = kategoriList.map(k => k.id === kategoriDetail.id ? { ...k, name: kategoriDetailName, menuIds: [...menuIdsInKategori] } : k);
+    showKategoriDetailModal = false;
+    kategoriDetail = null;
   }
-  showKategoriForm = false;
 }
 
-function deleteKategori(id) {
-  if (confirm('Yakin ingin menghapus kategori ini?')) {
-    kategoriList = kategoriList.filter(k => k.id !== id);
+function confirmDeleteKategori(id: number) {
+  kategoriIdToDelete = id;
+  showDeleteKategoriModal = true;
+}
+
+function doDeleteKategori() {
+  if (kategoriIdToDelete !== null) {
+    kategoriList = kategoriList.filter(k => k.id !== kategoriIdToDelete);
+    showDeleteKategoriModal = false;
+    kategoriIdToDelete = null;
   }
+}
+
+function cancelDeleteKategori() {
+  showDeleteKategoriModal = false;
+  kategoriIdToDelete = null;
 }
 
 // Ekstra functions
@@ -194,6 +279,7 @@ function openEkstraForm(ekstra = null) {
 }
 
 function saveEkstra() {
+  if (!ekstraForm.name.trim() || !ekstraForm.harga || isNaN(parseInt(ekstraForm.harga)) || parseInt(ekstraForm.harga) <= 0) return;
   if (editEkstraId) {
     ekstraList = ekstraList.map(e => e.id === editEkstraId ? { ...ekstraForm, id: editEkstraId, harga: parseInt(ekstraForm.harga) } : e);
   } else {
@@ -202,10 +288,22 @@ function saveEkstra() {
   showEkstraForm = false;
 }
 
-function deleteEkstra(id) {
-  if (confirm('Yakin ingin menghapus ekstra ini?')) {
-    ekstraList = ekstraList.filter(e => e.id !== id);
+function confirmDeleteEkstra(id) {
+  ekstraIdToDelete = id;
+  showDeleteEkstraModal = true;
+}
+
+function doDeleteEkstra() {
+  if (ekstraIdToDelete !== null) {
+    ekstraList = ekstraList.filter(e => e.id !== ekstraIdToDelete);
+    showDeleteEkstraModal = false;
+    ekstraIdToDelete = null;
   }
+}
+
+function cancelDeleteEkstra() {
+  showDeleteEkstraModal = false;
+  ekstraIdToDelete = null;
 }
 
 // Helper functions
@@ -287,7 +385,7 @@ function formatRupiahInput(e) {
     <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-4xl mx-auto px-4 py-4">
         <div class="flex items-center">
-          <button on:click={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+          <button onclick={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
             <ArrowLeft class="w-5 h-5 text-gray-600" />
           </button>
           {#if currentPage !== 'main'}
@@ -306,7 +404,7 @@ function formatRupiahInput(e) {
           <!-- Manajemen Menu -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-pink-300 group text-left flex flex-col justify-center"
-            on:click={() => currentPage = 'menu'}
+            onclick={() => currentPage = 'menu'}
           >
             <div class="flex items-center gap-2 mb-2">
               <div class="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -320,7 +418,7 @@ function formatRupiahInput(e) {
           <!-- Ganti Keamanan -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-blue-300 group text-left flex flex-col justify-center"
-            on:click={() => currentPage = 'security'}
+            onclick={() => currentPage = 'security'}
           >
             <div class="flex items-center gap-2 mb-2">
               <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -338,7 +436,11 @@ function formatRupiahInput(e) {
 
     <!-- Menu Management Page -->
     {#if currentPage === 'menu'}
-      <div class="max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col">
+      <div class="max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col"
+        ontouchstart={handleTabTouchStart}
+        ontouchmove={handleTabTouchMove}
+        ontouchend={handleTabTouchEnd}
+      >
         <!-- Tab Navigation -->
         <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 gap-2 overflow-hidden">
           <!-- Indicator Slide & Color Transition -->
@@ -351,21 +453,21 @@ function formatRupiahInput(e) {
           ></div>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'menu'}
+            onclick={() => activeTab = 'menu'}
           >
             <Utensils class="w-4 h-4" />
             Menu
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'kategori'}
+            onclick={() => activeTab = 'kategori'}
           >
             <Tag class="w-4 h-4" />
             Kategori
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'ekstra'}
+            onclick={() => activeTab = 'ekstra'}
           >
             <Coffee class="w-4 h-4" />
             Ekstra
@@ -397,14 +499,14 @@ function formatRupiahInput(e) {
           <div class="flex gap-2 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4">
           <button 
               class="px-3 py-2.5 min-w-[88px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-            on:click={() => selectedKategori = 'Semua'}
+            onclick={() => selectedKategori = 'Semua'}
           >
             Semua
           </button>
           {#each getKategoriNames() as kategori}
             <button 
                 class="px-3 py-2.5 min-w-[88px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-              on:click={() => selectedKategori = kategori}
+              onclick={() => selectedKategori = kategori}
             >
               {kategori}
             </button>
@@ -414,17 +516,13 @@ function formatRupiahInput(e) {
         <div class="flex-1 overflow-y-auto pb-16 pr-1">
           <div class="grid grid-cols-2 gap-3">
             {#each filteredMenus as menu}
-              <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group">
+              <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group cursor-pointer hover:bg-pink-50 transition-colors"
+                onclick={() => openMenuForm(menu)}
+              >
                 <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
                   <button 
-                    class="p-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-md"
-                    on:click={() => openMenuForm(menu)}
-                  >
-                    <Edit class="w-5 h-5" />
-                  </button>
-                  <button 
                     class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                    on:click={() => confirmDeleteMenu(menu.id)}
+                    onclick={e => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
                   >
                     <Trash class="w-5 h-5" />
                   </button>
@@ -442,12 +540,25 @@ function formatRupiahInput(e) {
           </div>
         </div>
       <!-- Floating Action Button Tambah Menu -->
-        <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-pink-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-pink-600 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400" on:click={() => openMenuForm()} aria-label="Tambah Menu">
+        <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-pink-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-pink-600 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400" onclick={() => openMenuForm()} aria-label="Tambah Menu">
           <Plus class="w-7 h-7" />
         </button>
       {/if}
 
         {#if activeTab === 'kategori'}
+          <div class="w-full mb-4 px-0">
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+              </span>
+              <input
+                type="text"
+                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder-gray-400"
+                placeholder="Cari kategori…"
+                bind:value={searchKategoriKeyword}
+              />
+            </div>
+          </div>
           <div class="flex-1 overflow-y-auto pb-16 pr-1">
             <div class="flex items-center gap-2 mb-5 mt-1 px-1">
               <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
@@ -457,17 +568,16 @@ function formatRupiahInput(e) {
               <div class="text-center text-blue-400 py-12 text-sm">Belum ada kategori.<br/>Klik tombol + untuk menambah.</div>
             {:else}
               <div class="space-y-3">
-                {#each kategoriList as kat}
-                  <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group">
+                {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
+                  <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
+                    data-kategori-box
+                    onclick={() => openKategoriForm(kat)}>
                     <div>
                       <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
                       <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
                     </div>
-                    <div class="flex gap-2">
-                      <button class="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors shadow-md" on:click={() => openKategoriForm(kat)}>
-                        <Edit class="w-5 h-5" />
-                      </button>
-                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" on:click={() => deleteKategori(kat.id)}>
+                    <div class="flex gap-2" onclick={e => e.stopPropagation()}>
+                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={() => confirmDeleteKategori(kat.id)}>
                         <Trash class="w-5 h-5" />
                       </button>
                     </div>
@@ -477,13 +587,53 @@ function formatRupiahInput(e) {
             {/if}
           </div>
           <!-- Floating Action Button Tambah Kategori -->
-          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" on:click={() => openKategoriForm()} aria-label="Tambah Kategori">
+          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" onclick={() => openKategoriForm()} aria-label="Tambah Kategori">
             <Plus class="w-7 h-7" />
           </button>
         {/if}
 
         {#if activeTab === 'ekstra'}
-          <!-- Konten ekstra bisa ditambahkan di sini -->
+          <div class="w-full mb-4 px-0">
+            <div class="relative mb-2">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+              </span>
+              <input
+                type="text"
+                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
+                placeholder="Cari ekstra…"
+                bind:value={searchEkstra}
+              />
+            </div>
+            <div class="flex items-center gap-2 mb-2 mt-1 px-1">
+              <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
+              <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
+            </div>
+          </div>
+          <div class="flex-1 overflow-y-auto pb-16 pr-1">
+            <div class="grid grid-cols-2 gap-3">
+              {#each ekstraList.filter(e => e.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra (ekstra.id)}
+                <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-center relative transition-all duration-200 cursor-pointer hover:bg-green-100"
+                  transition:fade
+                  onclick={() => openEkstraForm(ekstra)}
+                >
+                  <div class="absolute top-2 right-2 z-10 flex gap-2">
+                    <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={e => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
+                      <Trash class="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div class="w-full flex flex-col items-center">
+                    <h3 class="font-semibold text-green-700 text-sm truncate w-full text-center mb-0.5">{ekstra.name}</h3>
+                    <div class="text-green-400 font-bold text-xs">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+          <!-- Floating Action Button Tambah Ekstra -->
+          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-green-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400" onclick={() => openEkstraForm()} aria-label="Tambah Ekstra">
+            <Plus class="w-7 h-7" />
+          </button>
         {/if}
       </div>
     {/if}
@@ -544,28 +694,25 @@ function formatRupiahInput(e) {
     {#if showMenuForm}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh]">
-          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" on:click={() => showMenuForm = false} aria-label="Tutup">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
               <Utensils class="w-5 h-5 text-pink-500" />
             </div>
             <h2 class="text-base font-semibold text-gray-700">{editMenuId ? 'Edit Menu' : 'Tambah Menu'}</h2>
           </div>
-          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 space-y-6">
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4 space-y-6">
             <!-- Upload & Crop Gambar -->
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-gambar">Gambar Produk</label>
               {#if menuForm.gambar}
                 <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center mb-2 gap-2 cursor-pointer">
                   <img src={menuForm.gambar} alt="Preview" class="rounded-xl object-cover w-full h-full border border-gray-200 aspect-square" />
-                  <input type="file" accept="image/*" class="hidden" on:change={handleFileChange} />
+                  <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
                 </label>
                 {:else}
                   <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center border-2 border-dashed border-pink-200 rounded-xl cursor-pointer hover:bg-pink-50 transition-colors">
                     <span class="text-pink-400 font-medium mb-2">Klik untuk upload gambar</span>
-                    <input type="file" accept="image/*" class="hidden" on:change={handleFileChange} />
+                    <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
                     <span class="text-xs text-gray-400">Format: JPG, PNG, max 2MB</span>
                   </label>
               {/if}
@@ -586,12 +733,12 @@ function formatRupiahInput(e) {
               <div class="flex gap-3">
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'makanan' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  on:click={() => menuForm.tipe = 'makanan'}>
+                  onclick={() => menuForm.tipe = 'makanan'}>
                   Makanan
                 </button>
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'minuman' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  on:click={() => menuForm.tipe = 'minuman'}>
+                  onclick={() => menuForm.tipe = 'minuman'}>
                   Minuman
                 </button>
               </div>
@@ -603,7 +750,7 @@ function formatRupiahInput(e) {
                 {#each kategoriList as kat}
                   <button type="button"
                     class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                    on:click={() => menuForm.kategori = kat.name}>
+                    onclick={() => menuForm.kategori = kat.name}>
                     {kat.name}
                   </button>
                 {/each}
@@ -621,7 +768,7 @@ function formatRupiahInput(e) {
                   pattern="[0-9]*"
                   id="menu-harga"
                   bind:value={menuForm.harga}
-                  on:input={(e) => {
+                  oninput={(e) => {
                     let value = e.target.value.replace(/[^\d]/g, '');
                     if (value) {
                       value = parseInt(value, 10).toLocaleString('id-ID');
@@ -643,7 +790,7 @@ function formatRupiahInput(e) {
                 {#each ekstraList as ekstra}
                   <button type="button"
                     class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {menuForm.ekstraIds.includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                    on:click={() => {
+                    onclick={() => {
                       if (menuForm.ekstraIds.includes(ekstra.id)) {
                         menuForm.ekstraIds = menuForm.ekstraIds.filter(id => id !== ekstra.id);
                       } else {
@@ -660,13 +807,13 @@ function formatRupiahInput(e) {
           <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
               class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
-              on:click={() => showMenuForm = false}
+              onclick={() => showMenuForm = false}
             >
               Batal
             </button>
             <button 
               class="flex-1 py-3 px-4 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors text-base shadow-md"
-              on:click={saveMenu}
+              onclick={saveMenu}
             >
               {editMenuId ? 'Simpan' : 'Tambah Menu'}
             </button>
@@ -676,108 +823,67 @@ function formatRupiahInput(e) {
     {/if}
 
     <!-- Kategori Form Modal -->
-    {#if showKategoriForm}
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">{editKategoriId ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
-            <button class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors" on:click={() => showKategoriForm = false}>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+    {#if showKategoriDetailModal}
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh] max-h-[600px]">
+          <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
+            <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center">
+              <Tag class="w-5 h-5 text-blue-500" />
+            </div>
+            <h2 class="text-base font-semibold text-gray-700">Edit Kategori</h2>
           </div>
-          
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2" for="kategori-nama">Nama Kategori</label>
-              <input 
-                class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4">
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="kategori-nama-input">Nama Kategori</label>
+              <input id="kategori-nama-input"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Contoh: Minuman"
-                id="kategori-nama"
-                bind:value={kategoriForm.name}
+                bind:value={kategoriDetailName}
               />
             </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2" for="kategori-menu">Menu dalam Kategori</label>
-              <select 
-                class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                id="kategori-menu"
-                multiple
-                bind:value={kategoriForm.menuIds}
-              >
-                {#each menus as menu}
-                  <option value={menu.id}>{menu.name}</option>
+            <div class="mb-6">
+              <div class="text-xs font-semibold text-blue-500 mb-2">Menu dalam Kategori</div>
+              <div class="flex flex-wrap gap-2 min-h-[36px]">
+                {#each menuIdsInKategori as id (id)}
+                  <div class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-200"
+                    transition:fly={{ y: -16, duration: 200 }}
+                    onclick={() => toggleMenuInKategori(id)}>
+                    {menus.find(m => m.id === id)?.name}
+                  </div>
                 {/each}
-              </select>
-              <p class="text-xs text-gray-500 mt-1">Pilih menu yang masuk ke kategori ini</p>
+                {#if menuIdsInKategori.length === 0}
+                  <div class="text-gray-300 text-xs italic">Belum ada menu</div>
+                {/if}
+              </div>
+            </div>
+            <div class="mb-6">
+              <div class="text-xs font-semibold text-gray-400 mb-2">Menu Non-Kategori</div>
+              <div class="flex flex-wrap gap-2 min-h-[36px]">
+                {#each menuIdsNonKategori as id (id)}
+                  <div class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-50"
+                    transition:fly={{ y: 16, duration: 200 }}
+                    onclick={() => toggleMenuInKategori(id)}>
+                    {menus.find(m => m.id === id)?.name}
+                  </div>
+                {/each}
+                {#if menuIdsNonKategori.length === 0}
+                  <div class="text-gray-300 text-xs italic">Tidak ada menu non-kategori</div>
+                {/if}
+              </div>
             </div>
           </div>
-
-          <div class="flex gap-3 mt-6">
+          <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
-              class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-              on:click={() => showKategoriForm = false}
+              class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
+              onclick={closeKategoriDetailModal}
             >
               Batal
             </button>
             <button 
-              class="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors"
-              on:click={saveKategori}
+              class="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-colors text-base shadow-md"
+              onclick={saveKategoriDetail}
             >
-              {editKategoriId ? 'Simpan' : 'Tambah Kategori'}
-            </button>
-          </div>
-        </div>
-      </div>
-    {/if}
-
-    <!-- Ekstra Form Modal -->
-    {#if showEkstraForm}
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">{editEkstraId ? 'Edit Ekstra' : 'Tambah Ekstra'}</h2>
-            <button class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors" on:click={() => showEkstraForm = false}>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-nama">Nama Ekstra</label>
-              <input 
-                class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Contoh: Coklat"
-                id="ekstra-nama"
-                bind:value={ekstraForm.name}
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-harga">Harga</label>
-              <input 
-                class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="0"
-                type="number"
-                min="0"
-                id="ekstra-harga"
-                bind:value={ekstraForm.harga}
-              />
-            </div>
-          </div>
-
-          <div class="flex gap-3 mt-6">
-            <button 
-              class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-              on:click={() => showEkstraForm = false}
-            >
-              Batal
-            </button>
-            <button 
-              class="flex-1 py-3 px-4 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors"
-              on:click={saveEkstra}
-            >
-              {editEkstraId ? 'Simpan' : 'Tambah Ekstra'}
+              Simpan
             </button>
           </div>
         </div>
@@ -788,7 +894,7 @@ function formatRupiahInput(e) {
     {#if showDeleteModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
-          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" on:click={cancelDeleteMenu} aria-label="Tutup">
+          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteMenu} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
@@ -797,8 +903,8 @@ function formatRupiahInput(e) {
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Menu?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Menu yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus menu ini?</p>
           <div class="flex gap-3 w-full">
-            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" on:click={cancelDeleteMenu}>Batal</button>
-            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" on:click={doDeleteMenu}>Hapus</button>
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteMenu}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteMenu}>Hapus</button>
           </div>
         </div>
       </div>
@@ -806,6 +912,94 @@ function formatRupiahInput(e) {
 
     <!-- Cropper Dialog -->
     <CropperDialog bind:open={showCropperDialog} src={cropperDialogImage} aspect={1} on:done={handleCropperDone} on:cancel={handleCropperCancel} />
+
+    <!-- Delete Confirmation Modal Kategori -->
+    {#if showDeleteKategoriModal}
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
+          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteKategori} aria-label="Tutup">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+            <Trash class="w-8 h-8 text-red-500" />
+          </div>
+          <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Kategori?</h2>
+          <p class="text-gray-500 text-sm mb-6 text-center">Kategori yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus kategori ini?</p>
+          <div class="flex gap-3 w-full">
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteKategori}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteKategori}>Hapus</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Delete Confirmation Modal Ekstra -->
+    {#if showDeleteEkstraModal}
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
+          <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+            <Trash class="w-8 h-8 text-red-500" />
+          </div>
+          <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Ekstra?</h2>
+          <p class="text-gray-500 text-sm mb-6 text-center">Ekstra yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus ekstra ini?</p>
+          <div class="flex gap-3 w-full">
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteEkstra}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteEkstra}>Hapus</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Ekstra Form Modal -->
+    {#if showEkstraForm}
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh] max-h-[600px]">
+          <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
+            <div class="w-8 h-8 rounded-lg bg-green-100 border border-green-200 flex items-center justify-center">
+              <Coffee class="w-5 h-5 text-green-500" />
+            </div>
+            <h2 class="text-base font-semibold text-gray-700">{editEkstraId ? 'Edit Ekstra' : 'Tambah Ekstra'}</h2>
+          </div>
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4">
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-nama">Nama Ekstra</label>
+              <input 
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Contoh: Coklat"
+                id="ekstra-nama"
+                bind:value={ekstraForm.name}
+              />
+            </div>
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-harga">Harga</label>
+              <input 
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="0"
+                type="number"
+                min="0"
+                id="ekstra-harga"
+                bind:value={ekstraForm.harga}
+              />
+            </div>
+          </div>
+          <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
+            <button 
+              class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
+              onclick={() => showEkstraForm = false}
+            >
+              Batal
+            </button>
+            <button 
+              class="flex-1 py-3 px-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors text-base shadow-md"
+              onclick={saveEkstra}
+              disabled={!ekstraForm.name.trim() || !ekstraForm.harga || isNaN(parseInt(ekstraForm.harga)) || parseInt(ekstraForm.harga) <= 0}
+            >
+              {editEkstraId ? 'Simpan' : 'Tambah Ekstra'}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 {:else}
   <div class="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -815,10 +1009,10 @@ function formatRupiahInput(e) {
       <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       <button 
         class="bg-pink-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-pink-600 transition-colors"
-        on:click={() => goto('/pengaturan')}
+        onclick={() => goto('/pengaturan')}
       >
         Kembali ke Pengaturan
       </button>
     </div>
   </div>
-{/if} 
+{/if}   
