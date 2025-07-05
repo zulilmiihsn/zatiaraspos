@@ -7,7 +7,10 @@
   let selected = value;
   $: if (open) selected = value;
   function close() { dispatch('close'); }
-  function confirm() { dispatch('select', selected); close(); }
+  function selectOption(optionValue) { 
+    dispatch('select', optionValue); 
+    close(); 
+  }
 </script>
 
 {#if open}
@@ -16,10 +19,10 @@
       <div class="sheet-header">Pilih Opsi</div>
       <div class="dropdown-list">
         {#each options as opt}
-          <button type="button" class="dropdown-item {selected === opt.value ? 'active' : ''}" on:click={() => selected = opt.value}>{opt.label}</button>
+          <button type="button" class="dropdown-item {selected === opt.value ? 'active' : ''}" on:click={() => selectOption(opt.value)}>{opt.label}</button>
         {/each}
       </div>
-      <button class="sheet-btn" on:click={confirm}>Pilih</button>
+
     </div>
   </div>
 {/if}
@@ -35,7 +38,7 @@
   background: #fff; border-radius: 18px 18px 0 0;
   box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
   min-height: 120px; padding: 2rem 1.5rem 1.5rem 1.5rem;
-  display: flex; flex-direction: column; gap: 1.2rem;
+  display: flex; flex-direction: column; gap: 1rem;
   animation: slideUp 0.22s cubic-bezier(.4,1.4,.6,1) 1;
 }
 @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -53,10 +56,4 @@
 .dropdown-item.active, .dropdown-item:active, .dropdown-item:hover {
   background: #ff5fa2; color: #fff; border-color: #ff5fa2;
 }
-.sheet-btn {
-  width: 100%; background: #ff5fa2; color: #fff; font-weight: bold; font-size: 1.08rem;
-  border: none; border-radius: 12px; padding: 0.95rem 0; box-shadow: 0 2px 8px rgba(255,95,162,0.10);
-  transition: background 0.18s;
-}
-.sheet-btn:active, .sheet-btn:hover { background: #e94e8f; }
 </style> 

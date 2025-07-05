@@ -1,11 +1,31 @@
 <script lang="ts">
 import { Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp } from 'lucide-svelte';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+
 // Data dummy, nanti diisi dari Supabase
 let omzet = null;
 let totalItem = null;
 let profit = null;
 let jumlahTransaksi = null;
 let modalAwal = null;
+
+// Touch handling variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+let isTouchDevice = false;
+let clickBlocked = false;
+
+const navs = [
+  { label: 'Beranda', path: '/' },
+  { label: 'Kasir', path: '/pos' },
+  { label: 'Catat', path: '/catat' },
+  { label: 'Laporan', path: '/laporan' },
+];
 
 const bestSellers = [];
 
@@ -38,24 +58,120 @@ let weeklyIncome = [];
 let days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 let weeklyMax = 1;
 let itemTerjual = null;
+
+onMount(() => {
+  // Detect touch device
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+});
+
+function handleTouchStart(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isSwiping = false;
+  clickBlocked = false;
+}
+
+function handleTouchMove(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchEndX = e.touches[0].clientX;
+  touchEndY = e.touches[0].clientY;
+  
+  const deltaX = Math.abs(touchEndX - touchStartX);
+  const deltaY = Math.abs(touchEndY - touchStartY);
+  const viewportWidth = window.innerWidth;
+  const swipeThreshold = viewportWidth * 0.4; // 40% of viewport width
+  
+  // Check if this is a horizontal swipe
+  if (deltaX > swipeThreshold && deltaX > deltaY) {
+    isSwiping = true;
+    clickBlocked = true;
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  if (isSwiping) {
+    // Handle swipe navigation
+    const deltaX = touchEndX - touchStartX;
+    const viewportWidth = window.innerWidth;
+    const swipeThreshold = viewportWidth * 0.4;
+    
+    if (Math.abs(deltaX) > swipeThreshold) {
+      const currentIndex = 0; // Beranda is index 0
+      if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right - go to previous tab
+        goto(navs[currentIndex - 1].path);
+      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
+        // Swipe left - go to next tab
+        goto(navs[currentIndex + 1].path);
+      }
+    }
+    
+    // Block any subsequent click events
+    setTimeout(() => {
+      clickBlocked = false;
+    }, 100);
+  }
+}
+
+function handleGlobalClick(e) {
+  if (clickBlocked) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+}
 </script>
 
-<div class="flex flex-col h-screen min-h-0 bg-white">
+<div 
+  class="flex flex-col h-max min-h-0 bg-white"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+  onclick={handleGlobalClick}
+>
   <div class="sticky top-0 z-30 bg-white">
     <!-- Topbar -->
   </div>
-  <div class="flex-1 min-h-0 overflow-y-auto">
-    <main class="flex flex-col min-h-full bg-white">
+  <div class="flex-1 h-max overflow-y-auto"
+    style="scrollbar-width:none;-ms-overflow-style:none;"
+  >
+    <main class="flex flex-col h-max bg-white">
       <div class="px-4 py-4">
         <!-- Metrik Utama -->
-        <div class="flex flex-col gap-3 w-full">
+        <div class="flex flex-col gap-3 w-full mb-6">
           <div class="grid grid-cols-2 gap-3 md:gap-6">
-            <div class="bg-sky-100 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+            <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
               <ShoppingBag class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
               <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Item Terjual</div>
               <div class="text-xl md:text-3xl font-bold text-sky-600">{itemTerjual ?? '--'}</div>
             </div>
-            <div class="bg-purple-100 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+            <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
               <TrendingUp class="w-6 h-6 md:w-8 md:h-8 mb-2 text-purple-500" />
               <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Jumlah Transaksi</div>
               <div class="text-xl md:text-3xl font-bold text-purple-600">{jumlahTransaksi ?? '--'}</div>
@@ -73,8 +189,8 @@ let itemTerjual = null;
           </div>
         </div>
         <!-- Menu Terlaris -->
-        <div>
-          <div class="text-pink-500 font-semibold mb-2 text-base">Menu Terlaris</div>
+        <div class="mb-4">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2">Menu Terlaris</div>
           {#if bestSellers.length === 0}
             <div class="text-center text-gray-400 py-6 text-base">Belum ada data menu terlaris</div>
           {:else}
@@ -89,7 +205,7 @@ let itemTerjual = null;
                     <span class="absolute -left-3 -top-3 text-2xl">🥉</span>
                   {/if}
                   {#if m.image && !imageError[i]}
-                    <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} on:error={() => imageError[i] = true} />
+                    <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
                   {:else}
                     <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-xl text-pink-400">🍹</div>
                   {/if}
@@ -103,8 +219,8 @@ let itemTerjual = null;
           {/if}
         </div>
         <!-- Statistik -->
-        <div class="mt-6">
-          <div class="font-bold text-lg mb-2">Statistik</div>
+        <div class="mt-0 mb-2">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2">Statistik</div>
           <div class="grid grid-cols-2 gap-3">
             <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center">
               <div class="text-pink-400 text-xl font-bold">{avgTransaksi ?? '--'}</div>
@@ -116,8 +232,8 @@ let itemTerjual = null;
             </div>
           </div>
           <!-- Grafik Pendapatan 7 Hari -->
-          <div class="mt-6">
-            <div class="font-semibold text-base mb-2">Pendapatan 7 Hari Terakhir</div>
+          <div class="mt-8">
+            <div class="text-xs font-semibold text-gray-500 mb-2 mt-4">Pendapatan 7 Hari Terakhir</div>
             {#if weeklyIncome.length === 0}
               <div class="text-center text-gray-400 py-6 text-base">Belum ada data grafik pendapatan</div>
             {:else}

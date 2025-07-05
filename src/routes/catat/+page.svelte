@@ -3,6 +3,25 @@ import { onMount } from 'svelte';
 import DatePickerSheet from '$lib/components/shared/DatePickerSheet.svelte';
 import TimePickerSheet from '$lib/components/shared/TimePickerSheet.svelte';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
+import { validateNumber, validateText, validateDate, validateTime, sanitizeInput, validateIncomeExpense } from '$lib/validation.js';
+import { SecurityMiddleware } from '$lib/security.js';
+import { goto } from '$app/navigation';
+
+// Touch handling variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+let isTouchDevice = false;
+let clickBlocked = false;
+
+const navs = [
+  { label: 'Beranda', path: '/' },
+  { label: 'Kasir', path: '/pos' },
+  { label: 'Catat', path: '/catat' },
+  { label: 'Laporan', path: '/laporan' },
+];
 
 let mode: 'pemasukan' | 'pengeluaran' = 'pemasukan';
 let date = '';
@@ -28,6 +47,9 @@ const jenisPengeluaran = [
 ];
 
 onMount(() => {
+  // Detect touch device
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
   const now = new Date();
   date = now.toISOString().slice(0, 10);
   time = now.toTimeString().slice(0, 5);
@@ -36,6 +58,89 @@ onMount(() => {
 
 $: if (mode === 'pemasukan' && !jenisPemasukan.find(j => j.value === jenis)) jenis = 'pendapatan_usaha';
 $: if (mode === 'pengeluaran' && !jenisPengeluaran.find(j => j.value === jenis)) jenis = 'beban_usaha';
+
+function handleTouchStart(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isSwiping = false;
+  clickBlocked = false;
+}
+
+function handleTouchMove(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchEndX = e.touches[0].clientX;
+  touchEndY = e.touches[0].clientY;
+  
+  const deltaX = Math.abs(touchEndX - touchStartX);
+  const deltaY = Math.abs(touchEndY - touchStartY);
+  const viewportWidth = window.innerWidth;
+  const swipeThreshold = viewportWidth * 0.4; // 40% of viewport width
+  
+  // Check if this is a horizontal swipe
+  if (deltaX > swipeThreshold && deltaX > deltaY) {
+    isSwiping = true;
+    clickBlocked = true;
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  if (isSwiping) {
+    // Handle swipe navigation
+    const deltaX = touchEndX - touchStartX;
+    const viewportWidth = window.innerWidth;
+    const swipeThreshold = viewportWidth * 0.4;
+    
+    if (Math.abs(deltaX) > swipeThreshold) {
+      const currentIndex = 2; // Catat is index 2
+      if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right - go to previous tab
+        goto(navs[currentIndex - 1].path);
+      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
+        // Swipe left - go to next tab
+        goto(navs[currentIndex + 1].path);
+      }
+    }
+    
+    // Block any subsequent click events
+    setTimeout(() => {
+      clickBlocked = false;
+    }, 100);
+  }
+}
+
+function handleGlobalClick(e) {
+  if (clickBlocked) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+}
 
 function formatRupiah(angka) {
   if (!angka) return '';
@@ -56,18 +161,86 @@ function setTemplateNominal(val) {
   nominal = formatRupiah(next);
 }
 
-function handleSubmit() {
+function handleSubmit(e) {
+  e.preventDefault();
   error = '';
-  if (!date || !time || !nominal || !jenis || (jenis === 'lainnya' && !namaJenis) || !nama) {
-    error = 'Semua field wajib diisi.';
+  
+  // Check rate limiting
+  if (!SecurityMiddleware.checkFormRateLimit('catat_form')) {
+    error = 'Terlalu banyak submission. Silakan tunggu sebentar.';
     return;
   }
-  if (isNaN(Number(nominal)) || Number(nominal) <= 0) {
-    error = 'Nominal harus angka lebih dari 0.';
+  
+  // Sanitize inputs
+  const sanitizedDate = sanitizeInput(date);
+  const sanitizedTime = sanitizeInput(time);
+  const sanitizedNominal = sanitizeInput(nominal);
+  const sanitizedJenis = sanitizeInput(jenis);
+  const sanitizedNamaJenis = sanitizeInput(namaJenis);
+  const sanitizedNama = sanitizeInput(nama);
+  
+  // Validate all fields
+  const dateValidation = validateDate(sanitizedDate);
+  const timeValidation = validateTime(sanitizedTime);
+  const nominalValidation = validateNumber(sanitizedNominal, { required: true, min: 0 });
+  const jenisValidation = validateText(sanitizedJenis, { required: true });
+  const namaValidation = validateText(sanitizedNama, { required: true, minLength: 2, maxLength: 100 });
+  
+  // Check for suspicious activity
+  const allInputs = `${sanitizedDate}${sanitizedTime}${sanitizedNominal}${sanitizedJenis}${sanitizedNamaJenis}${sanitizedNama}`;
+  if (SecurityMiddleware.detectSuspiciousActivity('catat_form', allInputs)) {
+    error = 'Input mencurigakan terdeteksi. Silakan coba lagi.';
+    SecurityMiddleware.logSecurityEvent('suspicious_input_blocked', {
+      form: 'catat',
+      inputs: { date: sanitizedDate, time: sanitizedTime, nominal: sanitizedNominal }
+    });
     return;
   }
+  
+  // Collect all validation errors
+  const errors = [];
+  if (!dateValidation.isValid) errors.push(`Tanggal: ${dateValidation.errors.join(', ')}`);
+  if (!timeValidation.isValid) errors.push(`Waktu: ${timeValidation.errors.join(', ')}`);
+  if (!nominalValidation.isValid) errors.push(`Nominal: ${nominalValidation.errors.join(', ')}`);
+  if (!jenisValidation.isValid) errors.push(`Jenis: ${jenisValidation.errors.join(', ')}`);
+  if (!namaValidation.isValid) errors.push(`Nama: ${namaValidation.errors.join(', ')}`);
+  
+  // Validate nama jenis if jenis is 'lainnya'
+  if (sanitizedJenis === 'lainnya') {
+    const namaJenisValidation = validateText(sanitizedNamaJenis, { required: true, minLength: 2, maxLength: 50 });
+    if (!namaJenisValidation.isValid) {
+      errors.push(`Nama Jenis: ${namaJenisValidation.errors.join(', ')}`);
+    }
+  }
+  
+  if (errors.length > 0) {
+    error = errors.join('\n');
+    return;
+  }
+  
+  // Validate complete data object
+  const dataToValidate = {
+    amount: parseFloat(sanitizedNominal.replace(/\D/g, '')),
+    type: sanitizedJenis,
+    description: sanitizedNama
+  };
+  
+  const completeValidation = validateIncomeExpense(dataToValidate);
+  if (!completeValidation.isValid) {
+    error = completeValidation.errors.join('\n');
+    return;
+  }
+  
+  // Log successful submission
+  SecurityMiddleware.logSecurityEvent('income_expense_recorded', {
+    mode,
+    amount: dataToValidate.amount,
+    type: dataToValidate.type
+  });
+  
   // Simpan data (dummy)
-  alert(`Disimpan: ${mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}\nTanggal: ${date} ${time}\nNominal: Rp${Number(nominal).toLocaleString('id-ID')}\nJenis: ${jenis === 'lainnya' ? namaJenis : (mode === 'pemasukan' ? 'Pendapatan Usaha' : 'Beban Usaha')}\nNama: ${nama}`);
+  alert(`Disimpan: ${mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}\nTanggal: ${sanitizedDate} ${sanitizedTime}\nNominal: Rp${dataToValidate.amount.toLocaleString('id-ID')}\nJenis: ${sanitizedJenis === 'lainnya' ? sanitizedNamaJenis : (mode === 'pemasukan' ? 'Pendapatan Usaha' : 'Beban Usaha')}\nNama: ${sanitizedNama}`);
+  
   // Reset form
   rawNominal = '';
   namaJenis = '';
@@ -81,177 +254,121 @@ function getJenisLabel(val) {
 </script>
 
 <style>
-.page-root {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background: #fff;
-}
 main {
   flex: 1 1 auto;
 }
-.catat-tab {
-  flex: 1;
-  padding: 0.95rem 0;
-  font-weight: 600;
-  font-size: 1.08rem;
-  border: none;
-  background: #f9f9fb;
-  color: #ff5fa2;
-  border-bottom: 2.5px solid transparent;
-  border-radius: 999px 999px 0 0;
-  transition: all 0.18s;
-  box-shadow: 0 2px 8px rgba(255,95,162,0.07);
+@keyframes slideUp { 
+  from { transform: translateY(100%); opacity: 0; } 
+  to { transform: translateY(0); opacity: 1; } 
 }
-.catat-tab.active {
-  background: #fff;
-  color: #e94e8f;
-  border-bottom: 2.5px solid #ff5fa2;
-  box-shadow: 0 4px 16px rgba(255,95,162,0.10);
-}
-.catat-form-label {
-  font-size: 0.98rem;
-  font-weight: 500;
-  color: #ff5fa2;
-  margin-bottom: 0.18rem;
-  display: block;
-}
-.catat-input, .catat-select {
-  width: 100%;
-  border: 1.5px solid #f3c6db;
-  border-radius: 10px;
-  padding: 0.7rem 1rem;
-  font-size: 1.08rem;
-  background: #fff;
-  color: #333;
-  outline: none;
-  transition: border 0.18s;
-  margin-bottom: 0.1rem;
-}
-.catat-input:focus, .catat-select:focus {
-  border-color: #ff5fa2;
-  box-shadow: 0 0 0 2px #ffe4f1;
-}
-.catat-form-row {
-  display: flex;
-  gap: 1rem;
-}
-.catat-form-row > div { flex: 1; }
-.catat-btn {
-  width: 100%;
-  background: #ff5fa2;
-  color: #fff;
-  font-weight: bold;
-  font-size: 1.08rem;
-  border: none;
-  border-radius: 12px;
-  padding: 0.95rem 0;
-  margin-top: 0.2rem;
-  box-shadow: 0 2px 8px rgba(255,95,162,0.10);
-  transition: background 0.18s;
-}
-.catat-btn:active, .catat-btn:hover {
-  background: #e94e8f;
-}
-.catat-error {
-  color: #e94e8f;
-  font-size: 0.98rem;
-  text-align: center;
-  margin-top: 0.2rem;
-}
-@media (max-width: 480px) {
-  .catat-form-row { flex-direction: column; gap: 0.5rem; }
-  .max-w-md { padding: 0 0.2rem; }
-}
-.relative { position: relative; }
-.icon-calendar, .icon-clock { display: flex; align-items: center; }
-.pr-10 { padding-right: 2.5rem; }
-.animate-slideUpModal {
-  animation: slideUp 0.22s cubic-bezier(.4,1.4,.6,1) 1;
-}
-@keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
 
-<div class="page-root">
-  <main>
-    <div class="px-3 py-4">
-      <div class="max-w-md mx-auto w-full pt-2 pb-8 px-2">
-        <div class="flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-[#f9f9fb]">
-          <button class="catat-tab {mode === 'pemasukan' ? 'active' : ''}" type="button" on:click={() => { mode = 'pemasukan'; jenis = 'pendapatan_usaha'; namaJenis = ''; nama = ''; }}>Catat Pemasukan</button>
-          <button class="catat-tab {mode === 'pengeluaran' ? 'active' : ''}" type="button" on:click={() => { mode = 'pengeluaran'; jenis = 'beban_usaha'; namaJenis = ''; nama = ''; }}>Catat Pengeluaran</button>
+<div 
+  class="min-h-max flex flex-col"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+  onclick={handleGlobalClick}
+>
+  <main class="min-h-max">
+    <div class="px-2 py-4">
+      <div class="max-w-md mx-auto w-full pt-2 pb-2 px-2">
+        <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50">
+          <!-- Indicator Slide -->
+          <div
+            class="absolute top-0 left-0 h-full w-1/2 bg-white rounded-full shadow border border-pink-200 transition-transform duration-300 z-0"
+            style="transform: translateX({mode === 'pengeluaran' ? '100%' : '0'});"
+          ></div>
+          <button
+            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pemasukan' ? 'text-pink-500' : 'text-gray-400'}"
+            type="button"
+            aria-current={mode === 'pemasukan' ? 'page' : undefined}
+            onclick={() => { mode = 'pemasukan'; jenis = 'pendapatan_usaha'; namaJenis = ''; nama = ''; }}
+          >
+            Catat Pemasukan
+          </button>
+          <button
+            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pengeluaran' ? 'text-pink-500' : 'text-gray-400'}"
+            type="button"
+            aria-current={mode === 'pengeluaran' ? 'page' : undefined}
+            onclick={() => { mode = 'pengeluaran'; jenis = 'beban_usaha'; namaJenis = ''; nama = ''; }}
+          >
+            Catat Pengeluaran
+          </button>
         </div>
-        <form class="flex flex-col gap-4 bg-white rounded-2xl shadow p-5 border border-pink-100" on:submit|preventDefault={handleSubmit} autocomplete="off">
-          <div class="catat-form-row">
-            <div>
-              <label class="catat-form-label" for="tanggal-input">Tanggal</label>
+        <form class="flex flex-col gap-4 px-1 md:bg-white md:rounded-2xl md:shadow md:p-5 md:border md:border-pink-100 {jenis === 'lainnya' ? 'pb-16' : 'pb-12'}" onsubmit={handleSubmit} autocomplete="off" id="catat-form">
+          <div class="flex flex-col sm:flex-row gap-4 sm:gap-4">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-pink-500 mb-1" for="tanggal-input">Tanggal</label>
               <input
                 id="tanggal-input"
                 type="date"
-                class="catat-input"
+                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
                 bind:value={date}
                 min="2020-01-01"
                 max="2100-12-31"
                 required
               />
             </div>
-            <div>
-              <label class="catat-form-label" for="waktu-input">Waktu</label>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-pink-500 mb-1" for="waktu-input">Waktu</label>
               <input
                 id="waktu-input"
                 type="time"
-                class="catat-input"
+                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
                 bind:value={time}
                 required
               />
             </div>
           </div>
           <div>
-            <label class="catat-form-label">Nominal (Rp)</label>
+            <label class="block text-sm font-medium text-pink-500 mb-1">Nominal (Rp)</label>
             <input
               type="text"
               inputmode="numeric"
               pattern="[0-9]*"
-              class="catat-input"
+              class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
               value={nominal}
-              on:input={handleNominalInput}
+              oninput={handleNominalInput}
               required
               placeholder="Masukkan nominal"
               autocomplete="off"
             />
             <div class="flex flex-col items-center mt-2 mb-1">
-              <div class="grid grid-cols-3 gap-2 w-full max-w-xs">
-                <button type="button" class="px-0 py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 w-full" on:click={() => setTemplateNominal(5000)}>5.000</button>
-                <button type="button" class="px-0 py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 w-full" on:click={() => setTemplateNominal(10000)}>10.000</button>
-                <button type="button" class="px-0 py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 w-full" on:click={() => setTemplateNominal(20000)}>20.000</button>
-                <button type="button" class="px-0 py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 w-full" on:click={() => setTemplateNominal(50000)}>50.000</button>
-                <button type="button" class="px-0 py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 w-full" on:click={() => setTemplateNominal(100000)}>100.000</button>
-                <div></div>
+              <div class="grid grid-cols-3 md:grid-cols-5 gap-2 w-full">
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(5000)}>Rp 5.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(10000)}>Rp 10.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(20000)}>Rp 20.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(50000)}>Rp 50.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(100000)}>Rp 100.000</button>
               </div>
             </div>
           </div>
           <div>
-            <label class="catat-form-label">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <div class="catat-input flex items-center cursor-pointer" on:click={() => showDropdown = true} tabindex="0" style="user-select:none;">
+            <label class="block text-sm font-medium text-pink-500 mb-1">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <div class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 flex items-center cursor-pointer" onclick={() => showDropdown = true} tabindex="0" style="user-select:none;">
               <span class="truncate">{getJenisLabel(jenis)}</span>
             </div>
             <DropdownSheet open={showDropdown} value={jenis} options={mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran} on:close={() => showDropdown = false} on:select={e => { jenis = e.detail; showDropdown = false; }} />
           </div>
           {#if jenis === 'lainnya'}
             <div>
-              <label class="catat-form-label">Nama Jenis</label>
-              <input type="text" class="catat-input" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
+              <label class="block text-sm font-medium text-pink-500 mb-1">Nama Jenis</label>
+              <input type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
             </div>
           {/if}
           <div>
-            <label class="catat-form-label">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <input type="text" class="catat-input" bind:value={nama} required placeholder="Contoh: Modal Awal, Listrik, Dll" />
+            <label class="block text-sm font-medium text-pink-500 mb-1">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <input type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={nama} required />
           </div>
           {#if error}
-            <div class="catat-error">{error}</div>
+            <div class="text-pink-600 text-sm text-center mt-1">{error}</div>
           {/if}
-          <button type="submit" class="catat-btn">Simpan</button>
         </form>
       </div>
     </div>
   </main>
+  <div class="fixed left-0 right-0 bottom-[56px] z-30 px-2 pt-2 pb-3">
+    <button type="submit" form="catat-form" class="w-full bg-pink-500 text-white font-bold text-lg border-none rounded-xl py-4 mt-1 shadow-lg shadow-pink-500/10 transition-colors duration-200 hover:bg-pink-600 active:bg-pink-700">Simpan</button>
+  </div>
 </div> 

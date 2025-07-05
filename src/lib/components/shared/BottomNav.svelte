@@ -5,6 +5,7 @@ import FileText from 'lucide-svelte/icons/file-text';
 import Book from 'lucide-svelte/icons/book';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
+import { onMount } from 'svelte';
 
 const navs = [
   { label: 'Beranda', icon: Home, path: '/' },
@@ -17,10 +18,32 @@ let indicatorLeft = 0;
 let indicatorWidth = 0;
 let navRefs = [];
 
+// Touch handling variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+let isTouchDevice = false;
+let clickBlocked = false;
+let currentTabIndex = 0;
+
+onMount(() => {
+  // Detect touch device
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  // Set initial tab index
+  const idx = navs.findIndex(n =>
+    n.path === '/' ? $page.url.pathname === '/' : ($page.url.pathname === n.path || $page.url.pathname.startsWith(n.path + '/'))
+  );
+  currentTabIndex = idx >= 0 ? idx : 0;
+});
+
 $: {
   const idx = navs.findIndex(n =>
     n.path === '/' ? $page.url.pathname === '/' : ($page.url.pathname === n.path || $page.url.pathname.startsWith(n.path + '/'))
   );
+  currentTabIndex = idx >= 0 ? idx : 0;
   if (navRefs[idx]) {
     const rect = navRefs[idx].getBoundingClientRect();
     const parentRect = navRefs[0]?.parentElement?.getBoundingClientRect();
@@ -28,55 +51,72 @@ $: {
     indicatorWidth = rect.width;
   }
 }
+
+function handleTouchStart(e) {
+  if (!isTouchDevice) return;
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isSwiping = false;
+  clickBlocked = false;
+}
+
+function handleTouchMove(e) {
+  if (!isTouchDevice) return;
+  
+  touchEndX = e.touches[0].clientX;
+  touchEndY = e.touches[0].clientY;
+  
+  const deltaX = Math.abs(touchEndX - touchStartX);
+  const deltaY = Math.abs(touchEndY - touchStartY);
+  const viewportWidth = window.innerWidth;
+  const swipeThreshold = viewportWidth * 0.4; // 40% of viewport width
+  
+  // Check if this is a horizontal swipe
+  if (deltaX > swipeThreshold && deltaX > deltaY) {
+    isSwiping = true;
+    clickBlocked = true;
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!isTouchDevice) return;
+  
+  if (isSwiping) {
+    // Handle swipe navigation
+    const deltaX = touchEndX - touchStartX;
+    const viewportWidth = window.innerWidth;
+    const swipeThreshold = viewportWidth * 0.4;
+    
+    if (Math.abs(deltaX) > swipeThreshold) {
+      if (deltaX > 0 && currentTabIndex > 0) {
+        // Swipe right - go to previous tab
+        goto(navs[currentTabIndex - 1].path);
+      } else if (deltaX < 0 && currentTabIndex < navs.length - 1) {
+        // Swipe left - go to next tab
+        goto(navs[currentTabIndex + 1].path);
+      }
+    }
+    
+    // Block any subsequent click events
+    setTimeout(() => {
+      clickBlocked = false;
+    }, 100);
+  }
+}
+
+function handleNavClick(path, e) {
+  if (clickBlocked) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  
+  goto(path);
+}
 </script>
 
 <style>
-.bottom-nav {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  height: 58px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  z-index: 10;
-  border-radius: 4px 4px 0 0;
-  box-shadow: 0 -6px 24px -6px rgba(51,51,51,0.10);
-  padding: 0 2px;
-  overflow: hidden;
-}
-.bottom-nav-btn {
-  flex: 1;
-  text-align: center;
-  color: #ff5fa2;
-  font-size: 0.92rem;
-  font-weight: 400;
-  padding: 0.3rem 0 0.1rem 0;
-  border: none;
-  background: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.05rem;
-  transition: color 0.22s cubic-bezier(.4,0,.2,1);
-  min-width: 0;
-  position: relative;
-  z-index: 1;
-}
-.bottom-nav-btn svg {
-  display: block;
-  margin-bottom: 0.1rem;
-  width: 24px;
-  height: 24px;
-  stroke-width: 2.1;
-  transition: color 0.22s cubic-bezier(.4,0,.2,1);
-}
-.bottom-nav-btn.active {
-  color: #e94e8f;
-}
-.bottom-nav-btn:not(.active) {
-  color: #ffb3d1;
-}
 .nav-indicator {
   position: absolute;
   bottom: 0;
@@ -88,15 +128,21 @@ $: {
 }
 </style>
 
-<nav class="bottom-nav" style="position:relative;">
+<nav 
+  class="fixed left-0 right-0 bottom-0 h-[58px] bg-white flex items-center justify-around z-10 rounded-t-sm shadow-2xl shadow-gray-900/10 px-0.5 overflow-hidden" 
+  style="position:relative;"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+>
   {#each navs as nav, i}
     <button
-      class="bottom-nav-btn {nav.path === '/' ? ($page.url.pathname === '/' ? 'active' : '') : (($page.url.pathname === nav.path || $page.url.pathname.startsWith(nav.path + '/')) ? 'active' : '')}"
+      class="flex-1 text-center text-pink-500 text-xs font-medium py-1 border-none bg-transparent flex flex-col items-center gap-0 min-w-0 relative z-10 transition-colors duration-200 ease-out {nav.path === '/' ? ($page.url.pathname === '/' ? 'text-pink-600' : 'text-pink-300') : (($page.url.pathname === nav.path || $page.url.pathname.startsWith(nav.path + '/')) ? 'text-pink-600' : 'text-pink-300')}"
       aria-label={nav.label}
       bind:this={navRefs[i]}
-      on:click={() => goto(nav.path)}
+      onclick={(e) => handleNavClick(nav.path, e)}
     >
-      <svelte:component this={nav.icon} size={22} />
+      <svelte:component this={nav.icon} size={18} class="block mb-0.5 w-[18px] h-[18px] stroke-[1.7] transition-colors duration-200 ease-out" />
       {nav.label}
     </button>
   {/each}

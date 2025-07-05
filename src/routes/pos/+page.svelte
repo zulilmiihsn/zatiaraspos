@@ -12,6 +12,24 @@ import { page } from '$app/stores';
 import { get } from 'svelte/store';
 import Topbar from '$lib/components/shared/Topbar.svelte';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
+import { validateNumber, sanitizeInput } from '$lib/validation.js';
+import { SecurityMiddleware } from '$lib/security.js';
+
+// Touch handling variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isSwiping = false;
+let isTouchDevice = false;
+let clickBlocked = false;
+
+const navs = [
+  { label: 'Beranda', path: '/' },
+  { label: 'Kasir', path: '/pos' },
+  { label: 'Catat', path: '/catat' },
+  { label: 'Laporan', path: '/laporan' },
+];
 
 // Kategori produk
 const categories = [
@@ -135,13 +153,43 @@ function toggleAddOn(id) {
 }
 
 function addToCart() {
+  // Validate quantity
+  const qtyValidation = validateNumber(qty, { required: true, min: 1, max: 99 });
+  if (!qtyValidation.isValid) {
+    alert(`Error: ${qtyValidation.errors.join(', ')}`);
+    return;
+  }
+  
+  // Check rate limiting
+  if (!SecurityMiddleware.checkFormRateLimit('pos_add_to_cart')) {
+    alert('Terlalu banyak item ditambahkan. Silakan tunggu sebentar.');
+    return;
+  }
+  
+  // Sanitize inputs
+  const sanitizedSugar = sanitizeInput(selectedSugar);
+  const sanitizedIce = sanitizeInput(selectedIce);
+  
+  // Check for suspicious activity
+  const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${qty}`;
+  if (SecurityMiddleware.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
+    alert('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
+    SecurityMiddleware.logSecurityEvent('suspicious_cart_activity', {
+      product: selectedProduct?.name,
+      qty,
+      sugar: sanitizedSugar,
+      ice: sanitizedIce
+    });
+    return;
+  }
+  
   // Cek apakah item dengan kombinasi sama sudah ada di cart
   const addOnsSelected = addOns.filter(a => selectedAddOns.includes(a.id));
   const existingIdx = cart.findIndex(item =>
     item.product.id === selectedProduct.id &&
     JSON.stringify(item.addOns.map(a => a.id).sort()) === JSON.stringify(addOnsSelected.map(a => a.id).sort()) &&
-    item.sugar === selectedSugar &&
-    item.ice === selectedIce
+    item.sugar === sanitizedSugar &&
+    item.ice === sanitizedIce
   );
   if (existingIdx !== -1) {
     // Jika sudah ada, tambahkan qty
@@ -153,12 +201,20 @@ function addToCart() {
       {
         product: selectedProduct,
         addOns: addOnsSelected,
-        sugar: selectedSugar,
-        ice: selectedIce,
+        sugar: sanitizedSugar,
+        ice: sanitizedIce,
         qty,
       },
     ];
   }
+  
+  // Log successful add to cart
+  SecurityMiddleware.logSecurityEvent('product_added_to_cart', {
+    product: selectedProduct?.name,
+    qty,
+    totalItems: cart.length
+  });
+  
   showModal = false;
 }
 
@@ -222,39 +278,144 @@ $: {
   }
   prevCartLength = cart.length;
 }
+
+onMount(() => {
+  // Detect touch device
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+});
+
+function handleTouchStart(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isSwiping = false;
+  clickBlocked = false;
+}
+
+function handleTouchMove(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  touchEndX = e.touches[0].clientX;
+  touchEndY = e.touches[0].clientY;
+  
+  const deltaX = Math.abs(touchEndX - touchStartX);
+  const deltaY = Math.abs(touchEndY - touchStartY);
+  const viewportWidth = window.innerWidth;
+  const swipeThreshold = viewportWidth * 0.4; // 40% of viewport width
+  
+  // Check if this is a horizontal swipe
+  if (deltaX > swipeThreshold && deltaX > deltaY) {
+    isSwiping = true;
+    clickBlocked = true;
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!isTouchDevice) return;
+  
+  // Don't handle touch on interactive elements
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
+  if (isSwiping) {
+    // Handle swipe navigation
+    const deltaX = touchEndX - touchStartX;
+    const viewportWidth = window.innerWidth;
+    const swipeThreshold = viewportWidth * 0.4;
+    
+    if (Math.abs(deltaX) > swipeThreshold) {
+      const currentIndex = 1; // POS is index 1
+      if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right - go to previous tab
+        goto(navs[currentIndex - 1].path);
+      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
+        // Swipe left - go to next tab
+        goto(navs[currentIndex + 1].path);
+      }
+    }
+    
+    // Block any subsequent click events
+    setTimeout(() => {
+      clickBlocked = false;
+    }, 100);
+  }
+}
+
+function handleGlobalClick(e) {
+  if (clickBlocked) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+}
 </script>
 
-<div class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden">
-  <main class="flex-1 overflow-y-auto pb-24 w-full max-w-full overflow-x-hidden">
+<div 
+  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+  onclick={handleGlobalClick}
+>
+  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden"
+    style="scrollbar-width:none;-ms-overflow-style:none;"
+  >
     <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center gap-3">
-      <input
-        class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400"
-        type="text"
-        placeholder="Cari produk..."
-        bind:value={search}
-        autocomplete="off"
-      />
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+        </span>
+        <input
+          class="flex-1 border border-gray-200 rounded-lg pl-10 pr-3 py-2.5 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400 w-full"
+          type="text"
+          placeholder="Cari produk..."
+          bind:value={search}
+          autocomplete="off"
+        />
+      </div>
     </div>
-    <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white" style="scrollbar-width:none;-ms-overflow-style:none;" on:wheel={(e) => { e.currentTarget.scrollLeft += e.deltaY; }}>
+    <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white" style="scrollbar-width:none;-ms-overflow-style:none;" onwheel={(e) => { e.currentTarget.scrollLeft += e.deltaY; }}>
       {#each categories as c}
         <button
           class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border border-pink-400 font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'text-white' : 'text-pink-400'}"
           type="button"
           style={selectedCategory === c.id ? 'background:#ff5fa2' : 'background:#fff'}
-          on:click={() => selectedCategory = c.id}
+          onclick={() => selectedCategory = c.id}
         >{c.name}</button>
       {/each}
     </div>
-    <div class="grid grid-cols-2 gap-4 px-4">
+    <div class="grid grid-cols-2 gap-4 px-4 pb-4">
       {#each filteredProducts as p}
-        <div class="bg-white rounded-lg shadow-md flex flex-col items-center justify-start p-4 transition-shadow border-none cursor-pointer min-h-[128px]" tabindex="0" on:click={() => openAddOnModal(p)}>
+        <div class="bg-white rounded-lg shadow-md flex flex-col items-center justify-start p-4 transition-shadow border-none cursor-pointer min-h-[128px]" tabindex="0" onclick={() => openAddOnModal(p)}>
           {#if p.image && !imageError[String(p.id)]}
-            <img class="w-22 h-22 object-cover rounded-lg mb-3 bg-gray-100" src={p.image} alt={p.name} loading="lazy" on:error={() => handleImgError(String(p.id))} />
+            <img class="w-22 h-22 object-cover rounded-lg mb-3 bg-gray-100 min-h-[140px] aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
           {:else}
-            <ImagePlaceholder size={88} />
+            <div class="w-full aspect-square min-h-[140px] bg-white rounded-xl flex items-center justify-center mb-3 overflow-hidden">
+              <ImagePlaceholder size={140} />
+            </div>
           {/if}
-          <div class="text-base font-semibold text-gray-900 mb-1 text-center tracking-tight leading-tight">{p.name}</div>
-          <div class="text-pink-400 font-bold text-sm text-center tracking-tight leading-tight mt-0.5">Rp {p.price.toLocaleString('id-ID')}</div>
+          <div class="w-full flex flex-col items-center">
+            <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0">{p.name}</h3>
+            <div class="text-pink-500 font-bold text-base">Rp {p.price.toLocaleString('id-ID')}</div>
+          </div>
         </div>
       {/each}
     </div>
@@ -264,23 +425,25 @@ $: {
         bind:this={cartPreviewRef}
         class="fixed left-0 right-0 bottom-16 flex items-center justify-between bg-white border-t-2 border-gray-100 shadow-md px-6 py-3 z-20 rounded-t-lg min-h-[56px] text-base font-medium text-gray-900"
         style="transform: translateX({cartPreviewX}px); transition: {cartPreviewDragging ? 'none' : 'transform 0.25s cubic-bezier(.4,0,.2,1)'}; touch-action: pan-y;"
-        on:touchstart={handleCartPreviewTouchStart}
-        on:touchmove={handleCartPreviewTouchMove}
-        on:touchend={handleCartPreviewTouchEnd}
+        ontouchstart={handleCartPreviewTouchStart}
+        ontouchmove={handleCartPreviewTouchMove}
+        ontouchend={handleCartPreviewTouchEnd}
       >
-        <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" on:click={openCartModal} style="min-width:0;">
+        <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" onclick={openCartModal} style="min-width:0;">
           <div class="text-sm text-gray-500 truncate">{totalQty} item pesanan</div>
           <div class="font-bold text-pink-500 text-lg truncate">Rp {totalHarga.toLocaleString('id-ID')}</div>
         </div>
         <div class="flex items-center justify-center ml-4">
-          <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600 flex items-center justify-center" on:click|stopPropagation={goToBayar}>Bayar</button>
+          <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600 flex items-center justify-center" onclick={(e) => { e.stopPropagation(); goToBayar(); }}>Bayar</button>
         </div>
       </div>
     {/if}
 
     {#if showCartModal}
       <ModalSheet open={showCartModal} title="Keranjang" on:close={closeCartModal}>
-        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0">
+        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0"
+          style="scrollbar-width:none;-ms-overflow-style:none;"
+        >
           {#each cart as item, idx}
             <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-3 shadow-sm">
               <div class="flex flex-col min-w-0">
@@ -289,12 +452,12 @@ $: {
                   <div class="text-sm text-pink-400 font-medium">+ {item.addOns.map(a => a.name).join(', ')}</div>
                 {/if}
               </div>
-              <button class="bg-[#ff5fa2] text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={() => removeCartItem(idx)}>Hapus</button>
+              <button class="bg-[#ff5fa2] text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={() => removeCartItem(idx)}>Hapus</button>
             </div>
           {/each}
         </div>
         <div slot="footer">
-          <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={goToBayar}>Bayar</button>
+          <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={goToBayar}>Bayar</button>
         </div>
       </ModalSheet>
     {/if}
@@ -304,7 +467,9 @@ $: {
     {/if}
 
     <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
-      <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-56" on:click|stopPropagation>
+      <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-56" onclick={(e) => e.stopPropagation()}
+        style="scrollbar-width:none;-ms-overflow-style:none;"
+      >
         <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Gula</div>
         <div class="flex gap-2 mb-3">
           {#each sugarOptions as s}
@@ -312,7 +477,7 @@ $: {
               class="flex-1 px-0 py-2 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150"
               type="button"
               style={selectedSugar === s.id ? 'background:#ff5fa2;color:#fff' : ''}
-              on:click={() => selectedSugar = s.id}
+              onclick={() => selectedSugar = s.id}
             >{s.label}</button>
           {/each}
         </div>
@@ -323,7 +488,7 @@ $: {
               class="flex-1 px-0 py-2 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150"
               type="button"
               style={selectedIce === i.id ? 'background:#ff5fa2;color:#fff' : ''}
-              on:click={() => selectedIce = i.id}
+              onclick={() => selectedIce = i.id}
             >{i.label}</button>
           {/each}
         </div>
@@ -334,7 +499,7 @@ $: {
               class="w-full justify-center py-3 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center gap-1 text-center whitespace-normal overflow-hidden"
               type="button"
               style={selectedAddOns.includes(a.id) ? 'background:#ff5fa2;color:#fff' : ''}
-              on:click={() => toggleAddOn(a.id)}
+              onclick={() => toggleAddOn(a.id)}
             >
               <span>{a.name}</span>
               <span class="font-semibold mt-px" style={selectedAddOns.includes(a.id) ? 'color:#fff' : 'color:#ff5fa2'}>+Rp {a.price.toLocaleString('id-ID')}</span>
@@ -345,23 +510,17 @@ $: {
       <div slot="footer">
         <div class="font-semibold text-gray-800 mb-2 mt-0 text-base">Jumlah</div>
         <div class="flex items-center justify-center gap-3 mb-4">
-          <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" on:click={decQty}>-</button>
+          <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={decQty}>-</button>
           <input class="w-12 text-center text-lg font-semibold border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-800 outline-none" type="number" min="1" max="99" bind:value={qty} />
-          <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" on:click={incQty}>+</button>
+                      <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={incQty}>+</button>
         </div>
-        <button style="background:#ff5fa2" class="text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" on:click={addToCart}>Tambah ke Keranjang</button>
+                  <button style="background:#ff5fa2" class="text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={addToCart}>Tambah ke Keranjang</button>
       </div>
     </ModalSheet>
   </main>
 </div>
 
 <style>
-.category-scroll::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
 @keyframes fadeInOut {
   0% { opacity: 0; transform: translateY(16px); }
   10% { opacity: 1; transform: translateY(0); }

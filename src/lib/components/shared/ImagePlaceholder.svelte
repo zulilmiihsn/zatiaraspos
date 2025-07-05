@@ -9,7 +9,6 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: transparent;
   color: #ff5fa2;
   font-size: 2.5rem;
   width: var(--size, 72px);
@@ -19,7 +18,7 @@
 </style>
 
 <div
-  class="placeholder"
+  class="placeholder bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50"
   style="--size: {size}px;"
   aria-label="Gambar belum tersedia"
 >

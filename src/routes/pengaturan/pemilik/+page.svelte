@@ -128,9 +128,35 @@ let searchEkstra = '';
 let showDeleteEkstraModal = false;
 let ekstraIdToDelete = null;
 
+// Tambahkan state untuk tap vs swipe kategori
+let kategoriTouchStartX = 0;
+let kategoriTouchStartY = 0;
+let kategoriTouchStartTime = 0;
+let kategoriSwipeDetected = false;
+
+// Tambahkan state untuk tap vs swipe menu
+let menuTouchStartX = 0;
+let menuTouchStartY = 0;
+let menuTouchStartTime = 0;
+let menuSwipeDetected = false;
+
+// Tambahkan state untuk tap vs swipe ekstra
+let ekstraTouchStartX = 0;
+let ekstraTouchStartY = 0;
+let ekstraTouchStartTime = 0;
+let ekstraSwipeDetected = false;
+
+// Deteksi perangkat touch
+let isTouchDevice = false;
+if (typeof window !== 'undefined') {
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
+let justTapped = false;
+
 function handleTabTouchStart(e: TouchEvent) {
   const target = e.target as HTMLElement;
-  if (target.closest('button, [tabindex], input, select, textarea, [role="button"], [data-kategori-box]')) {
+  if (target.closest('button, [tabindex], input, select, textarea, [role="button"]')) {
     ignoreSwipe = true;
     return;
   }
@@ -144,7 +170,9 @@ function handleTabTouchMove(e: TouchEvent) {
 function handleTabTouchEnd() {
   if (ignoreSwipe) return;
   const delta = touchEndX - touchStartX;
-  if (Math.abs(delta) > 40) {
+  const swipeThreshold = window.innerWidth * 0.4;
+  if (Math.abs(delta) < 20) return; // abaikan swipe tab jika gesture kecil/tap
+  if (Math.abs(delta) > swipeThreshold) {
     if (delta < 0) {
       // Swipe kiri: next tab
       if (activeTab === 'menu') activeTab = 'kategori';
@@ -154,6 +182,61 @@ function handleTabTouchEnd() {
       if (activeTab === 'ekstra') activeTab = 'kategori';
       else if (activeTab === 'kategori') activeTab = 'menu';
     }
+  }
+}
+
+function handleKategoriTouchStart(e) {
+  kategoriSwipeDetected = false;
+  kategoriTouchStartX = e.touches[0].clientX;
+  kategoriTouchStartY = e.touches[0].clientY;
+  kategoriTouchStartTime = Date.now();
+}
+function handleKategoriTouchMove(e) {
+  const deltaX = e.touches[0].clientX - kategoriTouchStartX;
+  if (Math.abs(deltaX) > 40) {
+    kategoriSwipeDetected = true;
+  }
+}
+function handleKategoriTouchEnd(e, kat) {
+  const deltaX = e.changedTouches[0].clientX - kategoriTouchStartX;
+  const deltaY = e.changedTouches[0].clientY - kategoriTouchStartY;
+  const duration = Date.now() - kategoriTouchStartTime;
+  const swipeThreshold = window.innerWidth * 0.4;
+  if (Math.abs(deltaX) > swipeThreshold) {
+    // SWIPE: biarkan handler swipe tab global yang jalan, JANGAN buka modal
+    return;
+  }
+  if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20 && duration < 300) {
+    openKategoriForm(kat);
+    window.addEventListener('click', blockNextClick, true);
+  }
+}
+
+function handleMenuTouchStart(e) {
+  menuSwipeDetected = false;
+  menuTouchStartX = e.touches[0].clientX;
+  menuTouchStartY = e.touches[0].clientY;
+  menuTouchStartTime = Date.now();
+}
+function handleMenuTouchMove(e) {
+  const deltaX = e.touches[0].clientX - menuTouchStartX;
+  if (Math.abs(deltaX) > 40) {
+    // SWIPE: biarkan handler swipe tab global yang jalan, JANGAN buka modal
+    return;
+  }
+}
+function handleMenuTouchEnd(e, menu) {
+  const deltaX = e.changedTouches[0].clientX - menuTouchStartX;
+  const deltaY = e.changedTouches[0].clientY - menuTouchStartY;
+  const duration = Date.now() - menuTouchStartTime;
+  const swipeThreshold = window.innerWidth * 0.4;
+  if (Math.abs(deltaX) > swipeThreshold) {
+    // SWIPE: biarkan handler swipe tab global yang jalan, JANGAN buka modal
+    return;
+  }
+  if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20 && duration < 300) {
+    openMenuForm(menu);
+    window.addEventListener('click', blockNextClick, true);
   }
 }
 
@@ -373,6 +456,63 @@ function formatRupiahInput(e) {
   value = value ? parseInt(value).toLocaleString('id-ID') : '';
   menuForm.harga = value;
 }
+
+// Tambahkan state untuk tap vs swipe ekstra
+function handleEkstraTouchStart(e) {
+  ekstraSwipeDetected = false;
+  ekstraTouchStartX = e.touches[0].clientX;
+  ekstraTouchStartY = e.touches[0].clientY;
+  ekstraTouchStartTime = Date.now();
+}
+function handleEkstraTouchMove(e) {
+  const deltaX = e.touches[0].clientX - ekstraTouchStartX;
+  if (Math.abs(deltaX) > 40) {
+    ekstraSwipeDetected = true;
+  }
+}
+function handleEkstraTouchEnd(e, ekstra) {
+  const deltaX = e.changedTouches[0].clientX - ekstraTouchStartX;
+  const deltaY = e.changedTouches[0].clientY - ekstraTouchStartY;
+  const duration = Date.now() - ekstraTouchStartTime;
+  const swipeThreshold = window.innerWidth * 0.4;
+  if (Math.abs(deltaX) > swipeThreshold) {
+    // SWIPE: biarkan handler swipe tab global yang jalan, JANGAN buka modal
+    return;
+  }
+  if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20 && duration < 300) {
+    openEkstraForm(ekstra);
+    window.addEventListener('click', blockNextClick, true);
+  }
+}
+
+// Handler universal untuk desktop click
+function handleKategoriClick(event, kat) {
+  if (isTouchDevice && justTapped) {
+    event.preventDefault();
+    return;
+  }
+  openKategoriForm(kat);
+}
+function handleMenuClick(event, menu) {
+  if (isTouchDevice && justTapped) {
+    event.preventDefault();
+    return;
+  }
+  openMenuForm(menu);
+}
+function handleEkstraClick(event, ekstra) {
+  if (isTouchDevice && justTapped) {
+    event.preventDefault();
+    return;
+  }
+  openEkstraForm(ekstra);
+}
+
+function blockNextClick(e) {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  window.removeEventListener('click', blockNextClick, true);
+}
 </script>
 
 <svelte:head>
@@ -496,7 +636,9 @@ function formatRupiahInput(e) {
           <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium">{filteredMenus.length} menu</span>
         </div>
         <!-- Kategori Filter -->
-          <div class="flex gap-2 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4">
+          <div class="flex gap-2 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
           <button 
               class="px-3 py-2.5 min-w-[88px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
             onclick={() => selectedKategori = 'Semua'}
@@ -513,11 +655,17 @@ function formatRupiahInput(e) {
           {/each}
         </div>
         <!-- Menu Grid Scrollable -->
-        <div class="flex-1 overflow-y-auto pb-16 pr-1">
+        <div class="flex-1 overflow-y-auto pb-16"
+          style="scrollbar-width:none;-ms-overflow-style:none;"
+        >
           <div class="grid grid-cols-2 gap-3">
             {#each filteredMenus as menu}
               <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group cursor-pointer hover:bg-pink-50 transition-colors"
-                onclick={() => openMenuForm(menu)}
+                data-menu-card
+                ontouchstart={handleMenuTouchStart}
+                ontouchmove={handleMenuTouchMove}
+                ontouchend={(e) => handleMenuTouchEnd(e, menu)}
+                onclick={(e) => handleMenuClick(e, menu)}
               >
                 <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
                   <button 
@@ -557,10 +705,12 @@ function formatRupiahInput(e) {
                 placeholder="Cari kategori…"
                 bind:value={searchKategoriKeyword}
               />
-            </div>
+      </div>
           </div>
-          <div class="flex-1 overflow-y-auto pb-16 pr-1">
-            <div class="flex items-center gap-2 mb-5 mt-1 px-1">
+          <div class="flex-1 overflow-y-auto pb-16"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
+            <div class="flex items-center gap-2 mb-5">
               <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
               <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
             </div>
@@ -571,7 +721,11 @@ function formatRupiahInput(e) {
                 {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
                   <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
                     data-kategori-box
-                    onclick={() => openKategoriForm(kat)}>
+                    ontouchstart={handleKategoriTouchStart}
+                    ontouchmove={handleKategoriTouchMove}
+                    ontouchend={(e) => handleKategoriTouchEnd(e, kat)}
+                    onclick={(e) => handleKategoriClick(e, kat)}
+                  >
                     <div>
                       <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
                       <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
@@ -594,7 +748,7 @@ function formatRupiahInput(e) {
 
         {#if activeTab === 'ekstra'}
           <div class="w-full mb-4 px-0">
-            <div class="relative mb-2">
+            <div class="relative">
               <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
               </span>
@@ -605,17 +759,22 @@ function formatRupiahInput(e) {
                 bind:value={searchEkstra}
               />
             </div>
-            <div class="flex items-center gap-2 mb-2 mt-1 px-1">
+          </div>
+          <div class="flex-1 overflow-y-auto pb-16"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
+          <div class="flex items-center gap-2 mb-5">
               <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
               <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
             </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pb-16 pr-1">
             <div class="grid grid-cols-2 gap-3">
               {#each ekstraList.filter(e => e.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra (ekstra.id)}
                 <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-center relative transition-all duration-200 cursor-pointer hover:bg-green-100"
                   transition:fade
-                  onclick={() => openEkstraForm(ekstra)}
+                  ontouchstart={handleEkstraTouchStart}
+                  ontouchmove={handleEkstraTouchMove}
+                  ontouchend={(e) => handleEkstraTouchEnd(e, ekstra)}
+                  onclick={(e) => handleEkstraClick(e, ekstra)}
                 >
                   <div class="absolute top-2 right-2 z-10 flex gap-2">
                     <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={e => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
@@ -632,9 +791,9 @@ function formatRupiahInput(e) {
           </div>
           <!-- Floating Action Button Tambah Ekstra -->
           <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-green-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400" onclick={() => openEkstraForm()} aria-label="Tambah Ekstra">
-            <Plus class="w-7 h-7" />
-          </button>
-        {/if}
+          <Plus class="w-7 h-7" />
+        </button>
+      {/if}
       </div>
     {/if}
 
@@ -700,7 +859,9 @@ function formatRupiahInput(e) {
             </div>
             <h2 class="text-base font-semibold text-gray-700">{editMenuId ? 'Edit Menu' : 'Tambah Menu'}</h2>
           </div>
-          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4 space-y-6">
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4 space-y-6"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
             <!-- Upload & Crop Gambar -->
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-gambar">Gambar Produk</label>
@@ -741,8 +902,8 @@ function formatRupiahInput(e) {
                   onclick={() => menuForm.tipe = 'minuman'}>
                   Minuman
                 </button>
-              </div>
             </div>
+              </div>
             <!-- Kategori (Box Selector) -->
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
@@ -754,7 +915,7 @@ function formatRupiahInput(e) {
                     {kat.name}
                   </button>
                 {/each}
-              </div>
+            </div>
             </div>
             <!-- Harga (Input Format Rupiah) -->
             <div class="mb-6">
@@ -801,8 +962,8 @@ function formatRupiahInput(e) {
                     <span class="mx-auto">{ekstra.name}</span>
                   </button>
                 {/each}
-              </div>
             </div>
+          </div>
           </div>
           <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
@@ -829,10 +990,12 @@ function formatRupiahInput(e) {
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center">
               <Tag class="w-5 h-5 text-blue-500" />
-            </div>
+          </div>
             <h2 class="text-base font-semibold text-gray-700">Edit Kategori</h2>
           </div>
-          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4">
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="kategori-nama-input">Nama Kategori</label>
               <input id="kategori-nama-input"
@@ -854,8 +1017,8 @@ function formatRupiahInput(e) {
                 {#if menuIdsInKategori.length === 0}
                   <div class="text-gray-300 text-xs italic">Belum ada menu</div>
                 {/if}
-              </div>
             </div>
+          </div>
             <div class="mb-6">
               <div class="text-xs font-semibold text-gray-400 mb-2">Menu Non-Kategori</div>
               <div class="flex flex-wrap gap-2 min-h-[36px]">
@@ -896,7 +1059,7 @@ function formatRupiahInput(e) {
         <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
           <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteMenu} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+            </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
             <Trash class="w-8 h-8 text-red-500" />
           </div>
@@ -960,7 +1123,9 @@ function formatRupiahInput(e) {
             </div>
             <h2 class="text-base font-semibold text-gray-700">{editEkstraId ? 'Edit Ekstra' : 'Tambah Ekstra'}</h2>
           </div>
-          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4">
+          <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4"
+            style="scrollbar-width:none;-ms-overflow-style:none;"
+          >
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-nama">Nama Ekstra</label>
               <input 
@@ -1015,4 +1180,4 @@ function formatRupiahInput(e) {
       </button>
     </div>
   </div>
-{/if}   
+{/if} 
