@@ -1,7 +1,12 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { auth } from '$lib/auth.js';
+import { auth } from '$lib/auth.ts';
+import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
+import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
+import { fly } from 'svelte/transition';
+
+// Import icons directly
 import Plus from 'lucide-svelte/icons/plus';
 import Edit from 'lucide-svelte/icons/edit';
 import Trash from 'lucide-svelte/icons/trash';
@@ -13,9 +18,8 @@ import Utensils from 'lucide-svelte/icons/utensils';
 import Shield from 'lucide-svelte/icons/shield';
 import Lock from 'lucide-svelte/icons/lock';
 import Tag from 'lucide-svelte/icons/tag';
-import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
-import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
-import { fly } from 'svelte/transition';
+
+
 
 let currentUser = null;
 let userRole = '';
@@ -244,7 +248,12 @@ onMount(() => {
   currentUser = auth.getCurrentUser();
   userRole = currentUser?.role || '';
   
-  if (userRole !== 'admin') {
+  console.log('Current user:', currentUser);
+  console.log('User role:', userRole);
+  console.log('Has admin role:', auth.hasRole('admin'));
+  
+  // Check if user has admin role
+  if (!auth.hasRole('admin')) {
     alert('Anda tidak memiliki akses ke halaman ini.');
     goto('/pengaturan');
   }
@@ -526,7 +535,7 @@ function blockNextClick(e) {
       <div class="max-w-4xl mx-auto px-4 py-4">
         <div class="flex items-center">
           <button onclick={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
-            <ArrowLeft class="w-5 h-5 text-gray-600" />
+            <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
           </button>
           {#if currentPage !== 'main'}
             <h1 class="ml-4 text-xl font-bold text-gray-800">
@@ -547,9 +556,7 @@ function blockNextClick(e) {
             onclick={() => currentPage = 'menu'}
           >
             <div class="flex items-center gap-2 mb-2">
-              <div class="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Utensils class="w-5 h-5 text-white" />
-              </div>
+              <svelte:component this={Utensils} class="w-5 h-5 text-white" />
               <h3 class="text-sm font-semibold text-gray-800">Manajemen Menu</h3>
             </div>
             <p class="text-xs text-gray-500 leading-tight">Kelola menu, kategori, dan ekstra toko</p>
@@ -561,15 +568,15 @@ function blockNextClick(e) {
             onclick={() => currentPage = 'security'}
           >
             <div class="flex items-center gap-2 mb-2">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Shield class="w-5 h-5 text-white" />
-              </div>
+              <svelte:component this={Shield} class="w-5 h-5 text-white" />
               <h3 class="text-sm font-semibold text-gray-800 leading-tight">
                 Ganti<br />Keamanan
               </h3>
             </div>
             <p class="text-xs text-gray-500 leading-tight">Ubah password dan pengaturan keamanan</p>
           </button>
+          
+
         </div>
       </div>
     {/if}
@@ -595,21 +602,21 @@ function blockNextClick(e) {
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
             onclick={() => activeTab = 'menu'}
           >
-            <Utensils class="w-4 h-4" />
+            <svelte:component this={Utensils} class="w-4 h-4" />
             Menu
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
             onclick={() => activeTab = 'kategori'}
           >
-            <Tag class="w-4 h-4" />
+            <svelte:component this={Tag} class="w-4 h-4" />
             Kategori
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
             onclick={() => activeTab = 'ekstra'}
           >
-            <Coffee class="w-4 h-4" />
+            <svelte:component this={Coffee} class="w-5 h-5 text-brown-600" />
             Ekstra
           </button>
         </div>
@@ -672,7 +679,7 @@ function blockNextClick(e) {
                     class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
                     onclick={e => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
                   >
-                    <Trash class="w-5 h-5" />
+                    <svelte:component this={Trash} class="w-5 h-5" />
                   </button>
                 </div>
                 <div class="w-full aspect-square min-h-[140px] bg-white rounded-xl flex items-center justify-center mb-1 overflow-hidden">
@@ -689,7 +696,7 @@ function blockNextClick(e) {
         </div>
       <!-- Floating Action Button Tambah Menu -->
         <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-pink-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-pink-600 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400" onclick={() => openMenuForm()} aria-label="Tambah Menu">
-          <Plus class="w-7 h-7" />
+          <svelte:component this={Plus} class="w-7 h-7" />
         </button>
       {/if}
 
@@ -732,7 +739,7 @@ function blockNextClick(e) {
                     </div>
                     <div class="flex gap-2" onclick={e => e.stopPropagation()}>
                       <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={() => confirmDeleteKategori(kat.id)}>
-                        <Trash class="w-5 h-5" />
+                        <svelte:component this={Trash} class="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -742,7 +749,7 @@ function blockNextClick(e) {
           </div>
           <!-- Floating Action Button Tambah Kategori -->
           <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" onclick={() => openKategoriForm()} aria-label="Tambah Kategori">
-            <Plus class="w-7 h-7" />
+            <svelte:component this={Plus} class="w-7 h-7" />
           </button>
         {/if}
 
@@ -778,7 +785,7 @@ function blockNextClick(e) {
                 >
                   <div class="absolute top-2 right-2 z-10 flex gap-2">
                     <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={e => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
-                      <Trash class="w-5 h-5" />
+                      <svelte:component this={Trash} class="w-5 h-5" />
                     </button>
                   </div>
                   <div class="w-full flex flex-col items-center">
@@ -791,9 +798,9 @@ function blockNextClick(e) {
           </div>
           <!-- Floating Action Button Tambah Ekstra -->
           <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-green-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400" onclick={() => openEkstraForm()} aria-label="Tambah Ekstra">
-          <Plus class="w-7 h-7" />
-        </button>
-      {/if}
+            <svelte:component this={Plus} class="w-7 h-7" />
+          </button>
+        {/if}
       </div>
     {/if}
 
@@ -803,7 +810,7 @@ function blockNextClick(e) {
         <div class="space-y-6">
           <div class="text-center mb-8">
             <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Lock class="w-10 h-10 text-white" />
+              <svelte:component this={Lock} class="w-10 h-10 text-white" />
             </div>
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Pengaturan Keamanan</h2>
             <p class="text-gray-600">Kelola password dan keamanan akun</p>
@@ -815,7 +822,7 @@ function blockNextClick(e) {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
                   <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Lock class="w-6 h-6 text-blue-600" />
+                    <svelte:component this={Lock} class="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
                     <h3 class="text-lg font-bold text-gray-800">Ubah Password</h3>
@@ -832,7 +839,7 @@ function blockNextClick(e) {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
                   <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <Shield class="w-6 h-6 text-green-600" />
+                    <svelte:component this={Shield} class="w-6 h-6 text-green-600" />
                   </div>
                   <div>
                     <h3 class="text-lg font-bold text-gray-800">Riwayat Login</h3>
@@ -855,7 +862,7 @@ function blockNextClick(e) {
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh]">
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-              <Utensils class="w-5 h-5 text-pink-500" />
+              <svelte:component this={Utensils} class="w-5 h-5 text-pink-500" />
             </div>
             <h2 class="text-base font-semibold text-gray-700">{editMenuId ? 'Edit Menu' : 'Tambah Menu'}</h2>
           </div>
@@ -989,8 +996,8 @@ function blockNextClick(e) {
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh] max-h-[600px]">
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center">
-              <Tag class="w-5 h-5 text-blue-500" />
-          </div>
+              <svelte:component this={Tag} class="w-5 h-5 text-blue-500" />
+            </div>
             <h2 class="text-base font-semibold text-gray-700">Edit Kategori</h2>
           </div>
           <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4"
@@ -1061,7 +1068,7 @@ function blockNextClick(e) {
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
-            <Trash class="w-8 h-8 text-red-500" />
+            <svelte:component this={Trash} class="w-8 h-8 text-red-500" />
           </div>
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Menu?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Menu yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus menu ini?</p>
@@ -1084,7 +1091,7 @@ function blockNextClick(e) {
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
-            <Trash class="w-8 h-8 text-red-500" />
+            <svelte:component this={Trash} class="w-8 h-8 text-red-500" />
           </div>
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Kategori?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Kategori yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus kategori ini?</p>
@@ -1101,7 +1108,7 @@ function blockNextClick(e) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
-            <Trash class="w-8 h-8 text-red-500" />
+            <svelte:component this={Trash} class="w-8 h-8 text-red-500" />
           </div>
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Ekstra?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Ekstra yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus ekstra ini?</p>
@@ -1119,7 +1126,7 @@ function blockNextClick(e) {
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh] max-h-[600px]">
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-green-100 border border-green-200 flex items-center justify-center">
-              <Coffee class="w-5 h-5 text-green-500" />
+              <svelte:component this={Coffee} class="w-5 h-5 text-green-500" />
             </div>
             <h2 class="text-base font-semibold text-gray-700">{editEkstraId ? 'Edit Ekstra' : 'Tambah Ekstra'}</h2>
           </div>

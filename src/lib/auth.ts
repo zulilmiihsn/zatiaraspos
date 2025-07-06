@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
 // Dummy credentials - dalam produksi ini harus dari database
@@ -86,15 +86,13 @@ export const auth = {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    let currentSession: any;
-    session.subscribe(value => currentSession = value)();
+    const currentSession = get(session) as any;
     return currentSession?.isAuthenticated === true;
   },
 
   // Get current user
   getCurrentUser() {
-    let currentSession: any;
-    session.subscribe(value => currentSession = value)();
+    const currentSession = get(session);
     return currentSession?.user || null;
   },
 

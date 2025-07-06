@@ -1,11 +1,27 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Filter as FilterIcon, Download as DownloadIcon } from 'lucide-svelte';
 import Topbar from '$lib/components/shared/Topbar.svelte';
 import { slide, fade } from 'svelte/transition';
 import { cubicOut, cubicIn } from 'svelte/easing';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
+
+// Lazy load icons
+let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
+onMount(async () => {
+  const icons = await Promise.all([
+    import('lucide-svelte/icons/wallet'),
+    import('lucide-svelte/icons/arrow-down-circle'),
+    import('lucide-svelte/icons/arrow-up-circle'),
+    import('lucide-svelte/icons/filter'),
+    import('lucide-svelte/icons/download')
+  ]);
+  Wallet = icons[0].default;
+  ArrowDownCircle = icons[1].default;
+  ArrowUpCircle = icons[2].default;
+  FilterIcon = icons[3].default;
+  DownloadIcon = icons[4].default;
+});
 
 // Touch handling variables
 let touchStartX = 0;
@@ -31,8 +47,8 @@ let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
 let filterDate = '';
 let filterMonth = '';
 let filterYear = '';
-let startDate = '';
-let endDate = '';
+let startDate = getLocalDateString();
+let endDate = getLocalDateString();
 let showPemasukan = true;
 let showPendapatanUsaha = true;
 let showPemasukanLain = true;
@@ -80,8 +96,6 @@ onMount(() => {
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
-  startDate = now.toISOString().slice(0, 10);
-  endDate = '';
 });
 
 // Auto-calculate end date when start date or filter type changes
@@ -92,13 +106,6 @@ $: if (startDate && filterType) {
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
   
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
-  
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
   isSwiping = false;
@@ -107,13 +114,6 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   if (!isTouchDevice) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
   
   touchEndX = e.touches[0].clientX;
   touchEndY = e.touches[0].clientY;
@@ -132,13 +132,6 @@ function handleTouchMove(e) {
 
 function handleTouchEnd(e) {
   if (!isTouchDevice) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
   
   if (isSwiping) {
     // Handle swipe navigation
@@ -165,6 +158,13 @@ function handleTouchEnd(e) {
 }
 
 function handleGlobalClick(e) {
+  // Don't block clicks on interactive elements even if swipe was detected
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
   if (clickBlocked) {
     e.preventDefault();
     e.stopPropagation();
@@ -338,7 +338,13 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
   <Topbar>
     <span slot="download">
       <button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download" onclick={() => showDownloadModal = true}>
-        <DownloadIcon size={22} />
+        {#if DownloadIcon}
+          <svelte:component this={DownloadIcon} size={22} />
+        {:else}
+          <div class="w-[22px] h-[22px] flex items-center justify-center">
+            <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+          </div>
+        {/if}
       </button>
     </span>
   </Topbar>
@@ -368,7 +374,9 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
         <!-- Button Filter -->
         <div class="flex-none">
           <button class="w-12 h-12 p-0 rounded-xl bg-pink-500 text-white font-bold shadow-sm hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center justify-center" onclick={() => showFilter = true} aria-label="Filter">
-            <FilterIcon class="w-5 h-5" />
+            {#if FilterIcon}
+              <svelte:component this={FilterIcon} class="w-5 h-5" />
+            {/if}
           </button>
         </div>
         <!-- Button Filter Tanggal -->
@@ -386,17 +394,35 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
       <div class="px-2 py-3">
         <div class="grid grid-cols-2 gap-2">
           <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            <ArrowDownCircle class="w-6 h-6 mb-2 text-green-500" />
+            {#if ArrowDownCircle}
+              <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
             <div class="text-sm font-medium text-green-900/80">Pemasukan</div>
             <div class="text-xl font-bold text-green-900">Rp {summary.pendapatan !== null ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
           </div>
           <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            <ArrowUpCircle class="w-6 h-6 mb-2 text-red-500" />
+            {#if ArrowUpCircle}
+              <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
             <div class="text-sm font-medium text-red-900/80">Pengeluaran</div>
             <div class="text-xl font-bold text-red-900">Rp {summary.pengeluaran !== null ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
           </div>
           <div class="col-span-2 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            <Wallet class="w-6 h-6 mb-2 text-cyan-900" />
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
             <div class="text-sm font-medium text-cyan-900/80">Laba (Rugi)</div>
             <div class="text-xl font-bold text-cyan-900">Rp {summary.saldo !== null ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
           </div>
@@ -654,12 +680,12 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
             
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Awal</label>
-                              <input 
-                  type="date" 
-                  class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
-                  bind:value={startDate}
+              <input 
+                type="date" 
+                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
+                bind:value={startDate}
                   onchange={() => endDate = calculateEndDate(startDate, filterType)}
-                />
+              />
             </div>
 
             <div class="flex gap-3">

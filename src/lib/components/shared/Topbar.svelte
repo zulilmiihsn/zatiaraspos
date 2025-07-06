@@ -17,7 +17,7 @@ export let onSettings: (() => void) | undefined;
   <slot name="download" />
   <div class="flex items-center gap-2">
     {#if showSettings}
-      <button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12" aria-label="Pengaturan" on:click={onSettings ?? (() => goto('/pengaturan'))}>
+      <button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12" aria-label="Pengaturan" onclick={onSettings ?? (() => goto('/pengaturan'))}>
         <Settings size={22} />
       </button>
     {:else}

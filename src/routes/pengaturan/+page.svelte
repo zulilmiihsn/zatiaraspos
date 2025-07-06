@@ -3,31 +3,39 @@
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth.js';
   import { SecurityMiddleware } from '$lib/security.js';
-  import { 
-    User, 
-    Shield, 
-    LogOut, 
-    Settings, 
-    Bell, 
-    Palette, 
-    Database, 
-    HelpCircle,
-    ChevronRight,
-    Crown,
-    CreditCard,
-    ArrowLeft
-  } from 'lucide-svelte';
-  import Download from 'lucide-svelte/icons/download';
-  import Printer from 'lucide-svelte/icons/printer';
 
-  let currentUser = null;
-  let userRole = '';
-  let userName = '';
-  let showLogoutModal = false;
-  let deferredPrompt = null;
-  let canInstallPWA = false;
+  // Lazy load icons
+  let ArrowLeft, Crown, CreditCard, LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, User, Download, Printer;
+  onMount(async () => {
+    const icons = await Promise.all([
+      import('lucide-svelte/icons/arrow-left'),
+      import('lucide-svelte/icons/crown'),
+      import('lucide-svelte/icons/credit-card'),
+      import('lucide-svelte/icons/log-out'),
+      import('lucide-svelte/icons/shield'),
+      import('lucide-svelte/icons/palette'),
+      import('lucide-svelte/icons/database'),
+      import('lucide-svelte/icons/help-circle'),
+      import('lucide-svelte/icons/settings'),
+      import('lucide-svelte/icons/bell'),
+      import('lucide-svelte/icons/user'),
+      import('lucide-svelte/icons/download'),
+      import('lucide-svelte/icons/printer')
+    ]);
+    ArrowLeft = icons[0].default;
+    Crown = icons[1].default;
+    CreditCard = icons[2].default;
+    LogOut = icons[3].default;
+    Shield = icons[4].default;
+    Palette = icons[5].default;
+    Database = icons[6].default;
+    HelpCircle = icons[7].default;
+    Settings = icons[8].default;
+    Bell = icons[9].default;
+    User = icons[10].default;
+    Download = icons[11].default;
+    Printer = icons[12].default;
 
-  onMount(() => {
     currentUser = auth.getCurrentUser();
     userRole = currentUser?.role || '';
     if (currentUser) {
@@ -42,6 +50,13 @@
       });
     }
   });
+
+  let currentUser = null;
+  let userRole = '';
+  let userName = '';
+  let showLogoutModal = false;
+  let deferredPrompt = null;
+  let canInstallPWA = false;
 
   function handleLogout() {
     showLogoutModal = true;
@@ -160,6 +175,9 @@
   $: filteredSections = userRole === 'admin' 
     ? settingsSections 
     : settingsSections.filter(section => section.title !== 'Data & Backup');
+  
+  // Get role icon once and store it
+  $: roleIcon = getRoleIcon();
 </script>
 
 <svelte:head>
@@ -170,13 +188,25 @@
   <!-- Button Kembali -->
   <div class="mt-4 mx-4 mb-2">
             <button onclick={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
-      <ArrowLeft class="w-5 h-5 text-gray-600" />
+      {#if ArrowLeft}
+        <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
+      {:else}
+        <div class="w-5 h-5 flex items-center justify-center">
+          <span class="block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></span>
+        </div>
+      {/if}
     </button>
   </div>
   <!-- Box Informasi Role -->
   <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2">
     <div class="w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg mb-2">
-      <svelte:component this={getRoleIcon()} class="w-8 h-8 text-white" />
+      {#if roleIcon}
+        <svelte:component this={roleIcon} class="w-8 h-8 text-white" />
+      {:else}
+        <div class="w-8 h-8 flex items-center justify-center">
+          <span class="block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+        </div>
+      {/if}
     </div>
     {#if userRole === 'admin'}
       <div class="text-2xl font-extrabold text-purple-700 mb-1">Pemilik</div>
@@ -201,7 +231,13 @@
       {#if userRole === 'admin'}
         <!-- Box Pemilik (privilege) -->
         <button class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none" onclick={() => goto('/pengaturan/pemilik')}>
-          <Crown class="w-8 h-8 mb-2" />
+          {#if Crown}
+            <svelte:component this={Crown} class="w-8 h-8 mb-2" />
+          {:else}
+            <div class="w-8 h-8 mb-2 flex items-center justify-center">
+              <span class="block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            </div>
+          {/if}
           <div class="text-lg font-bold mb-1">Pemilik</div>
           <span class="inline-block bg-white/20 text-xs font-semibold px-3 py-1 rounded-full mb-2 border border-white/30">Privileged</span>
           <div class="text-xs text-white/80 text-center">Akses penuh ke seluruh sistem</div>
@@ -209,21 +245,39 @@
       {/if}
       <!-- Box Kasir (menu biasa) -->
       <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none">
-        <CreditCard class="w-8 h-8 mb-2 text-green-500" />
+        {#if CreditCard}
+          <svelte:component this={CreditCard} class="w-8 h-8 mb-2 text-green-500" />
+        {:else}
+          <div class="w-8 h-8 mb-2 flex items-center justify-center">
+            <span class="block w-6 h-6 border-2 border-green-200 border-t-green-500 rounded-full animate-spin"></span>
+          </div>
+        {/if}
         <div class="text-lg font-bold mb-1 text-gray-800">Kasir</div>
         <span class="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Menu</span>
         <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
       </button>
       <!-- Box Install PWA -->
       <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" onclick={handleInstallPWA} disabled={!canInstallPWA}>
-        <Download class="w-8 h-8 mb-2 text-pink-500" />
+        {#if Download}
+          <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
+        {:else}
+          <div class="w-8 h-8 mb-2 flex items-center justify-center">
+            <span class="block w-6 h-6 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+          </div>
+        {/if}
         <div class="text-lg font-bold mb-1 text-pink-500">Install PWA</div>
         <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Aplikasi</span>
         <div class="text-xs text-gray-500 text-center">Pasang ke Home Screen</div>
       </button>
       <!-- Box Printer -->
       <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={() => goto('/pengaturan/printer')}>
-        <Printer class="w-8 h-8 mb-2 text-blue-500" />
+        {#if Printer}
+          <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
+        {:else}
+          <div class="w-8 h-8 mb-2 flex items-center justify-center">
+            <span class="block w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></span>
+          </div>
+        {/if}
         <div class="text-lg font-bold mb-1 text-blue-700">Printer</div>
         <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Bluetooth</span>
         <div class="text-xs text-gray-500 text-center">Koneksikan printer Bluetooth</div>
@@ -235,7 +289,13 @@
   <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mx-4 mb-6 mt-4 overflow-hidden">
     <div class="px-6 py-4 bg-red-50 border-b border-red-200">
       <div class="flex items-center gap-3">
-        <LogOut class="w-5 h-5 text-red-600" />
+        {#if LogOut}
+          <svelte:component this={LogOut} class="w-5 h-5 text-red-600" />
+        {:else}
+          <div class="w-5 h-5 flex items-center justify-center">
+            <span class="block w-4 h-4 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></span>
+          </div>
+        {/if}
         <h3 class="font-semibold text-red-800">Keluar dari Sistem</h3>
       </div>
     </div>
@@ -247,7 +307,13 @@
         onclick={handleLogout}
         class="w-full bg-red-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center gap-2"
       >
-        <LogOut class="w-4 h-4" />
+        {#if LogOut}
+          <svelte:component this={LogOut} class="w-4 h-4" />
+        {:else}
+          <div class="w-4 h-4 flex items-center justify-center">
+            <span class="block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          </div>
+        {/if}
         Keluar dari Sistem
       </button>
     </div>
@@ -259,7 +325,13 @@
       <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-            <LogOut class="w-5 h-5 text-red-600" />
+            {#if LogOut}
+              <svelte:component this={LogOut} class="w-5 h-5 text-red-600" />
+            {:else}
+              <div class="w-5 h-5 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></span>
+              </div>
+            {/if}
           </div>
           <div>
             <h3 class="font-semibold text-gray-800">Konfirmasi Logout</h3>

@@ -56,18 +56,16 @@ onMount(() => {
   jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
 });
 
-$: if (mode === 'pemasukan' && !jenisPemasukan.find(j => j.value === jenis)) jenis = 'pendapatan_usaha';
-$: if (mode === 'pengeluaran' && !jenisPengeluaran.find(j => j.value === jenis)) jenis = 'beban_usaha';
+// Optimized reactive statements for better performance
+$: if (mode === 'pemasukan' && jenis !== 'pendapatan_usaha' && jenis !== 'lainnya') {
+  jenis = 'pendapatan_usaha';
+}
+$: if (mode === 'pengeluaran' && jenis !== 'beban_usaha' && jenis !== 'lainnya') {
+  jenis = 'beban_usaha';
+}
 
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
   
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
@@ -77,13 +75,6 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   if (!isTouchDevice) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
   
   touchEndX = e.touches[0].clientX;
   touchEndY = e.touches[0].clientY;
@@ -102,13 +93,6 @@ function handleTouchMove(e) {
 
 function handleTouchEnd(e) {
   if (!isTouchDevice) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
   
   if (isSwiping) {
     // Handle swipe navigation
@@ -135,6 +119,13 @@ function handleTouchEnd(e) {
 }
 
 function handleGlobalClick(e) {
+  // Don't block clicks on interactive elements even if swipe was detected
+  const target = e.target;
+  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('input') || target.closest('a')) {
+    return;
+  }
+  
   if (clickBlocked) {
     e.preventDefault();
     e.stopPropagation();
@@ -248,8 +239,15 @@ function handleSubmit(e) {
 }
 
 function getJenisLabel(val) {
-  const arr = mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran;
-  return arr.find(j => j.value === val)?.label || '';
+  // Optimized to avoid array search on every call
+  if (mode === 'pemasukan') {
+    if (val === 'pendapatan_usaha') return 'Pendapatan Usaha';
+    if (val === 'lainnya') return 'Lainnya';
+  } else {
+    if (val === 'beban_usaha') return 'Beban Usaha';
+    if (val === 'lainnya') return 'Lainnya';
+  }
+  return '';
 }
 </script>
 
@@ -276,14 +274,25 @@ main {
         <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50">
           <!-- Indicator Slide -->
           <div
-            class="absolute top-0 left-0 h-full w-1/2 bg-white rounded-full shadow border border-pink-200 transition-transform duration-300 z-0"
+            class="absolute top-0 left-0 h-full w-1/2 bg-white rounded-full shadow border border-pink-200 transition-transform duration-200 ease-out z-0"
             style="transform: translateX({mode === 'pengeluaran' ? '100%' : '0'});"
           ></div>
           <button
             class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pemasukan' ? 'text-pink-500' : 'text-gray-400'}"
             type="button"
             aria-current={mode === 'pemasukan' ? 'page' : undefined}
-            onclick={() => { mode = 'pemasukan'; jenis = 'pendapatan_usaha'; namaJenis = ''; nama = ''; }}
+            onclick={() => { 
+              if (mode !== 'pemasukan') {
+                mode = 'pemasukan'; 
+                if (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya') {
+                  jenis = 'pendapatan_usaha';
+                }
+                if (jenis === 'lainnya') {
+                  namaJenis = '';
+                }
+                nama = '';
+              }
+            }}
           >
             Catat Pemasukan
           </button>
@@ -291,7 +300,18 @@ main {
             class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pengeluaran' ? 'text-pink-500' : 'text-gray-400'}"
             type="button"
             aria-current={mode === 'pengeluaran' ? 'page' : undefined}
-            onclick={() => { mode = 'pengeluaran'; jenis = 'beban_usaha'; namaJenis = ''; nama = ''; }}
+            onclick={() => { 
+              if (mode !== 'pengeluaran') {
+                mode = 'pengeluaran'; 
+                if (jenis !== 'beban_usaha' && jenis !== 'lainnya') {
+                  jenis = 'beban_usaha';
+                }
+                if (jenis === 'lainnya') {
+                  namaJenis = '';
+                }
+                nama = '';
+              }
+            }}
           >
             Catat Pengeluaran
           </button>

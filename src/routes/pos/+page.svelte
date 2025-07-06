@@ -3,17 +3,29 @@ import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import Home from 'lucide-svelte/icons/home';
-import ShoppingBag from 'lucide-svelte/icons/shopping-bag';
-import FileText from 'lucide-svelte/icons/file-text';
-import Book from 'lucide-svelte/icons/book';
-import Settings from 'lucide-svelte/icons/settings';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
 import Topbar from '$lib/components/shared/Topbar.svelte';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
 import { validateNumber, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
+
+// Lazy load icons
+let Home, ShoppingBag, FileText, Book, Settings;
+onMount(async () => {
+  const icons = await Promise.all([
+    import('lucide-svelte/icons/home'),
+    import('lucide-svelte/icons/shopping-bag'),
+    import('lucide-svelte/icons/file-text'),
+    import('lucide-svelte/icons/book'),
+    import('lucide-svelte/icons/settings')
+  ]);
+  Home = icons[0].default;
+  ShoppingBag = icons[1].default;
+  FileText = icons[2].default;
+  Book = icons[3].default;
+  Settings = icons[4].default;
+});
 
 // Touch handling variables
 let touchStartX = 0;
@@ -119,11 +131,30 @@ let imageError: Record<string, boolean> = {};
 // Search produk
 let search = '';
 
-// Filter produk berdasarkan kategori & search
-$: filteredProducts = products.filter(p =>
-  (selectedCategory === 'all' || p.category === selectedCategory) &&
-  p.name.toLowerCase().includes(search.toLowerCase())
-);
+// Debounced search for better performance
+let searchTimeout;
+function handleSearchInput(value) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    search = value;
+  }, 300); // 300ms delay
+}
+
+// Memoized computed values for performance
+$: totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+$: totalHarga = cart.reduce((sum, item) => {
+  const itemPrice = item.product.price * item.qty;
+  const addOnsPrice = item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0;
+  return sum + itemPrice + addOnsPrice;
+}, 0);
+
+// Memoized filtered products
+$: filteredProducts = search 
+  ? products.filter(p => 
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.category.toLowerCase().includes(search.toLowerCase())
+    )
+  : products;
 
 let showCartModal = false;
 function openCartModal() { showCartModal = true; }
@@ -234,9 +265,6 @@ function incQty() {
 function decQty() {
   if (qty > 1) qty--;
 }
-
-$: totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
-$: totalHarga = cart.reduce((sum, item) => sum + (item.qty * item.product.price + item.addOns.reduce((a, b) => a + (b.price * item.qty), 0)), 0);
 
 let cartPreviewX = 0;
 let cartPreviewStartX = 0;
@@ -389,6 +417,7 @@ function handleGlobalClick(e) {
           placeholder="Cari produk..."
           bind:value={search}
           autocomplete="off"
+          oninput={(e) => handleSearchInput(e.target.value)}
         />
       </div>
     </div>
@@ -408,8 +437,8 @@ function handleGlobalClick(e) {
           {#if p.image && !imageError[String(p.id)]}
             <img class="w-22 h-22 object-cover rounded-lg mb-3 bg-gray-100 min-h-[140px] aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
           {:else}
-            <div class="w-full aspect-square min-h-[140px] bg-white rounded-xl flex items-center justify-center mb-3 overflow-hidden">
-              <ImagePlaceholder size={140} />
+            <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center mb-3 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+              🍹
             </div>
           {/if}
           <div class="w-full flex flex-col items-center">
@@ -430,7 +459,7 @@ function handleGlobalClick(e) {
         ontouchend={handleCartPreviewTouchEnd}
       >
         <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" onclick={openCartModal} style="min-width:0;">
-          <div class="text-sm text-gray-500 truncate">{totalQty} item pesanan</div>
+          <div class="text-sm text-gray-500 truncate">{totalItems} item pesanan</div>
           <div class="font-bold text-pink-500 text-lg truncate">Rp {totalHarga.toLocaleString('id-ID')}</div>
         </div>
         <div class="flex items-center justify-center ml-4">

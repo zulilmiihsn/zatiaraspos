@@ -185,7 +185,7 @@
         </div>
       {/if}
 
-      <form onsubmit|preventDefault={handleSubmit} class="space-y-5">
+              <form onsubmit={handleSubmit} class="space-y-5">
         <!-- Username Field -->
         <div>
           <label for="username" class="block text-sm font-medium text-gray-700 mb-2">

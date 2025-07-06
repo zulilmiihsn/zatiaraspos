@@ -1,8 +1,26 @@
 <script lang="ts">
-import { Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp } from 'lucide-svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
+
+// Lazy load icons
+let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
+onMount(async () => {
+  const icons = await Promise.all([
+    import('lucide-svelte/icons/wallet'),
+    import('lucide-svelte/icons/shopping-bag'),
+    import('lucide-svelte/icons/coins'),
+    import('lucide-svelte/icons/users'),
+    import('lucide-svelte/icons/clock'),
+    import('lucide-svelte/icons/trending-up')
+  ]);
+  Wallet = icons[0].default;
+  ShoppingBag = icons[1].default;
+  Coins = icons[2].default;
+  Users = icons[3].default;
+  Clock = icons[4].default;
+  TrendingUp = icons[5].default;
+});
 
 // Data dummy, nanti diisi dari Supabase
 let omzet = null;
@@ -167,23 +185,47 @@ function handleGlobalClick(e) {
         <div class="flex flex-col gap-3 w-full mb-6">
           <div class="grid grid-cols-2 gap-3 md:gap-6">
             <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
-              <ShoppingBag class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
+              {#if ShoppingBag}
+                <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
+              {:else}
+                <div class="w-6 h-6 md:w-8 md:h-8 mb-2 flex items-center justify-center">
+                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+                </div>
+              {/if}
               <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Item Terjual</div>
               <div class="text-xl md:text-3xl font-bold text-sky-600">{itemTerjual ?? '--'}</div>
             </div>
             <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
-              <TrendingUp class="w-6 h-6 md:w-8 md:h-8 mb-2 text-purple-500" />
+              {#if TrendingUp}
+                <svelte:component this={TrendingUp} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-purple-500" />
+              {:else}
+                <div class="w-6 h-6 md:w-8 md:h-8 mb-2 flex items-center justify-center">
+                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+                </div>
+              {/if}
               <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Jumlah Transaksi</div>
               <div class="text-xl md:text-3xl font-bold text-purple-600">{jumlahTransaksi ?? '--'}</div>
             </div>
           </div>
           <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 flex flex-col items-start">
-            <Wallet class="w-6 h-6 mb-2 text-green-900" />
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-green-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
             <div class="text-sm font-medium text-green-900/80">Pendapatan</div>
             <div class="text-xl font-bold text-green-900">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
           </div>
           <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 flex flex-col items-start">
-            <Wallet class="w-6 h-6 mb-2 text-cyan-900" />
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
             <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
             <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
           </div>
