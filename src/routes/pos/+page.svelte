@@ -121,6 +121,7 @@ let selectedAddOns: number[] = [];
 let selectedSugar = 'normal';
 let selectedIce = 'normal';
 let qty = 1;
+let selectedNote = '';
 
 // Keranjang sementara
 let cart: Array<any> = [];
@@ -168,6 +169,7 @@ function openAddOnModal(product) {
   selectedSugar = 'normal';
   selectedIce = 'normal';
   qty = 1;
+  selectedNote = '';
   showModal = true;
 }
 
@@ -220,7 +222,8 @@ function addToCart() {
     item.product.id === selectedProduct.id &&
     JSON.stringify(item.addOns.map(a => a.id).sort()) === JSON.stringify(addOnsSelected.map(a => a.id).sort()) &&
     item.sugar === sanitizedSugar &&
-    item.ice === sanitizedIce
+    item.ice === sanitizedIce &&
+    item.note === selectedNote.trim()
   );
   if (existingIdx !== -1) {
     // Jika sudah ada, tambahkan qty
@@ -235,6 +238,7 @@ function addToCart() {
         sugar: sanitizedSugar,
         ice: sanitizedIce,
         qty,
+        note: selectedNote.trim(),
       },
     ];
   }
@@ -394,6 +398,11 @@ function handleGlobalClick(e) {
     return;
   }
 }
+
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 </script>
 
 <div 
@@ -424,9 +433,8 @@ function handleGlobalClick(e) {
     <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white" style="scrollbar-width:none;-ms-overflow-style:none;" onwheel={(e) => { e.currentTarget.scrollLeft += e.deltaY; }}>
       {#each categories as c}
         <button
-          class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border border-pink-400 font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'text-white' : 'text-pink-400'}"
+          class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
           type="button"
-          style={selectedCategory === c.id ? 'background:#ff5fa2' : 'background:#fff'}
           onclick={() => selectedCategory = c.id}
         >{c.name}</button>
       {/each}
@@ -463,7 +471,7 @@ function handleGlobalClick(e) {
           <div class="font-bold text-pink-500 text-lg truncate">Rp {totalHarga.toLocaleString('id-ID')}</div>
         </div>
         <div class="flex items-center justify-center ml-4">
-          <button class="bg-pink-400 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-500 active:bg-pink-600 flex items-center justify-center" onclick={(e) => { e.stopPropagation(); goToBayar(); }}>Bayar</button>
+          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700 flex items-center justify-center" onclick={(e) => { e.stopPropagation(); goToBayar(); }}>Bayar</button>
         </div>
       </div>
     {/if}
@@ -477,16 +485,23 @@ function handleGlobalClick(e) {
             <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-3 shadow-sm">
               <div class="flex flex-col min-w-0">
                 <div class="text-base font-semibold text-gray-900 mb-0.5 truncate">{item.qty}x {item.product.name}</div>
-                {#if item.addOns && item.addOns.length > 0}
-                  <div class="text-sm text-pink-400 font-medium">+ {item.addOns.map(a => a.name).join(', ')}</div>
+                {#if (item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
+                  <div class="text-xs text-gray-500 font-medium">
+                    {[
+                      item.addOns && item.addOns.length > 0 ? `+ ${item.addOns.map(a => a.name).join(', ')}` : null,
+                      item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
+                      item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
+                      item.note && item.note.trim() ? item.note : null
+                    ].filter(Boolean).join(', ')}
+                  </div>
                 {/if}
               </div>
-              <button class="bg-[#ff5fa2] text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={() => removeCartItem(idx)}>Hapus</button>
+              <button class="bg-pink-500 text-white border-none rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={() => removeCartItem(idx)}>Hapus</button>
             </div>
           {/each}
         </div>
         <div slot="footer">
-          <button class="bg-[#ff5fa2] text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={goToBayar}>Bayar</button>
+          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mt-4 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={goToBayar}>Bayar</button>
         </div>
       </ModalSheet>
     {/if}
@@ -503,9 +518,8 @@ function handleGlobalClick(e) {
         <div class="flex gap-2 mb-3">
           {#each sugarOptions as s}
             <button
-              class="flex-1 px-0 py-2 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150"
+              class="flex-1 px-0 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 {selectedSugar === s.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
               type="button"
-              style={selectedSugar === s.id ? 'background:#ff5fa2;color:#fff' : ''}
               onclick={() => selectedSugar = s.id}
             >{s.label}</button>
           {/each}
@@ -514,9 +528,8 @@ function handleGlobalClick(e) {
         <div class="flex gap-2 mb-3">
           {#each iceOptions as i}
             <button
-              class="flex-1 px-0 py-2 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150"
+              class="flex-1 px-0 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 {selectedIce === i.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
               type="button"
-              style={selectedIce === i.id ? 'background:#ff5fa2;color:#fff' : ''}
               onclick={() => selectedIce = i.id}
             >{i.label}</button>
           {/each}
@@ -525,16 +538,25 @@ function handleGlobalClick(e) {
         <div class="grid grid-cols-2 gap-3 mb-6">
           {#each addOns as a}
             <button
-              class="w-full justify-center py-3 rounded-lg border border-pink-400 bg-white text-pink-400 font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center gap-1 text-center whitespace-normal overflow-hidden"
+              class="w-full justify-center py-3 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center gap-1 text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
               type="button"
-              style={selectedAddOns.includes(a.id) ? 'background:#ff5fa2;color:#fff' : ''}
               onclick={() => toggleAddOn(a.id)}
             >
               <span>{a.name}</span>
-              <span class="font-semibold mt-px" style={selectedAddOns.includes(a.id) ? 'color:#fff' : 'color:#ff5fa2'}>+Rp {a.price.toLocaleString('id-ID')}</span>
+              <span class="font-semibold mt-px {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {a.price.toLocaleString('id-ID')}</span>
             </button>
           {/each}
         </div>
+        <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Catatan</div>
+        <textarea
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400 resize-none"
+          placeholder="Contoh: Tidak terlalu manis, tambah es batu, dll..."
+          bind:value={selectedNote}
+          rows="3"
+          maxlength="200"
+          oninput={(e) => { selectedNote = capitalizeFirst(e.target.value); }}
+        ></textarea>
+        <div class="text-xs text-gray-500 text-right mt-1">{selectedNote.length}/200</div>
       </div>
       <div slot="footer">
         <div class="font-semibold text-gray-800 mb-2 mt-0 text-base">Jumlah</div>
@@ -543,7 +565,7 @@ function handleGlobalClick(e) {
           <input class="w-12 text-center text-lg font-semibold border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-800 outline-none" type="number" min="1" max="99" bind:value={qty} />
                       <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={incQty}>+</button>
         </div>
-                  <button style="background:#ff5fa2" class="text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:opacity-90 active:opacity-95" onclick={addToCart}>Tambah ke Keranjang</button>
+                  <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={addToCart}>Tambah ke Keranjang</button>
       </div>
     </ModalSheet>
   </main>

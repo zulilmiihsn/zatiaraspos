@@ -6,6 +6,7 @@ import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js'
 import { SecurityMiddleware } from '$lib/security.js';
 
 let cart = [];
+let customerName = '';
 let paymentMethod = '';
 const paymentOptions = [
   { id: 'cash', label: 'Tunai' },
@@ -104,7 +105,7 @@ function finishCash() {
   SecurityMiddleware.logSecurityEvent('payment_completed', {
     paymentMethod: sanitizedPaymentMethod,
     totalAmount: totalHarga,
-    cashReceived: parseInt(sanitizedCashReceived),
+    cashReceived: parseInt(sanitizedCashRecyeived),
     change: kembalian,
     itemsCount: cart.length
   });
@@ -124,13 +125,52 @@ function handleKeypad(val) {
 }
 function printReceipt() {
   // TODO: Implementasi cetak struk ke printer thermal
-  alert('Fitur cetak struk belum tersedia.');
+  // Struk akan mencakup:
+  // - Header toko
+  // - Detail pesanan dengan catatan
+  // - Total pembayaran
+  // - Metode pembayaran
+  // - Kembalian
+  
+  const receiptData = {
+    transactionId: 'TRX123456',
+    customerName: customerName.trim() || 'Pelanggan',
+    items: cart.map(item => ({
+      name: item.product.name,
+      qty: item.qty,
+      price: item.product.price,
+      addOns: item.addOns || [],
+      sugar: item.sugar,
+      ice: item.ice,
+      note: item.note || '',
+      subtotal: item.product.price * item.qty + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0)
+    })),
+    total: totalHarga,
+    paymentMethod: paymentMethod === 'qris' ? 'QRIS' : 'Tunai',
+    cashReceived: parseInt(cashReceived) || 0,
+    change: kembalian,
+    timestamp: new Date().toLocaleString('id-ID')
+  };
+  
+  console.log('Struk yang akan dicetak:', receiptData);
+  alert('Fitur cetak struk belum tersedia. Data struk telah disimpan di console.');
 }
 </script>
 
 <main class="flex-1 overflow-y-auto px-2 pt-2">
   <div class="px-2 py-4">
     <div class="font-semibold text-sm text-gray-700 mb-3">Pembayaran: #TRX123456</div>
+    <!-- Input Nama Pelanggan -->
+    <div class="mb-4">
+      <div class="block text-sm text-gray-500 mb-2">Nama Pelanggan</div>
+      <input
+        type="text"
+        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400"
+        placeholder="Masukkan nama pelanggan..."
+        bind:value={customerName}
+        maxlength="50"
+      />
+    </div>
     <!-- Info Pesanan -->
     <div class="bg-pink-50 rounded-xl p-4 mb-4">
       <div class="font-semibold text-pink-500 mb-2">Pesanan</div>
@@ -144,14 +184,15 @@ function printReceipt() {
               </div>
               <span class="font-bold text-pink-500">Rp {(item.product.price * item.qty + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0)).toLocaleString('id-ID')}</span>
             </div>
-            {#if item.addOns && item.addOns.length > 0}
-              <div class="text-xs text-gray-400 ml-1">+ {item.addOns.map(a => a.name).join(', ')}</div>
-            {/if}
-            {#if item.sugar && item.sugar !== 'normal'}
-              <div class="text-xs text-blue-400 ml-1">Gula: {item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar}</div>
-            {/if}
-            {#if item.ice && item.ice !== 'normal'}
-              <div class="text-xs text-cyan-500 ml-1">Es: {item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice}</div>
+            {#if (item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
+              <div class="text-xs text-gray-500 font-medium ml-1">
+                {[
+                  item.addOns && item.addOns.length > 0 ? `+ ${item.addOns.map(a => a.name).join(', ')}` : null,
+                  item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
+                  item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
+                  item.note && item.note.trim() ? item.note : null
+                ].filter(Boolean).join(', ')}
+              </div>
             {/if}
           </li>
         {/each}
@@ -256,7 +297,13 @@ function printReceipt() {
         <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4ade80" opacity="0.18"/><path d="M7 13l3 3 7-7" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="text-2xl font-bold text-green-600 mb-1 text-center">Transaksi Berhasil!</div>
-      <div class="text-gray-700 text-center mb-2">Pembayaran {paymentMethod === 'qris' ? 'QRIS' : 'tunai'} telah diterima.<br/>Kembalian: <span class='font-bold text-pink-500'>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span></div>
+      <div class="text-gray-700 text-center mb-2">
+        Pembayaran {paymentMethod === 'qris' ? 'QRIS' : 'tunai'} telah diterima.<br/>
+        {#if customerName.trim()}
+          <span class="font-semibold text-pink-500">{customerName.trim()}</span><br/>
+        {/if}
+        Kembalian: <span class='font-bold text-pink-500'>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span>
+      </div>
       <div class="w-full flex flex-col gap-1 bg-pink-50 rounded-lg p-3 mb-2">
         <div class="flex justify-between text-sm text-gray-500"><span>Total</span><span class="font-bold text-pink-500">Rp {totalHarga.toLocaleString('id-ID')}</span></div>
         <div class="flex justify-between text-sm text-gray-500"><span>Dibayar</span><span class="font-bold text-green-600">Rp {cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '0'}</span></div>

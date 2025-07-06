@@ -185,7 +185,7 @@
         </div>
       {/if}
 
-              <form onsubmit={handleSubmit} class="space-y-5">
+      <form on:submit|preventDefault={handleSubmit} class="space-y-5">
         <!-- Username Field -->
         <div>
           <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
@@ -196,9 +196,9 @@
               id="username"
               type="text"
               bind:value={username}
-                              oninput={handleUsernameChange}
-                onkeypress={handleKeyPress}
-                class="block w-full rounded-xl border border-gray-200 bg-white/80 py-3 px-4 text-gray-800 shadow-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none transition placeholder-gray-400"
+              on:input={handleUsernameChange}
+              on:keypress={handleKeyPress}
+              class="block w-full rounded-xl border border-gray-200 bg-white/80 py-3 px-4 text-gray-800 shadow-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none transition placeholder-gray-400"
               placeholder="Masukkan username"
               autocomplete="username"
               required
@@ -221,9 +221,9 @@
               id="password"
               type="password"
               bind:value={password}
-                              oninput={handlePasswordChange}
-                onkeypress={handleKeyPress}
-                class="block w-full rounded-xl border border-gray-200 bg-white/80 py-3 px-4 text-gray-800 shadow-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none transition placeholder-gray-400"
+              on:input={handlePasswordChange}
+              on:keypress={handleKeyPress}
+              class="block w-full rounded-xl border border-gray-200 bg-white/80 py-3 px-4 text-gray-800 shadow-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none transition placeholder-gray-400"
               placeholder="Masukkan password"
               autocomplete="current-password"
               required
