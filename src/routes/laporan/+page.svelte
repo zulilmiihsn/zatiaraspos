@@ -329,7 +329,7 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
 {/if}
 
 <div 
-  class="flex flex-col min-h-screen bg-white"
+  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
@@ -367,7 +367,9 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
     </div>
   {/if}
 
-  <main class="flex-1 flex flex-col bg-white">
+  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
+    style="scrollbar-width:none;-ms-overflow-style:none;"
+  >
     <!-- Konten utama halaman Laporan di sini -->
     <div class="max-w-md mx-auto w-full pt-2 pb-8 px-2">
       <div class="flex w-full items-center gap-2 px-2 mb-3">

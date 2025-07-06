@@ -50,7 +50,7 @@ onDestroy(() => {
   <title>Sandingkan Printer - ZatiarasPOS</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 page-content">
   <!-- Header -->
   <div class="bg-white shadow-sm border-b border-gray-200">
     <div class="max-w-4xl mx-auto px-4 py-4">

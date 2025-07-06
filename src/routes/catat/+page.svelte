@@ -262,13 +262,15 @@ main {
 </style>
 
 <div 
-  class="min-h-max flex flex-col"
+  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
 >
-  <main class="min-h-max">
+  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
+    style="scrollbar-width:none;-ms-overflow-style:none;"
+  >
     <div class="px-2 py-4">
       <div class="max-w-md mx-auto w-full pt-2 pb-2 px-2">
         <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50">

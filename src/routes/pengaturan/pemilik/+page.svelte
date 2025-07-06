@@ -158,6 +158,24 @@ if (typeof window !== 'undefined') {
 
 let justTapped = false;
 
+let userRoleTab: 'pemilik' | 'kasir' = 'pemilik';
+let oldUsername = '';
+let newUsername = '';
+let oldPassword = '';
+let newPassword = '';
+let confirmPassword = '';
+let userPassError = '';
+
+let oldPin = '';
+let newPin = '';
+let confirmPin = '';
+let lockedPages: string[] = [];
+let pinError = '';
+
+let showPinModal = false;
+let pinInput = '';
+let pinModalError = '';
+
 function handleTabTouchStart(e: TouchEvent) {
   const target = e.target as HTMLElement;
   if (target.closest('button, [tabindex], input, select, textarea, [role="button"]')) {
@@ -522,6 +540,54 @@ function blockNextClick(e) {
   e.stopImmediatePropagation();
   window.removeEventListener('click', blockNextClick, true);
 }
+
+function handleChangeUserPass() {
+  userPassError = '';
+  if (!oldUsername || !newUsername || !oldPassword || !newPassword || !confirmPassword) {
+    userPassError = 'Semua field wajib diisi.';
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    userPassError = 'Konfirmasi password tidak cocok.';
+    return;
+  }
+  if (oldUsername === newUsername) {
+    userPassError = 'Username baru tidak boleh sama dengan username lama.';
+    return;
+  }
+  // TODO: Integrasi backend untuk update username/password
+  userPassError = '';
+  alert('Perubahan username/password berhasil disimpan (dummy).');
+}
+
+function handleChangePin() {
+  pinError = '';
+  if (!oldPin || !newPin || !confirmPin) {
+    pinError = 'Semua field wajib diisi.';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    pinError = 'Konfirmasi PIN tidak cocok.';
+    return;
+  }
+  if (!/^[0-9]{4,6}$/.test(newPin)) {
+    pinError = 'PIN harus 4-6 digit angka.';
+    return;
+  }
+  // TODO: Integrasi backend untuk update PIN dan halaman yang dikunci
+  pinError = '';
+  alert('Perubahan PIN & pengaturan kunci berhasil disimpan (dummy).');
+}
+
+function handlePinSubmit() {
+  pinModalError = '';
+  if (pinInput !== '1234') { // Dummy PIN check
+    pinModalError = 'PIN salah.';
+    return;
+  }
+  showPinModal = false;
+  alert('Akses halaman berhasil dibuka (dummy).');
+}
 </script>
 
 <svelte:head>
@@ -529,7 +595,7 @@ function blockNextClick(e) {
 </svelte:head>
 
 {#if userRole === 'admin'}
-  <div class="h-screen max-h-screen bg-gray-50 overflow-hidden">
+  <div class="min-h-screen bg-gray-50 flex flex-col page-content">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-4xl mx-auto px-4 py-4">
@@ -556,7 +622,7 @@ function blockNextClick(e) {
             onclick={() => currentPage = 'menu'}
           >
             <div class="flex items-center gap-2 mb-2">
-              <svelte:component this={Utensils} class="w-5 h-5 text-white" />
+              <svelte:component this={Utensils} class="w-5 h-5 text-pink-500" />
               <h3 class="text-sm font-semibold text-gray-800">Manajemen Menu</h3>
             </div>
             <p class="text-xs text-gray-500 leading-tight">Kelola menu, kategori, dan ekstra toko</p>
@@ -568,9 +634,9 @@ function blockNextClick(e) {
             onclick={() => currentPage = 'security'}
           >
             <div class="flex items-center gap-2 mb-2">
-              <svelte:component this={Shield} class="w-5 h-5 text-white" />
+              <svelte:component this={Shield} class="w-5 h-5 text-blue-500" />
               <h3 class="text-sm font-semibold text-gray-800 leading-tight">
-                Ganti<br />Keamanan
+                Ganti Keamanan
               </h3>
             </div>
             <p class="text-xs text-gray-500 leading-tight">Ubah password dan pengaturan keamanan</p>
@@ -677,7 +743,7 @@ function blockNextClick(e) {
                 <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
                   <button 
                     class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                    onclick={e => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
+                    onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
                   >
                     <svelte:component this={Trash} class="w-5 h-5" />
                   </button>
@@ -737,8 +803,8 @@ function blockNextClick(e) {
                       <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
                       <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
                     </div>
-                    <div class="flex gap-2" onclick={e => e.stopPropagation()}>
-                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={() => confirmDeleteKategori(kat.id)}>
+                    <div class="flex gap-2" onclick={(e) => e.stopPropagation()}>
+                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}>
                         <svelte:component this={Trash} class="w-5 h-5" />
                       </button>
                     </div>
@@ -784,7 +850,7 @@ function blockNextClick(e) {
                   onclick={(e) => handleEkstraClick(e, ekstra)}
                 >
                   <div class="absolute top-2 right-2 z-10 flex gap-2">
-                    <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={e => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
+                    <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
                       <svelte:component this={Trash} class="w-5 h-5" />
                     </button>
                   </div>
@@ -806,52 +872,88 @@ function blockNextClick(e) {
 
     <!-- Security Page -->
     {#if currentPage === 'security'}
-      <div class="max-w-4xl mx-auto px-4 py-6">
-        <div class="space-y-6">
-          <div class="text-center mb-8">
-            <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <svelte:component this={Lock} class="w-10 h-10 text-white" />
+      <div class="h-screen flex flex-col">
+        <div class="max-w-2xl mx-auto px-4 py-6 flex-1 overflow-y-auto"
+          style="scrollbar-width:none;-ms-overflow-style:none;"
+        >
+          <!-- Section 1: Ganti Username & Password -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+            <!-- Tab Navigation -->
+            <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 gap-2 overflow-hidden">
+              <!-- Indicator Slide & Color Transition -->
+              <div
+                class="absolute top-1 left-1 h-[calc(100%-0.5rem)] w-1/2 rounded-lg z-0 transition-transform transition-colors duration-300 ease-in-out"
+                style="
+                  transform: translateX({userRoleTab === 'pemilik' ? '0%' : '100%'});
+                  background: {userRoleTab === 'pemilik' ? '#ec4899' : '#3b82f6'};
+                "
+              ></div>
+              <button 
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => userRoleTab = 'pemilik'}
+              >
+                Pemilik
+              </button>
+              <button 
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => userRoleTab = 'kasir'}
+              >
+                Kasir
+              </button>
             </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Pengaturan Keamanan</h2>
-            <p class="text-gray-600">Kelola password dan keamanan akun</p>
+            <form class="flex flex-col gap-4" onsubmit={handleChangeUserPass} autocomplete="off">
+              <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Lama" bind:value={oldUsername} required />
+              <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Baru" bind:value={newUsername} required />
+              <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Lama" bind:value={oldPassword} required />
+              <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Baru" bind:value={newPassword} required />
+              <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
+              {#if userPassError}
+                <div class="text-pink-600 text-sm text-center mt-1">{userPassError}</div>
+              {/if}
+              <button 
+                class={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 ${userRoleTab === 'pemilik' ? 'bg-pink-500 hover:bg-pink-600 active:bg-pink-700' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'}`}
+                type="submit"
+              >
+                Simpan Perubahan
+              </button>
+            </form>
           </div>
-
-          <!-- Security Options -->
-          <div class="grid gap-4">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <svelte:component this={Lock} class="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-gray-800">Ubah Password</h3>
-                    <p class="text-gray-600">Ganti password akun admin</p>
+          <!-- Section 2: Ganti PIN Keamanan -->
+          {#if userRoleTab === 'pemilik'}
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+              <div class="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mb-4">
+                <svelte:component this={Lock} class="w-8 h-8 text-pink-500" />
+              </div>
+              <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti PIN Keamanan</h3>
+              <p class="text-gray-500 text-sm mb-6">Pengaturan PIN keamanan untuk mengunci halaman tertentu.</p>
+              <form class="flex flex-col gap-4 w-full" onsubmit={handleChangePin} autocomplete="off">
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru (4-6 digit)" bind:value={newPin} required pattern="[0-9]{4,6}" maxlength="6" minlength="4" />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required pattern="[0-9]{4,6}" maxlength="6" minlength="4" />
+                <div>
+                  <div class="font-semibold text-gray-700 mb-2">Kunci PIN untuk halaman:</div>
+                  <div class="flex flex-wrap gap-3">
+                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="pengaturan" class="accent-pink-500" /> Pengaturan</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="laporan" class="accent-pink-500" /> Laporan</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="catat" class="accent-pink-500" /> Catat</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="beranda" class="accent-pink-500" /> Beranda</label>
                   </div>
                 </div>
-                <button class="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors">
-                  Ubah
-                </button>
-              </div>
+                {#if pinError}
+                  <div class="text-pink-600 text-sm text-center mt-1">{pinError}</div>
+                {/if}
+                <button class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-colors duration-200" type="submit">Simpan PIN & Pengaturan Kunci</button>
+              </form>
             </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <svelte:component this={Shield} class="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-gray-800">Riwayat Login</h3>
-                    <p class="text-gray-600">Lihat aktivitas login terakhir</p>
-                  </div>
-                </div>
-                <button class="px-4 py-2 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors">
-                  Lihat
-                </button>
+          {:else}
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+              <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <svelte:component this={Shield} class="w-8 h-8 text-blue-500" />
               </div>
+              <h3 class="text-lg font-bold text-gray-800 mb-2">Pengaturan Keamanan Kasir</h3>
+              <p class="text-gray-500 text-sm">Kasir hanya dapat mengubah username dan password. Pengaturan PIN hanya tersedia untuk pemilik.</p>
             </div>
-          </div>
+          {/if}
         </div>
       </div>
     {/if}
@@ -958,7 +1060,8 @@ function blockNextClick(e) {
                 {#each ekstraList as ekstra}
                   <button type="button"
                     class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {menuForm.ekstraIds.includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                    onclick={() => {
+                    onclick={(e) => {
+                      e.stopPropagation();
                       if (menuForm.ekstraIds.includes(ekstra.id)) {
                         menuForm.ekstraIds = menuForm.ekstraIds.filter(id => id !== ekstra.id);
                       } else {
@@ -1017,7 +1120,7 @@ function blockNextClick(e) {
                 {#each menuIdsInKategori as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-200"
                     transition:fly={{ y: -16, duration: 200 }}
-                    onclick={() => toggleMenuInKategori(id)}>
+                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
@@ -1032,7 +1135,7 @@ function blockNextClick(e) {
                 {#each menuIdsNonKategori as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-50"
                     transition:fly={{ y: 16, duration: 200 }}
-                    onclick={() => toggleMenuInKategori(id)}>
+                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}

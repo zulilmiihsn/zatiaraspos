@@ -412,7 +412,7 @@ function capitalizeFirst(str) {
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
 >
-  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden"
+  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center gap-3">

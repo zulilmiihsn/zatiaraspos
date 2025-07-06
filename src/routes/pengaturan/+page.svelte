@@ -3,45 +3,26 @@
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth.js';
   import { SecurityMiddleware } from '$lib/security.js';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import Crown from 'lucide-svelte/icons/crown';
+  import CreditCard from 'lucide-svelte/icons/credit-card';
+  import LogOut from 'lucide-svelte/icons/log-out';
+  import Shield from 'lucide-svelte/icons/shield';
+  import Palette from 'lucide-svelte/icons/palette';
+  import Database from 'lucide-svelte/icons/database';
+  import HelpCircle from 'lucide-svelte/icons/help-circle';
+  import Settings from 'lucide-svelte/icons/settings';
+  import Bell from 'lucide-svelte/icons/bell';
+  import User from 'lucide-svelte/icons/user';
+  import Download from 'lucide-svelte/icons/download';
+  import Printer from 'lucide-svelte/icons/printer';
 
-  // Lazy load icons
-  let ArrowLeft, Crown, CreditCard, LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, User, Download, Printer;
-  onMount(async () => {
-    const icons = await Promise.all([
-      import('lucide-svelte/icons/arrow-left'),
-      import('lucide-svelte/icons/crown'),
-      import('lucide-svelte/icons/credit-card'),
-      import('lucide-svelte/icons/log-out'),
-      import('lucide-svelte/icons/shield'),
-      import('lucide-svelte/icons/palette'),
-      import('lucide-svelte/icons/database'),
-      import('lucide-svelte/icons/help-circle'),
-      import('lucide-svelte/icons/settings'),
-      import('lucide-svelte/icons/bell'),
-      import('lucide-svelte/icons/user'),
-      import('lucide-svelte/icons/download'),
-      import('lucide-svelte/icons/printer')
-    ]);
-    ArrowLeft = icons[0].default;
-    Crown = icons[1].default;
-    CreditCard = icons[2].default;
-    LogOut = icons[3].default;
-    Shield = icons[4].default;
-    Palette = icons[5].default;
-    Database = icons[6].default;
-    HelpCircle = icons[7].default;
-    Settings = icons[8].default;
-    Bell = icons[9].default;
-    User = icons[10].default;
-    Download = icons[11].default;
-    Printer = icons[12].default;
-
+  onMount(() => {
     currentUser = auth.getCurrentUser();
     userRole = currentUser?.role || '';
     if (currentUser) {
       userName = currentUser.name;
     }
-
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -184,7 +165,7 @@
   <title>Pengaturan - Zatiaras Juice POS</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 flex flex-col">
+<div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Button Kembali -->
   <div class="mt-4 mx-4 mb-2">
             <button onclick={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">

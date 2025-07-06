@@ -129,7 +129,7 @@ function handleNavClick(path, e) {
 </style>
 
 <nav 
-  class="fixed left-0 right-0 bottom-0 h-[58px] bg-white flex items-center justify-around z-10 rounded-t-sm shadow-2xl shadow-gray-900/10 px-0.5 overflow-hidden" 
+  class="fixed left-0 right-0 bottom-0 h-[58px] bg-white flex items-center justify-around z-10 rounded-t-sm shadow-2xl shadow-gray-900/10 px-0.5 overflow-hidden nav-transition" 
   style="position:relative;"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
