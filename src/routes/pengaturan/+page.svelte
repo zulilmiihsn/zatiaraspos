@@ -186,16 +186,28 @@
   
   // Get role icon once and store it
   $: roleIcon = getRoleIcon();
+
+  // Tambahkan fungsi upload gambar menu ke bucket 'gambar-menu' Supabase Storage
+  async function uploadMenuImage(file, menuId) {
+    const ext = file.name.split('.').pop();
+    const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
+    // Upload ke bucket 'gambar-menu'
+    const { data, error } = await supabase.storage.from('gambar-menu').upload(filePath, file, { upsert: true });
+    if (error) throw error;
+    // Dapatkan public URL
+    const { data: publicUrlData } = supabase.storage.from('gambar-menu').getPublicUrl(filePath);
+    return publicUrlData.publicUrl;
+  }
 </script>
 
 <svelte:head>
-  <title>Pengaturan - Zatiaras Juice POS</title>
+  <title>ZatiarasPOS</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Button Kembali -->
-  <div class="mt-4 mx-4 mb-2">
-            <button onclick={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+  <div class="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-lg border-b border-gray-100 mt-0 mx-0 mb-2 px-4 py-3 flex items-center" style="min-height:56px">
+    <button on:click={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
       {#if ArrowLeft}
         <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
       {:else}
@@ -236,9 +248,21 @@
   <!-- Grid Menu Pengaturan -->
   <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0">
     <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2">
-      {#if userRole === 'admin' || userRole === 'pemilik'}
-        <!-- Box Pemilik (privilege) -->
-        <button class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none" onclick={() => goto('/pengaturan/pemilik')}>
+      {#if userRole === ''}
+        {#each Array(2) as _, i}
+          <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-lg border-2 border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4">
+            <div class="w-8 h-8 mb-2 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 rounded-lg"></div>
+          </div>
+        {/each}
+      {:else}
+        <!-- Box Pemilik (selalu tampil, disable jika bukan admin/pemilik) -->
+        <button
+          class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200"
+          on:click={() => (userRole === 'admin' || userRole === 'pemilik') && goto('/pengaturan/pemilik')}
+          disabled={userRole !== 'admin' && userRole !== 'pemilik'}
+          class:opacity-60={userRole !== 'admin' && userRole !== 'pemilik'}
+          class:pointer-events-none={userRole !== 'admin' && userRole !== 'pemilik'}
+        >
           {#if Crown}
             <svelte:component this={Crown} class="w-8 h-8 mb-2" />
           {:else}
@@ -250,46 +274,46 @@
           <span class="inline-block bg-white/20 text-xs font-semibold px-3 py-1 rounded-full mb-2 border border-white/30">Privileged</span>
           <div class="text-xs text-white/80 text-center">Akses penuh ke seluruh sistem</div>
         </button>
+        <!-- Box Kasir (menu biasa) -->
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none">
+          {#if CreditCard}
+            <svelte:component this={CreditCard} class="w-8 h-8 mb-2 text-green-500" />
+          {:else}
+            <div class="w-8 h-8 mb-2 flex items-center justify-center">
+              <span class="block w-6 h-6 border-2 border-green-200 border-t-green-500 rounded-full animate-spin"></span>
+            </div>
+          {/if}
+          <div class="text-lg font-bold mb-1 text-gray-800">Kasir</div>
+          <span class="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Menu</span>
+          <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
+        </button>
+        <!-- Box Install PWA -->
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" on:click={handleInstallPWA} disabled={!canInstallPWA}>
+          {#if Download}
+            <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
+          {:else}
+            <div class="w-8 h-8 mb-2 flex items-center justify-center">
+              <span class="block w-6 h-6 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+            </div>
+          {/if}
+          <div class="text-lg font-bold mb-1 text-pink-500">Install PWA</div>
+          <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Aplikasi</span>
+          <div class="text-xs text-gray-500 text-center">Pasang ke Home Screen</div>
+        </button>
+        <!-- Box Printer -->
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" on:click={() => goto('/pengaturan/printer')}>
+          {#if Printer}
+            <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
+          {:else}
+            <div class="w-8 h-8 mb-2 flex items-center justify-center">
+              <span class="block w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></span>
+            </div>
+          {/if}
+          <div class="text-lg font-bold mb-1 text-blue-700">Printer</div>
+          <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Bluetooth</span>
+          <div class="text-xs text-gray-500 text-center">Koneksikan printer Bluetooth</div>
+        </button>
       {/if}
-      <!-- Box Kasir (menu biasa) -->
-      <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none">
-        {#if CreditCard}
-          <svelte:component this={CreditCard} class="w-8 h-8 mb-2 text-green-500" />
-        {:else}
-          <div class="w-8 h-8 mb-2 flex items-center justify-center">
-            <span class="block w-6 h-6 border-2 border-green-200 border-t-green-500 rounded-full animate-spin"></span>
-          </div>
-        {/if}
-        <div class="text-lg font-bold mb-1 text-gray-800">Kasir</div>
-        <span class="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Menu</span>
-        <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
-      </button>
-      <!-- Box Install PWA -->
-      <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" onclick={handleInstallPWA} disabled={!canInstallPWA}>
-        {#if Download}
-          <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
-        {:else}
-          <div class="w-8 h-8 mb-2 flex items-center justify-center">
-            <span class="block w-6 h-6 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-          </div>
-        {/if}
-        <div class="text-lg font-bold mb-1 text-pink-500">Install PWA</div>
-        <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Aplikasi</span>
-        <div class="text-xs text-gray-500 text-center">Pasang ke Home Screen</div>
-      </button>
-      <!-- Box Printer -->
-      <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={() => goto('/pengaturan/printer')}>
-        {#if Printer}
-          <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
-        {:else}
-          <div class="w-8 h-8 mb-2 flex items-center justify-center">
-            <span class="block w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></span>
-          </div>
-        {/if}
-        <div class="text-lg font-bold mb-1 text-blue-700">Printer</div>
-        <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Bluetooth</span>
-        <div class="text-xs text-gray-500 text-center">Koneksikan printer Bluetooth</div>
-      </button>
     </div>
   </div>
 
@@ -312,7 +336,7 @@
         Anda akan keluar dari sistem dan harus login kembali untuk mengakses aplikasi.
       </p>
       <button
-        onclick={handleLogout}
+        on:click={handleLogout}
         class="w-full bg-red-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center gap-2"
       >
         {#if LogOut}
@@ -348,13 +372,13 @@
         </div>
         <div class="flex gap-3">
           <button
-            onclick={cancelLogout}
+            on:click={cancelLogout}
             class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
           >
             Batal
           </button>
           <button
-            onclick={confirmLogout}
+            on:click={confirmLogout}
             class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
           >
             Keluar
@@ -368,9 +392,9 @@
 <!-- App Info -->
 <div class="text-center py-4">
   <p class="text-xs text-gray-500">
-    Zatiaras Juice POS v1.0.0
+    ZatiarasPOS v1.0
   </p>
   <p class="text-xs text-gray-400 mt-1">
-    © 2024 Zatiaras Juice. All rights reserved.
+    © 2024 Zatiaras Juice.
   </p>
 </div> 
