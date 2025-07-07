@@ -1005,31 +1005,35 @@ function closeMenuForm() {
 
         {#if activeTab === 'kategori'}
           <!-- Pastikan handler swipe tab juga ada di tab kategori -->
-          <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
+          <div class="w-full max-w-4xl mx-auto pb-6 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
             on:touchstart={handleTabTouchStart}
             on:touchmove={handleTabTouchMove}
             on:touchend={handleTabTouchEnd}
             style="touch-action: pan-y;"
           >
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
-              </span>
-              <input
-                type="text"
-                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder-gray-400"
-                placeholder="Cari kategori…"
-                bind:value={searchKategoriKeyword}
-                on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
-              />
+            <!-- Search Kategori -->
+            <div class="w-full mb-4 px-0">
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder-gray-400"
+                  placeholder="Cari kategori…"
+                  bind:value={searchKategoriKeyword}
+                  on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
+                />
+              </div>
+            </div>
+            <!-- Daftar Kategori & Badge -->
+            <div class="flex items-center gap-2 mb-4 mt-0 px-0">
+              <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
             </div>
             <div class="flex-1 overflow-y-auto pb-16 w-full"
               style="scrollbar-width:none;-ms-overflow-style:none;"
             >
-              <div class="flex items-center gap-2 mb-5">
-                <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
-                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
-                    </div>
               {#if kategoriList.length === 0}
                 <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
                   Belum ada kategori.<br />Klik tombol + untuk menambah.
@@ -1044,19 +1048,19 @@ function closeMenuForm() {
                       on:touchend={(e) => handleKategoriTouchEnd(e, kat)}
                       on:click={(e) => handleKategoriClick(e, kat)}
                     >
-                    <div>
+                      <div>
                         <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
                         <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
-                    </div>
+                      </div>
                       <div class="flex gap-2" role="group">
                         <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
                           on:click={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}
                           on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteKategori(kat.id); }}
                         >
                           <svelte:component this={Trash} class="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+                        </button>
+                      </div>
+                    </div>
                   {/each}
                 </div>
               {/if}
@@ -1064,37 +1068,41 @@ function closeMenuForm() {
             <!-- Floating Action Button Tambah Kategori -->
             <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" on:click={() => openKategoriForm()} aria-label="Tambah Kategori">
               <svelte:component this={Plus} class="w-7 h-7" />
-                  </button>
+            </button>
           </div>
         {/if}
 
         {#if activeTab === 'ekstra'}
           <!-- Pastikan handler swipe tab juga ada di tab ekstra -->
-          <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
+          <div class="w-full max-w-4xl mx-auto pb-6 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
             on:touchstart={handleTabTouchStart}
             on:touchmove={handleTabTouchMove}
             on:touchend={handleTabTouchEnd}
             style="touch-action: pan-y;"
           >
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
-              </span>
-              <input
-                type="text"
-                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
-                placeholder="Cari ekstra…"
-                bind:value={searchEkstra}
-                on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
-              />
+            <!-- Search Ekstra -->
+            <div class="w-full mb-4 px-0">
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
+                  placeholder="Cari ekstra…"
+                  bind:value={searchEkstra}
+                  on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
+                />
+              </div>
+            </div>
+            <!-- Daftar Ekstra & Badge -->
+            <div class="flex items-center gap-2 mb-4 mt-0 px-0">
+              <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
+              <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto pb-16 w-full"
               style="scrollbar-width:none;-ms-overflow-style:none;"
             >
-              <div class="flex items-center gap-2 mb-5">
-                <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
-                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
-              </div>
               {#if ekstraList.length === 0}
                 <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
                   Belum ada ekstra.<br />Klik tombol + untuk menambah.
