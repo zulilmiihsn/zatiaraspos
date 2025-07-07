@@ -324,12 +324,19 @@ async function fetchEkstra() {
 }
 
 async function uploadMenuImage(file, menuId) {
+  const MAX_SIZE_MB = 2;
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    throw new Error('Ukuran file maksimal 2MB. Silakan pilih gambar yang lebih kecil.');
+  }
   const ext = file.name.split('.').pop();
   const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
-  const { data, error } = await supabase.storage.from('menu-images').upload(filePath, file, { upsert: true });
-  if (error) throw error;
+  const { data, error } = await supabase.storage.from('gambar-menu').upload(filePath, file, { upsert: true });
+  if (error) {
+    console.error('Supabase uploadMenuImage error:', error);
+    throw error;
+  }
   // Dapatkan public URL
-  const { data: publicUrlData } = supabase.storage.from('menu-images').getPublicUrl(filePath);
+  const { data: publicUrlData } = supabase.storage.from('gambar-menu').getPublicUrl(filePath);
   return publicUrlData.publicUrl;
 }
 
@@ -337,7 +344,13 @@ async function saveMenu() {
   let imageUrl = menuForm.gambar;
   // Jika user memilih file baru (bukan string URL)
   if (selectedImage && selectedImage instanceof File) {
-    imageUrl = await uploadMenuImage(selectedImage, editMenuId || Date.now());
+    try {
+      imageUrl = await uploadMenuImage(selectedImage, editMenuId || Date.now());
+    } catch (err) {
+      console.error('Gagal upload gambar menu:', err);
+      alert('Gagal upload gambar: ' + (err?.message || err?.error_description || 'Unknown error'));
+      return;
+    }
   }
   const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
   let result;
@@ -371,7 +384,7 @@ async function doDeleteMenu() {
     const menu = menus.find(m => m.id === menuIdToDelete);
     if (menu?.gambar) {
       const path = menu.gambar.split('/').pop();
-      await supabase.storage.from('menu-images').remove([path]);
+      await supabase.storage.from('gambar-menu').remove([path]);
     }
     await supabase.from('products').delete().eq('id', menuIdToDelete);
     showDeleteModal = false;
@@ -847,10 +860,12 @@ function closeMenuForm() {
 
     <!-- Menu Management Page -->
     {#if currentPage === 'menu'}
-              <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden"
+      <!-- Tambahkan handler swipe tab di container utama agar swipe bisa di area kosong -->
+      <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
         on:touchstart={handleTabTouchStart}
         on:touchmove={handleTabTouchMove}
         on:touchend={handleTabTouchEnd}
+        style="touch-action: pan-y;"
       >
         <!-- Tab Navigation -->
         <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 overflow-hidden">
@@ -864,21 +879,21 @@ function closeMenuForm() {
           ></div>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'menu'}
+            on:click={() => { activeTab = 'menu'; ignoreSwipe = false; }}
           >
             <svelte:component this={Utensils} class="w-4 h-4" />
             Menu
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'kategori'}
+            on:click={() => { activeTab = 'kategori'; ignoreSwipe = false; }}
           >
             <svelte:component this={Tag} class="w-4 h-4" />
             Kategori
           </button>
           <button 
             class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            on:click={() => activeTab = 'ekstra'}
+            on:click={() => { activeTab = 'ekstra'; ignoreSwipe = false; }}
           >
             <svelte:component this={Coffee} class="w-4 h-4" />
             Ekstra
@@ -989,7 +1004,13 @@ function closeMenuForm() {
     {/if}
 
         {#if activeTab === 'kategori'}
-          <div class="w-full mb-4 px-0">
+          <!-- Pastikan handler swipe tab juga ada di tab kategori -->
+          <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
+            on:touchstart={handleTabTouchStart}
+            on:touchmove={handleTabTouchMove}
+            on:touchend={handleTabTouchEnd}
+            style="touch-action: pan-y;"
+          >
             <div class="relative">
               <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
@@ -1002,72 +1023,73 @@ function closeMenuForm() {
                 on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
               />
             </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pb-16 w-full"
-            style="scrollbar-width:none;-ms-overflow-style:none;"
-          >
-            <div class="flex items-center gap-2 mb-5">
-              <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
-              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
-                  </div>
-            {#if kategoriList.length === 0}
-              <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
-                Belum ada kategori.<br />Klik tombol + untuk menambah.
-              </div>
-            {:else}
-              <div class="space-y-3">
-                {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
-                  <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
-                    data-kategori-box
-                    on:touchstart={handleKategoriTouchStart}
-                    on:touchmove={handleKategoriTouchMove}
-                    on:touchend={(e) => handleKategoriTouchEnd(e, kat)}
-                    on:click={(e) => handleKategoriClick(e, kat)}
-                  >
-                  <div>
-                      <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
-                      <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
-                  </div>
-                    <div class="flex gap-2" role="group">
-                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                        on:click={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}
-                        on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteKategori(kat.id); }}
-                      >
-                        <svelte:component this={Trash} class="w-5 h-5" />
-                </button>
-              </div>
+            <div class="flex-1 overflow-y-auto pb-16 w-full"
+              style="scrollbar-width:none;-ms-overflow-style:none;"
+            >
+              <div class="flex items-center gap-2 mb-5">
+                <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
+                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
+                    </div>
+              {#if kategoriList.length === 0}
+                <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
+                  Belum ada kategori.<br />Klik tombol + untuk menambah.
+                </div>
+              {:else}
+                <div class="space-y-3">
+                  {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
+                    <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
+                      data-kategori-box
+                      on:touchstart={handleKategoriTouchStart}
+                      on:touchmove={handleKategoriTouchMove}
+                      on:touchend={(e) => handleKategoriTouchEnd(e, kat)}
+                      on:click={(e) => handleKategoriClick(e, kat)}
+                    >
+                    <div>
+                        <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
+                        <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
+                    </div>
+                      <div class="flex gap-2" role="group">
+                        <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
+                          on:click={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}
+                          on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteKategori(kat.id); }}
+                        >
+                          <svelte:component this={Trash} class="w-5 h-5" />
+              </button>
             </div>
-                {/each}
-              </div>
-            {/if}
           </div>
-          <!-- Floating Action Button Tambah Kategori -->
-          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" on:click={() => openKategoriForm()} aria-label="Tambah Kategori">
-            <svelte:component this={Plus} class="w-7 h-7" />
-                </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+            <!-- Floating Action Button Tambah Kategori -->
+            <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" on:click={() => openKategoriForm()} aria-label="Tambah Kategori">
+              <svelte:component this={Plus} class="w-7 h-7" />
+                  </button>
+          </div>
         {/if}
 
         {#if activeTab === 'ekstra'}
-          <div class="flex flex-col flex-1 min-h-0 h-full w-full">
-            <div class="w-full mb-4 px-0">
-              <div class="relative">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
-                </span>
-                <input
-                  type="text"
-                  class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
-                  placeholder="Cari ekstra…"
-                  bind:value={searchEkstra}
-                  on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
-                />
-              </div>
+          <!-- Pastikan handler swipe tab juga ada di tab ekstra -->
+          <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden flex-1 min-h-0"
+            on:touchstart={handleTabTouchStart}
+            on:touchmove={handleTabTouchMove}
+            on:touchend={handleTabTouchEnd}
+            style="touch-action: pan-y;"
+          >
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+              </span>
+              <input
+                type="text"
+                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
+                placeholder="Cari ekstra…"
+                bind:value={searchEkstra}
+                on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
+              />
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto pb-16 w-full"
               style="scrollbar-width:none;-ms-overflow-style:none;"
-              on:touchstart={handleTabTouchStart}
-              on:touchmove={handleTabTouchMove}
-              on:touchend={handleTabTouchEnd}
             >
               <div class="flex items-center gap-2 mb-5">
                 <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
@@ -1080,7 +1102,7 @@ function closeMenuForm() {
               {/if}
               <div class="grid grid-cols-2 gap-2 w-full">
                 {#each ekstraList.filter(e => e.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra (ekstra.id)}
-                  <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-center relative transition-all duration-200 cursor-pointer hover:bg-green-100"
+                  <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-start relative transition-all duration-200 cursor-pointer hover:bg-green-100"
                     transition:fade
                     on:touchstart={handleEkstraTouchStart}
                     on:touchmove={handleEkstraTouchMove}
@@ -1090,13 +1112,13 @@ function closeMenuForm() {
                     <div class="absolute top-2 right-2 z-10 flex gap-2">
                       <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" on:click={(e) => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }} on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteEkstra(ekstra.id); }}>
                         <svelte:component this={Trash} class="w-5 h-5" />
-                </button>
-              </div>
-                    <div class="w-full flex flex-col items-center">
-                      <h3 class="font-semibold text-green-700 text-sm truncate w-full text-center mb-0.5">{ekstra.name}</h3>
-                      <div class="text-green-400 font-bold text-xs">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
-            </div>
-          </div>
+                      </button>
+                    </div>
+                    <div class="w-full flex flex-col items-start">
+                      <h3 class="font-semibold text-green-700 text-sm truncate w-full mb-0.5 text-left">{ekstra.name}</h3>
+                      <div class="text-green-400 font-bold text-xs text-left">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
+                    </div>
+                  </div>
                 {/each}
               </div>
               <div class="flex-1 min-h-[100px]"></div>
@@ -1546,7 +1568,7 @@ function closeMenuForm() {
     <div class="text-center">
       <div class="text-6xl mb-4">🔒</div>
       <h2 class="text-2xl font-bold text-gray-800 mb-2">Akses Ditolak</h2>
-      <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <p class="text-gray-600 mb-6 mx-24">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       <button 
         class="bg-pink-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-pink-600 transition-colors"
         on:click={() => goto('/pengaturan')}
