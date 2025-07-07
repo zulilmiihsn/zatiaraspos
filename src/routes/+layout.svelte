@@ -2,21 +2,104 @@
 	import '../app.css';
 	import Topbar from '$lib/components/shared/Topbar.svelte';
 	import BottomNav from '$lib/components/shared/BottomNav.svelte';
-	let { children } = $props();
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { navigating } from '$app/stores';
+	import { supabase } from '$lib/database/supabaseClient';
+
+	export let data;
+	
+	// Loading state for page transitions
+	let isLoading = false;
+	
+	// Watch for navigation changes
+	$: if ($navigating) {
+		isLoading = true;
+	} else {
+		// Small delay to show loading indicator
+		setTimeout(() => {
+			isLoading = false;
+		}, 100);
+	}
+	
+	// Check authentication on mount
+	onMount(async () => {
+		const currentPath = $page.url.pathname;
+		const publicPaths = ['/login', '/unauthorized'];
+		
+		// Skip auth check for public paths
+		if (publicPaths.includes(currentPath)) {
+			return;
+		}
+		
+		// Cek session Supabase
+		const { data: { session } } = await supabase.auth.getSession();
+		if (!session) {
+			goto('/login');
+			return;
+		}
+		
+		// Cek role jika akses /admin
+		if (currentPath.startsWith('/admin')) {
+			const userId = session.user.id;
+			const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+			if (!profile || profile.role !== 'admin') {
+				goto('/unauthorized');
+				return;
+			}
+		}
+	});
 </script>
 
-<div class="flex flex-col h-screen min-h-0 bg-white">
-	<div class="sticky top-0 z-30 bg-white">
-		<Topbar />
+<!-- Loading indicator -->
+{#if isLoading}
+	<div class="loading-indicator active"></div>
+{/if}
+
+{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik'}
+	<!-- Public pages and settings page without navigation -->
+	<div class="page-transition">
+		<slot />
 	</div>
-	<div class="flex-1 min-h-0 overflow-y-auto">
-		{@render children()}
+{:else if $page.url.pathname === '/pos/bayar'}
+	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+		<div class="flex-1 min-h-0 overflow-y-auto"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
+			<slot />
+		</div>
 	</div>
-	<div class="sticky bottom-0 z-30 bg-white">
-		<BottomNav />
+{:else if $page.url.pathname !== '/laporan'}
+	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+		<div class="sticky top-0 z-30 bg-white">
+			<Topbar>
+				<svelte:fragment slot="actions"></svelte:fragment>
+			</Topbar>
+		</div>
+		<div class="flex-1 min-h-0 overflow-y-auto"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
+			<slot />
+		</div>
+		<div class="sticky bottom-0 z-30 bg-white">
+			<BottomNav />
+		</div>
 	</div>
-</div>
+{:else}
+	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+		<div class="flex-1 min-h-0 overflow-y-auto"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
+			<slot />
+		</div>
+		<div class="sticky bottom-0 z-30 bg-white">
+			<BottomNav />
+		</div>
+	</div>
+{/if}
 
 <svelte:head>
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+	<title>ZatiarasPOS</title>
 </svelte:head>
