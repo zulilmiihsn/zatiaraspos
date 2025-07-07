@@ -346,16 +346,17 @@ function handlePinSubmit() {
   </div>
 {/if}
 
-<div class="flex flex-col h-max min-h-0 bg-white"
+<div class="flex flex-col h-max min-h-0 bg-white md:min-h-screen md:px-8 lg:px-16 md:pt-8 md:pb-12"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
 >
-  <main class="flex flex-col h-max bg-white page-content">
-    <div class="px-4 py-4">
+  <main class="flex flex-col h-max bg-white page-content md:max-w-3xl lg:max-w-5xl md:mx-auto md:rounded-2xl md:shadow-xl md:bg-white">
+    <div class="px-4 py-4 md:px-8 md:py-8 lg:px-12 lg:py-10">
       <!-- Metrik Utama -->
-      <div class="flex flex-col gap-3 w-full mb-6">
-        <div class="grid grid-cols-2 gap-3 md:gap-6">
+      <div class="flex flex-col gap-3 w-full mb-6 md:gap-6 md:mb-10">
+        <!-- Grid 2 kolom untuk mobile, 4 kolom di md+ -->
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
           <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
             {#if ShoppingBag}
               <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
@@ -378,99 +379,125 @@ function handlePinSubmit() {
             <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Jumlah Transaksi</div>
             <div class="text-xl md:text-3xl font-bold text-purple-600">{jumlahTransaksi ?? '--'}</div>
           </div>
-        </div>
-        <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 flex flex-col items-start">
-          {#if Wallet}
-            <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-green-900" />
-          {:else}
-            <div class="w-6 h-6 mb-2 flex items-center justify-center">
-              <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-            </div>
-          {/if}
-          <div class="text-sm font-medium text-green-900/80">Pendapatan</div>
-          <div class="text-xl font-bold text-green-900">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
-        </div>
-        <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 flex flex-col items-start">
-          {#if Wallet}
-            <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
-          {:else}
-            <div class="w-6 h-6 mb-2 flex items-center justify-center">
-              <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-            </div>
-          {/if}
-          <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
-          <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
-        </div>
-      </div>
-      <!-- Menu Terlaris -->
-      <div class="mb-4">
-        <div class="text-pink-500 font-medium mb-2 text-base mt-2">Menu Terlaris</div>
-        {#if bestSellers.length === 0}
-          <div class="text-center text-gray-400 py-6 text-base">Belum ada data menu terlaris</div>
-        {:else}
-          <div class="flex flex-col gap-3">
-            {#each bestSellers as m, i}
-              <div class="flex items-center bg-white rounded-xl shadow-md p-3 gap-3 relative {i === 0 ? 'border-2 border-yellow-400' : ''}">
-                {#if i === 0}
-                  <span class="absolute -left-3 -top-4 text-2xl">👑</span>
-                {:else if i === 1}
-                  <span class="absolute -left-3 -top-3 text-2xl">🥈</span>
-                {:else if i === 2}
-                  <span class="absolute -left-3 -top-3 text-2xl">🥉</span>
-                {/if}
-                {#if m.image && !imageError[i]}
-                  <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
-                {:else}
-                  <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-xl text-pink-400">🍹</div>
-                {/if}
-                <div class="flex-1 min-w-0">
-                  <div class="font-semibold text-gray-900 truncate text-base">{m.name}</div>
-                  <div class="text-sm text-pink-400">{m.sold} terjual</div>
-                </div>
+          <!-- Di md+ dua box berikut tetap grid, di mobile mereka di luar grid -->
+          <div class="hidden md:block bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-green-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
-            {/each}
+            {/if}
+            <div class="text-sm font-medium text-green-900/80">Pendapatan</div>
+            <div class="text-xl font-bold text-green-900">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
           </div>
-        {/if}
-      </div>
-      <!-- Statistik -->
-      <div class="mt-0 mb-2">
-        <div class="text-pink-500 font-medium mb-2 text-base mt-2">Statistik</div>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center">
-            <div class="text-pink-400 text-xl font-bold">{avgTransaksi ?? '--'}</div>
-            <div class="text-xs text-gray-500 mt-1">Rata-rata transaksi/hari</div>
-          </div>
-          <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center">
-            <div class="text-pink-400 text-xl font-bold">
-              {#if jamRamai}
-                {jamRamai}
-              {:else}
-                --
-              {/if}
-            </div>
-            <div class="text-xs text-gray-500 mt-1">Jam paling ramai</div>
+          <div class="hidden md:block bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
+            <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
+            <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
           </div>
         </div>
-        <!-- Grafik Pendapatan 7 Hari -->
-        <div class="mt-8">
-          <div class="text-xs font-semibold text-gray-500 mb-2 mt-4">Pendapatan 7 Hari Terakhir</div>
-          {#if weeklyIncome.length === 0}
-            <div class="text-center text-gray-400 py-6 text-base">Belum ada data grafik pendapatan</div>
+        <!-- Box pendapatan & modal awal satu baris penuh di mobile, hilang di md+ -->
+        <div class="flex flex-col gap-3 md:hidden">
+          <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 flex flex-col items-start">
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-green-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
+            <div class="text-sm font-medium text-green-900/80">Pendapatan</div>
+            <div class="text-xl font-bold text-green-900">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
+          </div>
+          <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 flex flex-col items-start">
+            {#if Wallet}
+              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
+            {:else}
+              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
+            <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
+            <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
+          </div>
+        </div>
+        <!-- Menu Terlaris -->
+        <div class="mb-4 md:mb-8">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Menu Terlaris</div>
+          {#if bestSellers.length === 0}
+            <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data menu terlaris</div>
           {:else}
-            <div class="flex items-end gap-2 h-32">
-              {#each weeklyIncome as income, i}
-                <div class="flex flex-col items-center flex-1">
-                  <div class="bg-green-400 rounded-t w-6" style="height: {income/weeklyMax*96}px"></div>
-                  <div class="text-xs mt-1">{days[i]}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {#each bestSellers as m, i}
+                <div class="flex items-center bg-white rounded-xl shadow-md p-3 gap-3 relative {i === 0 ? 'border-2 border-yellow-400' : ''} md:p-4 lg:p-5">
+                  {#if i === 0}
+                    <span class="absolute -left-3 -top-4 text-2xl">👑</span>
+                  {:else if i === 1}
+                    <span class="absolute -left-3 -top-3 text-2xl">🥈</span>
+                  {:else if i === 2}
+                    <span class="absolute -left-3 -top-3 text-2xl">🥉</span>
+                  {/if}
+                  {#if m.image && !imageError[i]}
+                    <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
+                  {:else}
+                    <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-xl text-pink-400">🍹</div>
+                  {/if}
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-gray-900 truncate text-base md:text-lg lg:text-xl">{m.name}</div>
+                    <div class="text-sm text-pink-400 md:text-base">{m.sold} terjual</div>
+                  </div>
                 </div>
               {/each}
             </div>
           {/if}
         </div>
+        <!-- Statistik -->
+        <div class="mt-0 mb-2 md:mt-6 md:mb-6">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Statistik</div>
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6">
+              <div class="text-pink-400 text-xl font-bold md:text-2xl lg:text-3xl">{avgTransaksi ?? '--'}</div>
+              <div class="text-xs text-gray-500 mt-1 md:text-sm">Rata-rata transaksi/hari</div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6">
+              <div class="text-pink-400 text-xl font-bold md:text-2xl lg:text-3xl">
+                {#if jamRamai}
+                  {jamRamai}
+                {:else}
+                  --
+                {/if}
+              </div>
+              <div class="text-xs text-gray-500 mt-1 md:text-sm">Jam paling ramai</div>
+            </div>
+          </div>
+          <!-- Grafik Pendapatan 7 Hari -->
+          <div class="mt-8 md:mt-12">
+            <div class="text-xs font-semibold text-gray-500 mb-2 mt-4 md:text-base">Pendapatan 7 Hari Terakhir</div>
+            {#if weeklyIncome.length === 0}
+              <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data grafik pendapatan</div>
+            {:else}
+              <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
+                {#each weeklyIncome as income, i}
+                  <div class="flex flex-col items-center flex-1">
+                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10" style="height: {income/weeklyMax*96}px"></div>
+                    <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
       </div>
     </div>
   </main>
-  <div class="sticky bottom-0 z-30 bg-white">
-    <!-- BottomNav -->
+  <div class="sticky bottom-0 z-30 bg-white md:hidden">
+    <!-- BottomNav hanya muncul di mobile -->
   </div>
 </div>
