@@ -1,10 +1,25 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { slide } from 'svelte/transition';
+import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
+import { auth } from '$lib/auth.js';
+import { supabase } from '$lib/database/supabaseClient';
 
 // Lazy load icons
 let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
+let omzet = 0;
+let jumlahTransaksi = 0;
+let profit = 0;
+let itemTerjual = 0;
+let totalItem = 0;
+let avgTransaksi = 0;
+let jamRamai = '';
+let weeklyIncome = [];
+let weeklyMax = 1;
+let bestSellers = [];
+let userRole = '';
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -20,13 +35,83 @@ onMount(async () => {
   Users = icons[3].default;
   Clock = icons[4].default;
   TrendingUp = icons[5].default;
+
+  await fetchDashboardStats();
+  await fetchPin();
+  await fetchDashboardStatsPOS();
+
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  // Ambil session Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    userRole = profile?.role || '';
+  }
+  if (userRole === 'kasir') {
+    const { data } = await supabase.from('security_settings').select('locked_pages').single();
+    const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+    if (lockedPages.includes('beranda')) {
+      showPinModal = true;
+    }
+  }
 });
 
+async function fetchDashboardStats() {
+  // Omzet
+  const { data: omzetData } = await supabase.rpc('get_omzet_today');
+  omzet = omzetData?.omzet || 0;
+  // Total transaksi
+  const { count: transaksiCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+  jumlahTransaksi = transaksiCount || 0;
+  // Best sellers
+  const { data: best } = await supabase.rpc('get_best_sellers');
+  bestSellers = best || [];
+  // ...tambahkan fetch lain sesuai kebutuhan (profit, itemTerjual, weeklyIncome, dsb)...
+}
+
+async function fetchDashboardStatsPOS() {
+  // Hitung range hari ini (00:00 - 23:59 waktu lokal)
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const startUTC = start.toISOString();
+  const endUTC = end.toISOString();
+
+  // Ambil semua transaksi kasir hari ini
+  const { data: kas, error } = await supabase
+    .from('cash_transactions')
+    .select('*')
+    .gte('transaction_date', startUTC)
+    .lte('transaction_date', endUTC)
+    .eq('jenis', 'pendapatan_usaha')
+    .eq('type', 'in');
+
+  if (!error && kas) {
+    // Item terjual: sum semua qty (jika ada), fallback ke jumlah baris
+    itemTerjual = kas.reduce((sum, t) => sum + (t.qty || 1), 0);
+    // Jumlah transaksi: jumlah transaksi unik per waktu transaksi (atau jumlah baris jika 1 transaksi = 1 insert)
+    jumlahTransaksi = kas.length;
+    // Pendapatan: sum amount
+    omzet = kas.reduce((sum, t) => sum + (t.amount || 0), 0);
+  } else {
+    itemTerjual = 0;
+    jumlahTransaksi = 0;
+    omzet = 0;
+  }
+}
+
+async function fetchPin() {
+  const { data } = await supabase.from('security_settings').select('pin').single();
+  pin = data?.pin || '1234';
+}
+
 // Data dummy, nanti diisi dari Supabase
-let omzet = null;
-let totalItem = null;
-let profit = null;
-let jumlahTransaksi = null;
 let modalAwal = null;
 
 // Touch handling variables
@@ -44,8 +129,6 @@ const navs = [
   { label: 'Catat', path: '/catat' },
   { label: 'Laporan', path: '/laporan' },
 ];
-
-const bestSellers = [];
 
 const stats = [
   {
@@ -70,17 +153,15 @@ const stats = [
 
 let imageError = {};
 
-let avgTransaksi = null;
-let jamRamai = null;
-let weeklyIncome = [];
 let days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-let weeklyMax = 1;
-let itemTerjual = null;
 
-onMount(() => {
-  // Detect touch device
-  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-});
+// PIN Modal State
+let showPinModal = false;
+let pinInput = '';
+let pinError = '';
+let pin = '';
+let errorTimeout: number;
+let isClosing = false;
 
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
@@ -164,9 +245,112 @@ function handleGlobalClick(e) {
     return;
   }
 }
+
+function handlePinSubmit() {
+  if (pinInput === pin) {
+    isClosing = true;
+    if (errorTimeout) {
+      clearTimeout(errorTimeout);
+    }
+    setTimeout(() => {
+      showPinModal = false;
+      pinError = '';
+      pinInput = '';
+      isClosing = false;
+    }, 300);
+  } else {
+    pinError = 'PIN salah. Silakan coba lagi.';
+    pinInput = '';
+    if (errorTimeout) {
+      clearTimeout(errorTimeout);
+    }
+    errorTimeout = setTimeout(() => {
+      pinError = '';
+    }, 2000);
+  }
+}
 </script>
 
-<div class="flex flex-col h-screen min-h-0 bg-white">
+{#if showPinModal}
+  <div 
+    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out"
+    class:translate-y-full={isClosing}
+    style="top: 58px; bottom: 58px; background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);"
+  >
+    {#if pinError}
+      <div 
+        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        style="transform: translateX(-50%);"
+        in:slide={{ duration: 300, easing: cubicOut }}
+        out:slide={{ duration: 300, easing: cubicIn }}
+      >
+        {pinError}
+      </div>
+    {/if}
+    <div class="w-full h-full flex flex-col items-center justify-center p-4">
+      <div class="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 max-w-sm w-full">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-white mb-2">Akses Beranda</h2>
+          <p class="text-pink-100 text-sm">Masukkan PIN untuk melihat beranda</p>
+        </div>
+        
+        <!-- PIN Display -->
+        <div class="flex justify-center gap-2 mb-6">
+          {#each Array(4) as _, i}
+            <div class="w-4 h-4 rounded-full {pinInput.length > i ? 'bg-white' : 'bg-white/30 border border-white/50'}"></div>
+          {/each}
+        </div>
+        
+        <!-- Numpad -->
+        <div class="grid grid-cols-3 gap-3 mb-4 justify-items-center">
+          {#each [1, 2, 3, 4, 5, 6, 7, 8, 9] as num}
+            <button
+              type="button"
+              class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
+              onclick={() => {
+                if (pinInput.length < 4) {
+                  pinInput += num.toString();
+                  if (pinInput.length === 4) {
+                    handlePinSubmit();
+                  }
+                }
+              }}
+            >
+              {num}
+            </button>
+          {/each}
+          <div class="w-16 h-16"></div>
+          <button
+            type="button"
+            class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
+            onclick={() => {
+              if (pinInput.length < 4) {
+                pinInput += '0';
+                if (pinInput.length === 4) {
+                  handlePinSubmit();
+                }
+              }
+            }}
+          >
+            0
+          </button>
+          <div class="w-16 h-16"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<div class="flex flex-col h-max min-h-0 bg-white"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+>
   <main class="flex flex-col h-max bg-white page-content">
     <div class="px-4 py-4">
       <!-- Metrik Utama -->
@@ -257,7 +441,13 @@ function handleGlobalClick(e) {
             <div class="text-xs text-gray-500 mt-1">Rata-rata transaksi/hari</div>
           </div>
           <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center">
-            <div class="text-pink-400 text-xl font-bold">{jamRamai ?? '--'}</div>
+            <div class="text-pink-400 text-xl font-bold">
+              {#if jamRamai}
+                {jamRamai}
+              {:else}
+                --
+              {/if}
+            </div>
             <div class="text-xs text-gray-500 mt-1">Jam paling ramai</div>
           </div>
         </div>

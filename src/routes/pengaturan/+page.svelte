@@ -16,12 +16,21 @@
   import User from 'lucide-svelte/icons/user';
   import Download from 'lucide-svelte/icons/download';
   import Printer from 'lucide-svelte/icons/printer';
+  import { supabase } from '$lib/database/supabaseClient';
 
-  onMount(() => {
-    currentUser = auth.getCurrentUser();
-    userRole = currentUser?.role || '';
-    if (currentUser) {
-      userName = currentUser.name;
+  onMount(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Session:', session);
+    const userId = session?.user?.id;
+    if (userId) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', userId)
+        .single();
+      console.log('Profile:', profile, 'Error:', error);
+      userRole = profile?.role || '';
+      userName = profile?.full_name || '';
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {
@@ -30,14 +39,32 @@
         canInstallPWA = true;
       });
     }
+    if (userRole === 'kasir') {
+      const { data } = await supabase.from('security_settings').select('locked_pages, pin').single();
+      const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+      pin = data?.pin || '1234';
+      if (lockedPages.includes('pengaturan')) {
+        showPinModal = true;
+      }
+      console.log('userRole', userRole);
+      console.log('lockedPages', lockedPages);
+      console.log('showPinModal', showPinModal);
+    }
   });
 
   let currentUser = null;
-  let userRole = '';
-  let userName = '';
   let showLogoutModal = false;
   let deferredPrompt = null;
   let canInstallPWA = false;
+  let currentPage = 'security';
+  let userRole = '';
+  let userName = '';
+  let showPinModal = false;
+  let pin = '';
+  let pinInput = '';
+  let pinError = '';
+  let errorTimeout: number;
+  let isClosing = false;
 
   function handleLogout() {
     showLogoutModal = true;
@@ -57,25 +84,25 @@
   }
 
   function getRoleIcon() {
-    if (userRole === 'admin') return Crown;
+    if (userRole === 'admin' || userRole === 'pemilik') return Crown;
     if (userRole === 'kasir') return CreditCard;
     return User;
   }
 
   function getRoleLabel() {
-    if (userRole === 'admin') return 'Pemilik';
+    if (userRole === 'admin' || userRole === 'pemilik') return 'Pemilik';
     if (userRole === 'kasir') return 'Kasir';
     return 'User';
   }
 
   function getRoleDesc() {
-    if (userRole === 'admin') return 'Akses penuh ke seluruh sistem';
+    if (userRole === 'admin' || userRole === 'pemilik') return 'Akses penuh ke seluruh sistem';
     if (userRole === 'kasir') return 'Akses standar';
     return 'Akses standar';
   }
 
   function getRoleColor() {
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'pemilik') {
       return 'from-purple-500 to-pink-500';
     } else if (userRole === 'kasir') {
       return 'from-green-500 to-blue-500';
@@ -84,7 +111,7 @@
   }
 
   function getRoleBadgeColor() {
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'pemilik') {
       return 'bg-purple-100 text-purple-800';
     } else if (userRole === 'kasir') {
       return 'bg-green-100 text-green-800';
@@ -93,7 +120,7 @@
   }
 
   function getRoleDescription() {
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'pemilik') {
       return 'Akses penuh ke semua fitur sistem';
     } else if (userRole === 'kasir') {
       return 'Akses terbatas untuk POS dan laporan';
@@ -153,7 +180,7 @@
   ];
 
   // Filter sections based on user role
-  $: filteredSections = userRole === 'admin' 
+  $: filteredSections = (userRole === 'admin' || userRole === 'pemilik') 
     ? settingsSections 
     : settingsSections.filter(section => section.title !== 'Data & Backup');
   
@@ -189,7 +216,7 @@
         </div>
       {/if}
     </div>
-    {#if userRole === 'admin'}
+    {#if userRole === 'admin' || userRole === 'pemilik'}
       <div class="text-2xl font-extrabold text-purple-700 mb-1">Pemilik</div>
       <div class="text-sm text-gray-600 mb-2">Akses penuh ke seluruh sistem</div>
       <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
@@ -209,7 +236,7 @@
   <!-- Grid Menu Pengaturan -->
   <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0">
     <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2">
-      {#if userRole === 'admin'}
+      {#if userRole === 'admin' || userRole === 'pemilik'}
         <!-- Box Pemilik (privilege) -->
         <button class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none" onclick={() => goto('/pengaturan/pemilik')}>
           {#if Crown}

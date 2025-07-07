@@ -1,12 +1,7 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
-import { auth } from '$lib/auth.ts';
-import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
-import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
-import { fly } from 'svelte/transition';
-
-// Import icons directly
+import { auth } from '$lib/auth.js';
 import Plus from 'lucide-svelte/icons/plus';
 import Edit from 'lucide-svelte/icons/edit';
 import Trash from 'lucide-svelte/icons/trash';
@@ -18,8 +13,10 @@ import Utensils from 'lucide-svelte/icons/utensils';
 import Shield from 'lucide-svelte/icons/shield';
 import Lock from 'lucide-svelte/icons/lock';
 import Tag from 'lucide-svelte/icons/tag';
-
-
+import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
+import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
+import { fly, fade } from 'svelte/transition';
+import { supabase } from '$lib/database/supabaseClient';
 
 let currentUser = null;
 let userRole = '';
@@ -27,45 +24,16 @@ let currentPage = 'main'; // 'main', 'menu', 'security'
 let activeTab = 'menu'; // 'menu', 'kategori', 'ekstra'
 
 // Data Menu
-let menus = [
-  { id: 1, name: 'Jus Alpukat', kategori: 'Minuman', tipe: 'minuman', harga: 15000, ekstraIds: [1, 2], gambar: '', gula: true },
-  { id: 2, name: 'Nasi Goreng', kategori: 'Makanan', tipe: 'makanan', harga: 20000, ekstraIds: [3], gambar: '', gula: false },
-  { id: 3, name: 'Es Teh Manis', kategori: 'Minuman', tipe: 'minuman', harga: 8000, ekstraIds: [], gambar: '', gula: true },
-  { id: 4, name: 'Mie Goreng', kategori: 'Makanan', tipe: 'makanan', harga: 18000, ekstraIds: [3, 4], gambar: '', gula: false },
-  { id: 5, name: 'Kopi Susu', kategori: 'Kopi', tipe: 'minuman', harga: 12000, ekstraIds: [1], gambar: '', gula: true },
-  { id: 6, name: 'Roti Bakar', kategori: 'Roti', tipe: 'makanan', harga: 10000, ekstraIds: [2], gambar: '', gula: false },
-  { id: 7, name: 'Jus Mangga', kategori: 'Jus', tipe: 'minuman', harga: 14000, ekstraIds: [], gambar: '', gula: true },
-  { id: 8, name: 'Teh Tarik', kategori: 'Teh', tipe: 'minuman', harga: 9000, ekstraIds: [], gambar: '', gula: true },
-  { id: 9, name: 'Brownies', kategori: 'Dessert', tipe: 'makanan', harga: 16000, ekstraIds: [], gambar: '', gula: false },
-  { id: 10, name: 'Paket Hemat', kategori: 'Paket', tipe: 'makanan', harga: 25000, ekstraIds: [2, 3], gambar: '', gula: false },
-  { id: 11, name: 'Keripik Kentang', kategori: 'Cemilan', tipe: 'makanan', harga: 7000, ekstraIds: [], gambar: '', gula: false },
-  { id: 12, name: 'Donat', kategori: 'Dessert', tipe: 'makanan', harga: 8000, ekstraIds: [], gambar: '', gula: false },
-  { id: 13, name: 'Jus Jeruk', kategori: 'Jus', tipe: 'minuman', harga: 13000, ekstraIds: [], gambar: '', gula: true },
-  { id: 14, name: 'Sosis Bakar', kategori: 'Snack', tipe: 'makanan', harga: 9000, ekstraIds: [], gambar: '', gula: false },
-  { id: 15, name: 'Teh Hijau', kategori: 'Teh', tipe: 'minuman', harga: 9500, ekstraIds: [], gambar: '', gula: true },
-];
+let menus = [];
+
+// Untuk track error gambar per menu
+let imageError: Record<string, boolean> = {};
 
 // Data Kategori
-let kategoriList = [
-  { id: 1, name: 'Minuman', menuIds: [1, 3] },
-  { id: 2, name: 'Makanan', menuIds: [2, 4] },
-  { id: 3, name: 'Snack', menuIds: [] },
-  { id: 4, name: 'Kopi', menuIds: [] },
-  { id: 5, name: 'Teh', menuIds: [] },
-  { id: 6, name: 'Jus', menuIds: [] },
-  { id: 7, name: 'Roti', menuIds: [] },
-  { id: 8, name: 'Dessert', menuIds: [] },
-  { id: 9, name: 'Paket', menuIds: [] },
-  { id: 10, name: 'Cemilan', menuIds: [] },
-];
+let kategoriList = [];
 
 // Data Ekstra Template
-let ekstraList = [
-  { id: 1, name: 'Coklat', harga: 2000 },
-  { id: 2, name: 'Keju', harga: 3000 },
-  { id: 3, name: 'Telur', harga: 2500 },
-  { id: 4, name: 'Susu', harga: 1500 },
-];
+let ekstraList = [];
 
 // Form states
 let showMenuForm = false;
@@ -169,14 +137,49 @@ let userPassError = '';
 let oldPin = '';
 let newPin = '';
 let confirmPin = '';
-let lockedPages: string[] = [];
+let lockedPages: string[] = ['laporan', 'beranda'];
 let pinError = '';
+
+let pin = '';
+
+// Load saved settings on mount
+onMount(async () => {
+  // Ambil session Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (userId) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    userRole = profile?.role || '';
+    // Jika bukan admin/pemilik, set role jadi kasir
+    if (userRole !== 'admin' && userRole !== 'pemilik') {
+      userRole = 'kasir';
+      await supabase.from('profiles').update({ role: 'kasir' }).eq('id', userId);
+    }
+  }
+  await fetchSecuritySettings();
+  await fetchMenus();
+  await fetchKategori();
+  await fetchEkstra();
+});
+
+async function fetchSecuritySettings() {
+  const { data, error } = await supabase.from('security_settings').select('*').single();
+  if (!error && data) {
+    pin = data.pin;
+    lockedPages = data.locked_pages || ['laporan', 'beranda'];
+  }
+}
 
 let showPinModal = false;
 let pinInput = '';
 let pinModalError = '';
 
 function handleTabTouchStart(e: TouchEvent) {
+  if (ignoreSwipe) return; // abaikan swipe tab jika gesture kategori
   const target = e.target as HTMLElement;
   if (target.closest('button, [tabindex], input, select, textarea, [role="button"]')) {
     ignoreSwipe = true;
@@ -199,10 +202,12 @@ function handleTabTouchEnd() {
       // Swipe kiri: next tab
       if (activeTab === 'menu') activeTab = 'kategori';
       else if (activeTab === 'kategori') activeTab = 'ekstra';
+      // Jika sudah di 'ekstra', jangan pindah tab
     } else {
       // Swipe kanan: prev tab
       if (activeTab === 'ekstra') activeTab = 'kategori';
       else if (activeTab === 'kategori') activeTab = 'menu';
+      // Jika sudah di 'menu', jangan pindah tab
     }
   }
 }
@@ -224,11 +229,13 @@ function handleKategoriTouchEnd(e, kat) {
   const deltaY = e.changedTouches[0].clientY - kategoriTouchStartY;
   const duration = Date.now() - kategoriTouchStartTime;
   const swipeThreshold = window.innerWidth * 0.4;
+  const tapThreshold = 40; // px, lebih toleran
   if (Math.abs(deltaX) > swipeThreshold) {
     // SWIPE: biarkan handler swipe tab global yang jalan, JANGAN buka modal
     return;
   }
-  if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20 && duration < 300) {
+  if (Math.abs(deltaX) < tapThreshold && Math.abs(deltaY) < tapThreshold && duration < 300) {
+    e.stopPropagation(); // block agar tidak bubble ke parent
     openKategoriForm(kat);
     window.addEventListener('click', blockNextClick, true);
   }
@@ -265,15 +272,14 @@ function handleMenuTouchEnd(e, menu) {
 onMount(() => {
   currentUser = auth.getCurrentUser();
   userRole = currentUser?.role || '';
-  
-  console.log('Current user:', currentUser);
-  console.log('User role:', userRole);
-  console.log('Has admin role:', auth.hasRole('admin'));
-  
-  // Check if user has admin role
-  if (!auth.hasRole('admin')) {
-    alert('Anda tidak memiliki akses ke halaman ini.');
-    goto('/pengaturan');
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
+});
+
+onDestroy(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
   }
 });
 
@@ -292,35 +298,110 @@ function openMenuForm(menu = null) {
   }
 }
 
-function saveMenu() {
+async function fetchMenus() {
+  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Supabase fetchMenus error:', error);
+    alert('Gagal mengambil data menu: ' + error.message);
+  }
+  if (!error) menus = data;
+}
+async function fetchKategori() {
+  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Supabase fetchKategori error:', error);
+    alert('Gagal mengambil data kategori: ' + error.message);
+  }
+  if (!error) kategoriList = data;
+}
+async function fetchEkstra() {
+  const { data, error } = await supabase.from('add_ons').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Supabase fetchEkstra error:', error);
+    alert('Gagal mengambil data ekstra: ' + error.message);
+  }
+  if (!error) ekstraList = data;
+}
+
+async function uploadMenuImage(file, menuId) {
+  const ext = file.name.split('.').pop();
+  const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
+  const { data, error } = await supabase.storage.from('menu-images').upload(filePath, file, { upsert: true });
+  if (error) throw error;
+  // Dapatkan public URL
+  const { data: publicUrlData } = supabase.storage.from('menu-images').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+}
+
+async function saveMenu() {
+  let imageUrl = menuForm.gambar;
+  // Jika user memilih file baru (bukan string URL)
+  if (selectedImage && selectedImage instanceof File) {
+    imageUrl = await uploadMenuImage(selectedImage, editMenuId || Date.now());
+  }
+  const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
+  let result;
   if (editMenuId) {
-    menus = menus.map(m => m.id === editId ? { ...menuForm, id: editId, harga: parseInt(menuForm.harga) } : m);
+    result = await supabase.from('products').update(payload).eq('id', editMenuId);
   } else {
-    menus = [...menus, { ...menuForm, id: Date.now(), harga: parseInt(menuForm.harga) }];
+    result = await supabase.from('products').insert([payload]);
+  }
+  if (result.error) {
+    console.error('Supabase saveMenu error:', result.error);
+    alert('Gagal menyimpan menu: ' + result.error.message);
   }
   showMenuForm = false;
+  await fetchMenus();
 }
 
 function confirmDeleteMenu(id: number) {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
   menuIdToDelete = id;
   showDeleteModal = true;
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
-function doDeleteMenu() {
+async function doDeleteMenu() {
   if (menuIdToDelete !== null) {
-    menus = menus.filter(m => m.id !== menuIdToDelete);
+    // Hapus gambar dari storage jika ada
+    const menu = menus.find(m => m.id === menuIdToDelete);
+    if (menu?.gambar) {
+      const path = menu.gambar.split('/').pop();
+      await supabase.storage.from('menu-images').remove([path]);
+    }
+    await supabase.from('products').delete().eq('id', menuIdToDelete);
     showDeleteModal = false;
     menuIdToDelete = null;
+    await fetchMenus();
   }
 }
 
 function cancelDeleteMenu() {
   showDeleteModal = false;
   menuIdToDelete = null;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
 // Kategori functions
 function openKategoriForm(kat) {
+  if (!kat) {
+    // Create kategori baru
+    kategoriDetail = null;
+    showKategoriDetailModal = true;
+    kategoriDetailName = '';
+    menuIdsInKategori = [];
+    menuIdsNonKategori = menus.map(m => m.id);
+    return;
+  }
   kategoriDetail = kat;
   showKategoriDetailModal = true;
   kategoriDetailName = kat.name;
@@ -336,6 +417,9 @@ function openKategoriForm(kat) {
 function closeKategoriDetailModal() {
   showKategoriDetailModal = false;
   kategoriDetail = null;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
 }
 
 function toggleMenuInKategori(id) {
@@ -350,30 +434,82 @@ function toggleMenuInKategori(id) {
   }
 }
 
-function saveKategoriDetail() {
+async function saveKategoriDetail() {
   if (kategoriDetail) {
-    kategoriList = kategoriList.map(k => k.id === kategoriDetail.id ? { ...k, name: kategoriDetailName, menuIds: [...menuIdsInKategori] } : k);
-    showKategoriDetailModal = false;
-    kategoriDetail = null;
+    const { error } = await supabase.from('categories').update({ name: kategoriDetailName, menuIds: menuIdsInKategori }).eq('id', kategoriDetail.id);
+    if (error) {
+      console.error('Supabase saveKategoriDetail error:', error);
+      alert('Gagal menyimpan kategori: ' + error.message);
+    }
+    // Update kategori pada menu/products
+    await updateMenusKategori(kategoriDetailName, menuIdsInKategori, kategoriDetail.menuIds ?? []);
+  } else {
+    // INSERT kategori baru
+    const { data, error } = await supabase.from('categories').insert([{ name: kategoriDetailName, menuIds: menuIdsInKategori }]).select();
+    if (error) {
+      console.error('Supabase insertKategori error:', error);
+      alert('Gagal menambah kategori: ' + error.message);
+    }
+    // Update kategori pada menu/products
+    await updateMenusKategori(kategoriDetailName, menuIdsInKategori, []);
+  }
+  showKategoriDetailModal = false;
+  kategoriDetail = null;
+  await fetchKategori();
+  await fetchMenus();
+}
+
+// Update kategori pada tabel menu/products
+async function updateMenusKategori(namaKategori, menuIdsBaru, menuIdsLama) {
+  // Set kategori pada menu yang baru masuk kategori
+  for (const id of menuIdsBaru) {
+    await supabase.from('products').update({ kategori: namaKategori }).eq('id', id);
+  }
+  // Hapus kategori pada menu yang sebelumnya ada tapi sekarang tidak
+  for (const id of menuIdsLama) {
+    if (!menuIdsBaru.includes(id)) {
+      await supabase.from('products').update({ kategori: null }).eq('id', id);
+    }
   }
 }
 
 function confirmDeleteKategori(id: number) {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
   kategoriIdToDelete = id;
   showDeleteKategoriModal = true;
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
-function doDeleteKategori() {
+async function doDeleteKategori() {
   if (kategoriIdToDelete !== null) {
-    kategoriList = kategoriList.filter(k => k.id !== kategoriIdToDelete);
+    // Ambil nama kategori yang akan dihapus
+    const kategori = kategoriList.find(k => k.id === kategoriIdToDelete);
+    const kategoriName = kategori?.name || '';
+    await supabase.from('categories').delete().eq('id', kategoriIdToDelete);
+    // Update semua produk yang punya kategori ini menjadi null
+    if (kategoriName) {
+      await supabase.from('products').update({ kategori: null }).eq('kategori', kategoriName);
+    }
     showDeleteKategoriModal = false;
     kategoriIdToDelete = null;
+    await fetchKategori();
+    await fetchMenus();
   }
 }
 
 function cancelDeleteKategori() {
   showDeleteKategoriModal = false;
   kategoriIdToDelete = null;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
 // Ekstra functions
@@ -381,39 +517,61 @@ function openEkstraForm(ekstra = null) {
   showEkstraForm = true;
   if (ekstra) {
     editEkstraId = ekstra.id;
-    ekstraForm = { ...ekstra, harga: ekstra.harga.toString() };
+    ekstraForm = { ...ekstra, harga: ekstra.harga.toLocaleString('id-ID') };
   } else {
     editEkstraId = null;
     ekstraForm = { name: '', harga: '' };
   }
 }
 
-function saveEkstra() {
-  if (!ekstraForm.name.trim() || !ekstraForm.harga || isNaN(parseInt(ekstraForm.harga)) || parseInt(ekstraForm.harga) <= 0) return;
+async function saveEkstra() {
+  if (!ekstraForm.name.trim() || !ekstraForm.harga) return;
+  const hargaValue = ekstraForm.harga.toString().replace(/[^\d]/g, '');
+  const hargaNumber = parseInt(hargaValue);
+  if (isNaN(hargaNumber) || hargaNumber <= 0) return;
+  let result;
   if (editEkstraId) {
-    ekstraList = ekstraList.map(e => e.id === editEkstraId ? { ...ekstraForm, id: editEkstraId, harga: parseInt(ekstraForm.harga) } : e);
+    result = await supabase.from('add_ons').update({ ...ekstraForm, harga: hargaNumber }).eq('id', editEkstraId);
   } else {
-    ekstraList = [...ekstraList, { ...ekstraForm, id: Date.now(), harga: parseInt(ekstraForm.harga) }];
+    result = await supabase.from('add_ons').insert([{ ...ekstraForm, harga: hargaNumber }]);
+  }
+  if (result.error) {
+    console.error('Supabase saveEkstra error:', result.error);
+    alert('Gagal menyimpan ekstra: ' + result.error.message);
   }
   showEkstraForm = false;
+  await fetchEkstra();
 }
 
 function confirmDeleteEkstra(id) {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
   ekstraIdToDelete = id;
   showDeleteEkstraModal = true;
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
-function doDeleteEkstra() {
+async function doDeleteEkstra() {
   if (ekstraIdToDelete !== null) {
-    ekstraList = ekstraList.filter(e => e.id !== ekstraIdToDelete);
+    await supabase.from('add_ons').delete().eq('id', ekstraIdToDelete);
     showDeleteEkstraModal = false;
     ekstraIdToDelete = null;
+    await fetchEkstra();
   }
 }
 
 function cancelDeleteEkstra() {
   showDeleteEkstraModal = false;
   ekstraIdToDelete = null;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
+  touchStartX = 0;
+  touchEndX = 0;
+  ignoreSwipe = false;
 }
 
 // Helper functions
@@ -447,19 +605,19 @@ $: filteredMenus = menus.filter(menu => {
 function handleFileChange(e) {
   const file = e.target.files[0];
   if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
+  selectedImage = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
     cropperDialogImage = '';
     setTimeout(() => {
       cropperDialogImage = ev.target.result as string;
       showCropperDialog = true;
     }, 10);
-    };
-    reader.readAsDataURL(file);
-  }
+  };
+  reader.readAsDataURL(file);
+}
 
 function handleCropperDone(e) {
-  console.log('Hasil crop:', e.detail.cropped);
   menuForm.gambar = e.detail.cropped;
   menuForm = { ...menuForm };
   showCropperDialog = false;
@@ -475,6 +633,10 @@ function removeImage() {
   selectedImage = null;
   croppedImage = null;
   menuForm.gambar = '';
+}
+
+function handleImgError(id: string) {
+  imageError = { ...imageError, [id]: true };
 }
 
 // Format harga input
@@ -538,10 +700,13 @@ function handleEkstraClick(event, ekstra) {
 function blockNextClick(e) {
   e.preventDefault();
   e.stopImmediatePropagation();
-  window.removeEventListener('click', blockNextClick, true);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
 }
 
-function handleChangeUserPass() {
+async function handleChangeUserPass(e) {
+  e.preventDefault();
   userPassError = '';
   if (!oldUsername || !newUsername || !oldPassword || !newPassword || !confirmPassword) {
     userPassError = 'Semua field wajib diisi.';
@@ -555,12 +720,30 @@ function handleChangeUserPass() {
     userPassError = 'Username baru tidak boleh sama dengan username lama.';
     return;
   }
-  // TODO: Integrasi backend untuk update username/password
+  // Ambil userId dari session
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) {
+    userPassError = 'Session tidak valid.';
+    return;
+  }
+  // Update username di profiles (pakai full_name)
+  const { error: usernameError } = await supabase.from('profiles').update({ full_name: newUsername }).eq('id', userId);
+  if (usernameError) {
+    userPassError = 'Gagal update nama user.';
+    return;
+  }
+  // Update password via Supabase Auth
+  const { error: passError } = await supabase.auth.updateUser({ password: newPassword });
+  if (passError) {
+    userPassError = 'Gagal update password.';
+    return;
+  }
   userPassError = '';
-  alert('Perubahan username/password berhasil disimpan (dummy).');
+  alert('Perubahan username/password berhasil disimpan.');
 }
 
-function handleChangePin() {
+async function handleChangePin() {
   pinError = '';
   if (!oldPin || !newPin || !confirmPin) {
     pinError = 'Semua field wajib diisi.';
@@ -574,9 +757,16 @@ function handleChangePin() {
     pinError = 'PIN harus 4-6 digit angka.';
     return;
   }
-  // TODO: Integrasi backend untuk update PIN dan halaman yang dikunci
+  // Cek PIN lama
+  if (oldPin !== pin) {
+    pinError = 'PIN lama salah.';
+    return;
+  }
+  // Update ke Supabase
+  await supabase.from('security_settings').update({ pin: newPin, locked_pages: lockedPages }).eq('id', 1);
+  pin = newPin;
   pinError = '';
-  alert('Perubahan PIN & pengaturan kunci berhasil disimpan (dummy).');
+  alert('Perubahan PIN & pengaturan kunci berhasil disimpan.');
 }
 
 function handlePinSubmit() {
@@ -588,19 +778,27 @@ function handlePinSubmit() {
   showPinModal = false;
   alert('Akses halaman berhasil dibuka (dummy).');
 }
+
+function closeMenuForm() {
+  showMenuForm = false;
+  editMenuId = null;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', blockNextClick, true);
+  }
+}
 </script>
 
 <svelte:head>
   <title>Admin Panel - ZatiarasPOS</title>
 </svelte:head>
 
-{#if userRole === 'admin'}
+{#if userRole === 'admin' || userRole === 'pemilik'}
   <div class="min-h-screen bg-gray-50 flex flex-col page-content">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-4xl mx-auto px-4 py-4">
         <div class="flex items-center">
-          <button onclick={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+          <button on:click={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
             <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
           </button>
           {#if currentPage !== 'main'}
@@ -619,7 +817,7 @@ function handlePinSubmit() {
           <!-- Manajemen Menu -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-pink-300 group text-left flex flex-col justify-center"
-            onclick={() => currentPage = 'menu'}
+            on:click={() => currentPage = 'menu'}
           >
             <div class="flex items-center gap-2 mb-2">
               <svelte:component this={Utensils} class="w-5 h-5 text-pink-500" />
@@ -631,7 +829,7 @@ function handlePinSubmit() {
           <!-- Ganti Keamanan -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-blue-300 group text-left flex flex-col justify-center"
-            onclick={() => currentPage = 'security'}
+            on:click={() => currentPage = 'security'}
           >
             <div class="flex items-center gap-2 mb-2">
               <svelte:component this={Shield} class="w-5 h-5 text-blue-500" />
@@ -649,13 +847,13 @@ function handlePinSubmit() {
 
     <!-- Menu Management Page -->
     {#if currentPage === 'menu'}
-      <div class="max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col"
-        ontouchstart={handleTabTouchStart}
-        ontouchmove={handleTabTouchMove}
-        ontouchend={handleTabTouchEnd}
+              <div class="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 h-full flex flex-col overflow-x-hidden"
+        on:touchstart={handleTabTouchStart}
+        on:touchmove={handleTabTouchMove}
+        on:touchend={handleTabTouchEnd}
       >
         <!-- Tab Navigation -->
-        <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 gap-2 overflow-hidden">
+        <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 overflow-hidden">
           <!-- Indicator Slide & Color Transition -->
           <div
             class="absolute top-1 left-1 h-[calc(100%-0.5rem)] w-1/3 rounded-lg z-0 transition-transform transition-colors duration-300 ease-in-out"
@@ -665,24 +863,24 @@ function handlePinSubmit() {
             "
           ></div>
           <button 
-            class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            onclick={() => activeTab = 'menu'}
+            class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
+            on:click={() => activeTab = 'menu'}
           >
             <svelte:component this={Utensils} class="w-4 h-4" />
             Menu
           </button>
           <button 
-            class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            onclick={() => activeTab = 'kategori'}
+            class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
+            on:click={() => activeTab = 'kategori'}
           >
             <svelte:component this={Tag} class="w-4 h-4" />
             Kategori
           </button>
           <button 
-            class="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
-            onclick={() => activeTab = 'ekstra'}
+            class="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}"
+            on:click={() => activeTab = 'ekstra'}
           >
-            <svelte:component this={Coffee} class="w-5 h-5 text-brown-600" />
+            <svelte:component this={Coffee} class="w-4 h-4" />
             Ekstra
           </button>
         </div>
@@ -696,9 +894,10 @@ function handlePinSubmit() {
             </span>
             <input
               type="text"
-                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 placeholder-gray-400"
+              class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 placeholder-gray-400"
               placeholder="Cari produk…"
               bind:value={searchKeyword}
+              on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
             />
           </div>
         </div>
@@ -709,51 +908,74 @@ function handlePinSubmit() {
           <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium">{filteredMenus.length} menu</span>
         </div>
         <!-- Kategori Filter -->
-          <div class="flex gap-2 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4"
+          <div class="flex gap-1.5 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4"
             style="scrollbar-width:none;-ms-overflow-style:none;"
           >
           <button 
-              class="px-3 py-2.5 min-w-[88px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-            onclick={() => selectedKategori = 'Semua'}
+              class="px-2.5 py-2 min-w-[70px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+              on:click={() => { selectedKategori = 'Semua'; touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
           >
             Semua
           </button>
+          {#if kategoriList.length === 0}
+            <div class="flex items-center gap-2 h-[32px] px-2 text-xs text-gray-400">
+              <span class="text-base" style="position:relative;top:-2px;">📁</span>
+              <span>Belum ada Kategori</span>
+            </div>
+          {:else}
           {#each getKategoriNames() as kategori}
             <button 
-                class="px-3 py-2.5 min-w-[88px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-              onclick={() => selectedKategori = kategori}
+                  class="px-2.5 py-2 min-w-[70px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+                  on:click={() => { selectedKategori = kategori; touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
             >
               {kategori}
             </button>
           {/each}
+          {/if}
         </div>
         <!-- Menu Grid Scrollable -->
-        <div class="flex-1 overflow-y-auto pb-16"
+        <div class="flex-1 overflow-y-auto pb-16 w-full"
           style="scrollbar-width:none;-ms-overflow-style:none;"
         >
-          <div class="grid grid-cols-2 gap-3">
+          {#if selectedKategori === 'Semua' && filteredMenus.length === 0}
+            <div class="flex flex-col justify-center items-center min-h-[200px] w-full text-gray-400 font-medium text-base text-center">
+              Belum ada menu.<br />Klik tombol + untuk menambah.
+            </div>
+          {:else if selectedKategori !== 'Semua' && filteredMenus.length === 0}
+            <div class="flex flex-col justify-center items-center min-h-[200px] w-full text-gray-400 font-medium text-base text-center">
+              Belum ada menu di kategori ini.
+            </div>
+          {/if}
+          <div class="grid grid-cols-2 gap-2 w-full">
             {#each filteredMenus as menu}
               <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group cursor-pointer hover:bg-pink-50 transition-colors"
                 data-menu-card
-                ontouchstart={handleMenuTouchStart}
-                ontouchmove={handleMenuTouchMove}
-                ontouchend={(e) => handleMenuTouchEnd(e, menu)}
-                onclick={(e) => handleMenuClick(e, menu)}
+                on:touchstart={handleMenuTouchStart}
+                on:touchmove={handleMenuTouchMove}
+                on:touchend={(e) => handleMenuTouchEnd(e, menu)}
+                on:click={(e) => handleMenuClick(e, menu)}
               >
                 <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
                   <button 
                     class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                    onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
+                    on:click={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
+                    on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteMenu(menu.id); }}
                   >
                     <svelte:component this={Trash} class="w-5 h-5" />
                   </button>
                 </div>
-                <div class="w-full aspect-square min-h-[140px] bg-white rounded-xl flex items-center justify-center mb-1 overflow-hidden">
-                  <ImagePlaceholder size={140} />
+                <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center mb-1 overflow-hidden">
+                  {#if menu.gambar && !imageError[String(menu.id)]}
+                    <img src={menu.gambar} alt={menu.name} class="w-full h-full object-cover rounded-xl bg-gray-100 min-h-[140px] aspect-square" on:error={() => handleImgError(String(menu.id))} />
+                  {:else}
+                    <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+                      🍹
+                    </div>
+                  {/if}
                 </div>
                 <div class="w-full flex flex-col items-center">
                   <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{menu.name}</h3>
-                  <div class="text-xs text-gray-400 mb-0.5">{menu.kategori}</div>
+                  <div class="text-xs text-gray-400 mb-0.5 min-h-[20px]">{menu.kategori ? menu.kategori : '\u00A0'}</div>
                   <div class="text-pink-500 font-bold text-base">Rp {menu.harga.toLocaleString('id-ID')}</div>
                 </div>
               </div>
@@ -761,10 +983,10 @@ function handlePinSubmit() {
           </div>
         </div>
       <!-- Floating Action Button Tambah Menu -->
-        <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-pink-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-pink-600 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400" onclick={() => openMenuForm()} aria-label="Tambah Menu">
+        <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-pink-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-pink-600 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400" on:click={() => openMenuForm()} aria-label="Tambah Menu">
           <svelte:component this={Plus} class="w-7 h-7" />
         </button>
-      {/if}
+    {/if}
 
         {#if activeTab === 'kategori'}
           <div class="w-full mb-4 px-0">
@@ -777,95 +999,113 @@ function handlePinSubmit() {
                 class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder-gray-400"
                 placeholder="Cari kategori…"
                 bind:value={searchKategoriKeyword}
+                on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
               />
-      </div>
+            </div>
           </div>
-          <div class="flex-1 overflow-y-auto pb-16"
+          <div class="flex-1 overflow-y-auto pb-16 w-full"
             style="scrollbar-width:none;-ms-overflow-style:none;"
           >
             <div class="flex items-center gap-2 mb-5">
               <h2 class="text-base font-bold text-blue-700">Daftar Kategori</h2>
               <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{kategoriList.length} kategori</span>
-            </div>
+                  </div>
             {#if kategoriList.length === 0}
-              <div class="text-center text-blue-400 py-12 text-sm">Belum ada kategori.<br/>Klik tombol + untuk menambah.</div>
+              <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
+                Belum ada kategori.<br />Klik tombol + untuk menambah.
+              </div>
             {:else}
               <div class="space-y-3">
                 {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
                   <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
                     data-kategori-box
-                    ontouchstart={handleKategoriTouchStart}
-                    ontouchmove={handleKategoriTouchMove}
-                    ontouchend={(e) => handleKategoriTouchEnd(e, kat)}
-                    onclick={(e) => handleKategoriClick(e, kat)}
+                    on:touchstart={handleKategoriTouchStart}
+                    on:touchmove={handleKategoriTouchMove}
+                    on:touchend={(e) => handleKategoriTouchEnd(e, kat)}
+                    on:click={(e) => handleKategoriClick(e, kat)}
                   >
-                    <div>
+                  <div>
                       <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
                       <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
-                    </div>
-                    <div class="flex gap-2" onclick={(e) => e.stopPropagation()}>
-                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}>
-                        <svelte:component this={Trash} class="w-5 h-5" />
-                      </button>
-                    </div>
                   </div>
+                    <div class="flex gap-2" role="group">
+                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
+                        on:click={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}
+                        on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteKategori(kat.id); }}
+                      >
+                        <svelte:component this={Trash} class="w-5 h-5" />
+                </button>
+              </div>
+            </div>
                 {/each}
               </div>
             {/if}
           </div>
           <!-- Floating Action Button Tambah Kategori -->
-          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" onclick={() => openKategoriForm()} aria-label="Tambah Kategori">
+          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-blue-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400" on:click={() => openKategoriForm()} aria-label="Tambah Kategori">
             <svelte:component this={Plus} class="w-7 h-7" />
-          </button>
+                </button>
         {/if}
 
         {#if activeTab === 'ekstra'}
-          <div class="w-full mb-4 px-0">
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
-              </span>
-              <input
-                type="text"
-                class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
-                placeholder="Cari ekstra…"
-                bind:value={searchEkstra}
-              />
+          <div class="flex flex-col flex-1 min-h-0 h-full w-full">
+            <div class="w-full mb-4 px-0">
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  class="block w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder-gray-400"
+                  placeholder="Cari ekstra…"
+                  bind:value={searchEkstra}
+                  on:blur={() => { touchStartX = 0; touchEndX = 0; ignoreSwipe = false; }}
+                />
+              </div>
             </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pb-16"
-            style="scrollbar-width:none;-ms-overflow-style:none;"
-          >
-          <div class="flex items-center gap-2 mb-5">
-              <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
-              <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              {#each ekstraList.filter(e => e.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra (ekstra.id)}
-                <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-center relative transition-all duration-200 cursor-pointer hover:bg-green-100"
-                  transition:fade
-                  ontouchstart={handleEkstraTouchStart}
-                  ontouchmove={handleEkstraTouchMove}
-                  ontouchend={(e) => handleEkstraTouchEnd(e, ekstra)}
-                  onclick={(e) => handleEkstraClick(e, ekstra)}
-                >
-                  <div class="absolute top-2 right-2 z-10 flex gap-2">
-                    <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }}>
-                      <svelte:component this={Trash} class="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div class="w-full flex flex-col items-center">
-                    <h3 class="font-semibold text-green-700 text-sm truncate w-full text-center mb-0.5">{ekstra.name}</h3>
-                    <div class="text-green-400 font-bold text-xs">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
-                  </div>
+            <div class="flex-1 min-h-0 overflow-y-auto pb-16 w-full"
+              style="scrollbar-width:none;-ms-overflow-style:none;"
+              on:touchstart={handleTabTouchStart}
+              on:touchmove={handleTabTouchMove}
+              on:touchend={handleTabTouchEnd}
+            >
+              <div class="flex items-center gap-2 mb-5">
+                <h2 class="text-base font-bold text-green-700">Daftar Ekstra</h2>
+                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">{ekstraList.length} ekstra</span>
+              </div>
+              {#if ekstraList.length === 0}
+                <div class="flex flex-col justify-center items-center min-h-[300px] w-full text-gray-400 font-medium text-base text-center">
+                  Belum ada ekstra.<br />Klik tombol + untuk menambah.
                 </div>
-              {/each}
+              {/if}
+              <div class="grid grid-cols-2 gap-2 w-full">
+                {#each ekstraList.filter(e => e.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra (ekstra.id)}
+                  <div class="bg-green-50 rounded-xl shadow border border-green-200 p-3 flex flex-col items-center relative transition-all duration-200 cursor-pointer hover:bg-green-100"
+                    transition:fade
+                    on:touchstart={handleEkstraTouchStart}
+                    on:touchmove={handleEkstraTouchMove}
+                    on:touchend={(e) => handleEkstraTouchEnd(e, ekstra)}
+                    on:click={(e) => handleEkstraClick(e, ekstra)}
+                  >
+                    <div class="absolute top-2 right-2 z-10 flex gap-2">
+                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" on:click={(e) => { e.stopPropagation(); confirmDeleteEkstra(ekstra.id); }} on:touchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteEkstra(ekstra.id); }}>
+                        <svelte:component this={Trash} class="w-5 h-5" />
+                </button>
+              </div>
+                    <div class="w-full flex flex-col items-center">
+                      <h3 class="font-semibold text-green-700 text-sm truncate w-full text-center mb-0.5">{ekstra.name}</h3>
+                      <div class="text-green-400 font-bold text-xs">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
             </div>
           </div>
-          <!-- Floating Action Button Tambah Ekstra -->
-          <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-green-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400" onclick={() => openEkstraForm()} aria-label="Tambah Ekstra">
-            <svelte:component this={Plus} class="w-7 h-7" />
-          </button>
+                {/each}
+              </div>
+              <div class="flex-1 min-h-[100px]"></div>
+            </div>
+            <!-- Floating Action Button Tambah Ekstra -->
+            <button class="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-green-500 shadow-md flex items-center justify-center text-white text-3xl hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400" on:click={() => openEkstraForm()} aria-label="Tambah Ekstra">
+              <svelte:component this={Plus} class="w-7 h-7" />
+            </button>
+          </div>
         {/if}
       </div>
     {/if}
@@ -873,11 +1113,13 @@ function handlePinSubmit() {
     <!-- Security Page -->
     {#if currentPage === 'security'}
       <div class="h-screen flex flex-col">
-        <div class="max-w-2xl mx-auto px-4 py-6 flex-1 overflow-y-auto"
+        <div class="max-w-2xl px-4 py-6 flex-1 overflow-y-auto"
           style="scrollbar-width:none;-ms-overflow-style:none;"
         >
           <!-- Section 1: Ganti Username & Password -->
           <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti Username & Password</h3>
+            <p class="text-gray-500 text-sm mb-6">Ubah username dan password akun kasir Anda secara berkala untuk menjaga keamanan akun.</p>
             <!-- Tab Navigation -->
             <div class="relative flex bg-white rounded-xl p-1 shadow-sm border border-gray-200 mb-4 mt-0 gap-2 overflow-hidden">
               <!-- Indicator Slide & Color Transition -->
@@ -890,18 +1132,18 @@ function handlePinSubmit() {
               ></div>
               <button 
                 class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => userRoleTab = 'pemilik'}
+                on:click={() => userRoleTab = 'pemilik'}
               >
                 Pemilik
               </button>
               <button 
                 class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => userRoleTab = 'kasir'}
+                on:click={() => userRoleTab = 'kasir'}
               >
                 Kasir
               </button>
-            </div>
-            <form class="flex flex-col gap-4" onsubmit={handleChangeUserPass} autocomplete="off">
+                  </div>
+            <form class="flex flex-col gap-4" on:submit={handleChangeUserPass} autocomplete="off">
               <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Lama" bind:value={oldUsername} required />
               <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Baru" bind:value={newUsername} required />
               <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Lama" bind:value={oldPassword} required />
@@ -920,23 +1162,38 @@ function handlePinSubmit() {
           </div>
           <!-- Section 2: Ganti PIN Keamanan -->
           {#if userRoleTab === 'pemilik'}
-            <div class="flex flex-col items-center justify-center py-12 text-center">
-              <div class="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mb-4">
-                <svelte:component this={Lock} class="w-8 h-8 text-pink-500" />
-              </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
               <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti PIN Keamanan</h3>
               <p class="text-gray-500 text-sm mb-6">Pengaturan PIN keamanan untuk mengunci halaman tertentu.</p>
-              <form class="flex flex-col gap-4 w-full" onsubmit={handleChangePin} autocomplete="off">
-                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required />
-                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru (4-6 digit)" bind:value={newPin} required pattern="[0-9]{4,6}" maxlength="6" minlength="4" />
-                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required pattern="[0-9]{4,6}" maxlength="6" minlength="4" />
+              <form class="flex flex-col gap-4 w-full" on:submit={handleChangePin} autocomplete="off">
+                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" on:input={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); oldPin = e.target.value; }} />
+                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru (4 digit)" bind:value={newPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" on:input={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); newPin = e.target.value; }} />
+                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" on:input={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); confirmPin = e.target.value; }} />
                 <div>
                   <div class="font-semibold text-gray-700 mb-2">Kunci PIN untuk halaman:</div>
                   <div class="flex flex-wrap gap-3">
-                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="pengaturan" class="accent-pink-500" /> Pengaturan</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="laporan" class="accent-pink-500" /> Laporan</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="catat" class="accent-pink-500" /> Catat</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" bind:group={lockedPages} value="beranda" class="accent-pink-500" /> Beranda</label>
+                    <!-- Hapus opsi pengaturan -->
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" bind:group={lockedPages} value="laporan" class="hidden peer" />
+                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
+                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      </span>
+                      <span class="text-sm text-gray-700">Laporan</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" bind:group={lockedPages} value="catat" class="hidden peer" />
+                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
+                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      </span>
+                      <span class="text-sm text-gray-700">Catat</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" bind:group={lockedPages} value="beranda" class="hidden peer" />
+                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
+                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      </span>
+                      <span class="text-sm text-gray-700">Beranda</span>
+                    </label>
                   </div>
                 </div>
                 {#if pinError}
@@ -946,13 +1203,7 @@ function handlePinSubmit() {
               </form>
             </div>
           {:else}
-            <div class="flex flex-col items-center justify-center py-12 text-center">
-              <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                <svelte:component this={Shield} class="w-8 h-8 text-blue-500" />
-              </div>
-              <h3 class="text-lg font-bold text-gray-800 mb-2">Pengaturan Keamanan Kasir</h3>
-              <p class="text-gray-500 text-sm">Kasir hanya dapat mengubah username dan password. Pengaturan PIN hanya tersedia untuk pemilik.</p>
-            </div>
+            <div></div>
           {/if}
         </div>
       </div>
@@ -977,12 +1228,12 @@ function handlePinSubmit() {
               {#if menuForm.gambar}
                 <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center mb-2 gap-2 cursor-pointer">
                   <img src={menuForm.gambar} alt="Preview" class="rounded-xl object-cover w-full h-full border border-gray-200 aspect-square" />
-                  <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
+                  <input type="file" accept="image/*" class="hidden" on:change={handleFileChange} />
                 </label>
                 {:else}
                   <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center border-2 border-dashed border-pink-200 rounded-xl cursor-pointer hover:bg-pink-50 transition-colors">
                     <span class="text-pink-400 font-medium mb-2">Klik untuk upload gambar</span>
-                    <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
+                    <input type="file" accept="image/*" class="hidden" on:change={handleFileChange} />
                     <span class="text-xs text-gray-400">Format: JPG, PNG, max 2MB</span>
                   </label>
               {/if}
@@ -1003,12 +1254,12 @@ function handlePinSubmit() {
               <div class="flex gap-3">
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'makanan' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  onclick={() => menuForm.tipe = 'makanan'}>
+                  on:click={() => menuForm.tipe = 'makanan'}>
                   Makanan
                 </button>
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'minuman' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  onclick={() => menuForm.tipe = 'minuman'}>
+                  on:click={() => menuForm.tipe = 'minuman'}>
                   Minuman
                 </button>
             </div>
@@ -1017,13 +1268,20 @@ function handlePinSubmit() {
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
               <div class="flex gap-2 overflow-x-auto pb-1">
-                {#each kategoriList as kat}
-                  <button type="button"
-                    class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                    onclick={() => menuForm.kategori = kat.name}>
-                    {kat.name}
-                  </button>
-                {/each}
+                {#if kategoriList.length === 0}
+                  <div class="flex items-center gap-2 h-[40px] px-4 text-sm text-gray-400">
+                    <span class="text-base" style="position:relative;top:-2px;">📁</span>
+                    <span>Belum ada Kategori</span>
+            </div>
+                {:else}
+                  {#each kategoriList as kat}
+                    <button type="button"
+                      class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                      on:click={() => menuForm.kategori = kat.name}>
+                      {kat.name}
+                    </button>
+                  {/each}
+                {/if}
             </div>
             </div>
             <!-- Harga (Input Format Rupiah) -->
@@ -1038,29 +1296,21 @@ function handlePinSubmit() {
                   pattern="[0-9]*"
                   id="menu-harga"
                   bind:value={menuForm.harga}
-                  oninput={(e) => {
+                  on:input={(e) => {
                     let value = e.target.value.replace(/[^\d]/g, '');
-                    if (value) {
-                      value = parseInt(value, 10).toLocaleString('id-ID');
-                    } else {
-                      value = '';
-                    }
                     menuForm.harga = value;
-                    setTimeout(() => {
-                      e.target.selectionStart = e.target.selectionEnd = e.target.value.length;
-                    }, 0);
                   }}
                 />
               </div>
             </div>
             <!-- Ekstra (Box Selector Grid) -->
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Ekstra (Opsional)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Ekstra</label>
               <div class="grid grid-cols-2 gap-2">
                 {#each ekstraList as ekstra}
                   <button type="button"
                     class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {menuForm.ekstraIds.includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                    onclick={(e) => {
+                    on:click={(e) => {
                       e.stopPropagation();
                       if (menuForm.ekstraIds.includes(ekstra.id)) {
                         menuForm.ekstraIds = menuForm.ekstraIds.filter(id => id !== ekstra.id);
@@ -1078,13 +1328,13 @@ function handlePinSubmit() {
           <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
               class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
-              onclick={() => showMenuForm = false}
+              on:click={() => showMenuForm = false}
             >
               Batal
             </button>
             <button 
               class="flex-1 py-3 px-4 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors text-base shadow-md"
-              onclick={saveMenu}
+              on:click={saveMenu}
             >
               {editMenuId ? 'Simpan' : 'Tambah Menu'}
             </button>
@@ -1100,7 +1350,7 @@ function handlePinSubmit() {
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center">
               <svelte:component this={Tag} class="w-5 h-5 text-blue-500" />
-            </div>
+          </div>
             <h2 class="text-base font-semibold text-gray-700">Edit Kategori</h2>
           </div>
           <div class="flex-1 w-full overflow-y-auto px-6 pb-2 pt-4"
@@ -1120,7 +1370,7 @@ function handlePinSubmit() {
                 {#each menuIdsInKategori as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-200"
                     transition:fly={{ y: -16, duration: 200 }}
-                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
+                    on:click={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
@@ -1135,7 +1385,7 @@ function handlePinSubmit() {
                 {#each menuIdsNonKategori as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-50"
                     transition:fly={{ y: 16, duration: 200 }}
-                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
+                    on:click={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
@@ -1148,13 +1398,13 @@ function handlePinSubmit() {
           <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
               class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
-              onclick={closeKategoriDetailModal}
+              on:click={closeKategoriDetailModal}
             >
               Batal
             </button>
             <button 
               class="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition-colors text-base shadow-md"
-              onclick={saveKategoriDetail}
+              on:click={saveKategoriDetail}
             >
               Simpan
             </button>
@@ -1167,7 +1417,7 @@ function handlePinSubmit() {
     {#if showDeleteModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
-          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteMenu} aria-label="Tutup">
+          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" on:click={cancelDeleteMenu} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
@@ -1176,8 +1426,8 @@ function handlePinSubmit() {
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Menu?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Menu yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus menu ini?</p>
           <div class="flex gap-3 w-full">
-            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteMenu}>Batal</button>
-            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteMenu}>Hapus</button>
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" on:click={cancelDeleteMenu}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" on:click={doDeleteMenu}>Hapus</button>
           </div>
         </div>
       </div>
@@ -1190,7 +1440,7 @@ function handlePinSubmit() {
     {#if showDeleteKategoriModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
-          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteKategori} aria-label="Tutup">
+          <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" on:click={cancelDeleteKategori} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
@@ -1199,8 +1449,8 @@ function handlePinSubmit() {
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Kategori?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Kategori yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus kategori ini?</p>
           <div class="flex gap-3 w-full">
-            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteKategori}>Batal</button>
-            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteKategori}>Hapus</button>
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" on:click={cancelDeleteKategori}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" on:click={doDeleteKategori}>Hapus</button>
           </div>
         </div>
       </div>
@@ -1216,8 +1466,8 @@ function handlePinSubmit() {
           <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Ekstra?</h2>
           <p class="text-gray-500 text-sm mb-6 text-center">Ekstra yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus ekstra ini?</p>
           <div class="flex gap-3 w-full">
-            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteEkstra}>Batal</button>
-            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteEkstra}>Hapus</button>
+            <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" on:click={cancelDeleteEkstra}>Batal</button>
+            <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" on:click={doDeleteEkstra}>Hapus</button>
           </div>
         </div>
       </div>
@@ -1226,7 +1476,7 @@ function handlePinSubmit() {
     <!-- Ekstra Form Modal -->
     {#if showEkstraForm}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col h-[90vh] max-h-[600px]">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-0 relative flex flex-col max-h-[400px]">
           <div class="w-full flex flex-row items-center gap-4 px-4 pt-3 pb-2 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
             <div class="w-8 h-8 rounded-lg bg-green-100 border border-green-200 flex items-center justify-center">
               <svelte:component this={Coffee} class="w-5 h-5 text-green-500" />
@@ -1247,27 +1497,42 @@ function handlePinSubmit() {
             </div>
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="ekstra-harga">Harga</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Rp</span>
               <input 
-                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="0"
-                type="number"
-                min="0"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
                 id="ekstra-harga"
                 bind:value={ekstraForm.harga}
+                  on:input={(e) => {
+                    let value = e.target.value.replace(/[^\d]/g, '');
+                    if (value) {
+                      value = parseInt(value, 10).toLocaleString('id-ID');
+                    } else {
+                      value = '';
+                    }
+                    ekstraForm.harga = value;
+                    setTimeout(() => {
+                      e.target.selectionStart = e.target.selectionEnd = e.target.value.length;
+                    }, 0);
+                  }}
               />
             </div>
+          </div>
           </div>
           <div class="sticky bottom-0 left-0 w-full px-6 pb-6 pt-4 flex gap-3 z-10 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.12)]">
             <button 
               class="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base"
-              onclick={() => showEkstraForm = false}
+              on:click={() => showEkstraForm = false}
             >
               Batal
             </button>
             <button 
               class="flex-1 py-3 px-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors text-base shadow-md"
-              onclick={saveEkstra}
-              disabled={!ekstraForm.name.trim() || !ekstraForm.harga || isNaN(parseInt(ekstraForm.harga)) || parseInt(ekstraForm.harga) <= 0}
+              on:click={saveEkstra}
+              disabled={!ekstraForm.name.trim() || !ekstraForm.harga || isNaN(parseInt(ekstraForm.harga.toString().replace(/[^\d]/g, ''))) || parseInt(ekstraForm.harga.toString().replace(/[^\d]/g, '')) <= 0}
             >
               {editEkstraId ? 'Simpan' : 'Tambah Ekstra'}
             </button>
@@ -1284,7 +1549,7 @@ function handlePinSubmit() {
       <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       <button 
         class="bg-pink-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-pink-600 transition-colors"
-        onclick={() => goto('/pengaturan')}
+        on:click={() => goto('/pengaturan')}
       >
         Kembali ke Pengaturan
       </button>

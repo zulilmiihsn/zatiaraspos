@@ -4,10 +4,9 @@
 	import BottomNav from '$lib/components/shared/BottomNav.svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { auth, session } from '$lib/auth.js';
-	import { SecurityMiddleware } from '$lib/security.js';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
+	import { supabase } from '$lib/database/supabaseClient';
 
 	export let data;
 	
@@ -25,7 +24,7 @@
 	}
 	
 	// Check authentication on mount
-	onMount(() => {
+	onMount(async () => {
 		const currentPath = $page.url.pathname;
 		const publicPaths = ['/login', '/unauthorized'];
 		
@@ -34,16 +33,21 @@
 			return;
 		}
 		
-		// Check if user is authenticated
-		if (!auth.isAuthenticated()) {
+		// Cek session Supabase
+		const { data: { session } } = await supabase.auth.getSession();
+		if (!session) {
 			goto('/login');
 			return;
 		}
 		
-		// Check role-based access for admin routes
-		if (currentPath.startsWith('/admin') && !auth.hasRole('admin')) {
-			goto('/unauthorized');
-			return;
+		// Cek role jika akses /admin
+		if (currentPath.startsWith('/admin')) {
+			const userId = session.user.id;
+			const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+			if (!profile || profile.role !== 'admin') {
+				goto('/unauthorized');
+				return;
+			}
 		}
 	});
 </script>

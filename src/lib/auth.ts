@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { supabase } from '$lib/database/supabaseClient';
 
 // Dummy credentials - dalam produksi ini harus dari database
 const DUMMY_CREDENTIALS = {
@@ -121,4 +122,38 @@ function generateDummyToken(user: any): string {
   const signature = btoa('dummy-signature-' + Math.random().toString(36));
   
   return `${header}.${payload}.${signature}`;
+}
+
+export async function loginWithUsername(username: string, password: string) {
+  // Cari email user dari tabel profiles
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('full_name', username)
+    .single();
+
+  if (profileError || !profile) throw new Error('Username tidak ditemukan');
+
+  // Login dengan email dan password
+  const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    email: profile.email,
+    password
+  });
+
+  if (loginError) throw new Error('Password salah');
+  return data;
+}
+
+export async function getUserRole(userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data.role;
+}
+
+export async function logout() {
+  await supabase.auth.signOut();
 } 

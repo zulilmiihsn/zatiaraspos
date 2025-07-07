@@ -4,6 +4,7 @@ import { goto } from '$app/navigation';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
+import { supabase } from '$lib/database/supabaseClient';
 
 let cart = [];
 let customerName = '';
@@ -24,6 +25,15 @@ let keypad = [
 ];
 let showSuccessModal = false;
 let showQrisWarning = false;
+let transactionId = '';
+
+function generateTransactionId() {
+  // Ambil nomor urut terakhir dari localStorage
+  let lastNum = parseInt(localStorage.getItem('last_jus_id') || '0', 10);
+  lastNum++;
+  localStorage.setItem('last_jus_id', lastNum.toString());
+  return `JUS${lastNum.toString().padStart(5, '0')}`;
+}
 
 onMount(() => {
   const saved = localStorage.getItem('pos_cart');
@@ -32,10 +42,11 @@ onMount(() => {
       cart = JSON.parse(saved);
     } catch {}
   }
+  transactionId = generateTransactionId();
 });
 
 $: totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
-$: totalHarga = cart.reduce((sum, item) => sum + (item.qty * item.product.price + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0)), 0);
+$: totalHarga = cart.reduce((sum, item) => sum + (item.qty * (item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0) : 0)), 0);
 $: kembalian = (parseInt(cashReceived) || 0) - totalHarga;
 $: formattedCashReceived = cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '';
 
@@ -63,6 +74,8 @@ function confirmQrisChecked() {
   showSuccessModal = true;
   cashReceived = totalHarga.toString(); // QRIS = dibayar pas
   kembalian = 0;
+  // Catat ke laporan
+  catatTransaksiKeLaporan();
   localStorage.removeItem('pos_cart');
 }
 function addCashTemplate(nom) {
@@ -105,7 +118,7 @@ function finishCash() {
   SecurityMiddleware.logSecurityEvent('payment_completed', {
     paymentMethod: sanitizedPaymentMethod,
     totalAmount: totalHarga,
-    cashReceived: parseInt(sanitizedCashRecyeived),
+    cashReceived: parseInt(sanitizedCashReceived),
     change: kembalian,
     itemsCount: cart.length
   });
@@ -113,6 +126,8 @@ function finishCash() {
   // Proses pembayaran tunai selesai
   showCashModal = false;
   showSuccessModal = true;
+  // Catat ke laporan
+  catatTransaksiKeLaporan();
   // Kosongkan keranjang di localStorage jika perlu
   localStorage.removeItem('pos_cart');
 }
@@ -133,17 +148,17 @@ function printReceipt() {
   // - Kembalian
   
   const receiptData = {
-    transactionId: 'TRX123456',
+    transactionId: transactionId,
     customerName: customerName.trim() || 'Pelanggan',
     items: cart.map(item => ({
       name: item.product.name,
       qty: item.qty,
-      price: item.product.price,
+      price: item.product.price ?? item.product.harga ?? 0,
       addOns: item.addOns || [],
       sugar: item.sugar,
       ice: item.ice,
       note: item.note || '',
-      subtotal: item.product.price * item.qty + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0)
+      subtotal: (item.product.price ?? item.product.harga ?? 0) * item.qty + (item.addOns ? item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0) : 0)
     })),
     total: totalHarga,
     paymentMethod: paymentMethod === 'qris' ? 'QRIS' : 'Tunai',
@@ -152,20 +167,45 @@ function printReceipt() {
     timestamp: new Date().toLocaleString('id-ID')
   };
   
-  console.log('Struk yang akan dicetak:', receiptData);
   alert('Fitur cetak struk belum tersedia. Data struk telah disimpan di console.');
+}
+
+function getLocalOffsetString() {
+  const offset = -new Date().getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const pad = n => n.toString().padStart(2, '0');
+  const hours = pad(Math.floor(Math.abs(offset) / 60));
+  const minutes = pad(Math.abs(offset) % 60);
+  return `${sign}${hours}:${minutes}`;
+}
+
+async function catatTransaksiKeLaporan() {
+  const now = new Date();
+  const offset = getLocalOffsetString();
+  const transaction_date = now.toISOString().slice(0, 19) + offset;
+  const payment = paymentMethod === 'qris' ? 'non-tunai' : 'tunai';
+  const inserts = cart.map(item => ({
+    amount: item.qty * (item.product.price ?? item.product.harga ?? 0),
+    qty: item.qty,
+    type: 'in',
+    description: `Penjualan ${item.product.name}`,
+    transaction_date,
+    payment_method: payment,
+    jenis: 'pendapatan_usaha'
+  }));
+  await supabase.from('cash_transactions').insert(inserts);
 }
 </script>
 
 <main class="flex-1 overflow-y-auto px-2 pt-2 page-content">
   <div class="px-2 py-4">
-    <div class="font-semibold text-sm text-gray-700 mb-3">Pembayaran: #TRX123456</div>
+    <div class="font-semibold text-sm text-gray-700 mb-3">Pembayaran: #{transactionId}</div>
     <!-- Input Nama Pelanggan -->
     <div class="mb-4">
       <div class="block text-sm text-gray-500 mb-2">Nama Pelanggan</div>
       <input
         type="text"
-        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400"
+        class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
         placeholder="Masukkan nama pelanggan..."
         bind:value={customerName}
         maxlength="50"
@@ -182,7 +222,7 @@ function printReceipt() {
                 <span class="font-medium text-gray-900 truncate">{item.product.name}</span>
                 <span class="text-sm text-gray-500 flex-shrink-0">x{item.qty}</span>
               </div>
-              <span class="font-bold text-pink-500">Rp {(item.product.price * item.qty + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0)).toLocaleString('id-ID')}</span>
+              <span class="font-bold text-pink-500">Rp {(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</span>
             </div>
             {#if (item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
               <div class="text-xs text-gray-500 font-medium ml-1">
@@ -217,11 +257,22 @@ function printReceipt() {
       <div class="text-2xl font-bold text-pink-500">Rp {totalHarga.toLocaleString('id-ID')}</div>
     </div>
     <!-- Tombol Konfirmasi -->
-    <button class="w-full bg-pink-500 text-white text-lg font-bold rounded-xl py-4 shadow-lg active:bg-pink-600 transition-all mt-2 disabled:opacity-50" onclick={handleBayar} disabled={!paymentMethod}>
+    <button class="w-full bg-pink-500 text-white text-lg font-bold rounded-xl py-4 shadow-lg active:bg-pink-600 transition-all mt-2 disabled:opacity-50"
+      onclick={handleBayar}
+      disabled={!paymentMethod || !customerName.trim()}
+    >
       Konfirmasi & Bayar
     </button>
-    {#if !paymentMethod}
-      <div class="text-center text-xs text-red-400 mt-2">Pilih metode pembayaran dulu</div>
+    {#if !paymentMethod || !customerName.trim()}
+      <div class="text-center text-xs text-red-400 mt-2">
+        {#if !paymentMethod && !customerName.trim()}
+          Isi nama pelanggan & pilih metode pembayaran dulu
+        {:else if !paymentMethod}
+          Pilih metode pembayaran dulu
+        {:else}
+          Isi nama pelanggan dulu
+        {/if}
+      </div>
     {/if}
     <button class="block mx-auto mt-4 text-sm text-gray-400 underline hover:text-pink-400" type="button" onclick={handleCancel}>
       Batalkan

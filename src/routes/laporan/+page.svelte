@@ -5,9 +5,13 @@ import { slide, fade } from 'svelte/transition';
 import { cubicOut, cubicIn } from 'svelte/easing';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
+import { supabase } from '$lib/database/supabaseClient';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
+let pin = '';
+let userRole = '';
+
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -21,7 +25,38 @@ onMount(async () => {
   ArrowUpCircle = icons[2].default;
   FilterIcon = icons[3].default;
   DownloadIcon = icons[4].default;
+  await fetchPin();
+  await fetchLaporan();
+
+  // Ambil session Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    userRole = profile?.role || '';
+  }
+  if (userRole === 'kasir') {
+    const { data } = await supabase.from('security_settings').select('locked_pages').single();
+    const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+    if (lockedPages.includes('laporan')) {
+      showPinModal = true;
+    }
+  }
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  filterDate = now.toISOString().slice(0, 10);
+  filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+  filterYear = now.getFullYear().toString();
 });
+
+async function fetchPin() {
+  const { data } = await supabase.from('security_settings').select('pin').single();
+  pin = data?.pin || '1234';
+}
 
 // Touch handling variables
 let touchStartX = 0;
@@ -61,7 +96,6 @@ let showPinModal = false;
 let pinInput = '';
 let pinError = '';
 const DUMMY_PIN = '1234';
-let userRole = '';
 let errorTimeout: number;
 let isClosing = false;
 
@@ -71,6 +105,14 @@ let pemasukanUsaha = [];
 let pemasukanLain = [];
 let bebanUsaha = [];
 let bebanLain = [];
+
+let laporan = [];
+
+// Tambahan: Data transaksi kas terstruktur untuk accordion
+let pemasukanUsahaDetail = [];
+let pemasukanLainDetail = [];
+let bebanUsahaDetail = [];
+let bebanLainDetail = [];
 
 // Fungsi untuk tanggal lokal sesuai waktu sistem
 function getLocalDateString() {
@@ -88,9 +130,15 @@ onMount(() => {
   
   const user = auth.getCurrentUser();
   userRole = user?.role || '';
+  
+  // Check if page is locked for kasir
   if (userRole === 'kasir') {
+    const lockedPages = JSON.parse(localStorage.getItem('lockedPages') || '["laporan", "beranda"]');
+    if (lockedPages.includes('laporan')) {
     showPinModal = true;
+    }
   }
+  
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   filterDate = now.toISOString().slice(0, 10);
@@ -173,12 +221,11 @@ function handleGlobalClick(e) {
 }
 
 function handlePinSubmit() {
-  if (pinInput === DUMMY_PIN) {
+  if (pinInput === pin) {
     isClosing = true;
     if (errorTimeout) {
       clearTimeout(errorTimeout);
     }
-    // Delay untuk animasi swipe up
     setTimeout(() => {
       showPinModal = false;
       pinError = '';
@@ -199,8 +246,7 @@ function handlePinSubmit() {
 
 function applyFilter() {
   showFilter = false;
-  // TODO: fetch data sesuai filter
-  console.log('Filter applied:', { filterType, filterDate, filterMonth, filterYear, startDate, endDate });
+  fetchLaporan(startDate, endDate);
 }
 
 function openDatePicker() {
@@ -251,6 +297,79 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
     year: 'numeric' 
   });
 }
+
+// Modifikasi fetchLaporan agar filter tanggal pakai waktu sistem user/browser tanpa offset tambahan
+async function fetchLaporan(start = startDate, end = endDate) {
+  // Konversi filter ke UTC ISO string
+  const startUTC = new Date(start + 'T00:00:00').toISOString();
+  const endUTC = new Date(end + 'T23:59:59').toISOString();
+  const { data: kas, error: kasError } = await supabase
+    .from('cash_transactions')
+    .select('*')
+    .gte('transaction_date', startUTC)
+    .lte('transaction_date', endUTC)
+    .order('transaction_date', { ascending: false });
+  if (!kasError && kas) {
+    laporan = kas;
+    // Reset detail
+    pemasukanUsahaDetail = [];
+    pemasukanLainDetail = [];
+    bebanUsahaDetail = [];
+    bebanLainDetail = [];
+    kas.forEach(item => {
+      if (item.type === 'in') {
+        if (item.jenis === 'pendapatan_usaha') {
+          pemasukanUsahaDetail.push(item);
+        } else {
+          pemasukanLainDetail.push(item);
+        }
+      } else if (item.type === 'out') {
+        if (item.jenis === 'beban_usaha') {
+          bebanUsahaDetail.push(item);
+        } else {
+          bebanLainDetail.push(item);
+        }
+      }
+    });
+    // Accordion auto-close/expand
+    showPendapatanUsaha = pemasukanUsahaDetail.length > 0;
+    showPemasukanLain = pemasukanLainDetail.length > 0;
+    showBebanUsaha = bebanUsahaDetail.length > 0;
+    showBebanLain = bebanLainDetail.length > 0;
+    showPemasukan = pemasukanUsahaDetail.length > 0 || pemasukanLainDetail.length > 0;
+    showPengeluaran = bebanUsahaDetail.length > 0 || bebanLainDetail.length > 0;
+  }
+}
+
+// Tambahkan reactive statement untuk summary box
+$: {
+  const totalPemasukan = (pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0));
+  const totalPengeluaran = (bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0));
+  const totalPendapatanUsaha = pemasukanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalBebanUsaha = bebanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const labaKotor = totalPendapatanUsaha - totalBebanUsaha;
+  const pajak = Math.round(totalPendapatanUsaha * 0.005);
+  const labaBersih = labaKotor - pajak;
+  summary = {
+    pendapatan: totalPemasukan,
+    pengeluaran: totalPengeluaran,
+    saldo: totalPemasukan - totalPengeluaran,
+    labaKotor,
+    pajak,
+    labaBersih
+  };
+}
+
+// Akumulasi pemasukanUsahaDetail per produk sebelum render
+$: pemasukanUsahaGrouped = (() => {
+  const group = {};
+  for (const item of pemasukanUsahaDetail) {
+    if (!item.description) continue;
+    if (!group[item.description]) group[item.description] = 0;
+    group[item.description] += item.amount || 0;
+  }
+  return group;
+})();
 </script>
 
 {#if showPinModal}
@@ -378,6 +497,10 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
           <button class="w-12 h-12 p-0 rounded-xl bg-pink-500 text-white font-bold shadow-sm hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center justify-center" onclick={() => showFilter = true} aria-label="Filter">
             {#if FilterIcon}
               <svelte:component this={FilterIcon} class="w-5 h-5" />
+            {:else}
+              <div class="w-5 h-5 flex items-center justify-center">
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
             {/if}
           </button>
         </div>
@@ -448,10 +571,10 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
               </button>
               {#if showPendapatanUsaha}
                 <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#each pemasukanUsaha as item}
+                  {#each Object.entries(pemasukanUsahaGrouped) as [desc, total]}
                     <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.label}</span>
-                      <span>Rp {item.nominal !== null ? item.nominal.toLocaleString('id-ID') : '--'}</span>
+                      <span>{desc}</span>
+                      <span class="font-bold text-gray-700">Rp {total.toLocaleString('id-ID')}</span>
                     </li>
                   {/each}
                 </ul>
@@ -463,10 +586,13 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
               </button>
               {#if showPemasukanLain}
                 <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#each pemasukanLain as item}
+                  {#if pemasukanLainDetail.length === 0}
+                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                  {/if}
+                  {#each pemasukanLainDetail as item}
                     <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.label}</span>
-                      <span>Rp {item.nominal !== null ? item.nominal.toLocaleString('id-ID') : '--'}</span>
+                      <span>{item.description || '-'}</span>
+                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                     </li>
                   {/each}
                 </ul>
@@ -489,10 +615,13 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
               </button>
               {#if showBebanUsaha}
                 <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#each bebanUsaha as item}
+                  {#if bebanUsahaDetail.length === 0}
+                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                  {/if}
+                  {#each bebanUsahaDetail as item}
                     <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.label}</span>
-                      <span>Rp {item.nominal !== null ? item.nominal.toLocaleString('id-ID') : '--'}</span>
+                      <span>{item.description || '-'}</span>
+                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                     </li>
                   {/each}
                 </ul>
@@ -504,10 +633,13 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
               </button>
               {#if showBebanLain}
                 <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#each bebanLain as item}
+                  {#if bebanLainDetail.length === 0}
+                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                  {/if}
+                  {#each bebanLainDetail as item}
                     <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.label}</span>
-                      <span>Rp {item.nominal !== null ? item.nominal.toLocaleString('id-ID') : '--'}</span>
+                      <span>{item.description || '-'}</span>
+                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                     </li>
                   {/each}
                 </ul>
@@ -518,17 +650,17 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
         <!-- Laba (Rugi) Kotor -->
         <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
           <span>Laba (Rugi) Kotor</span>
-          <span>Rp 0</span>
+          <span>Rp {summary.labaKotor !== null ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
         </div>
         <!-- Pajak Pendapatan UMKM -->
         <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
           <span>Pajak Pendapatan UMKM (0,5%)</span>
-          <span>Rp 0</span>
+          <span>Rp {summary.pajak !== null ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
         </div>
         <!-- Laba (Rugi) Bersih -->
         <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm">
           <span>Laba (Rugi) Bersih</span>
-          <span>Rp 0</span>
+          <span>Rp {summary.labaBersih !== null ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
         </div>
       </div>
 

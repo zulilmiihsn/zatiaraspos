@@ -257,24 +257,15 @@ export function checkRateLimit(key: string, maxRequests: number = 10, windowMs: 
 // Validasi tanggal
 export function validateDate(date: string | Date): ValidationResult {
   const errors: string[] = [];
-  
   if (!date) {
     errors.push('Tanggal harus diisi');
     return { isValid: false, errors };
   }
-  
   const dateObj = new Date(date);
-  
   if (isNaN(dateObj.getTime())) {
     errors.push('Format tanggal tidak valid');
     return { isValid: false, errors };
   }
-  
-  // Pastikan tanggal tidak di masa depan untuk transaksi
-  if (dateObj > new Date()) {
-    errors.push('Tanggal tidak boleh di masa depan');
-  }
-  
   return { isValid: errors.length === 0, errors };
 }
 

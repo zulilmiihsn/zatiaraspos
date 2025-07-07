@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { auth, session } from '$lib/auth.js';
+  import { loginWithUsername } from '$lib/auth';
   import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/validation.js';
   import { SecurityMiddleware } from '$lib/security.js';
 
+  let userRole = '';
   let username = '';
   let password = '';
   let isLoading = false;
@@ -15,18 +16,9 @@
   let usernameError = '';
   let passwordError = '';
 
-  // Check if already logged in
-  onMount(() => {
-    if (auth.isAuthenticated()) {
-      goto('/');
-    }
-  });
-
   // Validate form
   function validateForm(): boolean {
     let isValid = true;
-
-    // Validate username
     const usernameValidation = validateText(username, {
       required: true,
       minLength: 3,
@@ -34,37 +26,22 @@
     });
     usernameError = usernameValidation.errors.join(', ');
     if (!usernameValidation.isValid) isValid = false;
-
-    // Validate password (simplified for demo)
     const passwordValidation = validatePasswordDemo(password);
     passwordError = passwordValidation.errors.join(', ');
     if (!passwordValidation.isValid) isValid = false;
-
     return isValid;
   }
 
-  // Handle form submission
   async function handleSubmit() {
-    // Clear previous messages
     errorMessage = '';
     successMessage = '';
-
-    // Validate form
-    if (!validateForm()) {
-      return;
-    }
-
-    // Check rate limiting
+    if (!validateForm()) return;
     if (!SecurityMiddleware.checkFormRateLimit('login')) {
       errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
       return;
     }
-
-    // Sanitize inputs
     const sanitizedUsername = sanitizeInput(username);
     const sanitizedPassword = sanitizeInput(password);
-
-    // Check for suspicious activity
     if (SecurityMiddleware.detectSuspiciousActivity('login', sanitizedUsername + sanitizedPassword)) {
       errorMessage = 'Aktivitas mencurigakan terdeteksi. Silakan coba lagi.';
       SecurityMiddleware.logSecurityEvent('login_attempt_blocked', {
@@ -73,69 +50,35 @@
       });
       return;
     }
-
     isLoading = true;
-
     try {
-      const result = await auth.login(sanitizedUsername, sanitizedPassword);
-      
-      if (result.success) {
-        const userRole = result.user?.role;
-        const userName = result.user?.name;
-        
-        // Custom success message based on role
-        let roleMessage = '';
-        if (userRole === 'admin') {
-          roleMessage = 'Selamat datang, Administrator! Anda memiliki akses penuh ke semua fitur sistem.';
-        } else if (userRole === 'kasir') {
-          roleMessage = 'Selamat datang, Kasir! Anda dapat mengakses POS dan laporan transaksi.';
-        }
-        
-        successMessage = `${result.message} ${roleMessage}`;
-        
-        SecurityMiddleware.logSecurityEvent('login_success', {
-          username: sanitizedUsername,
-          role: userRole,
-          name: userName
-        });
-        
-        // Redirect after short delay
-        setTimeout(() => {
-          goto('/');
-        }, 2000); // Increased delay to show role message
-      } else {
-        errorMessage = result.message;
-        SecurityMiddleware.logSecurityEvent('login_failed', {
-          username: sanitizedUsername,
-          reason: 'invalid_credentials'
-        });
-      }
-    } catch (error) {
-      errorMessage = 'Terjadi kesalahan sistem. Silakan coba lagi.';
-      SecurityMiddleware.logSecurityEvent('login_error', {
+      await loginWithUsername(sanitizedUsername, sanitizedPassword);
+      successMessage = 'Login berhasil!';
+      setTimeout(() => goto('/'), 1000);
+    } catch (e) {
+      errorMessage = e.message;
+      SecurityMiddleware.logSecurityEvent('login_failed', {
         username: sanitizedUsername,
-        error: error.message
+        reason: 'invalid_credentials'
       });
     } finally {
       isLoading = false;
     }
   }
 
-  // Handle input changes
-  function handleUsernameChange() {
-    usernameError = '';
-  }
+  function handleUsernameChange() { usernameError = ''; }
+  function handlePasswordChange() { passwordError = ''; }
+  function handleKeyPress(event: KeyboardEvent) { if (event.key === 'Enter') handleSubmit(); }
 
-  function handlePasswordChange() {
-    passwordError = '';
-  }
-
-  // Handle key press
-  function handleKeyPress(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      handleSubmit();
+  onMount(async () => {
+    if (userRole === 'kasir') {
+      const { data } = await supabase.from('security_settings').select('locked_pages').single();
+      const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+      if (lockedPages.includes('beranda')) {
+        showPinModal = true;
+      }
     }
-  }
+  });
 </script>
 
 <svelte:head>

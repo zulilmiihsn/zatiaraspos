@@ -9,9 +9,13 @@ import Topbar from '$lib/components/shared/Topbar.svelte';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
 import { validateNumber, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
+import { fly } from 'svelte/transition';
+import { supabase } from '$lib/database/supabaseClient';
 
 // Lazy load icons
 let Home, ShoppingBag, FileText, Book, Settings;
+let isLoadingProducts = true;
+
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/home'),
@@ -25,7 +29,25 @@ onMount(async () => {
   FileText = icons[2].default;
   Book = icons[3].default;
   Settings = icons[4].default;
+
+  await fetchCategories();
+  await fetchAddOns();
+  await fetchProducts();
+  isLoadingProducts = false;
 });
+
+async function fetchCategories() {
+  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
+  if (!error) categories = data;
+}
+async function fetchProducts() {
+  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  if (!error) products = data;
+}
+async function fetchAddOns() {
+  const { data, error } = await supabase.from('add_ons').select('*').order('created_at', { ascending: false });
+  if (!error) addOns = data;
+}
 
 // Touch handling variables
 let touchStartX = 0;
@@ -44,64 +66,13 @@ const navs = [
 ];
 
 // Kategori produk
-const categories = [
-  { id: 'all', name: 'Semua' },
-  { id: 'buah', name: 'Jus Buah' },
-  { id: 'campur', name: 'Jus Campur' },
-  { id: 'signature', name: 'Signature' },
-];
 let selectedCategory = 'all';
 
 // Produk mock dengan kategori
-const products = [
-  {
-    id: 1,
-    name: 'Jus Alpukat',
-    price: 18000,
-    image: '',
-    category: 'buah',
-  },
-  {
-    id: 2,
-    name: 'Jus Mangga',
-    price: 15000,
-    image: '',
-    category: 'buah',
-  },
-  {
-    id: 3,
-    name: 'Jus Strawberry',
-    price: 17000,
-    image: '',
-    category: 'buah',
-  },
-  {
-    id: 4,
-    name: 'Jus Campur Segar',
-    price: 20000,
-    image: '',
-    category: 'campur',
-  },
-  {
-    id: 5,
-    name: 'Zatiaras Signature',
-    price: 25000,
-    image: '',
-    category: 'signature',
-  },
-  // ... tambahkan produk lain
-];
+let products = [];
 
 // Topping mock tanpa emoji/icon
-const addOns = [
-  { id: 1, name: 'Susu Kental Manis', price: 2000 },
-  { id: 2, name: 'Coklat', price: 2500 },
-  { id: 3, name: 'Keju Parut', price: 3000 },
-  { id: 4, name: 'Oreo', price: 2500 },
-  { id: 5, name: 'Boba', price: 3000 },
-  { id: 6, name: 'Nata de Coco', price: 2000 },
-  { id: 7, name: 'Jelly', price: 2000 },
-];
+let addOns = [];
 
 // Jenis gula dan es
 const sugarOptions = [
@@ -144,18 +115,24 @@ function handleSearchInput(value) {
 // Memoized computed values for performance
 $: totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
 $: totalHarga = cart.reduce((sum, item) => {
-  const itemPrice = item.product.price * item.qty;
-  const addOnsPrice = item.addOns ? item.addOns.reduce((a, b) => a + (b.price * item.qty), 0) : 0;
+  const itemPrice = (item.product.price ?? item.product.harga ?? 0) * item.qty;
+  const addOnsPrice = item.addOns ? item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0) : 0;
   return sum + itemPrice + addOnsPrice;
 }, 0);
 
 // Memoized filtered products
-$: filteredProducts = search 
-  ? products.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
-    )
-  : products;
+$: filteredProducts = products.filter(p => {
+  // Filter berdasarkan kategori
+  if (selectedCategory !== 'all' && p.kategori !== categories.find(c => c.id === selectedCategory)?.name) {
+    return false;
+  }
+  // Filter berdasarkan search
+  if (search) {
+    return p.name.toLowerCase().includes(search.toLowerCase()) ||
+           (p.kategori ?? '').toLowerCase().includes(search.toLowerCase());
+  }
+  return true;
+});
 
 let showCartModal = false;
 function openCartModal() { showCartModal = true; }
@@ -318,6 +295,8 @@ onMount(() => {
 
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
+  // Cek jika swipe di area preview keranjang, jangan trigger swipe navigasi
+  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
   
   // Don't handle touch on interactive elements
   const target = e.target;
@@ -334,6 +313,7 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   if (!isTouchDevice) return;
+  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
   
   // Don't handle touch on interactive elements
   const target = e.target;
@@ -359,6 +339,7 @@ function handleTouchMove(e) {
 
 function handleTouchEnd(e) {
   if (!isTouchDevice) return;
+  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
   
   // Don't handle touch on interactive elements
   const target = e.target;
@@ -403,6 +384,8 @@ function capitalizeFirst(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+let categories = [];
 </script>
 
 <div 
@@ -414,6 +397,9 @@ function capitalizeFirst(str) {
 >
   <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
+    ontouchstart={handleTouchStart}
+    ontouchmove={handleTouchMove}
+    ontouchend={handleTouchEnd}
   >
     <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center gap-3">
       <div class="relative w-full">
@@ -431,30 +417,60 @@ function capitalizeFirst(str) {
       </div>
     </div>
     <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white" style="scrollbar-width:none;-ms-overflow-style:none;" onwheel={(e) => { e.currentTarget.scrollLeft += e.deltaY; }}>
-      {#each categories as c}
-        <button
-          class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
-          type="button"
-          onclick={() => selectedCategory = c.id}
-        >{c.name}</button>
-      {/each}
-    </div>
-    <div class="grid grid-cols-2 gap-4 px-4 pb-4">
-      {#each filteredProducts as p}
-        <div class="bg-white rounded-lg shadow-md flex flex-col items-center justify-start p-4 transition-shadow border-none cursor-pointer min-h-[128px]" tabindex="0" onclick={() => openAddOnModal(p)}>
-          {#if p.image && !imageError[String(p.id)]}
-            <img class="w-22 h-22 object-cover rounded-lg mb-3 bg-gray-100 min-h-[140px] aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
-          {:else}
-            <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center mb-3 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
-              🍹
-            </div>
-          {/if}
-          <div class="w-full flex flex-col items-center">
-            <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0">{p.name}</h3>
-            <div class="text-pink-500 font-bold text-base">Rp {p.price.toLocaleString('id-ID')}</div>
-          </div>
+      <button
+        class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
+        type="button"
+        onclick={() => selectedCategory = 'all'}
+      >Semua</button>
+      {#if (categories ?? []).length === 0}
+        <div class="flex items-center gap-2 h-[40px] px-4 text-sm text-gray-400">
+          <span class="text-base" style="position:relative;top:-2px;">📁</span>
+          <span>Belum ada Kategori</span>
         </div>
-      {/each}
+      {:else}
+        {#each categories ?? [] as c}
+          <button
+            class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
+            type="button"
+            onclick={() => selectedCategory = c.id}
+          >{c.name}</button>
+        {/each}
+      {/if}
+    </div>
+    <div class="grid grid-cols-2 gap-4 px-4 pb-4 min-h-[60vh]">
+      {#if isLoadingProducts}
+        {#each Array(window.innerWidth < 768 ? 6 : 9) as _, i}
+          <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/3.7] max-h-[210px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100">
+            <div class="w-20 h-20 rounded-lg mb-2 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100"></div>
+            <div class="w-full flex flex-col items-center">
+              <div class="h-4 w-3/4 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 rounded mb-0.5"></div>
+              <div class="h-4 w-1/2 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 rounded"></div>
+            </div>
+          </div>
+        {/each}
+      {:else if filteredProducts.length === 0}
+        <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+          <div class="text-6xl mb-2">🍽️</div>
+          <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+          <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+        </div>
+      {:else}
+        {#each filteredProducts as p}
+          <div class="bg-white rounded-xl shadow-md flex flex-col items-center justify-between p-3 aspect-[3/4] max-h-[260px] min-h-[180px] cursor-pointer transition-shadow border border-gray-100" tabindex="0" onclick={() => openAddOnModal(p)}>
+            {#if p.image && !imageError[String(p.id)]}
+              <img class="w-20 h-20 object-cover rounded-lg mb-2 bg-gray-100 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+            {:else}
+              <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+                🍹
+              </div>
+            {/if}
+            <div class="w-full flex flex-col items-center">
+              <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
+              <div class="text-pink-500 font-bold text-base">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+            </div>
+          </div>
+        {/each}
+      {/if}
     </div>
 
     {#if cart.length > 0}
@@ -465,6 +481,7 @@ function capitalizeFirst(str) {
         ontouchstart={handleCartPreviewTouchStart}
         ontouchmove={handleCartPreviewTouchMove}
         ontouchend={handleCartPreviewTouchEnd}
+        transition:fly={{ x: -64, duration: 320, opacity: 0.9 }}
       >
         <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" onclick={openCartModal} style="min-width:0;">
           <div class="text-sm text-gray-500 truncate">{totalItems} item pesanan</div>
@@ -511,7 +528,7 @@ function capitalizeFirst(str) {
     {/if}
 
     <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
-      <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-56" onclick={(e) => e.stopPropagation()}
+      <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()}
         style="scrollbar-width:none;-ms-overflow-style:none;"
       >
         <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Gula</div>
@@ -535,21 +552,25 @@ function capitalizeFirst(str) {
           {/each}
         </div>
         <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Ekstra</div>
-        <div class="grid grid-cols-2 gap-3 mb-6">
-          {#each addOns as a}
-            <button
-              class="w-full justify-center py-3 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center gap-1 text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
-              type="button"
-              onclick={() => toggleAddOn(a.id)}
-            >
-              <span>{a.name}</span>
-              <span class="font-semibold mt-px {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {a.price.toLocaleString('id-ID')}</span>
-            </button>
-          {/each}
-        </div>
+        {#if selectedProduct && selectedProduct.ekstraIds && selectedProduct.ekstraIds.length > 0 && addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)).length > 0}
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            {#each addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)) as a}
+              <button
+                class="w-full justify-center py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
+                type="button"
+                onclick={() => toggleAddOn(a.id)}
+              >
+                <span>{a.name}</span>
+                <span class="font-semibold mt-px {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <div class="mb-6 text-sm text-gray-400 font-medium text-center">Tidak ada ekstra untuk menu ini.</div>
+        {/if}
         <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Catatan</div>
         <textarea
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-gray-50 text-gray-800 outline-none focus:border-pink-400 resize-none"
+          class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 resize-none"
           placeholder="Contoh: Tidak terlalu manis, tambah es batu, dll..."
           bind:value={selectedNote}
           rows="3"
