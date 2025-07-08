@@ -418,7 +418,7 @@ $: if (filterType === 'bulanan' && startDate) {
 
 {#if showPinModal}
   <div 
-    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out"
+    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out modal-pin"
     class:translate-y-full={isClosing}
     style="top: 58px; bottom: 58px; background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);"
   >

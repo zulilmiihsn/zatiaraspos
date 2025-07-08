@@ -113,3 +113,11 @@ button, a, input, textarea, select {
   background-size: 200px 100%;
   animation: shimmer 1.5s infinite;
 }
+
+button, input, [role="button"] {
+  touch-action: manipulation;
+}
+
+.modal-pin * {
+  touch-action: manipulation !important;
+}

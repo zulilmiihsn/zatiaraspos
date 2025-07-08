@@ -205,7 +205,7 @@ onDestroy(() => {
 </script>
 
 <svelte:head>
-  <title>Pengaturan Printer - ZatiarasPOS</title>
+  <title>ZatiarasPOS</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 page-content">

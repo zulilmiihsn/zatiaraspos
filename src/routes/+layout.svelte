@@ -71,44 +71,38 @@
 			<slot />
 		</div>
 	</div>
-{:else if $page.url.pathname !== '/laporan'}
-	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="sticky top-0 z-30 bg-white shadow-md">
-			<Topbar>
-				<svelte:fragment slot="actions"></svelte:fragment>
-			</Topbar>
-		</div>
-		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;"
-		>
-			<slot />
-		</div>
-		<div class="sticky bottom-0 z-30 bg-white">
-			<BottomNav />
-		</div>
-	</div>
 {:else}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;"
-		>
+		{#if $page.url.pathname !== '/laporan'}
+			<div class="sticky top-0 z-30 bg-white shadow-md">
+				<Topbar>
+					<svelte:fragment slot="actions"></svelte:fragment>
+				</Topbar>
+			</div>
+		{/if}
+		{#if $page.url.pathname === '/laporan'}
 			<div class="sticky top-0 z-30 bg-white shadow-md">
 				<Topbar>
 					<svelte:fragment slot="download">
-						{#if $page.url.pathname === '/laporan'}
-							<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
-								<Download size={22} />
-							</button>
-						{/if}
+						<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
+							<Download size={22} />
+						</button>
 					</svelte:fragment>
 					<svelte:fragment slot="actions"></svelte:fragment>
 				</Topbar>
 			</div>
+		{/if}
+		<div class="flex-1 min-h-0 overflow-y-auto"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
 			<slot />
 		</div>
-		<div class="sticky bottom-0 z-30 bg-white">
-			<BottomNav />
-		</div>
+	</div>
+{/if}
+
+{#if $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar'}
+	<div class="sticky bottom-0 z-30 bg-white">
+		<BottomNav />
 	</div>
 {/if}
 
