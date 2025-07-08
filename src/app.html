@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#ec4899" />
+		<meta name="description" content="Zatiaras Juice POS - Aplikasi kasir modern untuk bisnis minuman" />
+		
+		<!-- PWA Meta Tags -->
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="Zatiaras POS" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="msapplication-TileColor" content="#ec4899" />
+		<meta name="msapplication-tap-highlight" content="no" />
+		
+		<!-- Apple Touch Icons -->
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/img/logo.svg" />
+		<link rel="apple-touch-icon" sizes="152x152" href="%sveltekit.assets%/img/logo.svg" />
+		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/img/logo.svg" />
+		<link rel="apple-touch-icon" sizes="167x167" href="%sveltekit.assets%/img/logo.svg" />
+		
+		<!-- Splash Screen -->
+		<link rel="apple-touch-startup-image" href="%sveltekit.assets%/img/logo.svg" />
+		
+		<!-- Preload critical resources -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+		
+		<style>
+			/* Smooth page transitions */
+			:global(*) {
+				transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+			
+			:global(.page-transition) {
+				animation: fadeInSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+			
+			:global(.page-exit) {
+				animation: fadeOutSlide 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+			
+			@keyframes fadeInSlide {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+			
+			@keyframes fadeOutSlide {
+				from {
+					opacity: 1;
+					transform: translateY(0);
+				}
+				to {
+					opacity: 0;
+					transform: translateY(-10px);
+				}
+			}
+			
+			/* Smooth navigation transitions */
+			:global(.nav-transition) {
+				transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+			
+			/* Loading indicator */
+			:global(.loading-indicator) {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				height: 2px;
+				background: linear-gradient(90deg, #ec4899, #f97316, #ec4899);
+				background-size: 200% 100%;
+				animation: loading 1.5s ease-in-out infinite;
+				z-index: 9999;
+				transform: translateX(-100%);
+			}
+			
+			:global(.loading-indicator.active) {
+				transform: translateX(0);
+			}
+			
+			@keyframes loading {
+				0% { background-position: 200% 0; }
+				100% { background-position: -200% 0; }
+			}
+		</style>
+		
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
