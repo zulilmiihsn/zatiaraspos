@@ -6,7 +6,7 @@ export let showSettings: boolean = true;
 export let onSettings: (() => void) | undefined;
 </script>
 
-<div class="flex items-center justify-between px-4 pt-4 pb-3 bg-white sticky top-0 z-10 nav-transition">
+<div class="flex items-center justify-between px-4 pt-4 pb-3 bg-white z-10 nav-transition">
   <div class="flex items-center gap-3">
     <img class="w-[38px] h-[38px] rounded-lg object-cover shadow-lg shadow-pink-500/7 bg-white" src="/img/logo.svg" alt="Logo Zatiaras" />
   </div>

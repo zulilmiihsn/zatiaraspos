@@ -51,6 +51,10 @@ onMount(async () => {
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
+
+  const handler = () => showDownloadModal = true;
+  window.addEventListener('showDownloadModal', handler);
+  return () => window.removeEventListener('showDownloadModal', handler);
 });
 
 async function fetchPin() {
@@ -494,39 +498,7 @@ $: if (filterType === 'bulanan' && startDate) {
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
 >
-  <Topbar>
-    <span slot="download">
-      <button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download laporan" onclick={() => showDownloadModal = true}>
-        {#if DownloadIcon}
-          <svelte:component this={DownloadIcon} size={22} />
-        {:else}
-          <div class="w-[22px] h-[22px] flex items-center justify-center">
-            <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-          </div>
-        {/if}
-      </button>
-    </span>
-  </Topbar>
-
-  {#if showDownloadModal}
-    <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
-      <div class="w-full max-w-xs mx-auto bg-white rounded-2xl shadow-lg p-6 mb-8 animate-[slideUp_0.2s] flex flex-col gap-3">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-bold text-lg text-gray-800">Download Laporan</div>
-          <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showDownloadModal = false}>
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <button class="w-full py-3 rounded-xl bg-pink-500 text-white font-semibold text-base shadow hover:bg-pink-600 transition-colors" onclick={() => { showDownloadModal = false; alert('Download PDF!'); }}>Download PDF</button>
-        <button class="w-full py-3 rounded-xl bg-pink-100 text-pink-500 font-semibold text-base shadow hover:bg-pink-200 transition-colors" onclick={() => { showDownloadModal = false; alert('Download XLSX!'); }}>Download XLSX</button>
-        <button class="w-full py-3 rounded-xl bg-pink-50 text-pink-500 font-semibold text-base shadow hover:bg-pink-100 transition-colors" onclick={() => { showDownloadModal = false; alert('Download CSV!'); }}>Download CSV</button>
-      </div>
-    </div>
-  {/if}
-
-  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
+  <main class="flex-1 w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <!-- Konten utama halaman Laporan di sini -->
