@@ -37,7 +37,7 @@
       const isIOS = /iphone|ipad|ipod/.test(ua);
       const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
       if (isIOS && !isInStandaloneMode) {
-        pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen".';
+        pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen"';
         canInstallPWA = false;
       } else if ('serviceWorker' in navigator) {
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -89,6 +89,7 @@
   let isClosing = false;
   let showPwaInstalledToast = false;
   let pwaStatus = '';
+  let showPwaManualToast = false;
 
   function handleLogout() {
     showLogoutModal = true;
@@ -159,17 +160,26 @@
         if (choiceResult.outcome === 'accepted') {
           showPwaInstalledToast = true;
           setTimeout(() => showPwaInstalledToast = false, 4000);
+        } else {
+          showPwaManualToast = true;
+          pwaStatus = 'Pemasangan aplikasi dibatalkan.';
+          setTimeout(() => showPwaManualToast = false, 4000);
         }
         deferredPrompt = null;
         canInstallPWA = false;
         pwaStatus = 'PWA sudah terpasang';
       });
     } else {
-      if (!('serviceWorker' in navigator)) {
-        pwaStatus = 'Browser tidak mendukung PWA';
+      // Tampilkan instruksi manual
+      const ua = window.navigator.userAgent.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(ua);
+      if (isIOS) {
+        pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen".';
       } else {
-        pwaStatus = 'PWA tidak bisa diinstal saat ini';
+        pwaStatus = 'Silakan install melalui menu browser (ikon titik tiga > Install App).';
       }
+      showPwaManualToast = true;
+      setTimeout(() => showPwaManualToast = false, 4000);
     }
   }
 
@@ -239,7 +249,7 @@
 
 <div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Button Kembali -->
-  <div class="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-lg border-b border-gray-100 mt-0 mx-0 mb-2 px-4 py-3 flex items-center" style="min-height:56px">
+  <div class="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-lg border-b border-gray-100 mt-0 mx-0 mb-2 px-4 py-3 flex items-center shadow-md" style="min-height:56px">
     <button onclick={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
       {#if ArrowLeft}
         <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
@@ -251,40 +261,55 @@
     </button>
   </div>
   <!-- Box Informasi Role -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2">
-    <div class="w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg mb-2">
-      {#if roleIcon}
-        <svelte:component this={roleIcon} class="w-8 h-8 text-white" />
-      {:else}
-        <div class="w-8 h-8 flex items-center justify-center">
-          <span class="block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+  {#if userRole === ''}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2 animate-pulse">
+      <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl mb-2"></div>
+      <div class="h-6 w-24 bg-gray-200 rounded mb-1"></div>
+      <div class="h-4 w-32 bg-gray-100 rounded mb-2"></div>
+      <div class="flex items-center justify-between w-full text-xs text-gray-300 mt-2">
+        <div class="h-3 w-1/3 bg-gray-100 rounded"></div>
+        <div class="h-3 w-1/4 bg-gray-100 rounded"></div>
+      </div>
+      <div class="h-2 w-full"></div>
+    </div>
+  {:else}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2">
+      <div class="w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg mb-2">
+        {#if roleIcon}
+          <svelte:component this={roleIcon} class="w-8 h-8 text-white" />
+        {:else}
+          <div class="w-8 h-8 flex items-center justify-center">
+            <span class="block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          </div>
+        {/if}
+      </div>
+      {#if userRole === 'admin' || userRole === 'pemilik'}
+        <div class="text-2xl font-extrabold text-purple-700 mb-1">Pemilik</div>
+        <div class="text-sm text-gray-600 mb-2">Akses penuh ke seluruh sistem</div>
+        <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
+          <span>Login terakhir: {new Date().toLocaleString('id-ID')}</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>Session aktif</span>
+        </div>
+      {:else if userRole === 'kasir'}
+        <div class="text-2xl font-extrabold text-green-700 mb-1">Kasir</div>
+        <div class="text-sm text-gray-600 mb-2">Akses standar</div>
+        <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
+          <span>Login terakhir: {new Date().toLocaleString('id-ID')}</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>Session aktif</span>
         </div>
       {/if}
     </div>
-    {#if userRole === 'admin' || userRole === 'pemilik'}
-      <div class="text-2xl font-extrabold text-purple-700 mb-1">Pemilik</div>
-      <div class="text-sm text-gray-600 mb-2">Akses penuh ke seluruh sistem</div>
-      <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
-        <span>Login terakhir: {new Date().toLocaleString('id-ID')}</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>Session aktif</span>
-      </div>
-    {:else if userRole === 'kasir'}
-      <div class="text-2xl font-extrabold text-green-700 mb-1">Kasir</div>
-      <div class="text-sm text-gray-600 mb-2">Akses standar</div>
-      <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
-        <span>Login terakhir: {new Date().toLocaleString('id-ID')}</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>Session aktif</span>
-      </div>
-    {/if}
-  </div>
+  {/if}
 
   <!-- Grid Menu Pengaturan -->
   <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0">
     <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2">
       {#if userRole === ''}
-        {#each Array(2) as _, i}
+        {#each Array(4) as _, i}
           <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-lg border-2 border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4">
             <div class="w-8 h-8 mb-2 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 rounded-lg"></div>
+            <div class="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
+            <div class="h-3 w-1/2 bg-gray-100 rounded"></div>
           </div>
         {/each}
       {:else}
@@ -321,7 +346,7 @@
           <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
         </button>
         <!-- Box Install PWA -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" onclick={handleInstallPWA} disabled={!canInstallPWA}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={handleInstallPWA}>
           {#if Download}
             <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
           {:else}
@@ -428,6 +453,13 @@
   {#if showPwaInstalledToast}
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 text-sm font-semibold animate-fadeIn">
       Aplikasi berhasil terpasang di Home Screen!
+    </div>
+  {/if}
+
+  <!-- Toast instruksi manual -->
+  {#if showPwaManualToast}
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-pink-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 text-sm font-semibold animate-fadeIn">
+      {pwaStatus}
     </div>
   {/if}
 </div>

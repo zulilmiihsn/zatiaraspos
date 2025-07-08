@@ -72,7 +72,7 @@
 	</div>
 {:else if $page.url.pathname !== '/laporan'}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="sticky top-0 z-30 bg-white">
+		<div class="sticky top-0 z-30 bg-white shadow-md">
 			<Topbar>
 				<svelte:fragment slot="actions"></svelte:fragment>
 			</Topbar>
