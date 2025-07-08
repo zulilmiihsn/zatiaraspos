@@ -33,15 +33,27 @@
       userName = profile?.full_name || '';
     }
     if (typeof window !== 'undefined') {
-      if (!('beforeinstallprompt' in window)) {
+      const ua = window.navigator.userAgent.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(ua);
+      const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
+      if (isIOS && !isInStandaloneMode) {
+        pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen".';
+        canInstallPWA = false;
+      } else if ('serviceWorker' in navigator) {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          canInstallPWA = true;
+          pwaStatus = '';
+        });
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+          pwaStatus = 'PWA sudah terpasang';
+          canInstallPWA = false;
+        }
+      } else {
         pwaStatus = 'Browser tidak mendukung PWA';
+        canInstallPWA = false;
       }
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        canInstallPWA = true;
-        pwaStatus = '';
-      });
       window.addEventListener('appinstalled', () => {
         showPwaInstalledToast = true;
         canInstallPWA = false;
@@ -153,7 +165,7 @@
         pwaStatus = 'PWA sudah terpasang';
       });
     } else {
-      if (!('beforeinstallprompt' in window)) {
+      if (!('serviceWorker' in navigator)) {
         pwaStatus = 'Browser tidak mendukung PWA';
       } else {
         pwaStatus = 'PWA tidak bisa diinstal saat ini';
@@ -309,7 +321,7 @@
           <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
         </button>
         <!-- Box Install PWA -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" onclick={handleInstallPWA}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none disabled:opacity-60" onclick={handleInstallPWA} disabled={!canInstallPWA}>
           {#if Download}
             <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
           {:else}
