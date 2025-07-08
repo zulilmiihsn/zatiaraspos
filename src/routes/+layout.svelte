@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import { supabase } from '$lib/database/supabaseClient';
+	import Download from 'lucide-svelte/icons/download';
 
 	export const data = {};
 	
@@ -91,6 +92,18 @@
 		<div class="flex-1 min-h-0 overflow-y-auto"
 			style="scrollbar-width:none;-ms-overflow-style:none;"
 		>
+			<div class="sticky top-0 z-30 bg-white shadow-md">
+				<Topbar>
+					<svelte:fragment slot="download">
+						{#if $page.url.pathname === '/laporan'}
+							<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
+								<Download size={22} />
+							</button>
+						{/if}
+					</svelte:fragment>
+					<svelte:fragment slot="actions"></svelte:fragment>
+				</Topbar>
+			</div>
 			<slot />
 		</div>
 		<div class="sticky bottom-0 z-30 bg-white">
