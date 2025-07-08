@@ -146,11 +146,6 @@ onMount(() => {
   filterYear = now.getFullYear().toString();
 });
 
-// Auto-calculate end date when start date or filter type changes
-$: if (startDate && filterType) {
-  endDate = calculateEndDate(startDate, filterType);
-}
-
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
   
@@ -370,6 +365,51 @@ $: pemasukanUsahaGrouped = (() => {
   }
   return group;
 })();
+
+$: if (filterType) {
+  const today = getLocalDateString();
+  if (filterType === 'harian') {
+    startDate = today;
+    endDate = today;
+  } else if (filterType === 'mingguan') {
+    startDate = today;
+    const d = new Date(today);
+    d.setDate(d.getDate() + 6);
+    endDate = d.toISOString().slice(0, 10);
+  } else if (filterType === 'bulanan') {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const pad = n => n.toString().padStart(2, '0');
+    startDate = `${y}-${pad(m + 1)}-01`;
+    const last = new Date(y, m + 1, 0);
+    endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+    filterMonth = pad(m + 1);
+    filterYear = y.toString();
+  } else if (filterType === 'tahunan') {
+    const y = new Date().getFullYear();
+    startDate = `${y}-01-01`;
+    endDate = `${y}-12-31`;
+    filterYear = y.toString();
+  }
+}
+
+// Untuk filter mingguan
+$: if (filterType === 'mingguan' && startDate) {
+  const d = new Date(startDate);
+  d.setDate(d.getDate() + 6);
+  endDate = d.toISOString().slice(0, 10);
+}
+
+// Untuk filter bulanan, reactivity jika startDate berubah
+$: if (filterType === 'bulanan' && startDate) {
+  const d = new Date(startDate);
+  const end = new Date(d);
+  end.setMonth(end.getMonth() + 1);
+  end.setDate(end.getDate() - 1);
+  const pad = n => n.toString().padStart(2, '0');
+  endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+}
 </script>
 
 {#if showPinModal}
@@ -716,7 +756,7 @@ $: pemasukanUsahaGrouped = (() => {
                   type="date" 
                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                   bind:value={startDate}
-                  onchange={() => endDate = calculateEndDate(startDate, filterType)}
+                  onchange={() => { if (filterType === 'harian') endDate = startDate; }}
                 />
               </div>
             {:else if filterType === 'mingguan'}
@@ -726,57 +766,67 @@ $: pemasukanUsahaGrouped = (() => {
                   type="date" 
                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                   bind:value={startDate}
-                  onchange={() => endDate = calculateEndDate(startDate, filterType)}
+                  onchange={() => {
+                    if (filterType === 'mingguan' && startDate) {
+                      const d = new Date(startDate);
+                      d.setDate(d.getDate() + 6);
+                      endDate = d.toISOString().slice(0, 10);
+                    }
+                  }}
                 />
               </div>
             {:else if filterType === 'bulanan'}
               <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Bulan dan Tahun</label>
                 <div class="flex gap-3">
-                  <select class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterMonth}>
+                  <select class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterMonth} onchange={() => {
+                    if (filterType === 'bulanan') {
+                      const y = parseInt(filterYear);
+                      const m = parseInt(filterMonth) - 1;
+                      const first = new Date(y, m, 1);
+                      const last = new Date(y, m + 1, 0);
+                      const pad = n => n.toString().padStart(2, '0');
+                      startDate = `${y}-${pad(m + 1)}-01`;
+                      endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+                    }
+                  }}>
                     {#each Array(12) as _, i}
                       <option value={(i+1).toString().padStart(2, '0')}>
                         {new Date(2024, i).toLocaleDateString('id-ID', { month: 'long' })}
                       </option>
                     {/each}
                   </select>
-                  <select class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear}>
+                  <select class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear} onchange={() => {
+                    if (filterType === 'bulanan') {
+                      const y = parseInt(filterYear);
+                      const m = parseInt(filterMonth) - 1;
+                      const first = new Date(y, m, 1);
+                      const last = new Date(y, m + 1, 0);
+                      const pad = n => n.toString().padStart(2, '0');
+                      startDate = `${y}-${pad(m + 1)}-01`;
+                      endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+                    }
+                  }}>
                     {#each Array(6) as _, i}
                       <option value={(2020+i).toString()}>{2020+i}</option>
                     {/each}
                   </select>
                 </div>
-                <div class="mt-3">
-                  <button 
-                    class="w-full py-3 px-4 bg-pink-100 text-pink-600 font-semibold rounded-xl hover:bg-pink-200 transition-colors" 
-                    onclick={() => {
-                      startDate = `${filterYear}-${filterMonth}-01`;
-                      endDate = calculateEndDate(startDate, filterType);
-                    }}
-                  >
-                    Set Tanggal Awal Bulan
-                  </button>
-                </div>
               </div>
             {:else if filterType === 'tahunan'}
               <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tahun</label>
-                <select class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear}>
+                <select class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear} onchange={() => {
+                  if (filterType === 'tahunan') {
+                    const y = parseInt(filterYear);
+                    startDate = `${y}-01-01`;
+                    endDate = `${y}-12-31`;
+                  }
+                }}>
                   {#each Array(6) as _, i}
                     <option value={(2020+i).toString()}>{2020+i}</option>
                   {/each}
                 </select>
-                <div class="mt-3">
-                  <button 
-                    class="w-full py-3 px-4 bg-pink-100 text-pink-600 font-semibold rounded-xl hover:bg-pink-200 transition-colors" 
-                    onclick={() => {
-                      startDate = `${filterYear}-01-01`;
-                      endDate = calculateEndDate(startDate, filterType);
-                    }}
-                  >
-                    Set Tanggal Awal Tahun
-                  </button>
-                </div>
               </div>
             {/if}
 
@@ -818,7 +868,6 @@ $: pemasukanUsahaGrouped = (() => {
                 type="date" 
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                 bind:value={startDate}
-                  onchange={() => endDate = calculateEndDate(startDate, filterType)}
               />
             </div>
 
