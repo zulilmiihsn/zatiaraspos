@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
 import { cubicIn, cubicOut } from 'svelte/easing';
 import DatePickerSheet from '$lib/components/shared/DatePickerSheet.svelte';
@@ -65,6 +65,10 @@ let transaksiList = [];
 let showSnackbar = false;
 let snackbarMsg = '';
 
+let observer;
+let isBottomVisible = false;
+let bottomRef;
+
 // Helper untuk tanggal lokal user (YYYY-MM-DD)
 function getLocalDateString() {
   const now = new Date();
@@ -101,6 +105,22 @@ onMount(async () => {
   time = new Date().toTimeString().slice(0, 5);
   jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
   await fetchTransaksi();
+
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      isBottomVisible = entry.isIntersecting;
+    },
+    { threshold: 0.1 }
+  );
+  if (bottomRef) observer.observe(bottomRef);
+});
+
+$: if (bottomRef && observer) {
+  observer.observe(bottomRef);
+}
+
+onDestroy(() => {
+  if (observer) observer.disconnect();
 });
 
 async function fetchPin() {
@@ -602,10 +622,21 @@ main {
             <div class="text-pink-600 text-sm text-center mt-1">{error}</div>
           {/if}
         </form>
+        <div bind:this={bottomRef}></div>
       </div>
     </div>
   </main>
-  <div class="fixed left-0 right-0 bottom-[56px] z-30 px-2 pt-2 pb-3">
-    <button type="submit" form="catat-form" class="w-full bg-pink-500 text-white font-bold text-lg border-none rounded-xl py-4 mt-1 shadow-lg shadow-pink-500/10 transition-colors duration-200 hover:bg-pink-600 active:bg-pink-700">Simpan</button>
+  <div class="fixed left-0 right-0 bottom-[56px] z-30 pt-2 pb-3 transition-all duration-500" class:px-2={!isBottomVisible} class:px-4={isBottomVisible}>
+    <div
+      class:w-full={!isBottomVisible}
+      class:max-w-md={isBottomVisible}
+      class:mx-auto={isBottomVisible}
+    >
+      <button type="submit" form="catat-form"
+        class="transition-all duration-300 bg-pink-500 text-white font-bold text-lg border-none rounded-xl py-4 mt-1 shadow-lg shadow-pink-500/10 hover:bg-pink-600 active:bg-pink-700 w-full"
+      >
+        Simpan
+      </button>
+    </div>
   </div>
 </div> 
