@@ -16,6 +16,7 @@ import Tag from 'lucide-svelte/icons/tag';
 import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
 import { fly, fade } from 'svelte/transition';
+import { slide } from 'svelte/transition';
 import { supabase } from '$lib/database/supabaseClient';
 
 let currentUser = null;
@@ -138,6 +139,8 @@ let lockedPages: string[] = ['laporan', 'beranda'];
 let pinError = '';
 
 let pin = '';
+
+let isGridView = true;
 
 // Load saved settings on mount
 onMount(async () => {
@@ -903,11 +906,27 @@ function closeMenuForm() {
         </div>
 
           <!-- Daftar Menu & Filter -->
-          <div class="flex items-center gap-2 mb-4 mt-0 px-0">
-          <h2 class="text-base font-bold text-gray-800">Daftar Menu</h2>
-          <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium">{filteredMenus.length} menu</span>
-        </div>
-        <!-- Kategori Filter -->
+          <div class="flex items-center justify-between gap-2 mb-4 mt-0 px-0">
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-gray-800">Daftar Menu</h2>
+              <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium">{filteredMenus.length} menu</span>
+            </div>
+            <button
+              class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center"
+              onclick={() => { isGridView = !isGridView; }}
+              aria-label={isGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
+              type="button"
+            >
+              {#if isGridView}
+                <!-- Icon List -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              {:else}
+                <!-- Icon Grid -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+              {/if}
+            </button>
+          </div>
+          <!-- Kategori Filter -->
           <div class="flex gap-1.5 overflow-x-auto pb-0 pt-0 px-0 border-b border-gray-100 mb-4"
             style="scrollbar-width:none;-ms-overflow-style:none;"
           >
@@ -946,45 +965,78 @@ function closeMenuForm() {
               Belum ada menu di kategori ini.
             </div>
           {/if}
-          <div class="grid grid-cols-2 gap-2 w-full">
-            {#each filteredMenus as menu}
-              <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group cursor-pointer hover:bg-pink-50 transition-colors"
-                data-menu-card
-                ontouchstart={handleMenuTouchStart}
-                ontouchmove={handleMenuTouchMove}
-                ontouchend={(e) => handleMenuTouchEnd(e, menu)}
-                onclick={(e) => handleMenuClick(e, menu)}
-                onkeydown={(e) => e.key === 'Enter' && handleMenuClick(e, menu)}
-                role="button"
-                tabindex="0"
-                aria-label="Edit menu {menu.name}"
-              >
-                <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
-                  <button 
-                    class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                    onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
-                    ontouchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteMenu(menu.id); }}
-                  >
-                    <svelte:component this={Trash} class="w-5 h-5" />
-                  </button>
+          {#if isGridView}
+            <div class="grid grid-cols-2 gap-2 w-full" transition:slide={{ duration: 250 }}>
+              {#each filteredMenus as menu}
+                <div class="bg-white rounded-xl shadow border border-gray-100 p-2 flex flex-col items-center relative group cursor-pointer hover:bg-pink-50 transition-colors"
+                  data-menu-card
+                  ontouchstart={handleMenuTouchStart}
+                  ontouchmove={handleMenuTouchMove}
+                  ontouchend={(e) => handleMenuTouchEnd(e, menu)}
+                  onclick={(e) => handleMenuClick(e, menu)}
+                  onkeydown={(e) => e.key === 'Enter' && handleMenuClick(e, menu)}
+                  role="button"
+                  tabindex="0"
+                  aria-label="Edit menu {menu.name}"
+                >
+                  <div class="absolute top-2 right-2 opacity-100 transition-opacity z-10 flex gap-2">
+                    <button 
+                      class="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
+                      onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
+                      ontouchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteMenu(menu.id); }}
+                    >
+                      <svelte:component this={Trash} class="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center mb-1 overflow-hidden">
+                    {#if menu.gambar && !imageError[String(menu.id)]}
+                      <img src={menu.gambar} alt={menu.name} class="w-full h-full object-cover rounded-xl bg-gray-100 min-h-[140px] aspect-square" onerror={() => handleImgError(String(menu.id))} />
+                    {:else}
+                      <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+                        🍹
+                      </div>
+                    {/if}
+                  </div>
+                  <div class="w-full flex flex-col items-center">
+                    <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{menu.name}</h3>
+                    <div class="text-xs text-gray-400 mb-0.5 min-h-[20px]">{menu.kategori ? menu.kategori : '\u00A0'}</div>
+                    <div class="text-pink-500 font-bold text-base">Rp {menu.harga.toLocaleString('id-ID')}</div>
+                  </div>
                 </div>
-                <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center mb-1 overflow-hidden">
-                  {#if menu.gambar && !imageError[String(menu.id)]}
-                    <img src={menu.gambar} alt={menu.name} class="w-full h-full object-cover rounded-xl bg-gray-100 min-h-[140px] aspect-square" onerror={() => handleImgError(String(menu.id))} />
-                  {:else}
-                    <div class="w-full aspect-square min-h-[140px] rounded-xl flex items-center justify-center text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
-                      🍹
-                    </div>
-                  {/if}
+              {/each}
+            </div>
+          {:else}
+            <div class="flex flex-col gap-1 w-full" transition:slide={{ duration: 250 }}>
+              {#each filteredMenus as menu}
+                <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors"
+                  data-menu-list
+                  ontouchstart={handleMenuTouchStart}
+                  ontouchmove={handleMenuTouchMove}
+                  ontouchend={(e) => handleMenuTouchEnd(e, menu)}
+                  onclick={(e) => handleMenuClick(e, menu)}
+                  onkeydown={(e) => e.key === 'Enter' && handleMenuClick(e, menu)}
+                  role="button"
+                  tabindex="0"
+                  aria-label="Edit menu {menu.name}"
+                >
+                  <div class="flex flex-col flex-1 min-w-0">
+                    <span class="font-medium text-gray-800 text-sm truncate">{menu.name}</span>
+                    <span class="text-xs text-gray-400 truncate">{menu.kategori ? menu.kategori : '\u00A0'}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {menu.harga.toLocaleString('id-ID')}</span>
+                    <button 
+                      class="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors ml-1"
+                      onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
+                      aria-label="Hapus menu {menu.name}"
+                    >
+                      <svelte:component this={Trash} class="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-                <div class="w-full flex flex-col items-center">
-                  <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{menu.name}</h3>
-                  <div class="text-xs text-gray-400 mb-0.5 min-h-[20px]">{menu.kategori ? menu.kategori : '\u00A0'}</div>
-                  <div class="text-pink-500 font-bold text-base">Rp {menu.harga.toLocaleString('id-ID')}</div>
-                </div>
-              </div>
-            {/each}
-          </div>
+              {/each}
+            </div>
+          {/if}
         </div>
         </div>
       <!-- Floating Action Button Tambah Menu -->

@@ -332,19 +332,6 @@
           <span class="inline-block bg-white/20 text-xs font-semibold px-3 py-1 rounded-full mb-2 border border-white/30">Privileged</span>
           <div class="text-xs text-white/80 text-center">Akses penuh ke seluruh sistem</div>
         </button>
-        <!-- Box Kasir (menu biasa) -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none">
-          {#if CreditCard}
-            <svelte:component this={CreditCard} class="w-8 h-8 mb-2 text-green-500" />
-          {:else}
-            <div class="w-8 h-8 mb-2 flex items-center justify-center">
-              <span class="block w-6 h-6 border-2 border-green-200 border-t-green-500 rounded-full animate-spin"></span>
-            </div>
-          {/if}
-          <div class="text-lg font-bold mb-1 text-gray-800">Kasir</div>
-          <span class="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Menu</span>
-          <div class="text-xs text-gray-500 text-center">Pengaturan kasir</div>
-        </button>
         <!-- Box Install PWA -->
         <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={handleInstallPWA}>
           {#if Download}

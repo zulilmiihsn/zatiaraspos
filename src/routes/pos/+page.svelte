@@ -5,12 +5,13 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
-import Topbar from '$lib/components/shared/Topbar.svelte';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
 import { validateNumber, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
 import { fly } from 'svelte/transition';
+import { slide } from 'svelte/transition';
 import { supabase } from '$lib/database/supabaseClient';
+import { posGridView } from '$lib/stores/posGridView';
 
 // Lazy load icons
 let Home, ShoppingBag, FileText, Book, Settings;
@@ -386,6 +387,11 @@ function capitalizeFirst(str) {
 }
 
 let categories = [];
+
+let skeletonCount = 9;
+if (typeof window !== 'undefined' && window.innerWidth < 768) {
+  skeletonCount = 6;
+}
 </script>
 
 <div 
@@ -440,41 +446,61 @@ let categories = [];
         {/each}
       {/if}
     </div>
-    <div class="grid grid-cols-2 gap-4 px-4 pb-4 min-h-[60vh]">
-      {#if isLoadingProducts}
-        {#each Array(window.innerWidth < 768 ? 6 : 9) as _, i}
-          <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/3.7] max-h-[210px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100">
-            <div class="w-20 h-20 rounded-lg mb-2 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100"></div>
-            <div class="w-full flex flex-col items-center">
-              <div class="h-4 w-3/4 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 rounded mb-0.5"></div>
-              <div class="h-4 w-1/2 bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 rounded"></div>
-            </div>
+    {#if $posGridView}
+      <div class="flex flex-col gap-1 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
+        {#if isLoadingProducts}
+          {#each Array(skeletonCount) as _, i}
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-lg shadow-md flex items-center justify-between px-3 py-2 min-h-[56px] max-h-[80px] cursor-pointer transition-shadow border border-gray-100"></div>
+          {/each}
+        {:else if filteredProducts.length === 0}
+          <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+            <div class="text-6xl mb-2">🍽️</div>
+            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
           </div>
-        {/each}
-      {:else if filteredProducts.length === 0}
-        <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
-          <div class="text-6xl mb-2">🍽️</div>
-          <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
-          <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
-        </div>
-      {:else}
-        {#each filteredProducts as p}
-          <div class="bg-white rounded-xl shadow-md flex flex-col items-center justify-between p-3 aspect-[3/4] max-h-[260px] min-h-[180px] cursor-pointer transition-shadow border border-gray-100" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
-            {#if p.image && !imageError[String(p.id)]}
-              <img class="w-20 h-20 object-cover rounded-lg mb-2 bg-gray-100 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
-            {:else}
-              <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
-                🍹
+        {:else}
+          {#each filteredProducts as p}
+            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="font-medium text-gray-800 text-sm truncate">{p.name}</span>
+                <span class="text-xs text-gray-400 truncate">{p.kategori ?? ''}</span>
               </div>
-            {/if}
-            <div class="w-full flex flex-col items-center">
-              <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
-              <div class="text-pink-500 font-bold text-base">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+              <div class="flex items-center gap-2">
+                <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
+              </div>
             </div>
+          {/each}
+        {/if}
+      </div>
+    {:else}
+      <div class="grid grid-cols-2 gap-4 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
+        {#if isLoadingProducts}
+          {#each Array(skeletonCount) as _, i}
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/3.7] max-h-[210px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
+          {/each}
+        {:else if filteredProducts.length === 0}
+          <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+            <div class="text-6xl mb-2">🍽️</div>
+            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
           </div>
-        {/each}
-      {/if}
-    </div>
+        {:else}
+          {#each filteredProducts as p}
+            <div class="bg-white rounded-xl shadow-md flex flex-col items-center justify-between p-3 aspect-[3/4] max-h-[260px] min-h-[180px] cursor-pointer transition-shadow border border-gray-100" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
+              {#if p.image && !imageError[String(p.id)]}
+                <img class="w-20 h-20 object-cover rounded-lg mb-2 bg-gray-100 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+              {:else}
+                <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
+              {/if}
+              <div class="w-full flex flex-col items-center">
+                <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
+                <div class="text-pink-500 font-bold text-base">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    {/if}
 
     {#if cart.length > 0}
       <div
