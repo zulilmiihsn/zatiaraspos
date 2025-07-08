@@ -20,6 +20,21 @@ let weeklyIncome = [];
 let weeklyMax = 1;
 let bestSellers = [];
 let userRole = '';
+
+function getBestSellersCache() {
+  const cache = localStorage.getItem('bestSellers');
+  if (!cache) return null;
+  const { date, data } = JSON.parse(cache);
+  const today = new Date().toISOString().slice(0, 10);
+  if (date === today) return data;
+  return null;
+}
+
+function setBestSellersCache(data) {
+  const today = new Date().toISOString().slice(0, 10);
+  localStorage.setItem('bestSellers', JSON.stringify({ date: today, data }));
+}
+
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -58,6 +73,36 @@ onMount(async () => {
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
+    }
+  }
+
+  // Best sellers 7 hari terakhir
+  const cached = getBestSellersCache();
+  if (cached) {
+    bestSellers = cached;
+  } else {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    // Query agregasi best sellers
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('product_id, qty, products(id, name, image)')
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .order('qty', { ascending: false })
+      .limit(10);
+    if (!error && data) {
+      // Agregasi manual jika Supabase tidak support group+sum
+      const map = {};
+      data.forEach(item => {
+        if (!map[item.product_id]) {
+          map[item.product_id] = { ...item.products, total_qty: 0 };
+        }
+        map[item.product_id].total_qty += item.qty;
+      });
+      const sorted = Object.values(map).sort((a, b) => b.total_qty - a.total_qty).slice(0, 5);
+      bestSellers = sorted;
+      setBestSellersCache(sorted);
     }
   }
 });
@@ -429,34 +474,23 @@ function handlePinSubmit() {
           </div>
         </div>
         <!-- Menu Terlaris -->
-        <div class="mb-4 md:mb-8">
-          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Menu Terlaris</div>
-          {#if bestSellers.length === 0}
-            <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data menu terlaris</div>
-          {:else}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {#each bestSellers as m, i}
-                <div class="flex items-center bg-white rounded-xl shadow-md p-3 gap-3 relative {i === 0 ? 'border-2 border-yellow-400' : ''} md:p-4 lg:p-5">
-                  {#if i === 0}
-                    <span class="absolute -left-3 -top-4 text-2xl">👑</span>
-                  {:else if i === 1}
-                    <span class="absolute -left-3 -top-3 text-2xl">🥈</span>
-                  {:else if i === 2}
-                    <span class="absolute -left-3 -top-3 text-2xl">🥉</span>
-                  {/if}
-                  {#if m.image && !imageError[i]}
-                    <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
-                  {:else}
-                    <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-xl text-pink-400">🍹</div>
-                  {/if}
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-gray-900 truncate text-base md:text-lg lg:text-xl">{m.name}</div>
-                    <div class="text-sm text-pink-400 md:text-base">{m.sold} terjual</div>
-                  </div>
+        <div class="mt-8">
+          <h2 class="text-lg font-bold mb-2 text-pink-600">Menu Terlaris 7 Hari Terakhir</h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {#each bestSellers as p}
+              <div class="bg-white rounded-xl shadow-md flex flex-col items-center justify-between p-3 aspect-[3/4] max-h-[180px] min-h-[120px] cursor-pointer transition-shadow border border-gray-100">
+                {#if p.image}
+                  <img class="w-16 h-16 object-cover rounded-lg mb-2 bg-gray-100 aspect-square" src={p.image} alt={p.name} loading="lazy" />
+                {:else}
+                  <div class="w-full aspect-square min-h-[64px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-3xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍽️</div>
+                {/if}
+                <div class="w-full flex flex-col items-center">
+                  <h3 class="font-semibold text-gray-800 text-xs truncate w-full text-center mb-0.5">{p.name}</h3>
+                  <div class="text-pink-500 font-bold text-sm">{p.total_qty} terjual</div>
                 </div>
-              {/each}
-            </div>
-          {/if}
+              </div>
+            {/each}
+          </div>
         </div>
         <!-- Statistik -->
         <div class="mt-0 mb-2 md:mt-6 md:mb-6">

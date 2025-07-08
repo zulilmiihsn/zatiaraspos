@@ -502,7 +502,7 @@ $: if (filterType === 'bulanan' && startDate) {
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <!-- Konten utama halaman Laporan di sini -->
-    <div class="max-w-md mx-auto w-full pt-2 pb-8 px-2">
+    <div class="max-w-md mx-auto w-full pt-4 md:pt-8 lg:pt-10 pb-8 px-2">
       <div class="flex w-full items-center gap-2 px-2 mb-3">
         <!-- Button Filter -->
         <div class="flex-none">

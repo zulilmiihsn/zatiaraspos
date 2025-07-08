@@ -410,7 +410,7 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
   >
-    <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center gap-3">
+    <div class="sticky top-0 z-10 bg-white px-4 py-4 md:py-8 lg:py-10 flex items-center gap-3">
       <div class="relative w-full">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
