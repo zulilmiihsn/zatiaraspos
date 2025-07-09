@@ -1,11 +1,12 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
 import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { auth } from '$lib/auth.js';
 import { supabase } from '$lib/database/supabaseClient';
+import { browser } from '$app/environment';
 
 // Lazy load icons
 let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
@@ -273,6 +274,122 @@ let pin = '';
 let errorTimeout: number;
 let isClosing = false;
 
+let showTokoModal = false;
+let isBukaToko = true; // true: buka toko, false: tutup toko
+let modalAwalInput = '';
+let pinInputToko = '';
+let pinErrorToko = '';
+let tokoAktifLocal = false;
+let sesiAktif = null;
+let ringkasanTutup = { modalAwal: 0, totalPenjualan: 0, pemasukanTunai: 0, pengeluaranTunai: 0, uangKasir: 0 };
+
+function updateTokoAktif(val) {
+  tokoAktifLocal = val;
+  if (browser) window.tokoAktif = val;
+}
+
+async function cekSesiToko() {
+  const { data } = await supabase
+    .from('store_sessions')
+    .select('*')
+    .eq('is_active', true)
+    .order('opening_time', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  sesiAktif = data || null;
+  updateTokoAktif(!!sesiAktif);
+  // Update modalAwal agar box di beranda selalu sinkron
+  modalAwal = sesiAktif?.opening_cash ?? null;
+}
+
+onMount(() => {
+  cekSesiToko();
+  if (browser) {
+    window.addEventListener('openTokoModal', handleOpenTokoModal);
+  }
+});
+onDestroy(() => {
+  if (browser) {
+    window.removeEventListener('openTokoModal', handleOpenTokoModal);
+  }
+});
+
+function handleOpenTokoModal() {
+  cekSesiToko().then(() => {
+    isBukaToko = !tokoAktifLocal;
+    showTokoModal = true;
+    modalAwalInput = '';
+    pinInputToko = '';
+    pinErrorToko = '';
+    if (!isBukaToko) hitungRingkasanTutup();
+  });
+}
+
+async function handleBukaToko() {
+  if (!modalAwalInput || isNaN(Number(modalAwalInput)) || Number(modalAwalInput) < 0) {
+    pinErrorToko = 'Modal awal wajib diisi dan valid';
+    return;
+  }
+  if (userRole === 'kasir' && pinInputToko !== pin) {
+    pinErrorToko = 'PIN salah';
+    return;
+  }
+  await supabase.from('store_sessions').insert({
+    opening_cash: Number(modalAwalInput),
+    opening_time: new Date().toISOString(),
+    is_active: true
+  });
+  showTokoModal = false;
+  cekSesiToko();
+}
+
+async function hitungRingkasanTutup() {
+  if (!sesiAktif) return;
+  // Ambil rentang waktu sesi toko, tambahkan toleransi 2 menit ke belakang
+  const waktuMulaiObj = new Date(sesiAktif.opening_time);
+  waktuMulaiObj.setMinutes(waktuMulaiObj.getMinutes() - 2);
+  const waktuMulai = waktuMulaiObj.toISOString();
+  const waktuSelesai = sesiAktif.closing_time || new Date().toISOString();
+  const { data: kasRaw } = await supabase
+    .from('cash_transactions')
+    .select('*')
+    .gte('transaction_date', waktuMulai)
+    .lte('transaction_date', waktuSelesai);
+  type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string };
+  const kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
+  // DEBUG LOG
+  console.log('waktuMulai (dengan toleransi):', waktuMulai);
+  console.log('waktuSelesai:', waktuSelesai);
+  console.log('kas:', kas);
+  // Penjualan tunai
+  const totalPenjualanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
+  // Penjualan non-tunai (QRIS/dll)
+  const totalPenjualanNonTunai = kas.filter((t) => t.type === 'in' && t.payment_method !== 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
+  // Pemasukan tunai lain (bukan penjualan)
+  const pemasukanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && (!t.description || !t.description.includes('Penjualan'))).reduce((a, b) => a + (b.amount || 0), 0);
+  // Pengeluaran tunai
+  const pengeluaranTunai = kas.filter((t) => t.type === 'out' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+  const modalAwal = sesiAktif.opening_cash || 0;
+  const uangKasir = modalAwal + totalPenjualanTunai + pemasukanTunai - pengeluaranTunai;
+  ringkasanTutup = {
+    modalAwal,
+    totalPenjualan: totalPenjualanTunai + totalPenjualanNonTunai,
+    pemasukanTunai,
+    pengeluaranTunai,
+    uangKasir
+  };
+}
+
+async function handleTutupToko() {
+  if (!sesiAktif) return;
+  await supabase.from('store_sessions').update({
+    closing_time: new Date().toISOString(),
+    is_active: false
+  }).eq('id', sesiAktif.id);
+  showTokoModal = false;
+  cekSesiToko();
+}
+
 function handleTouchStart(e) {
   if (!isTouchDevice) return;
   
@@ -298,19 +415,17 @@ function handleTouchMove(e) {
       target.closest('button') || target.closest('input') || target.closest('a')) {
     return;
   }
-  
+  if (browser) {
   touchEndX = e.touches[0].clientX;
   touchEndY = e.touches[0].clientY;
-  
   const deltaX = Math.abs(touchEndX - touchStartX);
   const deltaY = Math.abs(touchEndY - touchStartY);
   const viewportWidth = window.innerWidth;
-  const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-  
-  // Check if this is a horizontal swipe
+    const swipeThreshold = viewportWidth * 0.25;
   if (deltaX > swipeThreshold && deltaX > deltaY) {
     isSwiping = true;
     clickBlocked = true;
+    }
   }
 }
 
@@ -324,7 +439,7 @@ function handleTouchEnd(e) {
     return;
   }
   
-  if (isSwiping) {
+  if (browser && isSwiping) {
     // Handle swipe navigation
     const deltaX = touchEndX - touchStartX;
     const viewportWidth = window.innerWidth;
@@ -452,6 +567,47 @@ function handlePinSubmit() {
           <div class="w-16 h-16"></div>
         </div>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Modal Buka/Tutup Toko -->
+{#if showTokoModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-auto animate-fadeIn">
+      {#if isBukaToko}
+        <h2 class="font-bold text-lg mb-4 text-pink-500">Buka Toko</h2>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-1 font-medium">Modal Awal</label>
+          <input type="number" min="0" bind:value={modalAwalInput} class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none transition" placeholder="Masukkan modal awal" autofocus />
+        </div>
+        {#if userRole === 'kasir'}
+          <div class="mb-4">
+            <label class="block text-gray-700 mb-1 font-medium">PIN Keamanan</label>
+            <input type="password" maxlength="6" bind:value={pinInputToko} class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none transition" placeholder="Masukkan PIN" />
+          </div>
+        {/if}
+        {#if pinErrorToko}
+          <div class="text-sm text-red-500 mb-2">{pinErrorToko}</div>
+        {/if}
+        <button class="w-full bg-pink-500 text-white font-bold rounded-xl py-3 mt-2 shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-all text-lg" onclick={handleBukaToko}>
+          Konfirmasi Buka Toko
+        </button>
+        <button class="w-full mt-2 text-gray-400 hover:text-pink-400 text-sm" onclick={() => showTokoModal = false}>Batal</button>
+      {:else}
+        <h2 class="font-bold text-lg mb-4 text-pink-500">Ringkasan Harian</h2>
+        <div class="space-y-2 text-gray-700 text-base mb-4">
+          <div class="flex justify-between"><span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span></div>
+          <div class="flex justify-between"><span>Total Penjualan</span><span>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span></div>
+          <div class="flex justify-between"><span>Pemasukan Tunai</span><span>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span></div>
+          <div class="flex justify-between"><span>Pengeluaran Tunai</span><span>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span></div>
+          <div class="flex justify-between font-bold text-pink-500"><span>Uang Kasir Seharusnya</span><span>Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span></div>
+        </div>
+        <button class="w-full bg-pink-500 text-white font-bold rounded-xl py-3 mt-2 shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-all text-lg" onclick={handleTutupToko}>
+          Konfirmasi Tutup Toko
+        </button>
+        <button class="w-full mt-2 text-gray-400 hover:text-pink-400 text-sm" onclick={() => showTokoModal = false}>Batal</button>
+      {/if}
     </div>
   </div>
 {/if}
