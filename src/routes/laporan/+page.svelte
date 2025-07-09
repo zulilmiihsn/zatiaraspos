@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import Topbar from '$lib/components/shared/Topbar.svelte';
-import { slide, fade } from 'svelte/transition';
+import { slide, fade, fly } from 'svelte/transition';
 import { cubicOut, cubicIn } from 'svelte/easing';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
@@ -425,10 +425,10 @@ $: if (filterType === 'bulanan' && startDate) {
   >
     {#if pinError}
       <div 
-        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        class="fixed top-24 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
         style="transform: translateX(-50%);"
-        in:slide={{ duration: 300, easing: cubicOut }}
-        out:slide={{ duration: 300, easing: cubicIn }}
+        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+        out:fade={{ duration: 200 }}
       >
         {pinError}
       </div>

@@ -2,6 +2,7 @@
 import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
 import { cubicIn, cubicOut } from 'svelte/easing';
+import { fade, fly } from 'svelte/transition';
 import DatePickerSheet from '$lib/components/shared/DatePickerSheet.svelte';
 import TimePickerSheet from '$lib/components/shared/TimePickerSheet.svelte';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
@@ -402,10 +403,10 @@ main {
   >
     {#if pinError}
       <div 
-        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        class="fixed top-24 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
         style="transform: translateX(-50%);"
-        in:slide={{ duration: 300, easing: cubicOut }}
-        out:slide={{ duration: 300, easing: cubicIn }}
+        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+        out:fade={{ duration: 200 }}
       >
         {pinError}
       </div>

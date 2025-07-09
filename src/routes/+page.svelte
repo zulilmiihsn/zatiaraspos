@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
-import { slide } from 'svelte/transition';
+import { slide, fade, fly } from 'svelte/transition';
 import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
@@ -365,10 +365,6 @@ async function handleBukaToko() {
     pinErrorToko = 'Modal awal wajib diisi dan valid';
     return;
   }
-  if (userRole === 'kasir' && pinInputToko !== pin) {
-    pinErrorToko = 'PIN salah';
-    return;
-  }
   await supabase.from('store_sessions').insert({
     opening_cash: modalAwalRaw,
     opening_time: new Date().toISOString(),
@@ -586,10 +582,10 @@ onMount(() => {
   >
     {#if pinError}
       <div 
-        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        class="fixed top-40 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
         style="transform: translateX(-50%);"
-        in:slide={{ duration: 300, easing: cubicOut }}
-        out:slide={{ duration: 300, easing: cubicIn }}
+        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+        out:fade={{ duration: 200 }}
       >
         {pinError}
       </div>
@@ -676,7 +672,14 @@ onMount(() => {
           </div>
         </div>
         {#if pinErrorToko}
-          <div class="text-sm text-red-500 mb-2">{pinErrorToko}</div>
+          <div 
+            class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+            style="transform: translateX(-50%);"
+            in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+            out:fade={{ duration: 200 }}
+          >
+            {pinErrorToko}
+          </div>
         {/if}
         <button class="w-full bg-gradient-to-r from-pink-500 to-pink-400 text-white font-extrabold rounded-xl py-3 mt-2 shadow-xl hover:scale-105 hover:shadow-2xl active:scale-100 transition-all text-lg flex items-center justify-center gap-2" onclick={handleBukaToko}>
           <span class="text-2xl">🍹</span>
@@ -720,22 +723,27 @@ onMount(() => {
 {/if}
 
 <!-- Top Bar Status Toko -->
-<div bind:this={topbarRef} class="sticky top-0 z-40 w-full flex items-center justify-between px-4 py-3 md:rounded-2xl md:shadow-lg md:mx-auto md:mt-4 bg-gradient-to-r from-pink-400 to-pink-500 text-white mb-2 gap-4 transition-transform duration-500 ease-in-out" style="transform: translateX({hideTopbar ? '-100%' : '0'})">
-  <div class="flex items-center gap-3">
-    <span class="text-3xl md:text-4xl">{tokoAktifLocal ? '🍹' : '🔒'}</span>
-    <div class="flex flex-col">
-      <span class="font-extrabold text-base md:text-lg tracking-wide">{tokoAktifLocal ? 'Toko Sedang Buka' : 'Toko Sedang Tutup'}</span>
-      <span class="text-xs md:text-sm opacity-80">{tokoAktifLocal ? 'Siap melayani pelanggan' : 'Belum menerima transaksi'}</span>
+<div class="relative w-full min-h-[64px] overflow-hidden md:rounded-2xl md:shadow-lg md:mx-auto md:mt-4 mb-2">
+  {#key tokoAktifLocal}
+    <div bind:this={topbarRef} class="absolute left-0 top-0 w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-pink-400 to-pink-500 text-white gap-4 transition-transform duration-500 ease-in-out md:rounded-2xl" style="height:64px"
+      in:fly={{ x: -64, duration: 350 }} out:fly={{ x: 64, duration: 350 }}>
+      <div class="flex items-center gap-3">
+        <span class="text-3xl md:text-4xl">{tokoAktifLocal ? '🍹' : '🔒'}</span>
+        <div class="flex flex-col">
+          <span class="font-extrabold text-base md:text-lg tracking-wide">{tokoAktifLocal ? 'Toko Sedang Buka' : 'Toko Sedang Tutup'}</span>
+          <span class="text-xs md:text-sm opacity-80">{tokoAktifLocal ? 'Siap melayani pelanggan' : 'Belum menerima transaksi'}</span>
+        </div>
+      </div>
+      {#if userRole === ''}
+        <div class="min-w-[92px] h-9 md:min-w-[110px] md:h-10 px-3 py-2 rounded-lg bg-white/30 animate-pulse"></div>
+      {:else if userRole === 'kasir' || userRole === 'pemilik'}
+        <button class="flex items-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white font-bold rounded-lg px-3 py-2 shadow transition-all text-xs md:text-sm min-w-[92px] h-9 md:min-w-[110px] md:h-10" onclick={handleOpenTokoModal}>
+          <span class="text-lg">{tokoAktifLocal ? '🔒' : '🍹'}</span>
+          <span>{tokoAktifLocal ? 'Tutup Toko' : 'Buka Toko'}</span>
+        </button>
+      {/if}
     </div>
-  </div>
-  {#if userRole === ''}
-    <div class="min-w-[92px] h-9 md:min-w-[110px] md:h-10 px-3 py-2 rounded-lg bg-white/30 animate-pulse"></div>
-  {:else if userRole === 'kasir' || userRole === 'pemilik'}
-    <button class="flex items-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white font-bold rounded-lg px-3 py-2 shadow transition-all text-xs md:text-sm min-w-[92px] h-9 md:min-w-[110px] md:h-10" onclick={handleOpenTokoModal}>
-      <span class="text-lg">{tokoAktifLocal ? '🔒' : '🍹'}</span>
-      <span>{tokoAktifLocal ? 'Tutup Toko' : 'Buka Toko'}</span>
-    </button>
-  {/if}
+  {/key}
 </div>
 <div bind:this={sentinelRef} style="height:1px;width:100%"></div>
 
@@ -882,20 +890,22 @@ onMount(() => {
             </div>
           </div>
           <!-- Grafik Pendapatan 7 Hari -->
-          <div class="mt-8 md:mt-12" bind:this={incomeChartRef}>
-            <div class="text-xs font-semibold text-gray-500 mb-2 mt-4 md:text-base">Pendapatan 7 Hari Terakhir</div>
-            {#if weeklyIncome.length === 0}
-              <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data grafik pendapatan</div>
-            {:else}
-              <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
-                {#each weeklyIncome as income, i}
-                  <div class="flex flex-col items-center flex-1">
-                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
-                    <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
-                  </div>
-                {/each}
-              </div>
-            {/if}
+          <div class="mt-3 md:mt-4">
+            <div class="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col" bind:this={incomeChartRef}>
+              <div class="text-xs text-gray-500 mt-1 md:text-sm mb-2">Pendapatan 7 Hari Terakhir</div>
+              {#if weeklyIncome.length === 0}
+                <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data grafik pendapatan</div>
+              {:else}
+                <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
+                  {#each weeklyIncome as income, i}
+                    <div class="flex flex-col items-center flex-1">
+                      <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
+                      <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
           </div>
         </div>
       </div>
