@@ -37,6 +37,7 @@
   let lottieTimeout: any = null;
   let showLottieError = false;
   let lottieErrorTimeout: any = null;
+  // let isLottiePlaying = false; // Hapus semua logic isLottiePlaying
 
   async function handleSubmit() {
     errorMessage = '';
@@ -66,7 +67,9 @@
     try {
       await loginWithUsername(sanitizedUsername, sanitizedPassword);
       showLottieSuccess = true;
+      // isLottiePlaying = true; // Hapus semua logic isLottiePlaying
       await new Promise(resolve => setTimeout(resolve, 1200));
+      // isLottiePlaying = false; // Hapus semua logic isLottiePlaying
       goto('/');
     } catch (e) {
       errorMessage = e.message;
@@ -84,14 +87,16 @@
 
   function handleUsernameChange() { usernameError = ''; }
   function handlePasswordChange() { passwordError = ''; }
-  function handleKeyPress(event: KeyboardEvent) { if (event.key === 'Enter') handleSubmit(); }
+  function handleKeyPress(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !isLoading) handleSubmit();
+  }
 
   onMount(async () => {
     if (userRole === 'kasir') {
       const { data } = await supabase.from('security_settings').select('locked_pages').single();
       const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
       if (lockedPages.includes('beranda')) {
-        showPinModal = true;
+        // showPinModal = true; // Hapus semua logic showPinModal
       }
     }
   });
@@ -129,6 +134,15 @@
           </div>
         </div>
       {/if}
+
+      <!-- Preload Lottie Animation (hidden) -->
+      <div style="display:none">
+        <DotLottieSvelte
+          src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
+          loop
+          autoplay
+        />
+      </div>
 
       <!-- Floating Lottie Success Notification -->
       {#if showLottieSuccess}
