@@ -329,6 +329,23 @@ onDestroy(() => {
 });
 
 function handleOpenTokoModal() {
+  // Untuk kasir, tampilkan modal PIN dulu sebelum modal Buka Toko
+  if (userRole === 'kasir') {
+    // Simpan callback untuk buka toko setelah PIN benar
+    pendingAction = () => {
+      cekSesiToko().then(() => {
+        isBukaToko = !tokoAktifLocal;
+        showTokoModal = true;
+        modalAwalInput = '';
+        pinInputToko = '';
+        pinErrorToko = '';
+        if (!isBukaToko) hitungRingkasanTutup();
+      });
+    };
+    showPinModal = true;
+    return;
+  }
+  // Untuk non-kasir, langsung buka modal
   cekSesiToko().then(() => {
     isBukaToko = !tokoAktifLocal;
     showTokoModal = true;
@@ -338,6 +355,9 @@ function handleOpenTokoModal() {
     if (!isBukaToko) hitungRingkasanTutup();
   });
 }
+
+// Tambahkan state untuk pending action setelah PIN benar
+let pendingAction = null;
 
 async function handleBukaToko() {
   const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
@@ -497,6 +517,10 @@ function handlePinSubmit() {
       pinError = '';
       pinInput = '';
       isClosing = false;
+      if (pendingAction) {
+        pendingAction();
+        pendingAction = null;
+      }
     }, 300);
   } else {
     pinError = 'PIN salah. Silakan coba lagi.';
@@ -651,12 +675,6 @@ onMount(() => {
               placeholder="Modal awal kas hari ini" autofocus />
           </div>
         </div>
-        {#if userRole === 'kasir'}
-          <div class="mb-4">
-            <label class="block text-gray-700 mb-1 font-medium">PIN Keamanan</label>
-            <input type="password" maxlength="6" bind:value={pinInputToko} class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none transition" placeholder="Masukkan PIN" />
-          </div>
-        {/if}
         {#if pinErrorToko}
           <div class="text-sm text-red-500 mb-2">{pinErrorToko}</div>
         {/if}
