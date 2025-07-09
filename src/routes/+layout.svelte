@@ -46,7 +46,7 @@
 		// Cek role jika akses /admin
 		if (currentPath.startsWith('/admin')) {
 			const userId = session.user.id;
-			const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+			const { data: profile } = await supabase.from('profil').select('role').eq('id', userId).single();
 			if (!profile || profile.role !== 'admin') {
 				goto('/unauthorized');
 				return;

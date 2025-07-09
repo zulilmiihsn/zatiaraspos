@@ -8,6 +8,13 @@ import { auth } from '$lib/auth.js';
 import { supabase } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
+import { dashboardCache } from '$lib/stores/dashboardCache';
+
+let dashboardData;
+dashboardCache.subscribe(val => dashboardData = val.data);
+
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 1 hari
+
 let barsVisible = false;
 let incomeChartRef: HTMLDivElement | null = null;
 onMount(() => {
@@ -63,14 +70,14 @@ onMount(async () => {
   const user = session?.user;
   if (user) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('profil')
       .select('role')
       .eq('id', user.id)
       .single();
     userRole = profile?.role || '';
   }
   if (userRole === 'kasir') {
-    const { data } = await supabase.from('security_settings').select('locked_pages').single();
+    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
@@ -78,13 +85,35 @@ onMount(async () => {
   }
 });
 
+function applyDashboardData(data) {
+  if (!data) return;
+  omzet = data.omzet;
+  jumlahTransaksi = data.jumlahTransaksi;
+  profit = data.profit;
+  itemTerjual = data.itemTerjual;
+  totalItem = data.totalItem;
+  avgTransaksi = data.avgTransaksi;
+  jamRamai = data.jamRamai;
+  weeklyIncome = data.weeklyIncome;
+  weeklyMax = data.weeklyMax;
+  bestSellers = data.bestSellers;
+}
+
 async function fetchDashboardStats() {
+  let lastFetched;
+  dashboardCache.subscribe(val => lastFetched = val.lastFetched)();
+  if (dashboardData && Date.now() - lastFetched < CACHE_TTL) {
+    applyDashboardData(dashboardData);
+    isLoadingBestSellers = false;
+    return;
+  }
+  // Fetch baru dari Supabase
   isLoadingBestSellers = true;
   // Omzet
   const { data: omzetData } = await supabase.rpc('get_omzet_today');
   omzet = omzetData?.omzet || 0;
   // Total transaksi
-  const { count: transaksiCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+  const { count: transaksiCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true });
   jumlahTransaksi = transaksiCount || 0;
 
   // Statistik 7 hari terakhir
@@ -94,7 +123,7 @@ async function fetchDashboardStats() {
 
   // Rata-rata transaksi/hari dari cash_transactions (group by waktu detik per hari)
   const { data: transaksiKas } = await supabase
-    .from('cash_transactions')
+    .from('buku_kas')
     .select('transaction_date')
     .gte('transaction_date', startDate)
     .eq('type', 'in');
@@ -130,7 +159,7 @@ async function fetchDashboardStats() {
 
   // 2. Pendapatan 7 hari terakhir (grafik)
   const { data: pemasukan } = await supabase
-    .from('cash_transactions')
+    .from('buku_kas')
     .select('amount, transaction_date')
     .gte('transaction_date', startDate)
     .eq('type', 'in');
@@ -155,7 +184,7 @@ async function fetchDashboardStats() {
 
   // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
   const { data: items, error } = await supabase
-    .from('transaction_items')
+    .from('item_transaksi')
     .select('menu_id, qty, created_at')
     .gte('created_at', startDate);
   if (!error && items) {
@@ -176,7 +205,7 @@ async function fetchDashboardStats() {
     }
     // Ambil semua produk
     const { data: allProducts } = await supabase
-      .from('products')
+      .from('produk')
       .select('id, name, image');
     // Filter hanya menu_id yang ada di products
     const validMenuIds = topMenuIds.filter(id => allProducts && allProducts.some(p => p.id === id));
@@ -198,6 +227,22 @@ async function fetchDashboardStats() {
   }
   // ...tambahkan fetch lain sesuai kebutuhan (profit, itemTerjual, weeklyIncome, dsb)...
   isLoadingBestSellers = false;
+  // Setelah data didapat:
+  const newData = {
+    omzet,
+    jumlahTransaksi,
+    profit,
+    itemTerjual,
+    totalItem,
+    avgTransaksi,
+    jamRamai,
+    weeklyIncome,
+    weeklyMax,
+    bestSellers
+  };
+  applyDashboardData(newData);
+  dashboardCache.set({ data: newData, lastFetched: Date.now() });
+  localStorage.setItem('dashboardCache', JSON.stringify({ data: newData, lastFetched: Date.now() }));
 }
 
 async function fetchDashboardStatsPOS() {
@@ -210,7 +255,7 @@ async function fetchDashboardStatsPOS() {
 
   // Ambil semua transaksi kasir hari ini
   const { data: kas, error } = await supabase
-    .from('cash_transactions')
+    .from('buku_kas')
     .select('*')
     .gte('transaction_date', startUTC)
     .lte('transaction_date', endUTC)
@@ -232,7 +277,7 @@ async function fetchDashboardStatsPOS() {
 }
 
 async function fetchPin() {
-  const { data } = await supabase.from('security_settings').select('pin').single();
+  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -304,7 +349,7 @@ function updateTokoAktif(val) {
 
 async function cekSesiToko() {
   const { data } = await supabase
-    .from('store_sessions')
+    .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
     .order('opening_time', { ascending: false })
@@ -365,7 +410,7 @@ async function handleBukaToko() {
     pinErrorToko = 'Modal awal wajib diisi dan valid';
     return;
   }
-  await supabase.from('store_sessions').insert({
+  await supabase.from('sesi_toko').insert({
     opening_cash: modalAwalRaw,
     opening_time: new Date().toISOString(),
     is_active: true
@@ -382,7 +427,7 @@ async function hitungRingkasanTutup() {
   const waktuMulai = waktuMulaiObj.toISOString();
   const waktuSelesai = sesiAktif.closing_time || new Date().toISOString();
   const { data: kasRaw } = await supabase
-    .from('cash_transactions')
+    .from('buku_kas')
     .select('*')
     .gte('transaction_date', waktuMulai)
     .lte('transaction_date', waktuSelesai);
@@ -409,7 +454,7 @@ async function hitungRingkasanTutup() {
 
 async function handleTutupToko() {
   if (!sesiAktif) return;
-  await supabase.from('store_sessions').update({
+  await supabase.from('sesi_toko').update({
     closing_time: new Date().toISOString(),
     is_active: false
   }).eq('id', sesiAktif.id);

@@ -12,6 +12,10 @@ import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
 import { supabase } from '$lib/database/supabaseClient';
 import { formatWitaDateTime } from '$lib/index';
+import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
+import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
+let pendingCount = 0;
+transaksiPendingCount.subscribe(val => pendingCount = val);
 
 // Touch handling variables
 let touchStartX = 0;
@@ -88,7 +92,7 @@ onMount(async () => {
   userRole = '';
   if (user) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('profil')
       .select('role')
       .eq('id', user.id)
       .single();
@@ -96,7 +100,7 @@ onMount(async () => {
   }
   await fetchPin();
   if (userRole === 'kasir') {
-    const { data } = await supabase.from('security_settings').select('locked_pages').single();
+    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('catat')) {
       showPinModal = true;
@@ -126,12 +130,12 @@ onDestroy(() => {
 });
 
 async function fetchPin() {
-  const { data } = await supabase.from('security_settings').select('pin').single();
+  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
 async function fetchTransaksi() {
-  const { data, error } = await supabase.from('cash_transactions').select('*').order('transaction_date', { ascending: false });
+  const { data, error } = await supabase.from('buku_kas').select('*').order('transaction_date', { ascending: false });
   if (!error) transaksiList = data;
 }
 
@@ -146,14 +150,19 @@ function getLocalOffsetString() {
 }
 
 async function saveTransaksi(form) {
-  await supabase.from('cash_transactions').insert([{
+  const trx = {
     amount: form.amount,
     type: mode === 'pemasukan' ? 'in' : 'out',
     description: form.description,
     transaction_date: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
     payment_method: form.payment_method,
     jenis: form.jenis
-  }]);
+  };
+  if (navigator.onLine) {
+    await supabase.from('buku_kas').insert([trx]);
+  } else {
+    await saveTransaksiOffline(trx);
+  }
   await fetchTransaksi();
 }
 
@@ -326,14 +335,19 @@ async function handleSubmit(e) {
   
   // Simpan ke database: tanggal + jam input user (UTC ISO)
   const inputDateTime = new Date(`${sanitizedDate}T${sanitizedTime}`);
-  await supabase.from('cash_transactions').insert([{
+  const trx = {
     amount: dataToValidate.amount,
     type: mode === 'pemasukan' ? 'in' : 'out',
     description: sanitizedNama,
     transaction_date: inputDateTime.toISOString(),
     payment_method: sanitizedPaymentMethod,
     jenis: sanitizedJenis
-  }]);
+  };
+  if (navigator.onLine) {
+    await supabase.from('buku_kas').insert([trx]);
+  } else {
+    await saveTransaksiOffline(trx);
+  }
   await fetchTransaksi();
   
   // Tampilkan snackbar sukses
@@ -467,6 +481,12 @@ main {
 
 {#if showSnackbar}
   <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-pink-500 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
+{/if}
+
+{#if pendingCount > 0}
+  <div class="fixed top-20 right-4 z-50 bg-yellow-400 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce">
+    {pendingCount} transaksi menunggu sinkronisasi
+  </div>
 {/if}
 
 <div 

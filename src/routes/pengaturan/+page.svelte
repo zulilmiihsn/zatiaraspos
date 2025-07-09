@@ -17,6 +17,10 @@
   import Download from 'lucide-svelte/icons/download';
   import Printer from 'lucide-svelte/icons/printer';
   import { supabase } from '$lib/database/supabaseClient';
+  import { pengaturanCache } from '$lib/stores/pengaturanCache';
+  let pengaturanData;
+  pengaturanCache.subscribe(val => pengaturanData = val.data);
+  const PENGATURAN_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 hari
 
   onMount(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -24,7 +28,7 @@
     const userId = session?.user?.id;
     if (userId) {
       const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('profil')
         .select('role, full_name')
         .eq('id', userId)
         .single();
@@ -62,9 +66,9 @@
       });
     }
     if (userRole === 'kasir') {
-      const { data } = await supabase.from('security_settings').select('locked_pages, pin').single();
-      const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-      pin = data?.pin || '1234';
+      await fetchPengaturan();
+      const lockedPages = pengaturan?.locked_pages || ['laporan', 'beranda'];
+      pin = pengaturan?.pin || '1234';
       if (lockedPages.includes('pengaturan')) {
         showPinModal = true;
       }
@@ -90,6 +94,35 @@
   let showPwaInstalledToast = false;
   let pwaStatus = '';
   let showPwaManualToast = false;
+  let pengaturan;
+
+  async function fetchPengaturan() {
+    let lastFetched;
+    pengaturanCache.subscribe(val => lastFetched = val.lastFetched)();
+    if (!navigator.onLine && pengaturanData) {
+      pengaturan = pengaturanData;
+      return;
+    }
+    if (pengaturanData && Date.now() - lastFetched < PENGATURAN_CACHE_TTL) {
+      pengaturan = pengaturanData;
+      return;
+    }
+    // Fetch baru dari Supabase
+    const { data, error } = await supabase.from('pengaturan_keamanan').select('locked_pages, pin').single();
+    if (!error && data) {
+      pengaturan = data;
+      pengaturanCache.set({ data, lastFetched: Date.now() });
+      localStorage.setItem('pengaturanCache', JSON.stringify({ data, lastFetched: Date.now() }));
+    }
+  }
+
+  // Saat inisialisasi, load cache dari localStorage jika ada
+  if (typeof window !== 'undefined') {
+    const cache = localStorage.getItem('pengaturanCache');
+    if (cache) {
+      pengaturanCache.set(JSON.parse(cache));
+    }
+  }
 
   function handleLogout() {
     showLogoutModal = true;

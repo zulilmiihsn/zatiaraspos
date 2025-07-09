@@ -22,7 +22,7 @@ export class SecurityMiddleware {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     if (!userId) return false;
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    const { data: profile } = await supabase.from('profil').select('role').eq('id', userId).single();
     if (!profile || profile.role !== requiredRole) {
       window.location.href = '/unauthorized';
       return false;

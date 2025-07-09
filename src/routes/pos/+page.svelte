@@ -12,6 +12,21 @@ import { fly } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { supabase } from '$lib/database/supabaseClient';
 import { posGridView } from '$lib/stores/posGridView';
+import { produkCache } from '$lib/stores/produkCache';
+import { kategoriCache } from '$lib/stores/kategoriCache';
+import { tambahanCache } from '$lib/stores/tambahanCache';
+import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
+
+let produkData: any[] | null = null;
+produkCache.subscribe(val => produkData = val.data);
+let kategoriData: any[] | null = null;
+kategoriCache.subscribe(val => kategoriData = val.data);
+let tambahanData: any[] | null = null;
+tambahanCache.subscribe(val => tambahanData = val.data);
+
+const PRODUK_CACHE_TTL = 60 * 60 * 1000; // 1 jam
+const KATEGORI_CACHE_TTL = 60 * 60 * 1000; // 1 jam
+const TAMBAHAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 
 // Lazy load icons
 let Home, ShoppingBag, FileText, Book, Settings;
@@ -38,16 +53,63 @@ onMount(async () => {
 });
 
 async function fetchCategories() {
-  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
-  if (!error) categories = data;
+  let lastFetched;
+  kategoriCache.subscribe(val => lastFetched = val.lastFetched)();
+  if (kategoriData && Date.now() - lastFetched < KATEGORI_CACHE_TTL) {
+    categories = kategoriData;
+    return;
+  }
+  const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
+  if (!error) {
+    categories = data;
+    kategoriCache.set({ data, lastFetched: Date.now() });
+    localStorage.setItem('kategoriCache', JSON.stringify({ data, lastFetched: Date.now() }));
+  }
 }
 async function fetchProducts() {
-  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  if (!error) products = data;
+  let lastFetched;
+  produkCache.subscribe(val => lastFetched = val.lastFetched)();
+  if (produkData && Date.now() - lastFetched < PRODUK_CACHE_TTL) {
+    products = produkData;
+    return;
+  }
+  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
+  if (!error) {
+    products = data;
+    produkCache.set({ data, lastFetched: Date.now() });
+    localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
+  }
 }
+
+// Saat inisialisasi, load cache dari localStorage jika ada
+if (typeof window !== 'undefined') {
+  const cache = localStorage.getItem('produkCache');
+  if (cache) {
+    produkCache.set(JSON.parse(cache));
+  }
+  const kategoriCacheRaw = localStorage.getItem('kategoriCache');
+  if (kategoriCacheRaw) {
+    kategoriCache.set(JSON.parse(kategoriCacheRaw));
+  }
+  const tambahanCacheRaw = localStorage.getItem('tambahanCache');
+  if (tambahanCacheRaw) {
+    tambahanCache.set(JSON.parse(tambahanCacheRaw));
+  }
+}
+
 async function fetchAddOns() {
-  const { data, error } = await supabase.from('add_ons').select('*').order('created_at', { ascending: false });
-  if (!error) addOns = data;
+  let lastFetched;
+  tambahanCache.subscribe(val => lastFetched = val.lastFetched)();
+  if (tambahanData && Date.now() - lastFetched < TAMBAHAN_CACHE_TTL) {
+    addOns = tambahanData;
+    return;
+  }
+  const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
+  if (!error) {
+    addOns = data;
+    tambahanCache.set({ data, lastFetched: Date.now() });
+    localStorage.setItem('tambahanCache', JSON.stringify({ data, lastFetched: Date.now() }));
+  }
 }
 
 // Touch handling variables
@@ -70,10 +132,10 @@ const navs = [
 let selectedCategory = 'all';
 
 // Produk mock dengan kategori
-let products = [];
+let products: any[] = [];
 
 // Topping mock tanpa emoji/icon
-let addOns = [];
+let addOns: any[] = [];
 
 // Jenis gula dan es
 const sugarOptions = [
@@ -392,6 +454,9 @@ let skeletonCount = 9;
 if (typeof window !== 'undefined' && window.innerWidth < 768) {
   skeletonCount = 6;
 }
+
+let pendingCount = 0;
+transaksiPendingCount.subscribe(val => pendingCount = val);
 </script>
 
 <div 

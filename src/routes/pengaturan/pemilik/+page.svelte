@@ -18,6 +18,9 @@ import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { supabase } from '$lib/database/supabaseClient';
+import { produkCache } from '$lib/stores/produkCache';
+import { kategoriCache } from '$lib/stores/kategoriCache';
+import { tambahanCache } from '$lib/stores/tambahanCache';
 
 let currentUser = null;
 let userRole = '';
@@ -56,7 +59,6 @@ let menuForm = {
 
 let kategoriForm = {
   name: '',
-  menuIds: [],
 };
 
 let ekstraForm = {
@@ -90,8 +92,8 @@ let kategoriIdToDelete: number|null = null;
 // State untuk modal edit/detail kategori
 let showKategoriDetailModal = false;
 let kategoriDetail = null;
-let menuIdsInKategori: number[] = [];
-let menuIdsNonKategori: number[] = [];
+let selectedMenuIds: number[] = [];
+let unselectedMenuIds: number[] = [];
 
 // Tambahkan state untuk input nama kategori
 let kategoriDetailName = '';
@@ -149,7 +151,7 @@ onMount(async () => {
   const userId = session?.user?.id;
   if (userId) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('profil')
       .select('role')
       .eq('id', userId)
       .single();
@@ -157,7 +159,7 @@ onMount(async () => {
     // Jika bukan admin/pemilik, set role jadi kasir
     if (userRole !== 'admin' && userRole !== 'pemilik') {
       userRole = 'kasir';
-      await supabase.from('profiles').update({ role: 'kasir' }).eq('id', userId);
+      await supabase.from('profil').update({ role: 'kasir' }).eq('id', userId);
     }
   }
   await fetchSecuritySettings();
@@ -167,7 +169,7 @@ onMount(async () => {
 });
 
 async function fetchSecuritySettings() {
-  const { data, error } = await supabase.from('security_settings').select('*').single();
+  const { data, error } = await supabase.from('pengaturan_keamanan').select('*').single();
   if (!error && data) {
     pin = data.pin;
     lockedPages = data.locked_pages || ['laporan', 'beranda'];
@@ -292,7 +294,7 @@ function openMenuForm(menu = null) {
 }
 
 async function fetchMenus() {
-  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
   if (error) {
     console.error('Supabase fetchMenus error:', error);
     alert('Gagal mengambil data menu: ' + error.message);
@@ -300,7 +302,7 @@ async function fetchMenus() {
   if (!error) menus = data;
 }
 async function fetchKategori() {
-  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
   if (error) {
     console.error('Supabase fetchKategori error:', error);
     alert('Gagal mengambil data kategori: ' + error.message);
@@ -308,7 +310,7 @@ async function fetchKategori() {
   if (!error) kategoriList = data;
 }
 async function fetchEkstra() {
-  const { data, error } = await supabase.from('add_ons').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
   if (error) {
     console.error('Supabase fetchEkstra error:', error);
     alert('Gagal mengambil data ekstra: ' + error.message);
@@ -348,9 +350,9 @@ async function saveMenu() {
   const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
   let result;
   if (editMenuId) {
-    result = await supabase.from('products').update(payload).eq('id', editMenuId);
+    result = await supabase.from('produk').update(payload).eq('id', editMenuId);
   } else {
-    result = await supabase.from('products').insert([payload]);
+    result = await supabase.from('produk').insert([payload]);
   }
   if (result.error) {
     console.error('Supabase saveMenu error:', result.error);
@@ -358,6 +360,7 @@ async function saveMenu() {
   }
   showMenuForm = false;
   await fetchMenus();
+  clearMasterCache();
 }
 
 function confirmDeleteMenu(id: number) {
@@ -378,10 +381,11 @@ async function doDeleteMenu() {
       const path = menu.gambar.split('/').pop();
       await supabase.storage.from('gambar-menu').remove([path]);
     }
-    await supabase.from('products').delete().eq('id', menuIdToDelete);
+    await supabase.from('produk').delete().eq('id', menuIdToDelete);
     showDeleteModal = false;
     menuIdToDelete = null;
     await fetchMenus();
+    clearMasterCache();
   }
 }
 
@@ -398,24 +402,21 @@ function cancelDeleteMenu() {
 // Kategori functions
 function openKategoriForm(kat) {
   if (!kat) {
-    // Create kategori baru
+    // Kategori baru
     kategoriDetail = null;
     showKategoriDetailModal = true;
     kategoriDetailName = '';
-    menuIdsInKategori = [];
-    menuIdsNonKategori = menus.map(m => m.id);
+    selectedMenuIds = [];
+    unselectedMenuIds = menus.filter(m => !m.kategori).map(m => m.id);
     return;
   }
   kategoriDetail = kat;
   showKategoriDetailModal = true;
   kategoriDetailName = kat.name;
-  // Menu yang sudah masuk kategori
-  menuIdsInKategori = kat.menuIds ? [...kat.menuIds] : [];
-  // Menu non-kategorized: kategori kosong atau tidak terdaftar di kategori manapun
-  menuIdsNonKategori = menus
-    .filter(m => !m.kategori || !kategoriList.some(k => k.menuIds && k.menuIds.includes(m.id)))
-    .map(m => m.id)
-    .filter(id => !menuIdsInKategori.includes(id));
+  // Menu yang sudah masuk kategori (berdasarkan field kategori di produk)
+  selectedMenuIds = menus.filter(m => m.kategori === kat.name).map(m => m.id);
+  // Menu non-kategori
+  unselectedMenuIds = menus.filter(m => !m.kategori || m.kategori === '').map(m => m.id).filter(id => !selectedMenuIds.includes(id));
 }
 
 function closeKategoriDetailModal() {
@@ -427,52 +428,53 @@ function closeKategoriDetailModal() {
 }
 
 function toggleMenuInKategori(id) {
-  if (menuIdsInKategori.includes(id)) {
-    menuIdsInKategori = menuIdsInKategori.filter(mid => mid !== id);
-    if (!menus.find(m => m.id === id)?.kategori || !kategoriList.some(k => k.menuIds && k.menuIds.includes(id))) {
-      menuIdsNonKategori = [id, ...menuIdsNonKategori];
-    }
+  if (selectedMenuIds.includes(id)) {
+    selectedMenuIds = selectedMenuIds.filter(mid => mid !== id);
+    unselectedMenuIds = [id, ...unselectedMenuIds];
   } else {
-    menuIdsNonKategori = menuIdsNonKategori.filter(mid => mid !== id);
-    menuIdsInKategori = [id, ...menuIdsInKategori];
+    unselectedMenuIds = unselectedMenuIds.filter(mid => mid !== id);
+    selectedMenuIds = [id, ...selectedMenuIds];
   }
 }
 
 async function saveKategoriDetail() {
   if (kategoriDetail) {
-    const { error } = await supabase.from('categories').update({ name: kategoriDetailName, menuIds: menuIdsInKategori }).eq('id', kategoriDetail.id);
+    // Update nama kategori
+    const { error } = await supabase.from('kategori').update({ name: kategoriDetailName }).eq('id', kategoriDetail.id);
     if (error) {
       console.error('Supabase saveKategoriDetail error:', error);
       alert('Gagal menyimpan kategori: ' + error.message);
     }
-    // Update kategori pada menu/products
-    await updateMenusKategori(kategoriDetailName, menuIdsInKategori, kategoriDetail.menuIds ?? []);
+    // Update kategori pada produk
+    await updateMenusKategori(kategoriDetailName, selectedMenuIds, kategoriDetail.name);
   } else {
     // INSERT kategori baru
-    const { data, error } = await supabase.from('categories').insert([{ name: kategoriDetailName, menuIds: menuIdsInKategori }]).select();
+    const { data, error } = await supabase.from('kategori').insert([{ name: kategoriDetailName }]).select();
     if (error) {
       console.error('Supabase insertKategori error:', error);
       alert('Gagal menambah kategori: ' + error.message);
     }
-    // Update kategori pada menu/products
-    await updateMenusKategori(kategoriDetailName, menuIdsInKategori, []);
+    // Update kategori pada produk
+    await updateMenusKategori(kategoriDetailName, selectedMenuIds, null);
   }
   showKategoriDetailModal = false;
   kategoriDetail = null;
   await fetchKategori();
   await fetchMenus();
+  clearMasterCache();
 }
 
 // Update kategori pada tabel menu/products
-async function updateMenusKategori(namaKategori, menuIdsBaru, menuIdsLama) {
+async function updateMenusKategori(namaKategori, menuIdsBaru, namaKategoriLama) {
   // Set kategori pada menu yang baru masuk kategori
   for (const id of menuIdsBaru) {
-    await supabase.from('products').update({ kategori: namaKategori }).eq('id', id);
+    await supabase.from('produk').update({ kategori: namaKategori }).eq('id', id);
   }
   // Hapus kategori pada menu yang sebelumnya ada tapi sekarang tidak
-  for (const id of menuIdsLama) {
-    if (!menuIdsBaru.includes(id)) {
-      await supabase.from('products').update({ kategori: null }).eq('id', id);
+  if (namaKategoriLama) {
+    const produkLama = menus.filter(m => m.kategori === namaKategoriLama && !menuIdsBaru.includes(m.id));
+    for (const m of produkLama) {
+      await supabase.from('produk').update({ kategori: null }).eq('id', m.id);
     }
   }
 }
@@ -492,15 +494,16 @@ async function doDeleteKategori() {
     // Ambil nama kategori yang akan dihapus
     const kategori = kategoriList.find(k => k.id === kategoriIdToDelete);
     const kategoriName = kategori?.name || '';
-    await supabase.from('categories').delete().eq('id', kategoriIdToDelete);
+    await supabase.from('kategori').delete().eq('id', kategoriIdToDelete);
     // Update semua produk yang punya kategori ini menjadi null
     if (kategoriName) {
-      await supabase.from('products').update({ kategori: null }).eq('kategori', kategoriName);
+      await supabase.from('produk').update({ kategori: null }).eq('kategori', kategoriName);
     }
     showDeleteKategoriModal = false;
     kategoriIdToDelete = null;
     await fetchKategori();
     await fetchMenus();
+    clearMasterCache();
   }
 }
 
@@ -533,9 +536,9 @@ async function saveEkstra() {
   if (isNaN(hargaNumber) || hargaNumber <= 0) return;
   let result;
   if (editEkstraId) {
-    result = await supabase.from('add_ons').update({ ...ekstraForm, harga: hargaNumber }).eq('id', editEkstraId);
+    result = await supabase.from('tambahan').update({ ...ekstraForm, harga: hargaNumber }).eq('id', editEkstraId);
   } else {
-    result = await supabase.from('add_ons').insert([{ ...ekstraForm, harga: hargaNumber }]);
+    result = await supabase.from('tambahan').insert([{ ...ekstraForm, harga: hargaNumber }]);
   }
   if (result.error) {
     console.error('Supabase saveEkstra error:', result.error);
@@ -543,6 +546,7 @@ async function saveEkstra() {
   }
   showEkstraForm = false;
   await fetchEkstra();
+  clearMasterCache();
 }
 
 function confirmDeleteEkstra(id) {
@@ -557,10 +561,11 @@ function confirmDeleteEkstra(id) {
 
 async function doDeleteEkstra() {
   if (ekstraIdToDelete !== null) {
-    await supabase.from('add_ons').delete().eq('id', ekstraIdToDelete);
+    await supabase.from('tambahan').delete().eq('id', ekstraIdToDelete);
     showDeleteEkstraModal = false;
     ekstraIdToDelete = null;
     await fetchEkstra();
+    clearMasterCache();
   }
 }
 
@@ -727,7 +732,7 @@ async function handleChangeUserPass(e) {
     return;
   }
   // Update username di profiles (pakai full_name)
-  const { error: usernameError } = await supabase.from('profiles').update({ full_name: newUsername }).eq('id', userId);
+  const { error: usernameError } = await supabase.from('profil').update({ full_name: newUsername }).eq('id', userId);
   if (usernameError) {
     userPassError = 'Gagal update nama user.';
     return;
@@ -762,7 +767,7 @@ async function handleChangePin() {
     return;
   }
   // Update ke Supabase
-  await supabase.from('security_settings').update({ pin: newPin, locked_pages: lockedPages }).eq('id', 1);
+  await supabase.from('pengaturan_keamanan').update({ pin: newPin, locked_pages: lockedPages }).eq('id', 1);
   pin = newPin;
   pinError = '';
   alert('Perubahan PIN & pengaturan kunci berhasil disimpan.');
@@ -784,6 +789,15 @@ function closeMenuForm() {
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', blockNextClick, true);
   }
+}
+
+function clearMasterCache() {
+  localStorage.removeItem('produkCache');
+  localStorage.removeItem('kategoriCache');
+  localStorage.removeItem('tambahanCache');
+  produkCache.set({ data: null, lastFetched: 0 });
+  kategoriCache.set({ data: null, lastFetched: 0 });
+  tambahanCache.set({ data: null, lastFetched: 0 });
 }
 </script>
 
@@ -1096,7 +1110,9 @@ function closeMenuForm() {
                     >
                       <div>
                         <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
-                        <div class="text-xs text-blue-400">{kat.menuIds.length} menu</div>
+                        <div class="text-xs text-blue-400">
+                          {menus.filter(m => m.kategori === kat.name).length} menu
+                        </div>
                       </div>
                       <div class="flex gap-2" role="group">
                         <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
@@ -1455,7 +1471,7 @@ function closeMenuForm() {
             <div class="mb-6">
               <div class="text-xs font-semibold text-blue-500 mb-2">Menu dalam Kategori</div>
               <div class="flex flex-wrap gap-2 min-h-[36px]">
-                {#each menuIdsInKategori as id (id)}
+                {#each selectedMenuIds as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-200"
                     transition:fly={{ y: -16, duration: 200 }}
                     onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}
@@ -1465,7 +1481,7 @@ function closeMenuForm() {
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
-                {#if menuIdsInKategori.length === 0}
+                {#if selectedMenuIds.length === 0}
                   <div class="text-gray-300 text-xs italic">Belum ada menu</div>
                 {/if}
             </div>
@@ -1473,7 +1489,7 @@ function closeMenuForm() {
             <div class="mb-6">
               <div class="text-xs font-semibold text-gray-400 mb-2">Menu Non-Kategori</div>
               <div class="flex flex-wrap gap-2 min-h-[36px]">
-                {#each menuIdsNonKategori as id (id)}
+                {#each unselectedMenuIds as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-50"
                     transition:fly={{ y: 16, duration: 200 }}
                     onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}
@@ -1483,7 +1499,7 @@ function closeMenuForm() {
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
-                {#if menuIdsNonKategori.length === 0}
+                {#if unselectedMenuIds.length === 0}
                   <div class="text-gray-300 text-xs italic">Tidak ada menu non-kategori</div>
                 {/if}
               </div>

@@ -125,9 +125,9 @@ function generateDummyToken(user: any): string {
 }
 
 export async function loginWithUsername(username: string, password: string) {
-  // Cari email user dari tabel profiles
+  // Cari email user dari tabel profil
   const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+    .from('profil')
     .select('email')
     .eq('full_name', username)
     .single();
@@ -146,7 +146,7 @@ export async function loginWithUsername(username: string, password: string) {
 
 export async function getUserRole(userId: string) {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('profil')
     .select('role')
     .eq('id', userId)
     .single();

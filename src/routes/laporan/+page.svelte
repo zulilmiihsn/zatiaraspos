@@ -8,6 +8,10 @@ import { goto } from '$app/navigation';
 import { supabase } from '$lib/database/supabaseClient';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import { laporanCache } from '$lib/stores/laporanCache';
+let laporanData;
+laporanCache.subscribe(val => laporanData = val.data);
+const LAPORAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
@@ -35,14 +39,14 @@ onMount(async () => {
   const user = session?.user;
   if (user) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('profil')
       .select('role')
       .eq('id', user.id)
       .single();
     userRole = profile?.role || '';
   }
   if (userRole === 'kasir') {
-    const { data } = await supabase.from('security_settings').select('locked_pages').single();
+    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('laporan')) {
       showPinModal = true;
@@ -60,7 +64,7 @@ onMount(async () => {
 });
 
 async function fetchPin() {
-  const { data } = await supabase.from('security_settings').select('pin').single();
+  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -304,7 +308,7 @@ async function fetchLaporan(start = startDate, end = endDate) {
   // Konversi filter ke UTC ISO string berbasis WITA
   const { startUtc, endUtc } = getWitaDateRangeUtc(start);
   const { data: kas, error: kasError } = await supabase
-    .from('cash_transactions')
+    .from('buku_kas')
     .select('*')
     .gte('transaction_date', startUtc)
     .lte('transaction_date', endUtc)

@@ -38,6 +38,7 @@
 		"@lottiefiles/dotlottie-svelte": "^0.6.2",
 		"@supabase/supabase-js": "^2.50.3",
 		"@vite-pwa/sveltekit": "^1.0.0",
+		"idb-keyval": "^6.2.2",
 		"lucide-svelte": "^0.525.0",
 		"uuid": "^11.1.0"
 	}

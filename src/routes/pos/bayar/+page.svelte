@@ -7,6 +7,7 @@ import { SecurityMiddleware } from '$lib/security.js';
 import { supabase } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { formatWitaDateTime } from '$lib/index';
+import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 
 let cart = [];
 let customerName = '';
@@ -245,9 +246,15 @@ async function catatTransaksiKeLaporan() {
     payment_method: payment,
     jenis: 'pendapatan_usaha'
   }));
-  await supabase.from('cash_transactions').insert(inserts);
+  if (navigator.onLine) {
+    await supabase.from('buku_kas').insert(inserts);
+  } else {
+    for (const trx of inserts) {
+      await saveTransaksiOffline(trx);
+    }
+  }
 
-  // 1. Insert ke transactions (header)
+  // 1. Insert ke transaksi (header)
   const transaksiHeader = {
     id: transactionId, // UUID
     type: 'penjualan',
@@ -256,13 +263,13 @@ async function catatTransaksiKeLaporan() {
     description: 'Penjualan kasir',
     created_at: new Date().toISOString()
   };
-  const { error: trxError } = await supabase.from('transactions').insert([transaksiHeader]);
+  const { error: trxError } = await supabase.from('transaksi').insert([transaksiHeader]);
   if (trxError) {
-    console.error('Gagal insert transactions:', trxError, transaksiHeader);
+    console.error('Gagal insert transaksi:', trxError, transaksiHeader);
     return;
   }
 
-  // 2. Insert ke transaction_items (detail)
+  // 2. Insert ke item_transaksi (detail)
   const itemInserts = cart.map(item => ({
     transaction_id: transactionId,
     menu_id: item.product.id,
@@ -270,11 +277,11 @@ async function catatTransaksiKeLaporan() {
     price: item.product.price ?? item.product.harga ?? 0
   }));
   if (itemInserts.some(i => !i.menu_id || typeof i.menu_id !== 'string' || i.menu_id.length < 10)) {
-    console.error('Gagal insert transaction_items: menu_id bukan UUID', itemInserts);
+    console.error('Gagal insert item_transaksi: menu_id bukan UUID', itemInserts);
   } else if (itemInserts.length > 0) {
-    const { error: insertError } = await supabase.from('transaction_items').insert(itemInserts);
+    const { error: insertError } = await supabase.from('item_transaksi').insert(itemInserts);
     if (insertError) {
-      console.error('Gagal insert transaction_items:', insertError, itemInserts);
+      console.error('Gagal insert item_transaksi:', insertError, itemInserts);
     }
   }
 }
