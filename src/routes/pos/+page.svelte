@@ -466,8 +466,12 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
           {#each filteredProducts as p}
             <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
               <div class="flex flex-col flex-1 min-w-0">
-                <span class="font-medium text-gray-800 text-sm truncate">{p.name}</span>
-                <span class="text-xs text-gray-400 truncate">{p.kategori ?? ''}</span>
+                <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
+                {#if p.kategori}
+                  <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{p.kategori}</span>
+                {:else}
+                  <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5 invisible">Kategori</span>
+                {/if}
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
@@ -498,6 +502,11 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
               {/if}
               <div class="w-full flex flex-col items-center">
                 <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
+                {#if p.kategori}
+                  <span class="text-xs text-gray-400 truncate min-h-[18px]">{p.kategori}</span>
+                {:else}
+                  <span class="text-xs text-gray-400 truncate min-h-[18px] invisible">Kategori</span>
+                {/if}
                 <div class="text-pink-500 font-bold text-base">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
               </div>
             </div>
