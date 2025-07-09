@@ -20,6 +20,7 @@ let weeklyIncome = [];
 let weeklyMax = 1;
 let bestSellers = [];
 let userRole = '';
+let isLoadingBestSellers = true;
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -63,16 +64,81 @@ onMount(async () => {
 });
 
 async function fetchDashboardStats() {
+  isLoadingBestSellers = true;
   // Omzet
   const { data: omzetData } = await supabase.rpc('get_omzet_today');
   omzet = omzetData?.omzet || 0;
   // Total transaksi
   const { count: transaksiCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
   jumlahTransaksi = transaksiCount || 0;
-  // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
+
+  // Statistik 7 hari terakhir
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0); // 7 hari terakhir termasuk hari ini
+  const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
   const startDate = sevenDaysAgo.toISOString();
+
+  // Rata-rata transaksi/hari dari cash_transactions (group by waktu detik per hari)
+  const { data: transaksiKas } = await supabase
+    .from('cash_transactions')
+    .select('transaction_date')
+    .gte('transaction_date', startDate)
+    .eq('type', 'in');
+
+  const transaksiPerHari = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sevenDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    transaksiPerHari[key] = new Set();
+  }
+  if (transaksiKas) {
+    transaksiKas.forEach(t => {
+      const key = t.transaction_date.slice(0, 10);
+      if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.transaction_date);
+    });
+  }
+  avgTransaksi = Math.round(
+    Object.values(transaksiPerHari).reduce((a, b) => a + b.size, 0) / 7
+  );
+
+  // Jam paling ramai (pakai transaksiKas)
+  const jamCount = {};
+  if (transaksiKas) {
+    transaksiKas.forEach(t => {
+      const jam = new Date(t.transaction_date).getHours();
+      jamCount[jam] = (jamCount[jam] || 0) + 1;
+    });
+  }
+  const jamRamaiVal = Object.entries(jamCount)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || '--';
+  jamRamai = jamRamaiVal !== '--' ? `${jamRamaiVal}.00–${parseInt(jamRamaiVal) + 1}.00` : '--';
+
+  // 2. Pendapatan 7 hari terakhir (grafik)
+  const { data: pemasukan } = await supabase
+    .from('cash_transactions')
+    .select('amount, transaction_date')
+    .gte('transaction_date', startDate)
+    .eq('type', 'in');
+  const pendapatanPerHari = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sevenDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    pendapatanPerHari[key] = 0;
+  }
+  if (pemasukan) {
+    pemasukan.forEach(t => {
+      const key = t.transaction_date.slice(0, 10);
+      if (pendapatanPerHari[key] !== undefined) pendapatanPerHari[key] += t.amount || 0;
+    });
+  }
+  weeklyIncome = Object.values(pendapatanPerHari);
+
+  // Setelah weeklyIncome diisi:
+  weeklyIncome = weeklyIncome.map(x => (typeof x === 'number' && !isNaN(x) && x > 0 ? x : 0));
+  weeklyMax = Math.max(...weeklyIncome, 1);
+
+  // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
   const { data: items, error } = await supabase
     .from('transaction_items')
     .select('menu_id, qty, created_at')
@@ -116,6 +182,7 @@ async function fetchDashboardStats() {
     bestSellers = [];
   }
   // ...tambahkan fetch lain sesuai kebutuhan (profit, itemTerjual, weeklyIncome, dsb)...
+  isLoadingBestSellers = false;
 }
 
 async function fetchDashboardStatsPOS() {
@@ -397,7 +464,7 @@ function handlePinSubmit() {
   <main class="flex flex-col h-max bg-white page-content md:max-w-3xl lg:max-w-5xl md:mx-auto md:rounded-2xl md:shadow-xl md:bg-white">
     <div class="px-4 py-4 md:px-8 md:py-8 lg:px-12 lg:py-10">
       <div class="flex flex-col space-y-6 md:space-y-10">
-        <!-- Metrik Utama -->
+      <!-- Metrik Utama -->
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
           <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
             {#if ShoppingBag}
@@ -473,7 +540,19 @@ function handlePinSubmit() {
         <!-- Menu Terlaris -->
         <div>
           <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Menu Terlaris</div>
-          {#if bestSellers.length === 0}
+          {#if isLoadingBestSellers}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {#each Array(3) as _, i}
+                <div class="flex items-center bg-gray-100 rounded-xl shadow-md p-3 gap-3 relative animate-pulse md:p-4 lg:p-5 h-16 md:h-20">
+                  <div class="w-12 h-12 rounded-lg bg-gray-200"></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-16"></div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else if bestSellers.length === 0}
             <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data menu terlaris</div>
           {:else}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -528,7 +607,7 @@ function handlePinSubmit() {
               <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
                 {#each weeklyIncome as income, i}
                   <div class="flex flex-col items-center flex-1">
-                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10" style="height: {income/weeklyMax*96}px"></div>
+                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10" style="height: {income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
                     <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
                   </div>
                 {/each}
