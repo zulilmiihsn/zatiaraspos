@@ -15,14 +15,20 @@
 		<meta name="msapplication-TileColor" content="#ec4899" />
 		<meta name="msapplication-tap-highlight" content="no" />
 		
-		<!-- Apple Touch Icons -->
-		<link rel="apple-touch-icon" href="%sveltekit.assets%/img/logo.svg" />
-		<link rel="apple-touch-icon" sizes="152x152" href="%sveltekit.assets%/img/logo.svg" />
-		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/img/logo.svg" />
-		<link rel="apple-touch-icon" sizes="167x167" href="%sveltekit.assets%/img/logo.svg" />
-		
-		<!-- Splash Screen -->
-		<link rel="apple-touch-startup-image" href="%sveltekit.assets%/img/logo.svg" />
+		<!-- Apple Touch Icons (gunakan PNG, bukan SVG, agar iOS tidak hanya menampilkan inisial) -->
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/img/apple-touch-icon.png" />
+		<link rel="apple-touch-icon" sizes="152x152" href="%sveltekit.assets%/img/apple-touch-icon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/img/apple-touch-icon.png" />
+		<link rel="apple-touch-icon" sizes="167x167" href="%sveltekit.assets%/img/apple-touch-icon.png" />
+
+		<!-- Splash Screen iOS (contoh, tambahkan untuk semua resolusi yang ingin didukung) -->
+		<link rel="apple-touch-startup-image" href="%sveltekit.assets%/img/apple-touch-icon.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+		<!--
+		  Untuk hasil terbaik, generate splash screen PNG untuk setiap resolusi iPhone/iPad yang ingin didukung.
+		  Contoh generator: https://appsco.pe/developer/splash-screens atau pwa-asset-generator
+		  Lalu tambahkan tag berikut untuk setiap resolusi:
+		  <link rel="apple-touch-startup-image" href="/img/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px)">
+		-->
 		
 		<!-- PWA Manifest Manual untuk dev -->
 		<link rel="manifest" href="/manifest.webmanifest">
