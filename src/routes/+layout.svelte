@@ -55,6 +55,7 @@
 
 	let isPosPage = false;
 	let posGridViewValue = true;
+	let tokoAktif = false; // TODO: Nanti dihubungkan ke state global/store dari page beranda
 
 	$: isPosPage = $page.url.pathname === '/pos';
 
@@ -87,6 +88,16 @@
 			<div class="sticky top-0 z-30 bg-white shadow-md">
 				<Topbar onSettings={undefined}>
 					<svelte:fragment slot="actions">
+						{#if $page.url.pathname === '/'}
+							<button
+								class="w-[38px] h-[38px] rounded-lg flex items-center justify-center text-2xl shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 mr-2 border-[1.5px] border-gray-200 {tokoAktif ? 'bg-pink-500 text-white' : 'bg-white text-pink-500'} hover:bg-pink-50 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12"
+								on:click={() => window.dispatchEvent(new CustomEvent('openTokoModal'))}
+								aria-label={tokoAktif ? 'Tutup Toko' : 'Buka Toko'}
+								type="button"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7V6a2 2 0 012-2h14a2 2 0 012 2v1M3 7h18M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7M16 11a4 4 0 01-8 0" /></svg>
+							</button>
+						{/if}
 						{#if $page.url.pathname === '/pos'}
 							<button
 								class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
