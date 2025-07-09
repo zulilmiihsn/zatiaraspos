@@ -382,6 +382,15 @@ function handlePinSubmit() {
     }, 2000);
   }
 }
+
+function handlePinInput(num) {
+  if (pinInput.length < 4) {
+    pinInput += num.toString();
+    if (pinInput.length === 4) {
+      setTimeout(() => handlePinSubmit(), 200);
+    }
+  }
+}
 </script>
 
 <style>
@@ -436,14 +445,7 @@ main {
             <button
               type="button"
               class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-              onclick={() => {
-                if (pinInput.length < 4) {
-                  pinInput += num.toString();
-                  if (pinInput.length === 4) {
-                    handlePinSubmit();
-                  }
-                }
-              }}
+              onclick={() => handlePinInput(num)}
             >
               {num}
             </button>
@@ -452,14 +454,7 @@ main {
           <button
             type="button"
             class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-            onclick={() => {
-              if (pinInput.length < 4) {
-                pinInput += '0';
-                if (pinInput.length === 4) {
-                  handlePinSubmit();
-                }
-              }
-            }}
+            onclick={() => handlePinInput(0)}
           >
             0
           </button>
@@ -475,13 +470,13 @@ main {
 {/if}
 
 <div 
-  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden"
+  class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
 >
-  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
+  <main class="flex-1 min-h-0 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <div class="px-2 pb-4 pt-4 md:pt-8 lg:pt-10">

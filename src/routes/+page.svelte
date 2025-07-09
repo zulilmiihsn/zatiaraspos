@@ -388,10 +388,6 @@ async function hitungRingkasanTutup() {
     .lte('transaction_date', waktuSelesai);
   type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string };
   const kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
-  // DEBUG LOG
-  console.log('waktuMulai (dengan toleransi):', waktuMulai);
-  console.log('waktuSelesai:', waktuSelesai);
-  console.log('kas:', kas);
   // Penjualan tunai
   const totalPenjualanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
   // Penjualan non-tunai (QRIS/dll)
@@ -747,12 +743,13 @@ onMount(() => {
 </div>
 <div bind:this={sentinelRef} style="height:1px;width:100%"></div>
 
-<div class="flex flex-col h-max min-h-0 bg-white md:min-h-screen md:px-8 lg:px-16 md:pt-8 md:pb-12"
+<div 
+  class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
 >
-  <main class="flex flex-col h-max bg-white page-content md:max-w-3xl lg:max-w-5xl md:mx-auto md:rounded-2xl md:shadow-xl md:bg-white">
+  <main class="flex-1 min-h-0 w-full max-w-full overflow-x-hidden page-content md:max-w-3xl lg:max-w-5xl md:mx-auto md:rounded-2xl md:shadow-xl md:bg-white">
     <div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
       <div class="flex flex-col space-y-3 md:space-y-10">
       <!-- Metrik Utama -->
