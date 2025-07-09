@@ -483,12 +483,6 @@ main {
   <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-pink-500 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
 {/if}
 
-{#if pendingCount > 0}
-  <div class="fixed top-20 right-4 z-50 bg-yellow-400 text-white px-4 py-2 rounded-lg shadow-lg animate-bounce">
-    {pendingCount} transaksi menunggu sinkronisasi
-  </div>
-{/if}
-
 <div 
   class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}

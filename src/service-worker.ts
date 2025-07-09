@@ -12,7 +12,16 @@ self.addEventListener('install', (event) => {
 	// Create a new cache and add all files to it
 	async function addFilesToCache() {
 		const cache = await caches.open(CACHE);
-		await cache.addAll(ASSETS);
+		// Cari semua file nodes/*.js dan tambahkan ke ASSETS
+		let nodeFiles: string[] = [];
+		try {
+			const res = await fetch('/.svelte-kit/generated/client/nodes/manifest.json');
+			if (res.ok) {
+				nodeFiles = await res.json();
+			}
+		} catch {}
+		const allAssets = [...ASSETS, ...nodeFiles];
+		await cache.addAll(allAssets);
 	}
 
 	event.waitUntil(addFilesToCache());
@@ -53,7 +62,9 @@ self.addEventListener('fetch', (event) => {
 
 			return response;
 		} catch {
-			return cache.match(event.request);
+			const cached = await cache.match(event.request);
+			// PATCH: Always return a Response object
+			return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
 		}
 	}
 
