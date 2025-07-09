@@ -5,6 +5,7 @@ import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
 import { supabase } from '$lib/database/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 let cart = [];
 let customerName = '';
@@ -26,8 +27,9 @@ let keypad = [
 let showSuccessModal = false;
 let showQrisWarning = false;
 let transactionId = '';
+let transactionCode = '';
 
-function generateTransactionId() {
+function generateTransactionCode() {
   // Ambil nomor urut terakhir dari localStorage
   let lastNum = parseInt(localStorage.getItem('last_jus_id') || '0', 10);
   lastNum++;
@@ -42,7 +44,8 @@ onMount(() => {
       cart = JSON.parse(saved);
     } catch {}
   }
-  transactionId = generateTransactionId();
+  transactionId = uuidv4(); // UUID untuk database
+  transactionCode = generateTransactionCode(); // Untuk tampilan/struk
 });
 
 $: totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -243,12 +246,43 @@ async function catatTransaksiKeLaporan() {
     jenis: 'pendapatan_usaha'
   }));
   await supabase.from('cash_transactions').insert(inserts);
+
+  // 1. Insert ke transactions (header)
+  const transaksiHeader = {
+    id: transactionId, // UUID
+    type: 'penjualan',
+    amount: totalHarga,
+    is_cash: paymentMethod === 'cash',
+    description: 'Penjualan kasir',
+    created_at: new Date().toISOString()
+  };
+  const { error: trxError } = await supabase.from('transactions').insert([transaksiHeader]);
+  if (trxError) {
+    console.error('Gagal insert transactions:', trxError, transaksiHeader);
+    return;
+  }
+
+  // 2. Insert ke transaction_items (detail)
+  const itemInserts = cart.map(item => ({
+    transaction_id: transactionId,
+    menu_id: item.product.id,
+    qty: item.qty,
+    price: item.product.price ?? item.product.harga ?? 0
+  }));
+  if (itemInserts.some(i => !i.menu_id || typeof i.menu_id !== 'string' || i.menu_id.length < 10)) {
+    console.error('Gagal insert transaction_items: menu_id bukan UUID', itemInserts);
+  } else if (itemInserts.length > 0) {
+    const { error: insertError } = await supabase.from('transaction_items').insert(itemInserts);
+    if (insertError) {
+      console.error('Gagal insert transaction_items:', insertError, itemInserts);
+    }
+  }
 }
 </script>
 
 <main class="flex-1 overflow-y-auto px-2 pt-2 page-content">
   <div class="px-2 py-4">
-    <div class="font-semibold text-sm text-gray-700 mb-3">Pembayaran: #{transactionId}</div>
+    <div class="font-semibold text-sm text-gray-700 mb-3">Pembayaran: #{transactionCode}</div>
     <!-- Input Nama Pelanggan -->
     <div class="mb-4">
       <div class="block text-sm text-gray-500 mb-2">Nama Pelanggan</div>
