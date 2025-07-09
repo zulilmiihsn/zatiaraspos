@@ -6,6 +6,8 @@ import { cubicOut, cubicIn } from 'svelte/easing';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
 import { supabase } from '$lib/database/supabaseClient';
+import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
+import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
@@ -299,14 +301,13 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
 
 // Modifikasi fetchLaporan agar filter tanggal pakai waktu sistem user/browser tanpa offset tambahan
 async function fetchLaporan(start = startDate, end = endDate) {
-  // Konversi filter ke UTC ISO string
-  const startUTC = new Date(start + 'T00:00:00').toISOString();
-  const endUTC = new Date(end + 'T23:59:59').toISOString();
+  // Konversi filter ke UTC ISO string berbasis WITA
+  const { startUtc, endUtc } = getWitaDateRangeUtc(start);
   const { data: kas, error: kasError } = await supabase
     .from('cash_transactions')
     .select('*')
-    .gte('transaction_date', startUTC)
-    .lte('transaction_date', endUTC)
+    .gte('transaction_date', startUtc)
+    .lte('transaction_date', endUtc)
     .order('transaction_date', { ascending: false });
   if (!kasError && kas) {
     laporan = kas;
@@ -679,7 +680,7 @@ $: if (filterType === 'bulanan' && startDate) {
       <!-- Modal Filter -->
       {#if showFilter}
         <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
-          <div class="w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-lg p-6 pb-8" style="animation: slideUp 0.3s ease-out;">
+          <div class="w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-lg p-6 pb-8 filter-sheet-anim">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-bold text-gray-800">Filter Laporan</h3>
               <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showFilter = false}>
@@ -688,7 +689,6 @@ $: if (filterType === 'bulanan' && startDate) {
                 </svg>
               </button>
             </div>
-            
             <!-- Pilihan Tipe Filter -->
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-3">Pilih Periode</label>
@@ -719,7 +719,6 @@ $: if (filterType === 'bulanan' && startDate) {
                 </button>
               </div>
             </div>
-
             <!-- Input Filter Berdasarkan Tipe -->
             {#if filterType === 'harian'}
               <div class="mb-6">
@@ -801,7 +800,6 @@ $: if (filterType === 'bulanan' && startDate) {
                 </select>
               </div>
             {/if}
-
             <!-- Button Actions -->
             <div class="flex gap-3">
               <button 
@@ -904,3 +902,13 @@ $: if (filterType === 'bulanan' && startDate) {
     </div>
   </main>
 </div> 
+
+<style>
+.filter-sheet-anim {
+  animation: slideUp 0.22s cubic-bezier(.4,1.4,.6,1) 1;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+</style> 

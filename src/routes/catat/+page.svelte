@@ -10,6 +10,7 @@ import { SecurityMiddleware } from '$lib/security.js';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
 import { supabase } from '$lib/database/supabaseClient';
+import { formatWitaDateTime } from '$lib/index';
 
 // Touch handling variables
 let touchStartX = 0;
@@ -148,7 +149,7 @@ async function saveTransaksi(form) {
     amount: form.amount,
     type: mode === 'pemasukan' ? 'in' : 'out',
     description: form.description,
-    transaction_date: `${form.transaction_date}${getLocalOffsetString()}`,
+    transaction_date: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
     payment_method: form.payment_method,
     jenis: form.jenis
   }]);

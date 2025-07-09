@@ -6,6 +6,7 @@ import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js'
 import { SecurityMiddleware } from '$lib/security.js';
 import { supabase } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
+import { formatWitaDateTime } from '$lib/index';
 
 let cart = [];
 let customerName = '';
@@ -233,8 +234,7 @@ function getLocalOffsetString() {
 
 async function catatTransaksiKeLaporan() {
   const now = new Date();
-  const offset = getLocalOffsetString();
-  const transaction_date = now.toISOString().slice(0, 19) + offset;
+  const transaction_date = now.toISOString();
   const payment = paymentMethod === 'qris' ? 'non-tunai' : 'tunai';
   const inserts = cart.map(item => ({
     amount: item.qty * (item.product.price ?? item.product.harga ?? 0),

@@ -7,6 +7,7 @@ import { page } from '$app/stores';
 import { auth } from '$lib/auth.js';
 import { supabase } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
+import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 
 // Lazy load icons
 let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
