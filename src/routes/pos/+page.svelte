@@ -431,7 +431,11 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
         type="button"
         onclick={() => selectedCategory = 'all'}
       >Semua</button>
-      {#if (categories ?? []).length === 0}
+      {#if (categories ?? []).length === 0 && isLoadingProducts}
+        {#each Array(4) as _, i}
+          <div class="flex-shrink-0 min-w-[96px] h-[40px] rounded-lg bg-gray-100 animate-pulse mb-1"></div>
+        {/each}
+      {:else if (categories ?? []).length === 0}
         <div class="flex items-center gap-2 h-[40px] px-4 text-sm text-gray-400">
           <span class="text-base" style="position:relative;top:-2px;">📁</span>
           <span>Belum ada Kategori</span>
@@ -473,10 +477,10 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
         {/if}
       </div>
     {:else}
-      <div class="grid grid-cols-2 gap-4 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
+      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
         {#if isLoadingProducts}
           {#each Array(skeletonCount) as _, i}
-            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/3.7] max-h-[210px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
           {/each}
         {:else if filteredProducts.length === 0}
           <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
@@ -486,9 +490,9 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-xl shadow-md flex flex-col items-center justify-between p-3 aspect-[3/4] max-h-[260px] min-h-[180px] cursor-pointer transition-shadow border border-gray-100" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => e.key === 'Enter' && openAddOnModal(p)} role="button" aria-label="Tambah {p.name} ke keranjang">
               {#if p.image && !imageError[String(p.id)]}
-                <img class="w-20 h-20 object-cover rounded-lg mb-2 bg-gray-100 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+                <img class="w-20 h-20 object-cover rounded-lg bg-gray-100 mb-2 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
               {:else}
                 <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
               {/if}
@@ -587,12 +591,12 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
           <div class="grid grid-cols-2 gap-3 mb-6">
             {#each addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)) as a}
               <button
-                class="w-full justify-center py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
+                class="w-full justify-center py-1.5 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
                 type="button"
                 onclick={() => toggleAddOn(a.id)}
               >
-                <span>{a.name}</span>
-                <span class="font-semibold mt-px {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
+                <span class="truncate w-full">{a.name}</span>
+                <span class="font-semibold mt-0 text-sm {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
               </button>
             {/each}
           </div>
@@ -632,5 +636,12 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
 }
 .animate-fadeInOut {
   animation: fadeInOut 1.8s cubic-bezier(.4,0,.2,1);
+}
+.animate-pulse {
+  animation: pulse 1.2s cubic-bezier(.4,0,.6,1) infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 </style> 

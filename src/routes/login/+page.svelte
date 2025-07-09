@@ -4,6 +4,7 @@
   import { loginWithUsername } from '$lib/auth';
   import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/validation.js';
   import { SecurityMiddleware } from '$lib/security.js';
+  import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
 
   let userRole = '';
   let username = '';
@@ -32,12 +33,20 @@
     return isValid;
   }
 
+  let showLottieSuccess = false;
+  let lottieTimeout: any = null;
+  let showLottieError = false;
+  let lottieErrorTimeout: any = null;
+
   async function handleSubmit() {
     errorMessage = '';
     successMessage = '';
     if (!validateForm()) return;
     if (!SecurityMiddleware.checkFormRateLimit('login')) {
       errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
+      showLottieError = true;
+      clearTimeout(lottieErrorTimeout);
+      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
       return;
     }
     const sanitizedUsername = sanitizeInput(username);
@@ -48,19 +57,26 @@
         username: sanitizedUsername,
         reason: 'suspicious_activity'
       });
+      showLottieError = true;
+      clearTimeout(lottieErrorTimeout);
+      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
       return;
     }
     isLoading = true;
     try {
       await loginWithUsername(sanitizedUsername, sanitizedPassword);
-      successMessage = 'Login berhasil!';
-      setTimeout(() => goto('/'), 1000);
+      showLottieSuccess = true;
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      goto('/');
     } catch (e) {
       errorMessage = e.message;
       SecurityMiddleware.logSecurityEvent('login_failed', {
         username: sanitizedUsername,
         reason: 'invalid_credentials'
       });
+      showLottieError = true;
+      clearTimeout(lottieErrorTimeout);
+      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
     } finally {
       isLoading = false;
     }
@@ -114,16 +130,33 @@
         </div>
       {/if}
 
-      <!-- Success Message -->
-      {#if successMessage}
-        <div class="bg-green-50/80 border border-green-200/50 rounded-2xl p-4 mb-6 backdrop-blur-sm">
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-              <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+      <!-- Floating Lottie Success Notification -->
+      {#if showLottieSuccess}
+        <div class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow-2xl px-8 py-6 border border-pink-200 animate-fadeInUp">
+            <DotLottieSvelte
+              src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
+              style="width: 90px; height: 90px;"
+              loop
+              autoplay
+            />
+            <div class="mt-2 text-pink-500 font-bold text-lg">Login Berhasil!</div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Floating Lottie Error Notification -->
+      {#if showLottieError}
+        <div class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow-2xl px-8 py-6 border border-red-200 animate-fadeInUp">
+            <div class="flex items-center justify-center w-[90px] h-[90px] rounded-full bg-red-100 mb-2">
+              <svg class="w-16 h-16 text-red-500" fill="none" viewBox="0 0 64 64" stroke="currentColor" stroke-width="3">
+                <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3" fill="#fee2e2" />
+                <line x1="22" y1="22" x2="42" y2="42" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                <line x1="42" y1="22" x2="22" y2="42" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
               </svg>
             </div>
-            <span class="text-green-700 text-sm font-medium">{successMessage}</span>
+            <div class="mt-2 text-red-500 font-bold text-lg">{errorMessage || 'Login Gagal!'}</div>
           </div>
         </div>
       {/if}
@@ -196,3 +229,13 @@
     </div>
   </div>
 </div> 
+
+<style>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(32px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s cubic-bezier(.4,0,.2,1);
+}
+</style> 

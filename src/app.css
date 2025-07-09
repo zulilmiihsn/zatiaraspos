@@ -7,6 +7,10 @@
 
 @import 'tailwindcss';
 
+:global(html), :global(body) {
+  scroll-behavior: smooth;
+  scroll-timeline: auto;
+}
 :global(html), :global(body), :global(*), :global(*::before), :global(*::after) {
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* IE/Edge */

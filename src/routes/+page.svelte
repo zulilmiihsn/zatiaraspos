@@ -8,6 +8,19 @@ import { auth } from '$lib/auth.js';
 import { supabase } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
+let barsVisible = false;
+let incomeChartRef: HTMLDivElement | null = null;
+onMount(() => {
+  if (incomeChartRef) {
+    const observer = new window.IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        barsVisible = true;
+        observer.disconnect();
+      }
+    }, { threshold: 0.3 });
+    observer.observe(incomeChartRef);
+  }
+});
 
 // Lazy load icons
 let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
@@ -327,7 +340,8 @@ function handleOpenTokoModal() {
 }
 
 async function handleBukaToko() {
-  if (!modalAwalInput || isNaN(Number(modalAwalInput)) || Number(modalAwalInput) < 0) {
+  const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
+  if (!modalAwalRaw || isNaN(modalAwalRaw) || modalAwalRaw < 0) {
     pinErrorToko = 'Modal awal wajib diisi dan valid';
     return;
   }
@@ -336,7 +350,7 @@ async function handleBukaToko() {
     return;
   }
   await supabase.from('store_sessions').insert({
-    opening_cash: Number(modalAwalInput),
+    opening_cash: modalAwalRaw,
     opening_time: new Date().toISOString(),
     is_active: true
   });
@@ -495,6 +509,49 @@ function handlePinSubmit() {
     }, 2000);
   }
 }
+
+// New function to format modalAwalInput to Rupiah format
+function formatModalAwalInput(e) {
+  let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+  if (value.length > 0) {
+    value = Number(value).toLocaleString('id-ID'); // Format as Rupiah
+  }
+  modalAwalInput = value;
+}
+
+// New function to get the raw number from formatted input
+function getModalAwalInputRaw() {
+  return Number(modalAwalInput.replace(/\./g, '')); // Remove dots and convert to number
+}
+
+// New function to set the raw number to formatted input
+function setModalAwalInputRaw(value) {
+  modalAwalInput = value.toLocaleString('id-ID'); // Format as Rupiah
+}
+
+// New function to get the formatted value for binding
+function getModalAwalInputFormatted() {
+  return modalAwalInput;
+}
+
+// New function to set the formatted value for binding
+function setModalAwalInputFormatted(value) {
+  modalAwalInput = value;
+}
+
+let hideTopbar = false;
+let topbarRef: HTMLDivElement | null = null;
+let sentinelRef: HTMLDivElement | null = null;
+onMount(() => {
+  // Observer untuk sticky topbar
+  if (sentinelRef && topbarRef) {
+    const observer = new window.IntersectionObserver((entries) => {
+      hideTopbar = !entries[0].isIntersecting;
+    }, { threshold: 0 });
+    observer.observe(sentinelRef);
+  }
+});
+
 </script>
 
 {#if showPinModal}
@@ -574,13 +631,25 @@ function handlePinSubmit() {
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-auto animate-fadeIn">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false}>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup modal-padding-custom" style="padding-left:3rem;padding-right:3rem;padding-top:3rem;padding-bottom:3rem;" onclick={event => event.stopPropagation()}>
       {#if isBukaToko}
-        <h2 class="font-bold text-lg mb-4 text-pink-500">Buka Toko</h2>
+        <div class="flex flex-col items-center mb-4">
+          <div class="text-4xl mb-2">🍹</div>
+          <h2 class="font-bold text-xl mb-1 text-pink-500">Buka Toko</h2>
+          <div class="text-sm text-gray-400 mb-2">Yuk, buka toko dan mulai hari ini.</div>
+        </div>
         <div class="mb-4">
-          <label class="block text-gray-700 mb-1 font-medium">Modal Awal</label>
-          <input type="number" min="0" bind:value={modalAwalInput} class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300 outline-none transition" placeholder="Masukkan modal awal" autofocus />
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 0V4m0 7v7m-7-7h14"/></svg>
+            </span>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" min="0"
+              bind:value={modalAwalInput}
+              oninput={formatModalAwalInput}
+              class="w-full border-2 border-pink-200 bg-pink-50 rounded-xl pl-10 pr-4 py-3 text-lg font-bold text-gray-800 focus:ring-2 focus:ring-pink-300 outline-none transition placeholder-pink-300 shadow-sm"
+              placeholder="Modal awal kas hari ini" autofocus />
+          </div>
         </div>
         {#if userRole === 'kasir'}
           <div class="mb-4">
@@ -591,27 +660,66 @@ function handlePinSubmit() {
         {#if pinErrorToko}
           <div class="text-sm text-red-500 mb-2">{pinErrorToko}</div>
         {/if}
-        <button class="w-full bg-pink-500 text-white font-bold rounded-xl py-3 mt-2 shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-all text-lg" onclick={handleBukaToko}>
-          Konfirmasi Buka Toko
+        <button class="w-full bg-gradient-to-r from-pink-500 to-pink-400 text-white font-extrabold rounded-xl py-3 mt-2 shadow-xl hover:scale-105 hover:shadow-2xl active:scale-100 transition-all text-lg flex items-center justify-center gap-2" onclick={handleBukaToko}>
+          <span class="text-2xl">🍹</span>
+          <span>Buka Toko Sekarang</span>
         </button>
-        <button class="w-full mt-2 text-gray-400 hover:text-pink-400 text-sm" onclick={() => showTokoModal = false}>Batal</button>
       {:else}
-        <h2 class="font-bold text-lg mb-4 text-pink-500">Ringkasan Harian</h2>
-        <div class="space-y-2 text-gray-700 text-base mb-4">
-          <div class="flex justify-between"><span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span></div>
-          <div class="flex justify-between"><span>Total Penjualan</span><span>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span></div>
-          <div class="flex justify-between"><span>Pemasukan Tunai</span><span>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span></div>
-          <div class="flex justify-between"><span>Pengeluaran Tunai</span><span>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span></div>
-          <div class="flex justify-between font-bold text-pink-500"><span>Uang Kasir Seharusnya</span><span>Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span></div>
+        <div class="flex flex-col items-center mb-4">
+          <div class="text-4xl mb-2">🔒</div>
+          <h2 class="font-bold text-xl mb-1 text-pink-500">Tutup Toko</h2>
+          <div class="text-sm text-gray-400 mb-2 text-center">Terima kasih atas kerja keras hari ini! Cek ringkasan sebelum tutup toko.</div>
         </div>
-        <button class="w-full bg-pink-500 text-white font-bold rounded-xl py-3 mt-2 shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-all text-lg" onclick={handleTutupToko}>
-          Konfirmasi Tutup Toko
+        <div class="space-y-3 text-gray-700 text-base mb-4">
+          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
+            <span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
+            <span>Total Penjualan</span><span>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
+            <span>Pemasukan Tunai</span><span>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
+            <span>Pengeluaran Tunai</span><span>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="mb-1 flex flex-col items-center">
+            <div class="font-bold text-pink-600 mb-1 text-base md:text-lg text-center">Uang Kasir Seharusnya</div>
+            <div class="rounded-xl bg-white border-2 border-pink-400 px-2 py-5 flex flex-col items-center justify-center w-full max-w-xs mx-8 md:mx-16 shadow-sm">
+              <div class="text-4xl mb-1">💸</div>
+              <span class="whitespace-nowrap text-2xl md:text-3xl font-extrabold text-pink-600 animate-glow">Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span>
+              <div class="text-xs text-gray-400 mt-2 text-center">Pastikan uang kasir sesuai sebelum tutup toko</div>
+            </div>
+          </div>
+        </div>
+        <button class="w-full bg-gradient-to-r from-pink-500 to-pink-400 text-white font-extrabold rounded-xl py-3 mt-2 shadow-xl hover:scale-105 hover:shadow-2xl active:scale-100 transition-all text-lg flex items-center justify-center gap-2" onclick={handleTutupToko}>
+          <span class="text-2xl">🔒</span>
+          <span>Tutup Toko Sekarang</span>
         </button>
-        <button class="w-full mt-2 text-gray-400 hover:text-pink-400 text-sm" onclick={() => showTokoModal = false}>Batal</button>
       {/if}
     </div>
   </div>
 {/if}
+
+<!-- Top Bar Status Toko -->
+<div bind:this={topbarRef} class="sticky top-0 z-40 w-full flex items-center justify-between px-4 py-3 md:rounded-2xl md:shadow-lg md:mx-auto md:mt-4 bg-gradient-to-r from-pink-400 to-pink-500 text-white mb-2 gap-4 transition-transform duration-500 ease-in-out" style="transform: translateX({hideTopbar ? '-100%' : '0'})">
+  <div class="flex items-center gap-3">
+    <span class="text-3xl md:text-4xl">{tokoAktifLocal ? '🍹' : '🔒'}</span>
+    <div class="flex flex-col">
+      <span class="font-extrabold text-base md:text-lg tracking-wide">{tokoAktifLocal ? 'Toko Sedang Buka' : 'Toko Sedang Tutup'}</span>
+      <span class="text-xs md:text-sm opacity-80">{tokoAktifLocal ? 'Siap melayani pelanggan' : 'Belum menerima transaksi'}</span>
+    </div>
+  </div>
+  {#if userRole === ''}
+    <div class="min-w-[92px] h-9 md:min-w-[110px] md:h-10 px-3 py-2 rounded-lg bg-white/30 animate-pulse"></div>
+  {:else if userRole === 'kasir' || userRole === 'pemilik'}
+    <button class="flex items-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white font-bold rounded-lg px-3 py-2 shadow transition-all text-xs md:text-sm min-w-[92px] h-9 md:min-w-[110px] md:h-10" onclick={handleOpenTokoModal}>
+      <span class="text-lg">{tokoAktifLocal ? '🔒' : '🍹'}</span>
+      <span>{tokoAktifLocal ? 'Tutup Toko' : 'Buka Toko'}</span>
+    </button>
+  {/if}
+</div>
+<div bind:this={sentinelRef} style="height:1px;width:100%"></div>
 
 <div class="flex flex-col h-max min-h-0 bg-white md:min-h-screen md:px-8 lg:px-16 md:pt-8 md:pb-12"
   ontouchstart={handleTouchStart}
@@ -619,10 +727,10 @@ function handlePinSubmit() {
   ontouchend={handleTouchEnd}
 >
   <main class="flex flex-col h-max bg-white page-content md:max-w-3xl lg:max-w-5xl md:mx-auto md:rounded-2xl md:shadow-xl md:bg-white">
-    <div class="px-4 py-4 md:px-8 md:py-8 lg:px-12 lg:py-10">
-      <div class="flex flex-col space-y-6 md:space-y-10">
+    <div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
+      <div class="flex flex-col space-y-3 md:space-y-10">
       <!-- Metrik Utama -->
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3">
           <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
             {#if ShoppingBag}
               <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
@@ -756,7 +864,7 @@ function handlePinSubmit() {
             </div>
           </div>
           <!-- Grafik Pendapatan 7 Hari -->
-          <div class="mt-8 md:mt-12">
+          <div class="mt-8 md:mt-12" bind:this={incomeChartRef}>
             <div class="text-xs font-semibold text-gray-500 mb-2 mt-4 md:text-base">Pendapatan 7 Hari Terakhir</div>
             {#if weeklyIncome.length === 0}
               <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data grafik pendapatan</div>
@@ -764,7 +872,7 @@ function handlePinSubmit() {
               <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
                 {#each weeklyIncome as income, i}
                   <div class="flex flex-col items-center flex-1">
-                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10" style="height: {income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
+                    <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
                     <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
                   </div>
                 {/each}
@@ -779,3 +887,44 @@ function handlePinSubmit() {
     <!-- BottomNav hanya muncul di mobile -->
   </div>
 </div>
+
+<style>
+.modal-slideup {
+  animation: modalSlideUp 0.28s cubic-bezier(.4,1.4,.6,1);
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(64px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-padding-custom {
+  max-width: 95vw !important;
+  box-sizing: border-box !important;
+  padding-left: 3rem !important;
+  padding-right: 3rem !important;
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+@media (min-width: 768px) {
+  .modal-padding-custom {
+    padding-left: 4rem !important;
+    padding-right: 4rem !important;
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+  }
+}
+@media (min-width: 1024px) {
+  .modal-padding-custom {
+    padding-left: 6rem !important;
+    padding-right: 6rem !important;
+    padding-top: 6rem !important;
+    padding-bottom: 6rem !important;
+  }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 #ec489980; }
+  50% { box-shadow: 0 0 16px 4px #ec489980; }
+}
+.animate-glow {
+  animation: glow 1.5s ease-in-out 1;
+}
+</style>

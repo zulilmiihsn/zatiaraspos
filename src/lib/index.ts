@@ -33,3 +33,31 @@ export function formatWitaDateTime(dateStr: string | Date, opts?: Intl.DateTimeF
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
   return date.toLocaleString('id-ID', { timeZone: 'Asia/Makassar', ...(opts || {}) });
 }
+
+// Tambahkan deklarasi global untuk window.scrollToSmooth
+declare global {
+  interface Window {
+    scrollToSmooth: (targetY: number, duration?: number) => void;
+  }
+}
+// Helper scrollToSmooth: scroll ke posisi Y dengan animasi smooth dan durasi custom (default 600ms, slowmo sedikit)
+if (typeof window !== 'undefined') {
+  window.scrollToSmooth = function(targetY: number, duration: number = 600) {
+    const startY = window.scrollY;
+    const diff = targetY - startY;
+    let start: number | undefined;
+    function step(timestamp: number) {
+      if (start === undefined) start = timestamp;
+      const elapsed = timestamp - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = progress < 0.5
+        ? 2 * progress * progress
+        : -1 + (4 - 2 * progress) * progress;
+      window.scrollTo(0, startY + diff * ease);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
+}

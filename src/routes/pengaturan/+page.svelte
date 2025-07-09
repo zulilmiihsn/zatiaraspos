@@ -402,7 +402,7 @@
   <!-- Logout Confirmation Modal -->
   {#if showLogoutModal}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+      <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-slideUpModal">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
             {#if LogOut}
@@ -468,5 +468,12 @@
 }
 .animate-fadeIn {
   animation: fadeIn 0.4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes slideUpModal {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slideUpModal {
+  animation: slideUpModal 0.32s cubic-bezier(.4,0,.2,1);
 }
 </style> 
