@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { supabase } from '$lib/database/supabaseClient';
+import { setUserRole, clearUserRole } from '$lib/stores/userRole';
 
 // Dummy credentials - dalam produksi ini harus dari database
 const DUMMY_CREDENTIALS = {
@@ -128,8 +129,8 @@ export async function loginWithUsername(username: string, password: string) {
   // Cari email user dari tabel profil
   const { data: profile, error: profileError } = await supabase
     .from('profil')
-    .select('email')
-    .eq('full_name', username)
+    .select('email, role, username')
+    .eq('username', username)
     .single();
 
   if (profileError || !profile) throw new Error('Username tidak ditemukan');
@@ -141,6 +142,10 @@ export async function loginWithUsername(username: string, password: string) {
   });
 
   if (loginError) throw new Error('Password salah');
+  
+  // Set user role dan profile ke store (hanya sekali saat login)
+  setUserRole(profile.role, profile);
+  
   return data;
 }
 
@@ -156,4 +161,6 @@ export async function getUserRole(userId: string) {
 
 export async function logout() {
   await supabase.auth.signOut();
+  // Clear user role dari store saat logout
+  clearUserRole();
 } 

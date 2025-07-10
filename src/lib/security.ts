@@ -121,8 +121,8 @@ export class SecurityMiddleware {
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
         if (user) {
-          // Prefer full_name, fallback ke email, lalu id
-          currentUser = user.user_metadata?.full_name || user.email || user.id || 'anonymous';
+          // Prefer username, fallback ke email, lalu id
+          currentUser = user.user_metadata?.username || user.email || user.id || 'anonymous';
         }
       } catch {}
     }
@@ -134,7 +134,8 @@ export class SecurityMiddleware {
       ip: 'dummy-ip',
       userAgent: browser ? navigator.userAgent : 'server'
     };
-    console.log('SECURITY LOG:', logEntry);
+    // Hapus log ke console
+    // console.log('SECURITY LOG:', logEntry);
   }
 
   // Check for suspicious activity

@@ -14,6 +14,7 @@ import { supabase } from '$lib/database/supabaseClient';
 import { formatWitaDateTime } from '$lib/index';
 import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
+import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 let pendingCount = 0;
 transaksiPendingCount.subscribe(val => pendingCount = val);
 
@@ -53,7 +54,7 @@ let showPinModal = false;
 let pinInput = '';
 let pinError = '';
 let pin = '';
-let userRole = '';
+// let userRole = ''; // Hapus variabel userRole yang lama
 let errorTimeout: number;
 let isClosing = false;
 
@@ -84,22 +85,41 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`;
 }
 
+let currentUserRole = '';
+let userProfileData = null;
+userRole.subscribe(val => currentUserRole = val || '');
+userProfile.subscribe(val => userProfileData = val);
+
 onMount(async () => {
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  // Ambil session Supabase
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  userRole = '';
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profil')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = profile?.role || '';
+  // Hapus query role dari Supabase, gunakan store
+  // const { data: { session } } = await supabase.auth.getSession();
+  // const user = session?.user;
+  // userRole = '';
+  // if (user) {
+  //   const { data: profile } = await supabase
+  //     .from('profil')
+  //     .select('role')
+  //     .eq('id', user.id)
+  //     .single();
+  //   userRole = profile?.role || '';
+  // }
+  // Jika role belum ada di store, coba validasi dengan Supabase
+  if (!currentUserRole) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profil')
+        .select('role, username')
+        .eq('id', session.user.id)
+        .single();
+      if (profile) {
+        setUserRole(profile.role, profile);
+      }
+    }
   }
   await fetchPin();
-  if (userRole === 'kasir') {
+  if (currentUserRole === 'kasir') {
     const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('catat')) {
@@ -480,7 +500,18 @@ main {
 {/if}
 
 {#if showSnackbar}
-  <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-pink-500 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
+  <div 
+    class="fixed top-24 left-1/2 z-50 bg-pink-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-center gap-3 font-semibold text-base min-w-[220px]"
+    style="transform: translateX(-50%);"
+    in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+    out:fade={{ duration: 200 }}
+  >
+    <svg class="w-7 h-7 text-white flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10" fill="#f9a8d4" />
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" />
+    </svg>
+    <span class="flex-1 text-center">{snackbarMsg}</span>
+  </div>
 {/if}
 
 <div 

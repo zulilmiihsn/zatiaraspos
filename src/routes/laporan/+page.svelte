@@ -10,6 +10,7 @@ import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { laporanCache } from '$lib/stores/laporanCache';
 import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
+import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 let laporanData;
 laporanCache.subscribe(val => laporanData = val.data);
 const LAPORAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
@@ -17,7 +18,15 @@ const LAPORAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
 let pin = '';
-let userRole = '';
+// Hapus variabel userRole yang lama
+// let userRole = '';
+
+// Ganti dengan subscribe ke store
+let currentUserRole = '';
+let userProfileData = null;
+
+userRole.subscribe(val => currentUserRole = val || '');
+userProfile.subscribe(val => userProfileData = val);
 
 onMount(async () => {
   const icons = await Promise.all([
@@ -38,15 +47,27 @@ onMount(async () => {
   // Ambil session Supabase
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profil')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = profile?.role || '';
+  // Hapus query role dari Supabase, gunakan store
+  // const { data: profile } = await supabase
+  //   .from('profil')
+  //   .select('role')
+  //   .eq('id', user.id)
+  //   .single();
+  // userRole = profile?.role || '';
+  // Jika role belum ada di store, coba validasi dengan Supabase
+  if (!currentUserRole) {
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profil')
+        .select('role, username')
+        .eq('id', user.id)
+        .single();
+      if (profile) {
+        setUserRole(profile.role, profile);
+      }
+    }
   }
-  if (userRole === 'kasir') {
+  if (currentUserRole === 'kasir') {
     const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('laporan')) {
@@ -139,11 +160,11 @@ onMount(() => {
   // Detect touch device
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   
-  const user = auth.getCurrentUser();
-  userRole = user?.role || '';
+  // const user = auth.getCurrentUser();
+  // userRole = user?.role || '';
   
   // Check if page is locked for kasir
-  if (userRole === 'kasir') {
+  if (currentUserRole === 'kasir') {
     const lockedPages = JSON.parse(localStorage.getItem('lockedPages') || '["laporan", "beranda"]');
     if (lockedPages.includes('laporan')) {
     showPinModal = true;

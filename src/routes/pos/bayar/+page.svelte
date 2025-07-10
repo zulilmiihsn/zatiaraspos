@@ -8,6 +8,8 @@ import { supabase } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { formatWitaDateTime } from '$lib/index';
 import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
+import { fly, fade } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
 
 let cart = [];
 let customerName = '';
@@ -30,6 +32,31 @@ let showSuccessModal = false;
 let showQrisWarning = false;
 let transactionId = '';
 let transactionCode = '';
+
+let showErrorNotification = false;
+let errorNotificationMessage = '';
+let errorNotificationTimeout: any = null;
+let showSuccessNotification = false;
+let successNotificationMessage = '';
+let successNotificationTimeout: any = null;
+
+function showErrorNotif(message: string) {
+  errorNotificationMessage = message;
+  showErrorNotification = true;
+  clearTimeout(errorNotificationTimeout);
+  errorNotificationTimeout = setTimeout(() => {
+    showErrorNotification = false;
+  }, 3000);
+}
+
+function showSuccessNotif(message: string) {
+  successNotificationMessage = message;
+  showSuccessNotification = true;
+  clearTimeout(successNotificationTimeout);
+  successNotificationTimeout = setTimeout(() => {
+    showSuccessNotification = false;
+  }, 3000);
+}
 
 function generateTransactionCode() {
   // Ambil nomor urut terakhir dari localStorage
@@ -93,13 +120,13 @@ function finishCash() {
   // Validate cash received
   const cashValidation = validateNumber(cashReceived, { required: true, min: totalHarga });
   if (!cashValidation.isValid) {
-    alert(`Error: ${cashValidation.errors.join(', ')}`);
+    showErrorNotif(`Error: ${cashValidation.errors.join(', ')}`);
     return;
   }
   
   // Check rate limiting
   if (!SecurityMiddleware.checkFormRateLimit('payment_completion')) {
-    alert('Terlalu banyak transaksi. Silakan tunggu sebentar.');
+    showErrorNotif('Terlalu banyak transaksi. Silakan tunggu sebentar.');
     return;
   }
   
@@ -110,7 +137,7 @@ function finishCash() {
   // Check for suspicious activity
   const allInputs = `${sanitizedCashReceived}${sanitizedPaymentMethod}${totalHarga}`;
   if (SecurityMiddleware.detectSuspiciousActivity('payment_completion', allInputs)) {
-    alert('Aktivitas pembayaran mencurigakan terdeteksi. Silakan coba lagi.');
+    showErrorNotif('Aktivitas pembayaran mencurigakan terdeteksi. Silakan coba lagi.');
     SecurityMiddleware.logSecurityEvent('suspicious_payment_activity', {
       cashReceived: sanitizedCashReceived,
       paymentMethod: sanitizedPaymentMethod,
@@ -147,7 +174,7 @@ function printReceipt() {
   // Ambil printer yang sudah dipilih user
   const printerData = localStorage.getItem('connectedPrinter');
   if (!printerData) {
-    alert('Belum ada printer yang tersambung. Silakan sandingkan printer di pengaturan.');
+    showErrorNotif('Belum ada printer yang tersambung. Silakan sandingkan printer di pengaturan.');
     return;
   }
   const printer = JSON.parse(printerData);
@@ -190,7 +217,7 @@ async function sendToBluetoothPrinter(deviceId, text) {
     // Deteksi iOS/iPhone
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
     if (isIOS) {
-      alert('Maaf, fitur print Bluetooth tidak didukung di iPhone/iOS karena keterbatasan browser. Silakan gunakan Android atau desktop.');
+      showErrorNotif('Maaf, fitur print Bluetooth tidak didukung di iPhone/iOS karena keterbatasan browser. Silakan gunakan Android atau desktop.');
       return;
     }
     // Cari device berdasarkan id
@@ -218,9 +245,9 @@ async function sendToBluetoothPrinter(deviceId, text) {
       if (found) break;
     }
     if (!found) throw new Error('Tidak ada karakteristik write pada printer');
-    alert('Struk berhasil dikirim ke printer!');
+    showSuccessNotif('Struk berhasil dikirim ke printer!');
   } catch (err) {
-    alert('Gagal mencetak struk: ' + err.message);
+    showErrorNotif('Gagal mencetak struk: ' + err.message);
   }
 }
 
@@ -455,6 +482,28 @@ async function catatTransaksiKeLaporan() {
         <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600 transition-all" onclick={() => { showSuccessModal = false; goto('/pos'); }}>Kembali ke Kasir</button>
       </div>
     </div>
+  </div>
+{/if}
+
+{#if showErrorNotification}
+  <div 
+    class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+    style="transform: translateX(-50%);"
+    in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+    out:fade={{ duration: 200 }}
+  >
+    {errorNotificationMessage}
+  </div>
+{/if}
+
+{#if showSuccessNotification}
+  <div 
+    class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+    style="transform: translateX(-50%);"
+    in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+    out:fade={{ duration: 200 }}
+  >
+    {successNotificationMessage}
   </div>
 {/if}
 

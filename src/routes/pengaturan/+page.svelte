@@ -18,6 +18,9 @@
   import Printer from 'lucide-svelte/icons/printer';
   import { supabase } from '$lib/database/supabaseClient';
   import { pengaturanCache } from '$lib/stores/pengaturanCache';
+  import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+  import { fly, fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   
   // Type definitions
   interface PengaturanData {
@@ -34,6 +37,43 @@
   let isProfileLoaded = false;
   let isPengaturanLoaded = false;
 
+  let currentUserRole = '';
+  let userProfileData = null;
+
+  // Subscribe ke store
+  userRole.subscribe(val => currentUserRole = val || '');
+  userProfile.subscribe(val => userProfileData = val);
+
+  let currentUser: any = null;
+  let showLogoutModal = false;
+  let deferredPrompt: any = null;
+  let canInstallPWA = false;
+  let currentPage = 'security';
+  let userName = '';
+  let showPinModal = false;
+  let pin = '';
+  let pinInput = '';
+  let pinError = '';
+  let errorTimeout: number;
+  let isClosing = false;
+  let showPwaInstalledToast = false;
+  let pwaStatus = '';
+  let showPwaManualToast = false;
+  let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
+
+  let showNotification = false;
+  let notificationMessage = '';
+  let notificationTimeout: any = null;
+
+  function showNotif(message: string) {
+    notificationMessage = message;
+    showNotification = true;
+    clearTimeout(notificationTimeout);
+    notificationTimeout = setTimeout(() => {
+      showNotification = false;
+    }, 3000);
+  }
+
   onMount(async () => {
     try {
       // Load cache dari localStorage terlebih dahulu
@@ -47,20 +87,33 @@
         }
       }
 
-      // Load profile data
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session:', session);
-      const userId = session?.user?.id;
+      // Hapus query profile dari Supabase, gunakan store
+      // const { data: { session } } = await supabase.auth.getSession();
+      // const userId = session?.user?.id;
+      // 
+      // if (userId) {
+      //   const { data: profile, error } = await supabase
+      //     .from('profil')
+      //     .select('role, username')
+      //     .eq('id', userId)
+      //     .single();
+      //   userRole = profile?.role || '';
+      //   userName = profile?.username || '';
+      // }
       
-      if (userId) {
-        const { data: profile, error } = await supabase
-          .from('profil')
-          .select('role, full_name')
-          .eq('id', userId)
-          .single();
-        console.log('Profile:', profile, 'Error:', error);
-        userRole = profile?.role || '';
-        userName = profile?.full_name || '';
+      // Jika role belum ada di store, coba validasi dengan Supabase
+      if (!currentUserRole) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profil')
+            .select('role, username')
+            .eq('id', session.user.id)
+            .single();
+          if (profile) {
+            setUserRole(profile.role, profile);
+          }
+        }
       }
       
       isProfileLoaded = true;
@@ -97,16 +150,13 @@
       }
 
       // Load pengaturan data
-      if (userRole === 'kasir') {
+      if (currentUserRole === 'kasir') {
         await fetchPengaturan();
         const lockedPages = pengaturan?.locked_pages || ['laporan', 'beranda'];
         pin = pengaturan?.pin || '1234';
         if (lockedPages.includes('pengaturan')) {
           showPinModal = true;
         }
-        console.log('userRole', userRole);
-        console.log('lockedPages', lockedPages);
-        console.log('showPinModal', showPinModal);
       }
 
       // Set loading selesai
@@ -117,24 +167,6 @@
       isLoading = false;
     }
   });
-
-  let currentUser: any = null;
-  let showLogoutModal = false;
-  let deferredPrompt: any = null;
-  let canInstallPWA = false;
-  let currentPage = 'security';
-  let userRole = '';
-  let userName = '';
-  let showPinModal = false;
-  let pin = '';
-  let pinInput = '';
-  let pinError = '';
-  let errorTimeout: number;
-  let isClosing = false;
-  let showPwaInstalledToast = false;
-  let pwaStatus = '';
-  let showPwaManualToast = false;
-  let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
 
   async function fetchPengaturan() {
     try {
@@ -195,45 +227,45 @@
   }
 
   function getRoleIcon() {
-    if (userRole === 'admin' || userRole === 'pemilik') return Crown;
-    if (userRole === 'kasir') return CreditCard;
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') return Crown;
+    if (currentUserRole === 'kasir') return CreditCard;
     return User;
   }
 
   function getRoleLabel() {
-    if (userRole === 'admin' || userRole === 'pemilik') return 'Pemilik';
-    if (userRole === 'kasir') return 'Kasir';
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') return 'Pemilik';
+    if (currentUserRole === 'kasir') return 'Kasir';
     return 'User';
   }
 
   function getRoleDesc() {
-    if (userRole === 'admin' || userRole === 'pemilik') return 'Akses penuh ke seluruh sistem';
-    if (userRole === 'kasir') return 'Akses standar';
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') return 'Akses penuh ke seluruh sistem';
+    if (currentUserRole === 'kasir') return 'Akses standar';
     return 'Akses standar';
   }
 
   function getRoleColor() {
-    if (userRole === 'admin' || userRole === 'pemilik') {
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
       return 'from-purple-500 to-pink-500';
-    } else if (userRole === 'kasir') {
+    } else if (currentUserRole === 'kasir') {
       return 'from-green-500 to-blue-500';
     }
     return 'from-gray-500 to-gray-600';
   }
 
   function getRoleBadgeColor() {
-    if (userRole === 'admin' || userRole === 'pemilik') {
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
       return 'bg-purple-100 text-purple-800';
-    } else if (userRole === 'kasir') {
+    } else if (currentUserRole === 'kasir') {
       return 'bg-green-100 text-green-800';
     }
     return 'bg-gray-100 text-gray-800';
   }
 
   function getRoleDescription() {
-    if (userRole === 'admin' || userRole === 'pemilik') {
+    if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
       return 'Akses penuh ke semua fitur sistem';
-    } else if (userRole === 'kasir') {
+    } else if (currentUserRole === 'kasir') {
       return 'Akses terbatas untuk POS dan laporan';
     }
     return 'Akses standar';
@@ -274,42 +306,42 @@
       title: 'Akun & Keamanan',
       icon: Shield,
       items: [
-        { label: 'Profil Pengguna', icon: User, action: () => alert('Fitur profil belum tersedia') },
-        { label: 'Ubah Password', icon: Shield, action: () => alert('Fitur ubah password belum tersedia') },
-        { label: 'Riwayat Login', icon: Bell, action: () => alert('Fitur riwayat login belum tersedia') }
+        { label: 'Profil Pengguna', icon: User, action: () => showNotif('Fitur profil belum tersedia') },
+        { label: 'Ubah Password', icon: Shield, action: () => showNotif('Fitur ubah password belum tersedia') },
+        { label: 'Riwayat Login', icon: Bell, action: () => showNotif('Fitur riwayat login belum tersedia') }
       ]
     },
     {
       title: 'Tampilan & Tema',
       icon: Palette,
       items: [
-        { label: 'Tema Aplikasi', icon: Palette, action: () => alert('Fitur tema belum tersedia') },
-        { label: 'Ukuran Font', icon: Settings, action: () => alert('Fitur ukuran font belum tersedia') },
-        { label: 'Animasi', icon: Settings, action: () => alert('Fitur animasi belum tersedia') }
+        { label: 'Tema Aplikasi', icon: Palette, action: () => showNotif('Fitur tema belum tersedia') },
+        { label: 'Ukuran Font', icon: Settings, action: () => showNotif('Fitur ukuran font belum tersedia') },
+        { label: 'Animasi', icon: Settings, action: () => showNotif('Fitur animasi belum tersedia') }
       ]
     },
     {
       title: 'Data & Backup',
       icon: Database,
       items: [
-        { label: 'Export Data', icon: Database, action: () => alert('Fitur export data belum tersedia') },
-        { label: 'Import Data', icon: Database, action: () => alert('Fitur import data belum tersedia') },
-        { label: 'Backup Otomatis', icon: Settings, action: () => alert('Fitur backup belum tersedia') }
+        { label: 'Export Data', icon: Database, action: () => showNotif('Fitur export data belum tersedia') },
+        { label: 'Import Data', icon: Database, action: () => showNotif('Fitur import data belum tersedia') },
+        { label: 'Backup Otomatis', icon: Settings, action: () => showNotif('Fitur backup belum tersedia') }
       ]
     },
     {
       title: 'Bantuan & Dukungan',
       icon: HelpCircle,
       items: [
-        { label: 'Panduan Penggunaan', icon: HelpCircle, action: () => alert('Panduan belum tersedia') },
-        { label: 'Hubungi Support', icon: Bell, action: () => alert('Support belum tersedia') },
-        { label: 'Tentang Aplikasi', icon: Settings, action: () => alert('Versi 1.0.0 - Zatiaras Juice POS') }
+        { label: 'Panduan Penggunaan', icon: HelpCircle, action: () => showNotif('Panduan belum tersedia') },
+        { label: 'Hubungi Support', icon: Bell, action: () => showNotif('Support belum tersedia') },
+        { label: 'Tentang Aplikasi', icon: Settings, action: () => showNotif('Versi 1.0.0 - Zatiaras Juice POS') }
       ]
     }
   ];
 
   // Filter sections based on user role
-  $: filteredSections = (userRole === 'admin' || userRole === 'pemilik') 
+  $: filteredSections = (currentUserRole === 'admin' || currentUserRole === 'pemilik') 
     ? settingsSections 
     : settingsSections.filter(section => section.title !== 'Data & Backup');
   
@@ -369,14 +401,14 @@
           </div>
         {/if}
       </div>
-      {#if userRole === 'admin' || userRole === 'pemilik'}
+      {#if currentUserRole === 'admin' || currentUserRole === 'pemilik'}
         <div class="text-2xl font-extrabold text-purple-700 mb-1">Pemilik</div>
         <div class="text-sm text-gray-600 mb-2">Akses penuh ke seluruh sistem</div>
         <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
           <span>Login terakhir: {new Date().toLocaleString('id-ID')}</span>
           <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>Session aktif</span>
         </div>
-      {:else if userRole === 'kasir'}
+      {:else if currentUserRole === 'kasir'}
         <div class="text-2xl font-extrabold text-green-700 mb-1">Kasir</div>
         <div class="text-sm text-gray-600 mb-2">Akses standar</div>
         <div class="flex items-center justify-between w-full text-xs text-gray-500 mt-2">
@@ -401,11 +433,11 @@
       {:else}
         <!-- Box Pemilik (selalu tampil, disable jika bukan admin/pemilik) -->
         <button
-          class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200"
-                        onclick={() => (userRole === 'admin' || userRole === 'pemilik') && goto('/pengaturan/pemilik')}
-          disabled={userRole !== 'admin' && userRole !== 'pemilik'}
-          class:opacity-60={userRole !== 'admin' && userRole !== 'pemilik'}
-          class:pointer-events-none={userRole !== 'admin' && userRole !== 'pemilik'}
+          class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200 overflow-hidden {currentUserRole === 'admin' || currentUserRole === 'pemilik' ? 'shimmer-highlight hover:scale-105' : ''}"
+          onclick={() => (currentUserRole === 'admin' || currentUserRole === 'pemilik') && goto('/pengaturan/pemilik')}
+          disabled={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
+          class:opacity-60={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
+          class:pointer-events-none={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
         >
           {#if Crown}
             <svelte:component this={Crown} class="w-8 h-8 mb-2" />
@@ -535,6 +567,17 @@
       {pwaStatus}
     </div>
   {/if}
+
+  {#if showNotification}
+    <div 
+      class="fixed top-20 left-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+      style="transform: translateX(-50%);"
+      in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+      out:fade={{ duration: 200 }}
+    >
+      {notificationMessage}
+    </div>
+  {/if}
 </div>
 
 <!-- App Info -->
@@ -561,5 +604,23 @@
 }
 .animate-slideUpModal {
   animation: slideUpModal 0.32s cubic-bezier(.4,0,.2,1);
+}
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+.shimmer-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200px 100%;
+  animation: shimmer 1.2s infinite;
+  pointer-events: none;
+  border-radius: 1rem;
+}
+.shimmer-highlight:hover::after {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0) 100%);
 }
 </style> 

@@ -10,6 +10,7 @@ import { browser } from '$app/environment';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import { dashboardCache } from '$lib/stores/dashboardCache';
 import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
+import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 
 let dashboardData;
 dashboardCache.subscribe(val => dashboardData = val.data);
@@ -42,8 +43,18 @@ let jamRamai = '';
 let weeklyIncome = [];
 let weeklyMax = 1;
 let bestSellers = [];
-let userRole = '';
+// let userRole = ''; // Hapus variabel userRole yang lama
+
+// Ganti dengan subscribe ke store
+let currentUserRole = '';
+let userProfileData = null;
+
+// Subscribe ke store
+userRole.subscribe(val => currentUserRole = val || '');
+userProfile.subscribe(val => userProfileData = val);
+
 let isLoadingBestSellers = true;
+let errorBestSellers = '';
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -65,19 +76,24 @@ onMount(async () => {
   await fetchDashboardStatsPOS();
 
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-  // Ambil session Supabase
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profil')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = profile?.role || '';
+  
+  // Jika role belum ada di store, coba validasi dengan Supabase
+  if (!currentUserRole) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profil')
+        .select('role, username')
+        .eq('id', session.user.id)
+        .single();
+      if (profile) {
+        setUserRole(profile.role, profile);
+      }
+    }
   }
-  if (userRole === 'kasir') {
+  
+  await fetchPin();
+  if (currentUserRole === 'kasir') {
     const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
@@ -106,159 +122,175 @@ async function fetchDashboardStats() {
   if (dashboardData && Date.now() - lastFetched < CACHE_TTL) {
     applyDashboardData(dashboardData);
     isLoadingBestSellers = false;
+    errorBestSellers = '';
     return;
   }
-  // Fetch baru dari Supabase
   isLoadingBestSellers = true;
-  
-  // Hitung omzet hari ini dari tabel buku_kas (ganti RPC yang error)
-  const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-  const startUTC = startOfDay.toISOString();
-  const endUTC = endOfDay.toISOString();
-  
-  const { data: omzetData } = await supabase
-    .from('buku_kas')
-    .select('amount')
-    .gte('transaction_date', startUTC)
-    .lte('transaction_date', endUTC)
-    .eq('type', 'in')
-    .eq('jenis', 'pendapatan_usaha');
-  
-  omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-  
-  // Total transaksi
-  const { count: transaksiCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true });
-  jumlahTransaksi = transaksiCount || 0;
+  errorBestSellers = '';
+  try {
+    // Hitung omzet hari ini dari tabel buku_kas (ganti RPC yang error)
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    const startUTC = startOfDay.toISOString();
+    const endUTC = endOfDay.toISOString();
+    
+    const { data: omzetData } = await supabase
+      .from('buku_kas')
+      .select('amount')
+      .gte('transaction_date', startUTC)
+      .lte('transaction_date', endUTC)
+      .eq('type', 'in')
+      .eq('jenis', 'pendapatan_usaha');
+    
+    omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    
+    // Total transaksi
+    const { count: transaksiCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true });
+    jumlahTransaksi = transaksiCount || 0;
 
-  // Statistik 7 hari terakhir
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
-  const startDate = sevenDaysAgo.toISOString();
+    // Statistik 7 hari terakhir
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
+    const startDate = sevenDaysAgo.toISOString();
 
-  // Rata-rata transaksi/hari dari cash_transactions (group by waktu detik per hari)
-  const { data: transaksiKas } = await supabase
-    .from('buku_kas')
-    .select('transaction_date')
-    .gte('transaction_date', startDate)
-    .eq('type', 'in');
+    // Rata-rata transaksi/hari dari cash_transactions (group by waktu detik per hari)
+    const { data: transaksiKas } = await supabase
+      .from('buku_kas')
+      .select('transaction_date')
+      .gte('transaction_date', startDate)
+      .eq('type', 'in');
 
-  const transaksiPerHari = {};
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(sevenDaysAgo);
-    d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    transaksiPerHari[key] = new Set();
-  }
-  if (transaksiKas) {
-    transaksiKas.forEach(t => {
-      const key = t.transaction_date.slice(0, 10);
-      if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.transaction_date);
-    });
-  }
-  avgTransaksi = Math.round(
-    Object.values(transaksiPerHari).reduce((a, b) => a + b.size, 0) / 7
-  );
-
-  // Jam paling ramai (pakai transaksiKas)
-  const jamCount = {};
-  if (transaksiKas) {
-    transaksiKas.forEach(t => {
-      const jam = new Date(t.transaction_date).getHours();
-      jamCount[jam] = (jamCount[jam] || 0) + 1;
-    });
-  }
-  const jamRamaiVal = Object.entries(jamCount)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || '--';
-  jamRamai = jamRamaiVal !== '--' ? `${jamRamaiVal}.00–${parseInt(jamRamaiVal) + 1}.00` : '--';
-
-  // 2. Pendapatan 7 hari terakhir (grafik)
-  const { data: pemasukan } = await supabase
-    .from('buku_kas')
-    .select('amount, transaction_date')
-    .gte('transaction_date', startDate)
-    .eq('type', 'in');
-  const pendapatanPerHari = {};
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(sevenDaysAgo);
-    d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    pendapatanPerHari[key] = 0;
-  }
-  if (pemasukan) {
-    pemasukan.forEach(t => {
-      const key = t.transaction_date.slice(0, 10);
-      if (pendapatanPerHari[key] !== undefined) pendapatanPerHari[key] += t.amount || 0;
-    });
-  }
-  weeklyIncome = Object.values(pendapatanPerHari);
-
-  // Setelah weeklyIncome diisi:
-  weeklyIncome = weeklyIncome.map(x => (typeof x === 'number' && !isNaN(x) && x > 0 ? x : 0));
-  weeklyMax = Math.max(...weeklyIncome, 1);
-
-  // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
-  const { data: items, error } = await supabase
-    .from('item_transaksi')
-    .select('menu_id, qty, created_at')
-    .gte('created_at', startDate);
-  if (!error && items) {
-    // Group by menu_id, sum qty
-    const grouped = {};
-    for (const item of items) {
-      if (!grouped[item.menu_id]) grouped[item.menu_id] = 0;
-      grouped[item.menu_id] += item.qty;
+    const transaksiPerHari = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      transaksiPerHari[key] = new Set();
     }
-    // Ambil 3 menu_id terlaris
-    const topMenuIds = Object.entries(grouped)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([menu_id]) => menu_id);
-    if (topMenuIds.length === 0) {
+    if (transaksiKas) {
+      transaksiKas.forEach(t => {
+        const key = t.transaction_date.slice(0, 10);
+        if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.transaction_date);
+      });
+    }
+    avgTransaksi = Math.round(
+      Object.values(transaksiPerHari).reduce((a, b) => a + b.size, 0) / 7
+    );
+
+    // Jam paling ramai (pakai transaksiKas)
+    const jamCount = {};
+    if (transaksiKas) {
+      transaksiKas.forEach(t => {
+        const jam = new Date(t.transaction_date).getHours();
+        jamCount[jam] = (jamCount[jam] || 0) + 1;
+      });
+    }
+    const jamRamaiVal = Object.entries(jamCount)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || '--';
+    jamRamai = jamRamaiVal !== '--' ? `${jamRamaiVal}.00–${parseInt(jamRamaiVal) + 1}.00` : '--';
+
+    // Fungsi konversi tanggal UTC ke tanggal WITA (YYYY-MM-DD)
+    function toWITA(dateStr) {
+      const date = new Date(dateStr);
+      date.setHours(date.getHours() + 8);
+      return date.toISOString().slice(0, 10);
+    }
+    // 2. Pendapatan 7 hari terakhir (grafik)
+    const { data: pemasukan } = await supabase
+      .from('buku_kas')
+      .select('amount, transaction_date')
+      .gte('transaction_date', startDate)
+      .eq('type', 'in');
+    const pendapatanPerHari = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo);
+      d.setDate(d.getDate() + i);
+      // Konversi ke tanggal WITA
+      d.setHours(d.getHours() + 8);
+      const key = d.toISOString().slice(0, 10);
+      pendapatanPerHari[key] = 0;
+    }
+    if (pemasukan) {
+      pemasukan.forEach(t => {
+        const key = toWITA(t.transaction_date);
+        if (pendapatanPerHari[key] !== undefined) pendapatanPerHari[key] += t.amount || 0;
+      });
+    }
+    weeklyIncome = Object.values(pendapatanPerHari);
+
+    // Setelah weeklyIncome diisi:
+    weeklyIncome = weeklyIncome.map(x => (typeof x === 'number' && !isNaN(x) && x > 0 ? x : 0));
+    weeklyMax = Math.max(...weeklyIncome, 1);
+
+    // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
+    const { data: items, error } = await supabase
+      .from('item_transaksi')
+      .select('menu_id, qty, created_at')
+      .gte('created_at', startDate);
+    if (!error && items) {
+      // Group by menu_id, sum qty
+      const grouped = {};
+      for (const item of items) {
+        if (!grouped[item.menu_id]) grouped[item.menu_id] = 0;
+        grouped[item.menu_id] += item.qty;
+      }
+      // Ambil 3 menu_id terlaris
+      const topMenuIds = Object.entries(grouped)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([menu_id]) => menu_id);
+      if (topMenuIds.length === 0) {
+        bestSellers = [];
+      } else {
+        // Ambil semua produk
+        const { data: allProducts } = await supabase
+          .from('produk')
+          .select('id, name, gambar');
+        // Filter hanya menu_id yang ada di products
+        const validMenuIds = topMenuIds.filter(id => allProducts && allProducts.some(p => p.id === id));
+        if (validMenuIds.length === 0) {
+          bestSellers = [];
+        } else {
+          const best = validMenuIds.map(menu_id => {
+            const prod = allProducts.find(p => p.id === menu_id);
+            return {
+              name: prod?.name || '-',
+              image: prod?.gambar || '',
+              total_qty: grouped[menu_id]
+            };
+          });
+          bestSellers = best;
+        }
+      }
+      errorBestSellers = '';
+    } else {
       bestSellers = [];
-      return;
+      errorBestSellers = 'Gagal memuat data menu terlaris';
     }
-    // Ambil semua produk
-    const { data: allProducts } = await supabase
-      .from('produk')
-      .select('id, name, image');
-    // Filter hanya menu_id yang ada di products
-    const validMenuIds = topMenuIds.filter(id => allProducts && allProducts.some(p => p.id === id));
-    if (validMenuIds.length === 0) {
-      bestSellers = [];
-      return;
-    }
-    const best = validMenuIds.map(menu_id => {
-      const prod = allProducts.find(p => p.id === menu_id);
-      return {
-        name: prod?.name || '-',
-        image: prod?.image || '',
-        total_qty: grouped[menu_id]
-      };
-    });
-    bestSellers = best;
-  } else {
+    // ...tambahkan fetch lain sesuai kebutuhan (profit, itemTerjual, weeklyIncome, dsb)...
+  } catch (e) {
     bestSellers = [];
+    errorBestSellers = 'Gagal memuat data menu terlaris';
+  } finally {
+    isLoadingBestSellers = false;
+    // Setelah data didapat:
+    const newData = {
+      omzet,
+      jumlahTransaksi,
+      profit,
+      itemTerjual,
+      totalItem,
+      avgTransaksi,
+      jamRamai,
+      weeklyIncome,
+      weeklyMax,
+      bestSellers
+    };
+    applyDashboardData(newData);
+    dashboardCache.set({ data: newData, lastFetched: Date.now() });
+    localStorage.setItem('dashboardCache', JSON.stringify({ data: newData, lastFetched: Date.now() }));
   }
-  // ...tambahkan fetch lain sesuai kebutuhan (profit, itemTerjual, weeklyIncome, dsb)...
-  isLoadingBestSellers = false;
-  // Setelah data didapat:
-  const newData = {
-    omzet,
-    jumlahTransaksi,
-    profit,
-    itemTerjual,
-    totalItem,
-    avgTransaksi,
-    jamRamai,
-    weeklyIncome,
-    weeklyMax,
-    bestSellers
-  };
-  applyDashboardData(newData);
-  dashboardCache.set({ data: newData, lastFetched: Date.now() });
-  localStorage.setItem('dashboardCache', JSON.stringify({ data: newData, lastFetched: Date.now() }));
 }
 
 async function fetchDashboardStatsPOS() {
@@ -339,7 +371,31 @@ const stats = [
 
 let imageError = {};
 
-let days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+// Hapus deklarasi let days = ...
+// Tambahkan fungsi untuk generate label hari dinamis
+function getLast7DaysLabels() {
+  const hari = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const today = new Date();
+  let labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    labels.push(hari[d.getDay()]);
+  }
+  return labels;
+}
+
+function getLast7DaysLabelsWITA() {
+  const hari = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const todayWITA = getTodayWITA();
+  let labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(todayWITA);
+    d.setDate(todayWITA.getDate() - i);
+    labels.push(hari[d.getDay()]);
+  }
+  return labels;
+}
 
 // PIN Modal State
 let showPinModal = false;
@@ -391,7 +447,7 @@ onDestroy(() => {
 
 function handleOpenTokoModal() {
   // Untuk kasir, tampilkan modal PIN dulu sebelum modal Buka Toko
-  if (userRole === 'kasir') {
+  if (currentUserRole === 'kasir') {
     // Simpan callback untuk buka toko setelah PIN benar
     pendingAction = () => {
       cekSesiToko().then(() => {
@@ -647,6 +703,20 @@ onMount(() => {
   }
 });
 
+// Fungsi untuk mendapatkan tanggal hari ini WITA (tanpa jam)
+function getTodayWITA() {
+  const now = new Date();
+  now.setHours(now.getHours() + 8, 0, 0, 0); // ke WITA, jam 00:00
+  // Kembalikan tanggal WITA (YYYY-MM-DDT00:00:00.000Z)
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+}
+
+// Inisialisasi range 7 hari terakhir berdasarkan hari WITA
+const todayWITA = getTodayWITA();
+const sevenDaysAgoWITA = new Date(todayWITA);
+sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
+const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
+
 </script>
 
 {#if showPinModal}
@@ -694,7 +764,7 @@ onMount(() => {
                 if (pinInput.length < 4) {
                   pinInput += num.toString();
                   if (pinInput.length === 4) {
-                    handlePinSubmit();
+                    setTimeout(() => handlePinSubmit(), 200);
                   }
                 }
               }}
@@ -710,7 +780,7 @@ onMount(() => {
               if (pinInput.length < 4) {
                 pinInput += '0';
                 if (pinInput.length === 4) {
-                  handlePinSubmit();
+                  setTimeout(() => handlePinSubmit(), 200);
                 }
               }
             }}
@@ -809,9 +879,9 @@ onMount(() => {
           <span class="text-xs md:text-sm opacity-80">{tokoAktifLocal ? 'Siap melayani pelanggan' : 'Belum menerima transaksi'}</span>
         </div>
       </div>
-      {#if userRole === ''}
+      {#if currentUserRole === ''}
         <div class="min-w-[92px] h-9 md:min-w-[110px] md:h-10 px-3 py-2 rounded-lg bg-white/30 animate-pulse"></div>
-      {:else if userRole === 'kasir' || userRole === 'pemilik'}
+      {:else if currentUserRole === 'kasir' || currentUserRole === 'pemilik'}
         <button class="flex items-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white font-bold rounded-lg px-3 py-2 shadow transition-all text-xs md:text-sm min-w-[92px] h-9 md:min-w-[110px] md:h-10" onclick={handleOpenTokoModal}>
           <span class="text-lg">{tokoAktifLocal ? '🔒' : '🍹'}</span>
           <span>{tokoAktifLocal ? 'Tutup Toko' : 'Buka Toko'}</span>
@@ -919,6 +989,8 @@ onMount(() => {
                 </div>
               {/each}
             </div>
+          {:else if errorBestSellers}
+            <div class="text-center text-red-400 py-6 text-base md:text-lg">{errorBestSellers}</div>
           {:else if bestSellers.length === 0}
             <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data menu terlaris</div>
           {:else}
@@ -976,7 +1048,7 @@ onMount(() => {
                   {#each weeklyIncome as income, i}
                     <div class="flex flex-col items-center flex-1">
                       <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
-                      <div class="text-xs mt-1 md:text-sm">{days[i]}</div>
+                      <div class="text-xs mt-1 md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
                     </div>
                   {/each}
                 </div>

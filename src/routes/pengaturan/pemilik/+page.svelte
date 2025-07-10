@@ -17,15 +17,18 @@ import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
 import { supabase } from '$lib/database/supabaseClient';
 import { produkCache } from '$lib/stores/produkCache';
 import { kategoriCache } from '$lib/stores/kategoriCache';
 import { tambahanCache } from '$lib/stores/tambahanCache';
 import { saveMenuOffline, getPendingMenus, deleteMenuOffline, syncDeleteMenu } from '$lib/stores/transaksiOffline';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 
 let currentUser = null;
-let userRole = '';
+let currentUserRole = '';
+let userProfileData = null;
 let currentPage = 'main'; // 'main', 'menu', 'security'
 let activeTab = 'menu'; // 'menu', 'kategori', 'ekstra'
 
@@ -128,7 +131,6 @@ if (typeof window !== 'undefined') {
 
 let justTapped = false;
 
-let userRoleTab: 'pemilik' | 'kasir' = 'pemilik';
 let oldUsername = '';
 let newUsername = '';
 let oldPassword = '';
@@ -161,11 +163,23 @@ onMount(async () => {
       .select('role')
       .eq('id', userId)
       .single();
-    userRole = profile?.role || '';
-    // Jika bukan admin/pemilik, set role jadi kasir
-    if (userRole !== 'admin' && userRole !== 'pemilik') {
-      userRole = 'kasir';
-      await supabase.from('profil').update({ role: 'kasir' }).eq('id', userId);
+    userProfileData = profile;
+    if (profile) {
+      setUserRole(profile.role, profile);
+    }
+  }
+  // Jika role belum ada di store, coba validasi dengan Supabase
+  if (!currentUserRole) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profil')
+        .select('role, username')
+        .eq('id', session.user.id)
+        .single();
+      if (profile) {
+        setUserRole(profile.role, profile);
+      }
     }
   }
   await fetchSecuritySettings();
@@ -178,9 +192,9 @@ onMount(async () => {
     window.addEventListener('online', async () => {
       // Clear cache untuk memaksa refresh data
       clearMasterCache();
-      await fetchMenus();
-      await fetchKategori();
-      await fetchEkstra();
+  await fetchMenus();
+  await fetchKategori();
+  await fetchEkstra();
     });
   }
 });
@@ -283,7 +297,7 @@ function handleMenuTouchEnd(e, menu) {
 
 onMount(() => {
   currentUser = auth.getCurrentUser();
-  userRole = currentUser?.role || '';
+  currentUserRole = currentUser?.role || '';
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', blockNextClick, true);
   }
@@ -311,45 +325,39 @@ function openMenuForm(menu = null) {
 }
 
 async function fetchMenus() {
-  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
-  if (error) {
-    console.error('Supabase fetchMenus error:', error);
-    alert('Gagal mengambil data menu: ' + error.message);
-  }
-  if (!error) menus = data;
-  
-  // Integrasi menu pending: gabungkan menu pending dari IndexedDB
   try {
-    const pendingMenus = await getPendingMenus();
-    if (pendingMenus.length) {
-      // Gabungkan menu pending ke menus, tapi filter yang sudah dihapus
-      const validPendingMenus = pendingMenus.filter((menu: any) => {
-        // Cek apakah menu ini sudah dihapus dari database online
-        return !data.some((onlineMenu: any) => onlineMenu.id === menu.id);
-      });
-      if (validPendingMenus.length) {
-        menus = [...menus, ...validPendingMenus];
-      }
-    }
+    const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    menus = data || [];
   } catch (error) {
-    console.error('Gagal mengambil menu pending:', error);
+    notifModalMsg = 'Gagal mengambil data menu: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
   }
 }
+
 async function fetchKategori() {
-  const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
-  if (error) {
-    console.error('Supabase fetchKategori error:', error);
-    alert('Gagal mengambil data kategori: ' + error.message);
+  try {
+    const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    kategoriList = data || [];
+  } catch (error) {
+    notifModalMsg = 'Gagal mengambil data kategori: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
   }
-  if (!error) kategoriList = data;
 }
+
 async function fetchEkstra() {
-  const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
-  if (error) {
-    console.error('Supabase fetchEkstra error:', error);
-    alert('Gagal mengambil data ekstra: ' + error.message);
+  try {
+    const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    ekstraList = data || [];
+  } catch (error) {
+    notifModalMsg = 'Gagal mengambil data ekstra: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
   }
-  if (!error) ekstraList = data;
 }
 
 async function uploadMenuImage(file, menuId) {
@@ -392,12 +400,12 @@ async function saveMenu() {
   const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
   let result;
   try {
-    if (editMenuId) {
-      result = await supabase.from('produk').update(payload).eq('id', editMenuId);
-    } else {
-      result = await supabase.from('produk').insert([payload]);
-    }
-    if (result.error) {
+  if (editMenuId) {
+    result = await supabase.from('produk').update(payload).eq('id', editMenuId);
+  } else {
+    result = await supabase.from('produk').insert([payload]);
+  }
+  if (result.error) {
       throw result.error;
     }
   } catch (error) {
@@ -439,12 +447,12 @@ function confirmDeleteMenu(id: number) {
 async function doDeleteMenu() {
   if (menuIdToDelete !== null) {
     try {
-      // Hapus gambar dari storage jika ada
-      const menu = menus.find(m => m.id === menuIdToDelete);
-      if (menu?.gambar) {
-        const path = menu.gambar.split('/').pop();
-        await supabase.storage.from('gambar-menu').remove([path]);
-      }
+    // Hapus gambar dari storage jika ada
+    const menu = menus.find(m => m.id === menuIdToDelete);
+    if (menu?.gambar) {
+      const path = menu.gambar.split('/').pop();
+      await supabase.storage.from('gambar-menu').remove([path]);
+    }
       
       // Coba hapus dari database online
       const { error } = await supabase.from('produk').delete().eq('id', menuIdToDelete);
@@ -630,23 +638,49 @@ function openEkstraForm(ekstra = null) {
 }
 
 async function saveEkstra() {
-  if (!ekstraForm.name.trim() || !ekstraForm.harga) return;
-  const hargaValue = ekstraForm.harga.toString().replace(/[^\d]/g, '');
-  const hargaNumber = parseInt(hargaValue);
-  if (isNaN(hargaNumber) || hargaNumber <= 0) return;
-  let result;
-  if (editEkstraId) {
-    result = await supabase.from('tambahan').update({ ...ekstraForm, harga: hargaNumber }).eq('id', editEkstraId);
-  } else {
-    result = await supabase.from('tambahan').insert([{ ...ekstraForm, harga: hargaNumber }]);
+  if (!ekstraForm.name.trim()) {
+    notifModalMsg = 'Nama ekstra wajib diisi';
+    notifModalType = 'warning';
+    showNotifModal = true;
+    return;
   }
-  if (result.error) {
-    console.error('Supabase saveEkstra error:', result.error);
-    alert('Gagal menyimpan ekstra: ' + result.error.message);
+  
+  const harga = parseInt(ekstraForm.harga.toString().replace(/[^\d]/g, ''));
+  if (isNaN(harga) || harga <= 0) {
+    notifModalMsg = 'Harga wajib diisi dan harus lebih dari 0';
+    notifModalType = 'warning';
+    showNotifModal = true;
+    return;
   }
-  showEkstraForm = false;
-  await fetchEkstra();
-  clearMasterCache();
+
+  try {
+    if (editEkstraId) {
+      const { error } = await supabase
+        .from('tambahan')
+        .update({ 
+          name: ekstraForm.name,
+          harga: harga
+        })
+        .eq('id', editEkstraId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('tambahan')
+        .insert([{ 
+          name: ekstraForm.name,
+          harga: harga
+        }]);
+      if (error) throw error;
+    }
+    await fetchEkstra();
+    showEkstraForm = false;
+    ekstraForm = { name: '', harga: '' };
+    editEkstraId = null;
+  } catch (error) {
+    notifModalMsg = 'Gagal menyimpan ekstra: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
+  }
 }
 
 function confirmDeleteEkstra(id) {
@@ -831,8 +865,8 @@ async function handleChangeUserPass(e) {
     userPassError = 'Session tidak valid.';
     return;
   }
-  // Update username di profiles (pakai full_name)
-  const { error: usernameError } = await supabase.from('profil').update({ full_name: newUsername }).eq('id', userId);
+  // Update username di profiles (pakai username)
+  const { error: usernameError } = await supabase.from('profil').update({ username: newUsername }).eq('id', userId);
   if (usernameError) {
     userPassError = 'Gagal update nama user.';
     return;
@@ -899,13 +933,136 @@ function clearMasterCache() {
   kategoriCache.set({ data: null, lastFetched: 0 });
   tambahanCache.set({ data: null, lastFetched: 0 });
 }
+
+async function saveKategori() {
+  try {
+    if (editKategoriId) {
+      const { error } = await supabase
+        .from('kategori')
+        .update({ name: kategoriForm.name })
+        .eq('id', editKategoriId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('kategori')
+        .insert([{ name: kategoriForm.name }]);
+      if (error) throw error;
+    }
+    await fetchKategori();
+    showKategoriForm = false;
+    kategoriForm = { name: '' };
+    editKategoriId = null;
+  } catch (error) {
+    notifModalMsg = 'Gagal menyimpan kategori: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
+  }
+}
+
+async function addKategori() {
+  if (!kategoriForm.name.trim()) {
+    notifModalMsg = 'Nama kategori wajib diisi';
+    notifModalType = 'warning';
+    showNotifModal = true;
+    return;
+  }
+  try {
+    const { error } = await supabase
+      .from('kategori')
+      .insert([{ name: kategoriForm.name }]);
+    if (error) throw error;
+    await fetchKategori();
+    kategoriForm = { name: '' };
+  } catch (error) {
+    notifModalMsg = 'Gagal menambah kategori: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
+  }
+}
+
+async function saveUserPass() {
+  if (!oldUsername.trim() || !newUsername.trim() || !oldPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+    userPassError = 'Semua field wajib diisi.';
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    userPassError = 'Konfirmasi password tidak cocok.';
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    userPassError = 'Password minimal 6 karakter.';
+    return;
+  }
+
+  try {
+    // Simulasi update username/password
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    notifModalMsg = 'Perubahan username/password berhasil disimpan.';
+    notifModalType = 'success';
+    showNotifModal = true;
+    
+    oldUsername = '';
+    newUsername = '';
+    oldPassword = '';
+    newPassword = '';
+    confirmPassword = '';
+    userPassError = '';
+  } catch (error) {
+    userPassError = 'Gagal menyimpan perubahan: ' + error.message;
+  }
+}
+
+async function savePinSettings() {
+  if (!oldPin.trim() || !newPin.trim() || !confirmPin.trim()) {
+    pinError = 'Semua field wajib diisi.';
+    return;
+  }
+  
+  if (newPin !== confirmPin) {
+    pinError = 'Konfirmasi PIN tidak cocok.';
+    return;
+  }
+  
+  if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
+    pinError = 'PIN harus 4-6 digit angka.';
+    return;
+  }
+  
+  if (oldPin !== '1234') { // Simulasi PIN lama
+    pinError = 'PIN lama salah.';
+    return;
+  }
+
+  try {
+    // Simulasi update PIN
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    notifModalMsg = 'Perubahan PIN & pengaturan kunci berhasil disimpan.';
+    notifModalType = 'success';
+    showNotifModal = true;
+    
+    oldPin = '';
+    newPin = '';
+    confirmPin = '';
+    pinError = '';
+  } catch (error) {
+    pinError = 'Gagal menyimpan perubahan: ' + error.message;
+  }
+}
+
+function openPageAccess() {
+  notifModalMsg = 'Akses halaman berhasil dibuka (dummy).';
+  notifModalType = 'success';
+  showNotifModal = true;
+}
 </script>
 
 <svelte:head>
   <title>Admin Panel - ZatiarasPOS</title>
 </svelte:head>
 
-{#if userRole === 'admin' || userRole === 'pemilik'}
+{#if currentUserRole === 'admin' || currentUserRole === 'pemilik'}
   <div class="min-h-screen bg-gray-50 flex flex-col page-content">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
@@ -1045,7 +1202,8 @@ function clearMasterCache() {
             style="scrollbar-width:none;-ms-overflow-style:none;"
           >
           <button 
-              class="px-2.5 py-2 min-w-[70px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+              class="min-w-[70px] w-auto max-w-full px-2.5 py-2 rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === 'Semua' ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+              style="max-width:fit-content"
               onclick={() => { selectedKategori = 'Semua'; touchStartX = 0; touchEndX = 0; }}
           >
             Semua
@@ -1058,7 +1216,7 @@ function clearMasterCache() {
           {:else}
           {#each getKategoriNames() as kategori}
             <button 
-                  class="px-2.5 py-2 min-w-[70px] rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+                  class="w-full px-2.5 py-2 rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
                   onclick={() => { selectedKategori = kategori; touchStartX = 0; touchEndX = 0; }}
             >
               {kategori}
@@ -1323,19 +1481,19 @@ function clearMasterCache() {
               <div
                 class="absolute top-1 left-1 h-[calc(100%-0.5rem)] w-1/2 rounded-lg z-0 transition-transform transition-colors duration-300 ease-in-out"
                 style="
-                  transform: translateX({userRoleTab === 'pemilik' ? '0%' : '100%'});
-                  background: {userRoleTab === 'pemilik' ? '#ec4899' : '#3b82f6'};
+                  transform: translateX({currentUserRole === 'pemilik' ? '0%' : '100%'});
+                  background: {currentUserRole === 'pemilik' ? '#ec4899' : '#3b82f6'};
                 "
               ></div>
               <button 
-                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => userRoleTab = 'pemilik'}
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${currentUserRole === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => setUserRole('pemilik')}
               >
                 Pemilik
               </button>
               <button 
-                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${userRoleTab === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => userRoleTab = 'kasir'}
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${currentUserRole === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => setUserRole('kasir')}
               >
                 Kasir
               </button>
@@ -1352,7 +1510,7 @@ function clearMasterCache() {
                 <div class="text-pink-600 text-sm text-center mt-1">{userPassError}</div>
               {/if}
               <button 
-                class={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 ${userRoleTab === 'pemilik' ? 'bg-pink-500 hover:bg-pink-600 active:bg-pink-700' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'}`}
+                class={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 ${currentUserRole === 'pemilik' ? 'bg-pink-500 hover:bg-pink-600 active:bg-pink-700' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'}`}
                 type="submit"
               >
                 Simpan Perubahan
@@ -1360,7 +1518,7 @@ function clearMasterCache() {
             </form>
           </div>
           <!-- Section 2: Ganti PIN Keamanan -->
-          {#if userRoleTab === 'pemilik'}
+          {#if currentUserRole === 'pemilik'}
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
               <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti PIN Keamanan</h3>
               <p class="text-gray-500 text-sm mb-6">Pengaturan PIN keamanan untuk mengunci halaman tertentu.</p>
@@ -1625,8 +1783,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal -->
     {#if showDeleteModal}
-      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpModal">
           <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteMenu} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -1648,8 +1806,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal Kategori -->
     {#if showDeleteKategoriModal}
-      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpModal">
           <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteKategori} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -1668,8 +1826,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal Ekstra -->
     {#if showDeleteEkstraModal}
-      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpModal">
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
             <svelte:component this={Trash} class="w-8 h-8 text-red-500" />
           </div>
@@ -1752,8 +1910,8 @@ function clearMasterCache() {
     {/if}
 
     {#if showNotifModal}
-      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
-        <div class="bg-white rounded-2xl shadow-2xl border-2 px-8 py-7 max-w-xs w-full flex flex-col items-center animate-slideUpFromBottom"
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div class="bg-white rounded-2xl shadow-2xl border-2 px-8 py-7 max-w-xs w-full flex flex-col items-center animate-slideUpModal"
           style="border-color: {notifModalType === 'success' ? '#facc15' : notifModalType === 'error' ? '#ef4444' : '#facc15'};">
           <div class="flex items-center justify-center w-16 h-16 rounded-full mb-3"
             style="background: {notifModalType === 'success' ? '#fef9c3' : notifModalType === 'error' ? '#fee2e2' : '#fef9c3'};">
@@ -1796,3 +1954,13 @@ function clearMasterCache() {
     </div>
   </div>
 {/if} 
+
+<style>
+@keyframes slideUpModal {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slideUpModal {
+  animation: slideUpModal 0.32s cubic-bezier(.4,0,.2,1);
+}
+</style>

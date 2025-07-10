@@ -8,8 +8,9 @@ import { get } from 'svelte/store';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
 import { validateNumber, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
-import { fly } from 'svelte/transition';
+import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
 import { supabase } from '$lib/database/supabaseClient';
 import { posGridView } from '$lib/stores/posGridView';
 import { produkCache } from '$lib/stores/produkCache';
@@ -86,11 +87,11 @@ async function fetchProducts() {
   if (produkData && Date.now() - lastFetched < PRODUK_CACHE_TTL) {
     products = produkData;
   } else {
-    const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
-    if (!error) {
-      products = data;
-      produkCache.set({ data, lastFetched: Date.now() });
-      localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
+  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
+  if (!error) {
+    products = data;
+    produkCache.set({ data, lastFetched: Date.now() });
+    localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
     }
   }
   
@@ -260,13 +261,13 @@ function addToCart() {
   // Validate quantity
   const qtyValidation = validateNumber(qty, { required: true, min: 1, max: 99 });
   if (!qtyValidation.isValid) {
-    alert(`Error: ${qtyValidation.errors.join(', ')}`);
+    showErrorNotif(`Error: ${qtyValidation.errors.join(', ')}`);
     return;
   }
   
   // Check rate limiting
   if (!SecurityMiddleware.checkFormRateLimit('pos_add_to_cart')) {
-    alert('Terlalu banyak item ditambahkan. Silakan tunggu sebentar.');
+    showErrorNotif('Terlalu banyak item ditambahkan. Silakan tunggu sebentar.');
     return;
   }
   
@@ -277,7 +278,7 @@ function addToCart() {
   // Check for suspicious activity
   const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${qty}`;
   if (SecurityMiddleware.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
-    alert('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
+    showErrorNotif('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
     SecurityMiddleware.logSecurityEvent('suspicious_cart_activity', {
       product: selectedProduct?.name,
       qty,
@@ -488,6 +489,19 @@ if (typeof window !== 'undefined' && window.innerWidth < 768) {
 
 let pendingCount = 0;
 transaksiPendingCount.subscribe(val => pendingCount = val);
+
+let showErrorNotification = false;
+let errorNotificationMessage = '';
+let errorNotificationTimeout: any = null;
+
+function showErrorNotif(message: string) {
+  errorNotificationMessage = message;
+  showErrorNotification = true;
+  clearTimeout(errorNotificationTimeout);
+  errorNotificationTimeout = setTimeout(() => {
+    showErrorNotification = false;
+  }, 3000);
+}
 </script>
 
 <div 
@@ -663,6 +677,17 @@ transaksiPendingCount.subscribe(val => pendingCount = val);
 
     {#if showSnackbar}
       <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-gray-900 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
+    {/if}
+
+    {#if showErrorNotification}
+      <div 
+        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        style="transform: translateX(-50%);"
+        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+        out:fade={{ duration: 200 }}
+      >
+        {errorNotificationMessage}
+      </div>
     {/if}
 
     <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
