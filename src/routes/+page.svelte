@@ -9,6 +9,7 @@ import { supabase } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import { dashboardCache } from '$lib/stores/dashboardCache';
+import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
 
 let dashboardData;
 dashboardCache.subscribe(val => dashboardData = val.data);
@@ -109,9 +110,24 @@ async function fetchDashboardStats() {
   }
   // Fetch baru dari Supabase
   isLoadingBestSellers = true;
-  // Omzet
-  const { data: omzetData } = await supabase.rpc('get_omzet_today');
-  omzet = omzetData?.omzet || 0;
+  
+  // Hitung omzet hari ini dari tabel buku_kas (ganti RPC yang error)
+  const today = new Date();
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+  const startUTC = startOfDay.toISOString();
+  const endUTC = endOfDay.toISOString();
+  
+  const { data: omzetData } = await supabase
+    .from('buku_kas')
+    .select('amount')
+    .gte('transaction_date', startUTC)
+    .lte('transaction_date', endUTC)
+    .eq('type', 'in')
+    .eq('jenis', 'pendapatan_usaha');
+  
+  omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+  
   // Total transaksi
   const { count: transaksiCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true });
   jumlahTransaksi = transaksiCount || 0;
@@ -432,20 +448,38 @@ async function hitungRingkasanTutup() {
     .gte('transaction_date', waktuMulai)
     .lte('transaction_date', waktuSelesai);
   type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string };
-  const kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
+  let kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
+  
+  // Integrasi transaksi offline: gabungkan transaksi pending dari IndexedDB
+  if (navigator.onLine === false) {
+    const pendingTransaksi = await getPendingTransaksi();
+    if (pendingTransaksi.length) {
+      // Filter transaksi pending yang masuk dalam rentang waktu sesi toko
+      const pendingDalamSesi = pendingTransaksi.filter((t: any) => {
+        const tDate = new Date(t.transaction_date || t.created_at);
+        return tDate >= new Date(waktuMulai) && tDate <= new Date(waktuSelesai);
+      });
+      // Gabungkan ke array kas
+      kas = [...kas, ...pendingDalamSesi];
+    }
+  }
+
   // Penjualan tunai
-  const totalPenjualanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
-  // Penjualan non-tunai (QRIS/dll)
-  const totalPenjualanNonTunai = kas.filter((t) => t.type === 'in' && t.payment_method !== 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
-  // Pemasukan tunai lain (bukan penjualan)
-  const pemasukanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && (!t.description || !t.description.includes('Penjualan'))).reduce((a, b) => a + (b.amount || 0), 0);
+  const penjualanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
+  // Catat pemasukan tunai (bukan penjualan)
+  const pemasukanTunaiCatat = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && (!t.description || !t.description.includes('Penjualan'))).reduce((a, b) => a + (b.amount || 0), 0);
+  // Pemasukan tunai = penjualan tunai + catat pemasukan tunai
+  const pemasukanTunai = penjualanTunai + pemasukanTunaiCatat;
   // Pengeluaran tunai
   const pengeluaranTunai = kas.filter((t) => t.type === 'out' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
   const modalAwal = sesiAktif.opening_cash || 0;
-  const uangKasir = modalAwal + totalPenjualanTunai + pemasukanTunai - pengeluaranTunai;
+  // Total penjualan = semua penjualan (tunai + non-tunai)
+  const totalPenjualan = kas.filter((t) => t.type === 'in' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
+  // Uang kasir seharusnya
+  const uangKasir = modalAwal + pemasukanTunai - pengeluaranTunai;
   ringkasanTutup = {
     modalAwal,
-    totalPenjualan: totalPenjualanTunai + totalPenjualanNonTunai,
+    totalPenjualan,
     pemasukanTunai,
     pengeluaranTunai,
     uangKasir
