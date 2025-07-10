@@ -1,4 +1,4 @@
-import { set, get, del } from 'idb-keyval';
+import { set, get } from 'idb-keyval';
 import { supabase } from '$lib/database/supabaseClient';
 import { transaksiPendingCount } from './transaksiPendingCount';
 

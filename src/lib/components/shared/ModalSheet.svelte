@@ -128,13 +128,12 @@
     <div
       class="modal-sheet w-full max-w-[100vw] overflow-x-hidden px-0 sm:px-0 pt-2 pb-0"
       style="max-width:100vw;"
+      role="document"
       bind:this={sheet}
       ontouchstart={onTouchStart}
       ontouchmove={onTouchMove}
       ontouchend={onTouchEnd}
       onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.key === 'Escape' && close()}
-      role="document"
       tabindex="-1"
     >
       <div class="sheet-dragbar" role="presentation"></div>

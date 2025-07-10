@@ -532,6 +532,7 @@ function handlePinInput(num) {
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
+  role="main"
 >
   <main class="flex-1 min-h-0 w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
@@ -717,7 +718,7 @@ function handlePinInput(num) {
           <div class="w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-lg p-6 pb-8 filter-sheet-anim">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-bold text-gray-800">Filter Laporan</h3>
-              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showFilter = false}>
+              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showFilter = false} aria-label="Tutup filter">
                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -725,29 +726,33 @@ function handlePinInput(num) {
             </div>
             <!-- Pilihan Tipe Filter -->
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-3">Pilih Periode</label>
-              <div class="grid grid-cols-2 gap-3">
+              <label class="block text-sm font-medium text-gray-700 mb-3" for="filter-type-buttons">Pilih Periode</label>
+              <div class="grid grid-cols-2 gap-3" id="filter-type-buttons" role="group" aria-labelledby="filter-type-buttons">
                 <button 
                   class="py-3 px-4 rounded-xl font-semibold text-sm border-2 transition-all duration-200 {filterType === 'harian' ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200'}" 
                   onclick={() => filterType = 'harian'}
+                  onkeydown={(e) => e.key === 'Enter' && (filterType = 'harian')}
                 >
                   Harian
                 </button>
                 <button 
                   class="py-3 px-4 rounded-xl font-semibold text-sm border-2 transition-all duration-200 {filterType === 'mingguan' ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200'}" 
                   onclick={() => filterType = 'mingguan'}
+                  onkeydown={(e) => e.key === 'Enter' && (filterType = 'mingguan')}
                 >
                   Mingguan
                 </button>
                 <button 
                   class="py-3 px-4 rounded-xl font-semibold text-sm border-2 transition-all duration-200 {filterType === 'bulanan' ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200'}" 
                   onclick={() => filterType = 'bulanan'}
+                  onkeydown={(e) => e.key === 'Enter' && (filterType = 'bulanan')}
                 >
                   Bulanan
                 </button>
                 <button 
                   class="py-3 px-4 rounded-xl font-semibold text-sm border-2 transition-all duration-200 {filterType === 'tahunan' ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-gray-200 bg-white text-gray-600 hover:border-pink-200'}" 
                   onclick={() => filterType = 'tahunan'}
+                  onkeydown={(e) => e.key === 'Enter' && (filterType = 'tahunan')}
                 >
                   Tahunan
                 </button>
@@ -756,18 +761,20 @@ function handlePinInput(num) {
             <!-- Input Filter Berdasarkan Tipe -->
             {#if filterType === 'harian'}
               <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal</label>
-                <input 
-                  type="date" 
-                  class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
-                  bind:value={startDate}
-                  onchange={() => { if (filterType === 'harian') endDate = startDate; }}
-                />
+                              <label class="block text-sm font-medium text-gray-700 mb-2" for="harian-date">Pilih Tanggal</label>
+              <input 
+                id="harian-date"
+                type="date" 
+                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
+                bind:value={startDate}
+                onchange={() => { if (filterType === 'harian') endDate = startDate; }}
+              />
               </div>
             {:else if filterType === 'mingguan'}
               <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal Awal Minggu</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="mingguan-date">Pilih Tanggal Awal Minggu</label>
                 <input 
+                  id="mingguan-date"
                   type="date" 
                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                   bind:value={startDate}
@@ -782,9 +789,9 @@ function handlePinInput(num) {
               </div>
             {:else if filterType === 'bulanan'}
               <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Bulan dan Tahun</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="bulanan-month">Pilih Bulan dan Tahun</label>
                 <div class="flex gap-3">
-                  <select class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterMonth} onchange={() => {
+                  <select id="bulanan-month" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterMonth} onchange={() => {
                     if (filterType === 'bulanan') {
                       const y = parseInt(filterYear);
                       const m = parseInt(filterMonth) - 1;
@@ -820,8 +827,8 @@ function handlePinInput(num) {
               </div>
             {:else if filterType === 'tahunan'}
               <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tahun</label>
-                <select class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear} onchange={() => {
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="tahunan-year">Pilih Tahun</label>
+                <select id="tahunan-year" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" bind:value={filterYear} onchange={() => {
                   if (filterType === 'tahunan') {
                     const y = parseInt(filterYear);
                     startDate = `${y}-01-01`;
@@ -859,7 +866,7 @@ function handlePinInput(num) {
           <div class="w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-lg p-6 pb-8" style="animation: slideUp 0.3s ease-out;">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-bold text-gray-800">Pilih Tanggal Awal</h3>
-              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showDatePicker = false}>
+              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showDatePicker = false} aria-label="Tutup date picker">
                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -867,8 +874,9 @@ function handlePinInput(num) {
             </div>
             
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Awal</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="date-picker-start">Tanggal Awal</label>
               <input 
+                id="date-picker-start"
                 type="date" 
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                 bind:value={startDate}
@@ -899,7 +907,7 @@ function handlePinInput(num) {
           <div class="w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-lg p-6 pb-8" style="animation: slideUp 0.3s ease-out;">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-bold text-gray-800">Pilih Tanggal Akhir</h3>
-              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showEndDatePicker = false}>
+              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" onclick={() => showEndDatePicker = false} aria-label="Tutup end date picker">
                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -907,8 +915,9 @@ function handlePinInput(num) {
             </div>
             
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="date-picker-end">Tanggal Akhir</label>
               <input 
+                id="date-picker-end"
                 type="date" 
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-pink-500 focus:outline-none transition-colors" 
                 bind:value={endDate}

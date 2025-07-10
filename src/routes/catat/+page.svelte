@@ -520,6 +520,7 @@ main {
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
+  role="main"
 >
   <main class="flex-1 min-h-0 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
@@ -597,8 +598,9 @@ main {
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1">Nominal</label>
+            <label class="block text-sm font-medium text-pink-500 mb-1" for="nominal-input">Nominal</label>
             <input
+              id="nominal-input"
               type="text"
               inputmode="numeric"
               class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
@@ -619,26 +621,26 @@ main {
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <div class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 flex items-center cursor-pointer" onclick={() => showDropdown = true} tabindex="0" style="user-select:none;">
+            <label class="block text-sm font-medium text-pink-500 mb-1" for="jenis-dropdown">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <button type="button" id="jenis-dropdown" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 flex items-center cursor-pointer" onclick={() => showDropdown = true} onkeydown={(e) => e.key === 'Enter' && (showDropdown = true)} style="user-select:none;">
               <span class="truncate">{getJenisLabel(jenis)}</span>
-            </div>
+            </button>
             <DropdownSheet open={showDropdown} value={jenis} options={mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran} on:close={() => showDropdown = false} on:select={e => { jenis = e.detail; showDropdown = false; }} />
           </div>
           {#if jenis === 'lainnya'}
             <div>
-              <label class="block text-sm font-medium text-pink-500 mb-1">Nama Jenis</label>
-              <input type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
+                          <label class="block text-sm font-medium text-pink-500 mb-1" for="nama-jenis-input">Nama Jenis</label>
+            <input id="nama-jenis-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
             </div>
           {/if}
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <input type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={nama} required />
+            <label class="block text-sm font-medium text-pink-500 mb-1" for="nama-input">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <input id="nama-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={nama} required />
           </div>
           
           <!-- Toggle Laci Kasir -->
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-2">Laci Kasir</label>
+            <label class="block text-sm font-medium text-pink-500 mb-2" for="laci-kasir-toggle">Laci Kasir</label>
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center {paymentMethod === 'tunai' ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}">
@@ -652,9 +654,12 @@ main {
                 </div>
               </div>
               <button
+                id="laci-kasir-toggle"
                 type="button"
                 class="relative w-12 h-6 rounded-full transition-colors duration-300 {paymentMethod === 'tunai' ? 'bg-green-500' : 'bg-gray-300'}"
                 onclick={() => paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai'}
+                onkeydown={(e) => e.key === 'Enter' && (paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai')}
+                aria-label="Toggle laci kasir"
               >
                 <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 {paymentMethod === 'tunai' ? 'translate-x-6' : 'translate-x-0'}"></div>
               </button>

@@ -16,8 +16,8 @@
 </script>
 
 {#if open}
-  <div class="modal-backdrop" onclick={close} role="dialog" tabindex="0">
-    <div class="sheet" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && close()}>
+  <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" tabindex="0">
+    <div class="sheet" onclick={(e) => e.stopPropagation()} role="document">
       <div class="sheet-header">Pilih Waktu</div>
       <div class="relative">
         <input type="time" class="time-input pr-10" bind:value={selected} />

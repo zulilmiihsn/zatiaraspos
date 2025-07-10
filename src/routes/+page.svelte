@@ -796,8 +796,8 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false}>
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup modal-padding-custom" style="padding-left:3rem;padding-right:3rem;padding-top:3rem;padding-bottom:3rem;" onclick={event => event.stopPropagation()}>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" tabindex="0">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup modal-padding-custom" style="padding-left:3rem;padding-right:3rem;padding-top:3rem;padding-bottom:3rem;" onclick={event => event.stopPropagation()} role="document">
       {#if isBukaToko}
         <div class="flex flex-col items-center mb-4">
           <div class="text-4xl mb-2">🍹</div>
@@ -813,7 +813,7 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
               bind:value={modalAwalInput}
               oninput={formatModalAwalInput}
               class="w-full border-2 border-pink-200 bg-pink-50 rounded-xl pl-10 pr-4 py-3 text-lg font-bold text-gray-800 focus:ring-2 focus:ring-pink-300 outline-none transition placeholder-pink-300 shadow-sm"
-              placeholder="Modal awal kas hari ini" autofocus />
+              placeholder="Modal awal kas hari ini" />
           </div>
         </div>
         {#if pinErrorToko}
