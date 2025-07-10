@@ -154,34 +154,27 @@ let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
 // Load saved settings on mount
 onMount(async () => {
-  // Ambil session Supabase
+  // Validasi role user
   const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  if (userId) {
-    const { data: profile } = await supabase
-      .from('profil')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    userProfileData = profile;
-    if (profile) {
-      setUserRole(profile.role, profile);
-    }
+  if (!session?.user) {
+    goto('/login');
+    return;
   }
-  // Jika role belum ada di store, coba validasi dengan Supabase
-  if (!currentUserRole) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data: profile } = await supabase
-        .from('profil')
-        .select('role, username')
-        .eq('id', session.user.id)
-        .single();
-      if (profile) {
-        setUserRole(profile.role, profile);
-      }
-    }
+  
+  const { data: profile } = await supabase
+    .from('profil')
+    .select('role, username')
+    .eq('id', session.user.id)
+    .single();
+    
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'pemilik')) {
+    goto('/unauthorized');
+    return;
   }
+  
+  userProfileData = profile;
+  setUserRole(profile.role, profile);
+  
   await fetchSecuritySettings();
   await fetchMenus();
   await fetchKategori();
@@ -192,9 +185,9 @@ onMount(async () => {
     window.addEventListener('online', async () => {
       // Clear cache untuk memaksa refresh data
       clearMasterCache();
-  await fetchMenus();
-  await fetchKategori();
-  await fetchEkstra();
+      await fetchMenus();
+      await fetchKategori();
+      await fetchEkstra();
     });
   }
 });
@@ -296,11 +289,17 @@ function handleMenuTouchEnd(e, menu) {
 }
 
 onMount(() => {
-  currentUser = auth.getCurrentUser();
-  currentUserRole = currentUser?.role || '';
+  // Subscribe ke store userRole
+  const unsubscribe = userRole.subscribe(role => {
+    currentUserRole = role || '';
+  });
+  
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', blockNextClick, true);
   }
+  
+  // Cleanup subscription
+  return unsubscribe;
 });
 
 onDestroy(() => {
