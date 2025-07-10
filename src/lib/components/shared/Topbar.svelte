@@ -20,7 +20,7 @@ onDestroy(unsubscribe);
     {#if pendingCount > 0}
       <div class="flex items-center" style="gap: 12px;">
         <div class="w-6 h-6 flex items-center justify-center bg-yellow-400 text-white text-xs font-semibold rounded-full shadow border-2 border-white animate-pulse transition-transform duration-300" style="animation-delay: 0.2s;">
-          <span class="mb-1">{pendingCount}</span>
+          <span class="mb-px">{pendingCount}</span>
         </div>
       </div>
     {/if}

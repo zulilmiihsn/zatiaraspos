@@ -9,6 +9,7 @@ import { supabase } from '$lib/database/supabaseClient';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { laporanCache } from '$lib/stores/laporanCache';
+import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
 let laporanData;
 laporanCache.subscribe(val => laporanData = val.data);
 const LAPORAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
@@ -342,6 +343,19 @@ async function fetchLaporan(start = startDate, end = endDate) {
     showBebanLain = bebanLainDetail.length > 0;
     showPemasukan = pemasukanUsahaDetail.length > 0 || pemasukanLainDetail.length > 0;
     showPengeluaran = bebanUsahaDetail.length > 0 || bebanLainDetail.length > 0;
+  }
+  let pendingTransaksi = [];
+  if (navigator.onLine === false) {
+    pendingTransaksi = await getPendingTransaksi();
+    if (pendingTransaksi.length) {
+      // Gabungkan transaksi pending ke laporan
+      // Asumsi laporan adalah array transaksi, atau sesuaikan struktur laporan
+      laporan = [...laporan, ...pendingTransaksi];
+      // Update summary, detail, dsb jika perlu
+      // Misal:
+      // summary.pendapatan += pendingTransaksi.filter(t => t.type === 'pemasukan').reduce((a, b) => a + b.amount, 0);
+      // dst.
+    }
   }
 }
 

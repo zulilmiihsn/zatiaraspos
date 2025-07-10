@@ -21,6 +21,8 @@ import { supabase } from '$lib/database/supabaseClient';
 import { produkCache } from '$lib/stores/produkCache';
 import { kategoriCache } from '$lib/stores/kategoriCache';
 import { tambahanCache } from '$lib/stores/tambahanCache';
+import { saveMenuOffline, getPendingMenus, deleteMenuOffline, syncDeleteMenu } from '$lib/stores/transaksiOffline';
+import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 
 let currentUser = null;
 let userRole = '';
@@ -144,6 +146,10 @@ let pin = '';
 
 let isGridView = true;
 
+let showNotifModal = false;
+let notifModalMsg = '';
+let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
+
 // Load saved settings on mount
 onMount(async () => {
   // Ambil session Supabase
@@ -166,6 +172,17 @@ onMount(async () => {
   await fetchMenus();
   await fetchKategori();
   await fetchEkstra();
+  
+  // Sync otomatis saat online
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', async () => {
+      // Clear cache untuk memaksa refresh data
+      clearMasterCache();
+      await fetchMenus();
+      await fetchKategori();
+      await fetchEkstra();
+    });
+  }
 });
 
 async function fetchSecuritySettings() {
@@ -300,6 +317,23 @@ async function fetchMenus() {
     alert('Gagal mengambil data menu: ' + error.message);
   }
   if (!error) menus = data;
+  
+  // Integrasi menu pending: gabungkan menu pending dari IndexedDB
+  try {
+    const pendingMenus = await getPendingMenus();
+    if (pendingMenus.length) {
+      // Gabungkan menu pending ke menus, tapi filter yang sudah dihapus
+      const validPendingMenus = pendingMenus.filter((menu: any) => {
+        // Cek apakah menu ini sudah dihapus dari database online
+        return !data.some((onlineMenu: any) => onlineMenu.id === menu.id);
+      });
+      if (validPendingMenus.length) {
+        menus = [...menus, ...validPendingMenus];
+      }
+    }
+  } catch (error) {
+    console.error('Gagal mengambil menu pending:', error);
+  }
 }
 async function fetchKategori() {
   const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
@@ -336,27 +370,56 @@ async function uploadMenuImage(file, menuId) {
 }
 
 async function saveMenu() {
+  // Validasi field harga
+  if (!menuForm.harga || menuForm.harga.toString().trim() === '') {
+    notifModalMsg = 'Harga menu wajib diisi!';
+    notifModalType = 'warning';
+    showNotifModal = true;
+    return;
+  }
   let imageUrl = menuForm.gambar;
   // Jika user memilih file baru (bukan string URL)
   if (selectedImage && selectedImage instanceof File) {
     try {
       imageUrl = await uploadMenuImage(selectedImage, editMenuId || Date.now());
     } catch (err) {
-      console.error('Gagal upload gambar menu:', err);
-      alert('Gagal upload gambar: ' + (err?.message || err?.error_description || 'Unknown error'));
+      notifModalMsg = 'Gagal upload gambar: ' + (err?.message || err?.error_description || 'Unknown error');
+      notifModalType = 'error';
+      showNotifModal = true;
       return;
     }
   }
   const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
   let result;
-  if (editMenuId) {
-    result = await supabase.from('produk').update(payload).eq('id', editMenuId);
-  } else {
-    result = await supabase.from('produk').insert([payload]);
-  }
-  if (result.error) {
-    console.error('Supabase saveMenu error:', result.error);
-    alert('Gagal menyimpan menu: ' + result.error.message);
+  try {
+    if (editMenuId) {
+      result = await supabase.from('produk').update(payload).eq('id', editMenuId);
+    } else {
+      result = await supabase.from('produk').insert([payload]);
+    }
+    if (result.error) {
+      throw result.error;
+    }
+  } catch (error) {
+    // Jika offline, simpan ke IndexedDB
+    if (navigator.onLine === false || error.message?.includes('fetch')) {
+      try {
+        await saveMenuOffline(payload);
+        notifModalMsg = 'Menu berhasil disimpan offline. Akan tersinkronisasi saat online.';
+        notifModalType = 'success';
+        showNotifModal = true;
+      } catch (offlineError) {
+        notifModalMsg = 'Gagal menyimpan menu offline: ' + offlineError.message;
+        notifModalType = 'error';
+        showNotifModal = true;
+        return;
+      }
+    } else {
+      notifModalMsg = 'Gagal menyimpan menu: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
+      return;
+    }
   }
   showMenuForm = false;
   await fetchMenus();
@@ -375,13 +438,50 @@ function confirmDeleteMenu(id: number) {
 
 async function doDeleteMenu() {
   if (menuIdToDelete !== null) {
-    // Hapus gambar dari storage jika ada
-    const menu = menus.find(m => m.id === menuIdToDelete);
-    if (menu?.gambar) {
-      const path = menu.gambar.split('/').pop();
-      await supabase.storage.from('gambar-menu').remove([path]);
+    try {
+      // Hapus gambar dari storage jika ada
+      const menu = menus.find(m => m.id === menuIdToDelete);
+      if (menu?.gambar) {
+        const path = menu.gambar.split('/').pop();
+        await supabase.storage.from('gambar-menu').remove([path]);
+      }
+      
+      // Coba hapus dari database online
+      const { error } = await supabase.from('produk').delete().eq('id', menuIdToDelete);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Jika berhasil hapus online, sync delete
+      await syncDeleteMenu(menuIdToDelete);
+      
+      notifModalMsg = 'Menu berhasil dihapus!';
+      notifModalType = 'success';
+      showNotifModal = true;
+      
+    } catch (error) {
+      // Jika offline atau error, hapus dari pending menus
+      if (navigator.onLine === false || error.message?.includes('fetch')) {
+        try {
+          await deleteMenuOffline(menuIdToDelete);
+          notifModalMsg = 'Menu berhasil dihapus offline. Akan tersinkronisasi saat online.';
+          notifModalType = 'success';
+          showNotifModal = true;
+        } catch (offlineError) {
+          notifModalMsg = 'Gagal menghapus menu offline: ' + offlineError.message;
+          notifModalType = 'error';
+          showNotifModal = true;
+          return;
+        }
+      } else {
+        notifModalMsg = 'Gagal menghapus menu: ' + error.message;
+        notifModalType = 'error';
+        showNotifModal = true;
+        return;
+      }
     }
-    await supabase.from('produk').delete().eq('id', menuIdToDelete);
+    
     showDeleteModal = false;
     menuIdToDelete = null;
     await fetchMenus();
@@ -919,8 +1019,8 @@ function clearMasterCache() {
           </div>
         </div>
 
-          <!-- Daftar Menu & Filter -->
-          <div class="flex items-center justify-between gap-2 mb-4 mt-0 px-0">
+          <!-- Daftar Menu & Badge -->
+          <div class="flex items-center justify-between gap-2 mb-2 -mt-[8px] px-0">
             <div class="flex items-center gap-2">
               <h2 class="text-base font-bold text-gray-800">Daftar Menu</h2>
               <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium">{filteredMenus.length} menu</span>
@@ -1525,8 +1625,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal -->
     {#if showDeleteModal}
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
+      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
           <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteMenu} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -1548,8 +1648,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal Kategori -->
     {#if showDeleteKategoriModal}
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
+      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
           <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200" onclick={cancelDeleteKategori} aria-label="Tutup">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -1568,8 +1668,8 @@ function clearMasterCache() {
 
     <!-- Delete Confirmation Modal Ekstra -->
     {#if showDeleteEkstraModal}
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center">
+      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpFromBottom">
           <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-4">
             <svelte:component this={Trash} class="w-8 h-8 text-red-500" />
           </div>
@@ -1647,6 +1747,36 @@ function clearMasterCache() {
               {editEkstraId ? 'Simpan' : 'Tambah Ekstra'}
             </button>
           </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if showNotifModal}
+      <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
+        <div class="bg-white rounded-2xl shadow-2xl border-2 px-8 py-7 max-w-xs w-full flex flex-col items-center animate-slideUpFromBottom"
+          style="border-color: {notifModalType === 'success' ? '#facc15' : notifModalType === 'error' ? '#ef4444' : '#facc15'};">
+          <div class="flex items-center justify-center w-16 h-16 rounded-full mb-3"
+            style="background: {notifModalType === 'success' ? '#fef9c3' : notifModalType === 'error' ? '#fee2e2' : '#fef9c3'};">
+            {#if notifModalType === 'success'}
+              <svg class="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" fill="#fef9c3" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" stroke="#facc15" stroke-width="2" />
+              </svg>
+            {:else if notifModalType === 'error'}
+              <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" fill="#fee2e2" />
+                <line x1="9" y1="9" x2="15" y2="15" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+                <line x1="15" y1="9" x2="9" y2="15" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            {:else}
+              <svg class="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" fill="#fef9c3" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01" stroke="#facc15" stroke-width="2" />
+              </svg>
+            {/if}
+          </div>
+          <div class="text-center text-base font-semibold text-gray-700 mb-2">{notifModalMsg}</div>
+          <button class="w-full py-2 bg-yellow-400 text-white rounded-lg font-semibold mt-2" onclick={() => showNotifModal = false}>Tutup</button>
         </div>
       </div>
     {/if}

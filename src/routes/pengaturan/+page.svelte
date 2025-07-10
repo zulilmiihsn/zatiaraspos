@@ -18,69 +18,109 @@
   import Printer from 'lucide-svelte/icons/printer';
   import { supabase } from '$lib/database/supabaseClient';
   import { pengaturanCache } from '$lib/stores/pengaturanCache';
-  let pengaturanData;
+  
+  // Type definitions
+  interface PengaturanData {
+    locked_pages?: string[];
+    pin?: string;
+  }
+  
+  let pengaturanData: PengaturanData | null = null;
   pengaturanCache.subscribe(val => pengaturanData = val.data);
   const PENGATURAN_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 hari
 
+  // State untuk loading
+  let isLoading = true;
+  let isProfileLoaded = false;
+  let isPengaturanLoaded = false;
+
   onMount(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('Session:', session);
-    const userId = session?.user?.id;
-    if (userId) {
-      const { data: profile, error } = await supabase
-        .from('profil')
-        .select('role, full_name')
-        .eq('id', userId)
-        .single();
-      console.log('Profile:', profile, 'Error:', error);
-      userRole = profile?.role || '';
-      userName = profile?.full_name || '';
-    }
-    if (typeof window !== 'undefined') {
-      const ua = window.navigator.userAgent.toLowerCase();
-      const isIOS = /iphone|ipad|ipod/.test(ua);
-      const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
-      if (isIOS && !isInStandaloneMode) {
-        pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen"';
-        canInstallPWA = false;
-      } else if ('serviceWorker' in navigator) {
-        window.addEventListener('beforeinstallprompt', (e) => {
-          e.preventDefault();
-          deferredPrompt = e;
-          canInstallPWA = true;
-          pwaStatus = '';
-        });
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-          pwaStatus = 'PWA sudah terpasang';
+    try {
+      // Load cache dari localStorage terlebih dahulu
+      if (typeof window !== 'undefined') {
+        const cache = localStorage.getItem('pengaturanCache');
+        if (cache) {
+          const parsedCache = JSON.parse(cache);
+          pengaturanCache.set(parsedCache);
+          pengaturan = parsedCache.data;
+          isPengaturanLoaded = true;
+        }
+      }
+
+      // Load profile data
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session:', session);
+      const userId = session?.user?.id;
+      
+      if (userId) {
+        const { data: profile, error } = await supabase
+          .from('profil')
+          .select('role, full_name')
+          .eq('id', userId)
+          .single();
+        console.log('Profile:', profile, 'Error:', error);
+        userRole = profile?.role || '';
+        userName = profile?.full_name || '';
+      }
+      
+      isProfileLoaded = true;
+
+      // Setup PWA detection
+      if (typeof window !== 'undefined') {
+        const ua = window.navigator.userAgent.toLowerCase();
+        const isIOS = /iphone|ipad|ipod/.test(ua);
+        const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
+        if (isIOS && !isInStandaloneMode) {
+          pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen"';
+          canInstallPWA = false;
+        } else if ('serviceWorker' in navigator) {
+          window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            canInstallPWA = true;
+            pwaStatus = '';
+          });
+          if (window.matchMedia('(display-mode: standalone)').matches) {
+            pwaStatus = 'PWA sudah terpasang';
+            canInstallPWA = false;
+          }
+        } else {
+          pwaStatus = 'Browser tidak mendukung PWA';
           canInstallPWA = false;
         }
-      } else {
-        pwaStatus = 'Browser tidak mendukung PWA';
-        canInstallPWA = false;
+        window.addEventListener('appinstalled', () => {
+          showPwaInstalledToast = true;
+          canInstallPWA = false;
+          pwaStatus = 'PWA sudah terpasang';
+          setTimeout(() => showPwaInstalledToast = false, 4000);
+        });
       }
-      window.addEventListener('appinstalled', () => {
-        showPwaInstalledToast = true;
-        canInstallPWA = false;
-        pwaStatus = 'PWA sudah terpasang';
-        setTimeout(() => showPwaInstalledToast = false, 4000);
-      });
-    }
-    if (userRole === 'kasir') {
-      await fetchPengaturan();
-      const lockedPages = pengaturan?.locked_pages || ['laporan', 'beranda'];
-      pin = pengaturan?.pin || '1234';
-      if (lockedPages.includes('pengaturan')) {
-        showPinModal = true;
+
+      // Load pengaturan data
+      if (userRole === 'kasir') {
+        await fetchPengaturan();
+        const lockedPages = pengaturan?.locked_pages || ['laporan', 'beranda'];
+        pin = pengaturan?.pin || '1234';
+        if (lockedPages.includes('pengaturan')) {
+          showPinModal = true;
+        }
+        console.log('userRole', userRole);
+        console.log('lockedPages', lockedPages);
+        console.log('showPinModal', showPinModal);
       }
-      console.log('userRole', userRole);
-      console.log('lockedPages', lockedPages);
-      console.log('showPinModal', showPinModal);
+
+      // Set loading selesai
+      isLoading = false;
+    } catch (error) {
+      console.error('Error loading pengaturan page:', error);
+      // Jika terjadi error, tetap tampilkan halaman dengan data yang tersedia
+      isLoading = false;
     }
   });
 
-  let currentUser = null;
+  let currentUser: any = null;
   let showLogoutModal = false;
-  let deferredPrompt = null;
+  let deferredPrompt: any = null;
   let canInstallPWA = false;
   let currentPage = 'security';
   let userRole = '';
@@ -94,33 +134,46 @@
   let showPwaInstalledToast = false;
   let pwaStatus = '';
   let showPwaManualToast = false;
-  let pengaturan;
+  let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
 
   async function fetchPengaturan() {
-    let lastFetched;
-    pengaturanCache.subscribe(val => lastFetched = val.lastFetched)();
-    if (!navigator.onLine && pengaturanData) {
-      pengaturan = pengaturanData;
-      return;
-    }
-    if (pengaturanData && Date.now() - lastFetched < PENGATURAN_CACHE_TTL) {
-      pengaturan = pengaturanData;
-      return;
-    }
-    // Fetch baru dari Supabase
-    const { data, error } = await supabase.from('pengaturan_keamanan').select('locked_pages, pin').single();
-    if (!error && data) {
-      pengaturan = data;
-      pengaturanCache.set({ data, lastFetched: Date.now() });
-      localStorage.setItem('pengaturanCache', JSON.stringify({ data, lastFetched: Date.now() }));
-    }
-  }
-
-  // Saat inisialisasi, load cache dari localStorage jika ada
-  if (typeof window !== 'undefined') {
-    const cache = localStorage.getItem('pengaturanCache');
-    if (cache) {
-      pengaturanCache.set(JSON.parse(cache));
+    try {
+      let lastFetched: number | undefined;
+      pengaturanCache.subscribe(val => lastFetched = val.lastFetched)();
+      
+      // Jika offline dan ada cache, gunakan cache
+      if (!navigator.onLine && pengaturanData) {
+        pengaturan = pengaturanData;
+        isPengaturanLoaded = true;
+        return;
+      }
+      
+      // Jika cache masih valid, gunakan cache
+      if (pengaturanData && lastFetched && Date.now() - lastFetched < PENGATURAN_CACHE_TTL) {
+        pengaturan = pengaturanData;
+        isPengaturanLoaded = true;
+        return;
+      }
+      
+      // Jika online, fetch baru dari Supabase
+      if (navigator.onLine) {
+        const { data, error } = await supabase.from('pengaturan_keamanan').select('locked_pages, pin').single();
+        if (!error && data) {
+          pengaturan = data as PengaturanData;
+          pengaturanCache.set({ data, lastFetched: Date.now() });
+          localStorage.setItem('pengaturanCache', JSON.stringify({ data, lastFetched: Date.now() }));
+          isPengaturanLoaded = true;
+        }
+      } else {
+        // Jika offline dan tidak ada cache valid, gunakan default
+        pengaturan = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
+        isPengaturanLoaded = true;
+      }
+    } catch (error) {
+      console.error('Error fetching pengaturan:', error);
+      // Fallback ke default jika terjadi error
+      pengaturan = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
+      isPengaturanLoaded = true;
     }
   }
 
@@ -189,7 +242,7 @@
   function handleInstallPWA() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt.userChoice.then((choiceResult: any) => {
         if (choiceResult.outcome === 'accepted') {
           showPwaInstalledToast = true;
           setTimeout(() => showPwaInstalledToast = false, 4000);
@@ -264,7 +317,7 @@
   $: roleIcon = getRoleIcon();
 
   // Tambahkan fungsi upload gambar menu ke bucket 'gambar-menu' Supabase Storage
-  async function uploadMenuImage(file, menuId) {
+  async function uploadMenuImage(file: File, menuId: string) {
     const ext = file.name.split('.').pop();
     const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
     // Upload ke bucket 'gambar-menu'
@@ -294,7 +347,7 @@
     </button>
   </div>
   <!-- Box Informasi Role -->
-  {#if userRole === ''}
+  {#if isLoading || !isProfileLoaded}
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2 animate-pulse">
       <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl mb-2"></div>
       <div class="h-6 w-24 bg-gray-200 rounded mb-1"></div>
@@ -337,7 +390,7 @@
   <!-- Grid Menu Pengaturan -->
   <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0">
     <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2">
-      {#if userRole === ''}
+      {#if isLoading || !isProfileLoaded}
         {#each Array(4) as _, i}
           <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-lg border-2 border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4">
             <div class="w-8 h-8 mb-2 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 rounded-lg"></div>

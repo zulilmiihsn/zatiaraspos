@@ -16,6 +16,7 @@ import { produkCache } from '$lib/stores/produkCache';
 import { kategoriCache } from '$lib/stores/kategoriCache';
 import { tambahanCache } from '$lib/stores/tambahanCache';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
+import { getPendingMenus } from '$lib/stores/transaksiOffline';
 
 let produkData: any[] | null = null;
 produkCache.subscribe(val => produkData = val.data);
@@ -50,6 +51,19 @@ onMount(async () => {
   await fetchAddOns();
   await fetchProducts();
   isLoadingProducts = false;
+  
+  // Sync otomatis saat online
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', async () => {
+      // Clear cache untuk memaksa refresh data
+      localStorage.removeItem('produkCache');
+      localStorage.removeItem('kategoriCache');
+      localStorage.removeItem('tambahanCache');
+      await fetchCategories();
+      await fetchAddOns();
+      await fetchProducts();
+    });
+  }
 });
 
 async function fetchCategories() {
@@ -71,13 +85,30 @@ async function fetchProducts() {
   produkCache.subscribe(val => lastFetched = val.lastFetched)();
   if (produkData && Date.now() - lastFetched < PRODUK_CACHE_TTL) {
     products = produkData;
-    return;
+  } else {
+    const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
+    if (!error) {
+      products = data;
+      produkCache.set({ data, lastFetched: Date.now() });
+      localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
+    }
   }
-  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
-  if (!error) {
-    products = data;
-    produkCache.set({ data, lastFetched: Date.now() });
-    localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
+  
+  // Integrasi menu pending: gabungkan menu pending dari IndexedDB
+  try {
+    const pendingMenus = await getPendingMenus();
+    if (pendingMenus.length) {
+      // Gabungkan menu pending ke products, tapi filter yang sudah dihapus
+      const validPendingMenus = pendingMenus.filter((menu: any) => {
+        // Cek apakah menu ini sudah dihapus dari database online
+        return !products.some((onlineMenu: any) => onlineMenu.id === menu.id);
+      });
+      if (validPendingMenus.length) {
+        products = [...products, ...validPendingMenus];
+      }
+    }
+  } catch (error) {
+    console.error('Gagal mengambil menu pending:', error);
   }
 }
 
