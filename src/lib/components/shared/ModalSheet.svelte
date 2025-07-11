@@ -124,7 +124,7 @@
 </style>
 
 {#if open}
-  <div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="0">
+  <div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="0" aria-label="Modal sheet" onkeyup={(e) => e.key === 'Enter' && close()}>
     <div
       class="modal-sheet w-full max-w-[100vw] overflow-x-hidden px-0 sm:px-0 pt-2 pb-0"
       style="max-width:100vw;"

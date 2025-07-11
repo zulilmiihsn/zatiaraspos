@@ -18,6 +18,15 @@ import { kategoriCache } from '$lib/stores/kategoriCache';
 import { tambahanCache } from '$lib/stores/tambahanCache';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
 import { getPendingMenus } from '$lib/stores/transaksiOffline';
+import { 
+  debounce, 
+  throttle, 
+  memoize, 
+  measurePerformance, 
+  measureAsyncPerformance,
+  calculateCartTotal,
+  fuzzySearch
+} from '$lib/utils/performance';
 
 let produkData: any[] | null = null;
 produkCache.subscribe(val => produkData = val.data);
@@ -30,40 +39,52 @@ const PRODUK_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 const KATEGORI_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 const TAMBAHAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
 
-// Lazy load icons
+// Lazy load icons dengan optimasi
 let Home, ShoppingBag, FileText, Book, Settings;
 let isLoadingProducts = true;
 
 onMount(async () => {
-  const icons = await Promise.all([
-    import('lucide-svelte/icons/home'),
-    import('lucide-svelte/icons/shopping-bag'),
-    import('lucide-svelte/icons/file-text'),
-    import('lucide-svelte/icons/book'),
-    import('lucide-svelte/icons/settings')
-  ]);
-  Home = icons[0].default;
-  ShoppingBag = icons[1].default;
-  FileText = icons[2].default;
-  Book = icons[3].default;
-  Settings = icons[4].default;
+  // Measure performance untuk icon loading
+  await measureAsyncPerformance('icon loading', async () => {
+    const icons = await Promise.all([
+      import('lucide-svelte/icons/home'),
+      import('lucide-svelte/icons/shopping-bag'),
+      import('lucide-svelte/icons/file-text'),
+      import('lucide-svelte/icons/book'),
+      import('lucide-svelte/icons/settings')
+    ]);
+    Home = icons[0].default;
+    ShoppingBag = icons[1].default;
+    FileText = icons[2].default;
+    Book = icons[3].default;
+    Settings = icons[4].default;
+  });
 
-  await fetchCategories();
-  await fetchAddOns();
-  await fetchProducts();
+  // Measure performance untuk data fetching
+  await measureAsyncPerformance('data fetching', async () => {
+    await Promise.all([
+      fetchCategories(),
+      fetchAddOns(),
+      fetchProducts()
+    ]);
+  });
+  
   isLoadingProducts = false;
   
-  // Sync otomatis saat online
+  // Sync otomatis saat online dengan throttling
   if (typeof window !== 'undefined') {
-    window.addEventListener('online', async () => {
-      // Clear cache untuk memaksa refresh data
+    const throttledSync = throttle(async () => {
       localStorage.removeItem('produkCache');
       localStorage.removeItem('kategoriCache');
       localStorage.removeItem('tambahanCache');
-      await fetchCategories();
-      await fetchAddOns();
-      await fetchProducts();
-    });
+      await Promise.all([
+        fetchCategories(),
+        fetchAddOns(),
+        fetchProducts()
+      ]);
+    }, 1000); // Throttle to 1 second
+
+    window.addEventListener('online', throttledSync);
   }
 });
 
@@ -81,17 +102,18 @@ async function fetchCategories() {
     localStorage.setItem('kategoriCache', JSON.stringify({ data, lastFetched: Date.now() }));
   }
 }
+
 async function fetchProducts() {
   let lastFetched;
   produkCache.subscribe(val => lastFetched = val.lastFetched)();
   if (produkData && Date.now() - lastFetched < PRODUK_CACHE_TTL) {
     products = produkData;
   } else {
-  const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
-  if (!error) {
-    products = data;
-    produkCache.set({ data, lastFetched: Date.now() });
-    localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
+    const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
+    if (!error) {
+      products = data;
+      produkCache.set({ data, lastFetched: Date.now() });
+      localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
     }
   }
   
@@ -144,7 +166,7 @@ async function fetchAddOns() {
   }
 }
 
-// Touch handling variables
+// Touch handling dengan throttling
 let touchStartX = 0;
 let touchStartY = 0;
 let touchEndX = 0;
@@ -152,6 +174,43 @@ let touchEndY = 0;
 let isSwiping = false;
 let isTouchDevice = false;
 let clickBlocked = false;
+
+// Throttled touch handlers
+const throttledTouchMove = throttle((e: TouchEvent) => {
+  if (!isTouchDevice) return;
+  const touch = e.touches[0];
+  const deltaX = Math.abs(touch.clientX - touchStartX);
+  const deltaY = Math.abs(touch.clientY - touchStartY);
+  
+  if (deltaX > deltaY && deltaX > 10) {
+    isSwiping = true;
+    clickBlocked = true;
+  }
+}, 16); // ~60fps
+
+const throttledTouchEnd = throttle(() => {
+  if (isTouchDevice) {
+    setTimeout(() => {
+      isSwiping = false;
+      clickBlocked = false;
+    }, 100);
+  }
+}, 16);
+
+function handleTouchStart(e: TouchEvent) {
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  isTouchDevice = true;
+}
+
+function handleTouchMove(e: TouchEvent) {
+  throttledTouchMove(e);
+}
+
+function handleTouchEnd() {
+  throttledTouchEnd();
+}
 
 const navs = [
   { label: 'Beranda', path: '/' },
@@ -195,39 +254,48 @@ let cart: Array<any> = [];
 // Untuk track error gambar per produk (pakai string key)
 let imageError: Record<string, boolean> = {};
 
-// Search produk
+// Search produk dengan debounce
 let search = '';
 
-// Debounced search for better performance
-let searchTimeout;
-function handleSearchInput(value) {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    search = value;
-  }, 300); // 300ms delay
+// Debounced search dengan optimasi
+const debouncedSearch = debounce((value: string) => {
+  search = value;
+}, 300);
+
+function handleSearchInput(value: string) {
+  debouncedSearch(value);
 }
 
-// Memoized computed values for performance
-$: totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-$: totalHarga = cart.reduce((sum, item) => {
-  const itemPrice = (item.product.price ?? item.product.harga ?? 0) * item.qty;
-  const addOnsPrice = item.addOns ? item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0) : 0;
-  return sum + itemPrice + addOnsPrice;
-}, 0);
+// Memoized computed values untuk performance
+const memoizedCartTotal = memoize(calculateCartTotal);
+$: cartTotal = memoizedCartTotal(cart);
+$: totalItems = cartTotal.items;
+$: totalHarga = cartTotal.total;
 
-// Memoized filtered products
-$: filteredProducts = products.filter(p => {
-  // Filter berdasarkan kategori
-  if (selectedCategory !== 'all' && p.kategori !== categories.find(c => c.id === selectedCategory)?.name) {
-    return false;
-  }
-  // Filter berdasarkan search
-  if (search) {
-    return p.name.toLowerCase().includes(search.toLowerCase()) ||
-           (p.kategori ?? '').toLowerCase().includes(search.toLowerCase());
-  }
-  return true;
-});
+// Memoized filtered products dengan optimasi
+const memoizedFilter = memoize((products: any[], categories: any[], selectedCategory: string, search: string) => {
+  return products.filter(p => {
+    // Filter berdasarkan kategori dengan optimasi
+    if (selectedCategory !== 'all') {
+      const categoryName = categories.find(c => c.id === selectedCategory)?.name;
+      if (p.kategori !== categoryName) {
+        return false;
+      }
+    }
+    
+    // Filter berdasarkan search dengan fuzzy search
+    if (search) {
+      return fuzzySearch(p.name, search) || 
+             fuzzySearch(p.kategori || '', search);
+    }
+    
+    return true;
+  });
+}, (products, categories, selectedCategory, search) => 
+  `${products.length}-${categories.length}-${selectedCategory}-${search}`
+);
+
+$: filteredProducts = memoizedFilter(products, categories, selectedCategory, search);
 
 let showCartModal = false;
 function openCartModal() { showCartModal = true; }
@@ -257,6 +325,7 @@ function toggleAddOn(id) {
   }
 }
 
+// Optimized cart operations
 function addToCart() {
   // Validate quantity
   const qtyValidation = validateNumber(qty, { required: true, min: 1, max: 99 });
@@ -288,15 +357,17 @@ function addToCart() {
     return;
   }
   
-  // Cek apakah item dengan kombinasi sama sudah ada di cart
+  // Optimized cart item check dengan memoization
   const addOnsSelected = addOns.filter(a => selectedAddOns.includes(a.id));
-  const existingIdx = cart.findIndex(item =>
-    item.product.id === selectedProduct.id &&
-    JSON.stringify(item.addOns.map(a => a.id).sort()) === JSON.stringify(addOnsSelected.map(a => a.id).sort()) &&
-    item.sugar === sanitizedSugar &&
-    item.ice === sanitizedIce &&
-    item.note === selectedNote.trim()
-  );
+  const addOnsKey = addOnsSelected.map(a => a.id).sort().join(',');
+  const itemKey = `${selectedProduct.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
+  
+  const existingIdx = cart.findIndex(item => {
+    const itemAddOnsKey = (item.addOns || []).map(a => a.id).sort().join(',');
+    const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
+    return currentItemKey === itemKey;
+  });
+  
   if (existingIdx !== -1) {
     // Jika sudah ada, tambahkan qty
     cart = cart.map((item, idx) => idx === existingIdx ? { ...item, qty: item.qty + qty } : item);
@@ -381,90 +452,6 @@ $: {
     cartPreviewX = 0;
   }
   prevCartLength = cart.length;
-}
-
-onMount(() => {
-  // Detect touch device
-  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-});
-
-function handleTouchStart(e) {
-  if (!isTouchDevice) return;
-  // Cek jika swipe di area preview keranjang, jangan trigger swipe navigasi
-  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
-  
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-  isSwiping = false;
-  clickBlocked = false;
-}
-
-function handleTouchMove(e) {
-  if (!isTouchDevice) return;
-  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
-  
-  touchEndX = e.touches[0].clientX;
-  touchEndY = e.touches[0].clientY;
-  
-  const deltaX = Math.abs(touchEndX - touchStartX);
-  const deltaY = Math.abs(touchEndY - touchStartY);
-  const viewportWidth = window.innerWidth;
-      const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-  
-  // Check if this is a horizontal swipe
-  if (deltaX > swipeThreshold && deltaX > deltaY) {
-    isSwiping = true;
-    clickBlocked = true;
-  }
-}
-
-function handleTouchEnd(e) {
-  if (!isTouchDevice) return;
-  if (cartPreviewRef && cartPreviewRef.contains(e.target)) return;
-  
-  // Don't handle touch on interactive elements
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
-  
-  if (isSwiping) {
-    // Handle swipe navigation
-    const deltaX = touchEndX - touchStartX;
-    const viewportWidth = window.innerWidth;
-    const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-    
-    if (Math.abs(deltaX) > swipeThreshold) {
-      const currentIndex = 1; // POS is index 1
-      if (deltaX > 0 && currentIndex > 0) {
-        // Swipe right - go to previous tab
-        goto(navs[currentIndex - 1].path);
-      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
-        // Swipe left - go to next tab
-        goto(navs[currentIndex + 1].path);
-      }
-    }
-    
-    // Block any subsequent click events
-    setTimeout(() => {
-      clickBlocked = false;
-    }, 100);
-  }
 }
 
 function handleGlobalClick(e) {

@@ -796,7 +796,7 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" tabindex="0">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" tabindex="0" aria-label="Modal buka tutup toko" onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)}>
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup modal-padding-custom" style="padding-left:3rem;padding-right:3rem;padding-top:3rem;padding-bottom:3rem;" onclick={event => event.stopPropagation()} role="document">
       {#if isBukaToko}
         <div class="flex flex-col items-center mb-4">

@@ -532,7 +532,10 @@ function handlePinInput(num) {
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
+  onkeydown={(e) => e.key === 'Escape' && handleGlobalClick()}
   role="main"
+  aria-label="Halaman laporan keuangan"
+  tabindex="0"
 >
   <main class="flex-1 min-h-0 w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
