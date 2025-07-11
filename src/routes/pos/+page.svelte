@@ -298,8 +298,13 @@ const memoizedFilter = memoize((products: any[], categories: any[], selectedCate
 $: filteredProducts = memoizedFilter(products, categories, selectedCategory, search);
 
 let showCartModal = false;
-function openCartModal() { showCartModal = true; }
-function closeCartModal() { showCartModal = false; }
+function openCartModal() {
+  showModal = false;
+  showCartModal = true;
+}
+function closeCartModal() {
+  showCartModal = false;
+}
 function removeCartItem(idx) { cart = cart.filter((_, i) => i !== idx); }
 
 function openAddOnModal(product) {
@@ -561,35 +566,7 @@ function showErrorNotif(message: string) {
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => {
-              if (p.tipe === 'minuman') {
-                openAddOnModal(p);
-              } else {
-                // Untuk makanan, langsung tambah ke keranjang
-                selectedProduct = p;
-                selectedAddOns = [];
-                selectedSugar = 'normal';
-                selectedIce = 'normal';
-                qty = 1;
-                selectedNote = '';
-                addToCart();
-              }
-            }} onkeydown={(e) => {
-              if (e.key === 'Enter') {
-                if (p.tipe === 'minuman') {
-                  openAddOnModal(p);
-                } else {
-                  // Untuk makanan, langsung tambah ke keranjang
-                  selectedProduct = p;
-                  selectedAddOns = [];
-                  selectedSugar = 'normal';
-                  selectedIce = 'normal';
-                  qty = 1;
-                  selectedNote = '';
-                  addToCart();
-                }
-              }
-            }} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
               <div class="flex flex-col flex-1 min-w-0">
                 <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
                 {#if p.kategori}
@@ -619,35 +596,7 @@ function showErrorNotif(message: string) {
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => {
-              if (p.tipe === 'minuman') {
-                openAddOnModal(p);
-              } else {
-                // Untuk makanan, langsung tambah ke keranjang
-                selectedProduct = p;
-                selectedAddOns = [];
-                selectedSugar = 'normal';
-                selectedIce = 'normal';
-                qty = 1;
-                selectedNote = '';
-                addToCart();
-              }
-            }} onkeydown={(e) => {
-              if (e.key === 'Enter') {
-                if (p.tipe === 'minuman') {
-                  openAddOnModal(p);
-                } else {
-                  // Untuk makanan, langsung tambah ke keranjang
-                  selectedProduct = p;
-                  selectedAddOns = [];
-                  selectedSugar = 'normal';
-                  selectedIce = 'normal';
-                  qty = 1;
-                  selectedNote = '';
-                  addToCart();
-                }
-              }
-            }} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
               {#if p.image && !imageError[String(p.id)]}
                 <img class="w-20 h-20 object-cover rounded-lg bg-gray-100 mb-2 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
               {:else}
@@ -689,14 +638,59 @@ function showErrorNotif(message: string) {
     {/if}
 
     {#if showCartModal}
-      <ModalSheet bind:open={showCartModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeCartModal}>
+      <ModalSheet bind:open={showCartModal} title="Keranjang" on:close={closeCartModal}>
+        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
+          style="scrollbar-width:none;-ms-overflow-style:none;"
+          role="button"
+          tabindex="0"
+        >
+          {#each cart as item, idx}
+            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-3 shadow-sm">
+              <div class="flex flex-col min-w-0">
+                <div class="text-base font-semibold text-gray-900 mb-0.5 truncate">{item.qty}x {item.product.name}</div>
+                <div class="text-xs text-gray-500 font-medium">
+                  {[
+                    item.addOns && item.addOns.length > 0 ? item.addOns.map(a => a.name).join(', ') : '',
+                    item.note ? `${item.note}` : '',
+                    item.product.tipe === 'minuman' && item.sugar !== 'normal' ? (sugarOptions.find(s => s.id === item.sugar)?.label ?? item.sugar) : '',
+                    item.product.tipe === 'minuman' && item.ice !== 'normal' ? (iceOptions.find(i => i.id === item.ice)?.label ?? item.ice) : ''
+                  ].filter(Boolean).join(', ')}
+                </div>
+              </div>
+              <button class="bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-semibold" onclick={() => removeCartItem(idx)}>Hapus</button>
+            </div>
+          {/each}
+        </div>
+        <div slot="footer">
+          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={goToBayar}>Bayar</button>
+        </div>
+      </ModalSheet>
+    {/if}
+
+    {#if showSnackbar}
+      <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-gray-900 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
+    {/if}
+
+    {#if showErrorNotification}
+      <div 
+        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        style="transform: translateX(-50%);"
+        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
+        out:fade={{ duration: 200 }}
+      >
+        {errorNotificationMessage}
+      </div>
+    {/if}
+
+    {#if showModal}
+      <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
         <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
           style="scrollbar-width:none;-ms-overflow-style:none;"
           role="button"
           tabindex="0"
         >
-          <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Gula</div>
           {#if selectedProduct && selectedProduct.tipe === 'minuman'}
+            <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Gula</div>
             <div class="flex gap-2 mb-3">
               {#each sugarOptions as s}
                 <button
@@ -707,8 +701,8 @@ function showErrorNotif(message: string) {
               {/each}
             </div>
           {/if}
-          <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Es</div>
           {#if selectedProduct && selectedProduct.tipe === 'minuman'}
+            <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Es</div>
             <div class="flex gap-2 mb-3">
               {#each iceOptions as i}
                 <button
@@ -758,86 +752,6 @@ function showErrorNotif(message: string) {
         </div>
       </ModalSheet>
     {/if}
-
-    {#if showSnackbar}
-      <div class="fixed left-1/2 bottom-28 -translate-x-1/2 bg-gray-900 text-white rounded-lg px-4 py-2 z-50 text-sm shadow-lg animate-fadeInOut">{snackbarMsg}</div>
-    {/if}
-
-    {#if showErrorNotification}
-      <div 
-        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
-        style="transform: translateX(-50%);"
-        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-        out:fade={{ duration: 200 }}
-      >
-        {errorNotificationMessage}
-      </div>
-    {/if}
-
-    <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
-      <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
-        style="scrollbar-width:none;-ms-overflow-style:none;"
-        role="button"
-        tabindex="0"
-      >
-        <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Gula</div>
-        <div class="flex gap-2 mb-3">
-          {#each sugarOptions as s}
-            <button
-              class="flex-1 px-0 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 {selectedSugar === s.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
-              type="button"
-              onclick={() => selectedSugar = s.id}
-            >{s.label}</button>
-          {/each}
-        </div>
-        <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Jenis Es</div>
-        <div class="flex gap-2 mb-3">
-          {#each iceOptions as i}
-            <button
-              class="flex-1 px-0 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 {selectedIce === i.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
-              type="button"
-              onclick={() => selectedIce = i.id}
-            >{i.label}</button>
-          {/each}
-        </div>
-        <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Ekstra</div>
-        {#if selectedProduct && selectedProduct.ekstraIds && selectedProduct.ekstraIds.length > 0 && addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)).length > 0}
-          <div class="grid grid-cols-2 gap-3 mb-6">
-            {#each addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)) as a}
-              <button
-                class="w-full justify-center py-1.5 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
-                type="button"
-                onclick={() => toggleAddOn(a.id)}
-              >
-                <span class="truncate w-full">{a.name}</span>
-                <span class="font-semibold mt-0 text-sm {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
-              </button>
-            {/each}
-          </div>
-        {:else}
-          <div class="mb-6 text-sm text-gray-400 font-medium text-center">Tidak ada ekstra untuk menu ini.</div>
-        {/if}
-        <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Catatan</div>
-        <textarea
-          class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 resize-none"
-          placeholder="Contoh: Tidak terlalu manis, tambah es batu, dll..."
-          bind:value={selectedNote}
-          rows="3"
-          maxlength="200"
-          oninput={(e) => { selectedNote = capitalizeFirst(e.target.value); }}
-        ></textarea>
-        <div class="text-xs text-gray-500 text-right mt-1">{selectedNote.length}/200</div>
-      </div>
-      <div slot="footer">
-        <div class="font-semibold text-gray-800 mb-2 mt-0 text-base">Jumlah</div>
-        <div class="flex items-center justify-center gap-3 mb-4">
-          <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={decQty}>-</button>
-          <input class="w-12 text-center text-lg font-semibold border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-800 outline-none" type="number" min="1" max="99" bind:value={qty} />
-                      <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={incQty}>+</button>
-        </div>
-                  <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={addToCart}>Tambah ke Keranjang</button>
-      </div>
-    </ModalSheet>
   </main>
 </div>
 
