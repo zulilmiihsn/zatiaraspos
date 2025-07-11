@@ -59,7 +59,6 @@ let menuForm = {
   harga: '',
   ekstraIds: [],
   gambar: '',
-  gula: true,
 };
 
 let kategoriForm = {
@@ -319,7 +318,7 @@ function openMenuForm(menu = null) {
     menuForm = { ...menu, harga: menu.harga.toString() };
   } else {
     editMenuId = null;
-    menuForm = { name: '', kategori: '', tipe: 'minuman', harga: '', ekstraIds: [], gambar: '', gula: true };
+    menuForm = { name: '', kategori: '', tipe: 'minuman', harga: '', ekstraIds: [], gambar: '' };
   }
 }
 
@@ -383,6 +382,10 @@ async function saveMenu() {
     notifModalType = 'warning';
     showNotifModal = true;
     return;
+  }
+  // Pastikan kategori null jika tidak dipilih
+  if (!menuForm.kategori || menuForm.kategori.trim() === '') {
+    menuForm.kategori = null;
   }
   let imageUrl = menuForm.gambar;
   // Jika user memilih file baru (bukan string URL)

@@ -14,7 +14,7 @@
 </script>
 
 {#if open}
-  <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" tabindex="0" aria-label="Modal pilih opsi" onkeyup={(e) => e.key === 'Enter' && close()}>
+  <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-label="Modal pilih opsi" onkeyup={(e) => e.key === 'Enter' && close()}>
     <div class="sheet" onclick={(e) => e.stopPropagation()} role="document">
       <div class="sheet-header">Pilih Opsi</div>
       <div class="dropdown-list">

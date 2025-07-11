@@ -523,7 +523,6 @@ main {
   onkeydown={(e) => e.key === 'Escape' && handleGlobalClick()}
   role="main"
   aria-label="Halaman catat pemasukan pengeluaran"
-  tabindex="0"
 >
   <main class="flex-1 min-h-0 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
