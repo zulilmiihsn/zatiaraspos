@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy, afterUpdate } from 'svelte';
   export let src: string = '';
   export let open: boolean = false;
   export const aspect: number = 1;
@@ -140,11 +140,52 @@
   function handleOk() {
     // preview sudah selalu update, cukup dispatch
     dispatch('done', { cropped: preview });
+    open = false;
   }
   function handleCancel() {
     dispatch('cancel');
+    open = false;
   }
-  onMount(() => draw());
+
+  let lastCanvasEl: HTMLCanvasElement | null = null;
+
+  $: {
+    if (canvasEl && open) {
+      // Jika canvasEl berubah, detach dari yang lama
+      if (lastCanvasEl && lastCanvasEl !== canvasEl) {
+        lastCanvasEl.removeEventListener('touchstart', onPointerDown);
+        lastCanvasEl.removeEventListener('touchmove', onPointerMove);
+        lastCanvasEl.removeEventListener('touchend', onPointerUp);
+        lastCanvasEl.removeEventListener('wheel', onWheel);
+      }
+      canvasEl.addEventListener('touchstart', onPointerDown, { passive: false });
+      canvasEl.addEventListener('touchmove', onPointerMove, { passive: false });
+      canvasEl.addEventListener('touchend', onPointerUp, { passive: false });
+      canvasEl.addEventListener('wheel', onWheel, { passive: false });
+      lastCanvasEl = canvasEl;
+    } else if (lastCanvasEl) {
+      lastCanvasEl.removeEventListener('touchstart', onPointerDown);
+      lastCanvasEl.removeEventListener('touchmove', onPointerMove);
+      lastCanvasEl.removeEventListener('touchend', onPointerUp);
+      lastCanvasEl.removeEventListener('wheel', onWheel);
+      lastCanvasEl = null;
+      dragging = false;
+    }
+  }
+
+  onMount(() => {
+    draw();
+  });
+  onDestroy(() => {
+    if (lastCanvasEl) {
+      lastCanvasEl.removeEventListener('touchstart', onPointerDown);
+      lastCanvasEl.removeEventListener('touchmove', onPointerMove);
+      lastCanvasEl.removeEventListener('touchend', onPointerUp);
+      lastCanvasEl.removeEventListener('wheel', onWheel);
+      lastCanvasEl = null;
+    }
+    dragging = false;
+  });
 </script>
 
 {#if open}
@@ -156,10 +197,6 @@
           onmousemove={onPointerMove}
           onmouseup={onPointerUp}
           onmouseleave={onPointerUp}
-          ontouchstart={onPointerDown}
-          ontouchmove={onPointerMove}
-          ontouchend={onPointerUp}
-          onwheel={onWheel}
           style="width:100%;height:100%;touch-action:none;cursor:grab;"
         ></canvas>
       </div>

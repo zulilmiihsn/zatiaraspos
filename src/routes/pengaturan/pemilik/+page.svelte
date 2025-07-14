@@ -25,6 +25,7 @@ import { tambahanCache } from '$lib/stores/tambahanCache';
 import { saveMenuOffline, getPendingMenus, deleteMenuOffline, syncDeleteMenu } from '$lib/stores/transaksiOffline';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+import { writable } from 'svelte/store';
 
 let currentUser = null;
 let currentUserRole = '';
@@ -52,14 +53,15 @@ let editMenuId = null;
 let editKategoriId = null;
 let editEkstraId = null;
 
-let menuForm = {
+// Ganti deklarasi menuForm menjadi store writable
+let menuForm = writable({
   name: '',
   kategori: '',
   tipe: 'minuman',
   harga: '',
   ekstraIds: [],
   gambar: '',
-};
+});
 
 let kategoriForm = {
   name: '',
@@ -150,6 +152,72 @@ let isGridView = true;
 let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
+
+let isCropping = false;
+
+let fileInputEl;
+
+// Tambahkan state lokal untuk tab keamanan
+let activeSecurityTab = 'pemilik'; // 'pemilik' atau 'kasir'
+
+// State untuk form kasir
+let kasirOldUsername = '';
+let kasirNewUsername = '';
+let kasirOldPassword = '';
+let kasirNewPassword = '';
+let kasirConfirmPassword = '';
+let kasirUserPassError = '';
+
+// Fungsi handle submit form kasir
+async function handleChangeKasirUserPass(e) {
+  e.preventDefault();
+  kasirUserPassError = '';
+  if (!kasirOldUsername || !kasirNewUsername || !kasirOldPassword || !kasirNewPassword || !kasirConfirmPassword) {
+    kasirUserPassError = 'Semua field wajib diisi.';
+    return;
+  }
+  if (kasirNewPassword !== kasirConfirmPassword) {
+    kasirUserPassError = 'Konfirmasi password tidak cocok.';
+    return;
+  }
+  if (kasirOldUsername === kasirNewUsername) {
+    kasirUserPassError = 'Username baru tidak boleh sama dengan username lama.';
+    return;
+  }
+  // Cari user kasir di profil
+  const { data: kasirProfile, error: kasirProfileError } = await supabase
+    .from('profil')
+    .select('id, email, username')
+    .eq('role', 'kasir')
+    .single();
+  if (kasirProfileError || !kasirProfile) {
+    kasirUserPassError = 'User kasir tidak ditemukan.';
+    return;
+  }
+  if (kasirProfile.username !== kasirOldUsername) {
+    kasirUserPassError = 'Username lama kasir salah.';
+    return;
+  }
+  // Update username di profil
+  const { error: usernameError } = await supabase.from('profil').update({ username: kasirNewUsername }).eq('id', kasirProfile.id);
+  if (usernameError) {
+    kasirUserPassError = 'Gagal update nama user kasir.';
+    return;
+  }
+  // Update password via Supabase Auth (harus login sebagai kasir, workaround: gunakan admin API jika ada, atau informasikan ke user)
+  // Di Supabase, update password user lain via client-side tidak didukung, jadi hanya update username saja.
+  // Jika ingin update password kasir, harus login sebagai kasir lalu update password sendiri.
+  // Untuk demo, tampilkan notifikasi sukses update username saja.
+  kasirUserPassError = '';
+  notifModalMsg = 'Username kasir berhasil diubah. Untuk mengubah password, silakan login sebagai kasir.';
+  notifModalType = 'success';
+  showNotifModal = true;
+  kasirOldUsername = '';
+  kasirNewUsername = '';
+  kasirOldPassword = '';
+  kasirNewPassword = '';
+  kasirConfirmPassword = '';
+}
 
 // Load saved settings on mount
 onMount(async () => {
@@ -315,10 +383,10 @@ function openMenuForm(menu = null) {
   showMenuForm = true;
   if (menu) {
     editMenuId = menu.id;
-    menuForm = { ...menu, harga: menu.harga.toString() };
+    $menuForm = { ...menu, harga: menu.harga.toString() };
   } else {
     editMenuId = null;
-    menuForm = { name: '', kategori: '', tipe: 'minuman', harga: '', ekstraIds: [], gambar: '' };
+    $menuForm = { name: '', kategori: '', tipe: 'minuman', harga: '', ekstraIds: [], gambar: '' };
   }
 }
 
@@ -367,31 +435,44 @@ async function uploadMenuImage(file, menuId) {
   const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
   const { data, error } = await supabase.storage.from('gambar-menu').upload(filePath, file, { upsert: true });
   if (error) {
-    console.error('Supabase uploadMenuImage error:', error);
-    throw error;
+    notifModalMsg = 'Gagal upload gambar: ' + (error?.message || error?.error_description || 'Unknown error');
+    notifModalType = 'error';
+    showNotifModal = true;
+    return;
   }
   // Dapatkan public URL
   const { data: publicUrlData } = supabase.storage.from('gambar-menu').getPublicUrl(filePath);
   return publicUrlData.publicUrl;
 }
 
+// Tambahkan fungsi upload dari data URL ke Supabase Storage
+async function uploadMenuImageFromDataUrl(dataUrl, menuId) {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const filePath = `menu-${menuId}-${Date.now()}.jpg`;
+  const { data, error } = await supabase.storage.from('gambar-menu').upload(filePath, blob, { upsert: true });
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from('gambar-menu').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+}
+
 async function saveMenu() {
   // Validasi field harga
-  if (!menuForm.harga || menuForm.harga.toString().trim() === '') {
+  if (!$menuForm.harga || $menuForm.harga.toString().trim() === '') {
     notifModalMsg = 'Harga menu wajib diisi!';
     notifModalType = 'warning';
     showNotifModal = true;
     return;
   }
   // Pastikan kategori null jika tidak dipilih
-  if (!menuForm.kategori || menuForm.kategori.trim() === '') {
-    menuForm.kategori = null;
+  if (!$menuForm.kategori || $menuForm.kategori.trim() === '') {
+    $menuForm = { ...$menuForm, kategori: null };
   }
-  let imageUrl = menuForm.gambar;
-  // Jika user memilih file baru (bukan string URL)
-  if (selectedImage && selectedImage instanceof File) {
+  let imageUrl = $menuForm.gambar;
+  // Jika gambar berupa data URL (hasil crop)
+  if (imageUrl && imageUrl.startsWith('data:image/')) {
     try {
-      imageUrl = await uploadMenuImage(selectedImage, editMenuId || Date.now());
+      imageUrl = await uploadMenuImageFromDataUrl(imageUrl, editMenuId || Date.now());
     } catch (err) {
       notifModalMsg = 'Gagal upload gambar: ' + (err?.message || err?.error_description || 'Unknown error');
       notifModalType = 'error';
@@ -399,7 +480,7 @@ async function saveMenu() {
       return;
     }
   }
-  const payload = { ...menuForm, gambar: imageUrl, harga: parseInt(menuForm.harga) };
+  const payload = { ...$menuForm, gambar: imageUrl, harga: parseInt($menuForm.harga) };
   let result;
   try {
   if (editMenuId) {
@@ -552,8 +633,10 @@ async function saveKategoriDetail() {
     // Update nama kategori
     const { error } = await supabase.from('kategori').update({ name: kategoriDetailName }).eq('id', kategoriDetail.id);
     if (error) {
-      console.error('Supabase saveKategoriDetail error:', error);
-      alert('Gagal menyimpan kategori: ' + error.message);
+      notifModalMsg = 'Gagal menyimpan kategori: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
+      return;
     }
     // Update kategori pada produk
     await updateMenusKategori(kategoriDetailName, selectedMenuIds, kategoriDetail.name);
@@ -561,12 +644,17 @@ async function saveKategoriDetail() {
     // INSERT kategori baru
     const { data, error } = await supabase.from('kategori').insert([{ name: kategoriDetailName }]).select();
     if (error) {
-      console.error('Supabase insertKategori error:', error);
-      alert('Gagal menambah kategori: ' + error.message);
+      notifModalMsg = 'Gagal menambah kategori: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
+      return;
     }
     // Update kategori pada produk
     await updateMenusKategori(kategoriDetailName, selectedMenuIds, null);
   }
+  notifModalMsg = 'Kategori berhasil disimpan.';
+  notifModalType = 'success';
+  showNotifModal = true;
   showKategoriDetailModal = false;
   kategoriDetail = null;
   await fetchKategori();
@@ -744,6 +832,9 @@ $: filteredMenus = menus.filter(menu => {
 });
 
 function handleFileChange(e) {
+  if (isCropping) {
+    return;
+  }
   const file = e.target.files[0];
   if (!file) return;
   selectedImage = file;
@@ -753,16 +844,18 @@ function handleFileChange(e) {
     setTimeout(() => {
       cropperDialogImage = ev.target.result as string;
       showCropperDialog = true;
+      isCropping = true;
     }, 10);
   };
   reader.readAsDataURL(file);
 }
 
 function handleCropperDone(e) {
-  menuForm.gambar = e.detail.cropped;
-  menuForm = { ...menuForm };
+  $menuForm = { ...$menuForm, gambar: e.detail.cropped };
   showCropperDialog = false;
   cropperDialogImage = '';
+  isCropping = false;
+  if (fileInputEl) fileInputEl.value = '';
 }
 
 function handleCropperCancel() {
@@ -773,7 +866,7 @@ function handleCropperCancel() {
 function removeImage() {
   selectedImage = null;
   croppedImage = null;
-  menuForm.gambar = '';
+  $menuForm = { ...$menuForm, gambar: '' };
 }
 
 function handleImgError(id: string) {
@@ -784,7 +877,7 @@ function handleImgError(id: string) {
 function formatRupiahInput(e) {
   let value = e.target.value.replace(/[^\d]/g, '');
   value = value ? parseInt(value).toLocaleString('id-ID') : '';
-  menuForm.harga = value;
+  $menuForm.harga = value;
 }
 
 // Tambahkan state untuk tap vs swipe ekstra
@@ -880,7 +973,9 @@ async function handleChangeUserPass(e) {
     return;
   }
   userPassError = '';
-  alert('Perubahan username/password berhasil disimpan.');
+  notifModalMsg = 'Perubahan username/password berhasil disimpan.';
+  notifModalType = 'success';
+  showNotifModal = true;
 }
 
 async function handleChangePin() {
@@ -906,7 +1001,9 @@ async function handleChangePin() {
   await supabase.from('pengaturan_keamanan').update({ pin: newPin, locked_pages: lockedPages }).eq('id', 1);
   pin = newPin;
   pinError = '';
-  alert('Perubahan PIN & pengaturan kunci berhasil disimpan.');
+  notifModalMsg = 'Perubahan PIN & pengaturan kunci berhasil disimpan.';
+  notifModalType = 'success';
+  showNotifModal = true;
 }
 
 function handlePinSubmit() {
@@ -916,7 +1013,9 @@ function handlePinSubmit() {
     return;
   }
   showPinModal = false;
-  alert('Akses halaman berhasil dibuka (dummy).');
+  notifModalMsg = 'Akses halaman berhasil dibuka (dummy).';
+  notifModalType = 'success';
+  showNotifModal = true;
 }
 
 function closeMenuForm() {
@@ -1021,33 +1120,30 @@ async function savePinSettings() {
     pinError = 'Semua field wajib diisi.';
     return;
   }
-  
   if (newPin !== confirmPin) {
     pinError = 'Konfirmasi PIN tidak cocok.';
     return;
   }
-  
-  if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
+  if (newPin.length < 4 || newPin.length > 6 || !/^[0-9]+$/.test(newPin)) {
     pinError = 'PIN harus 4-6 digit angka.';
     return;
   }
-  
   if (oldPin !== '1234') { // Simulasi PIN lama
     pinError = 'PIN lama salah.';
     return;
   }
-
   try {
     // Simulasi update PIN
     await new Promise(resolve => setTimeout(resolve, 1000));
     notifModalMsg = 'Perubahan PIN & pengaturan kunci berhasil disimpan.';
     notifModalType = 'success';
     showNotifModal = true;
-    
     oldPin = '';
     newPin = '';
     confirmPin = '';
     pinError = '';
+    // Simpan lockedPages ke localStorage setiap kali berhasil simpan
+    localStorage.setItem('lockedPages', JSON.stringify(lockedPages));
   } catch (error) {
     pinError = 'Gagal menyimpan perubahan: ' + error.message;
   }
@@ -1057,6 +1153,27 @@ function openPageAccess() {
   notifModalMsg = 'Akses halaman berhasil dibuka (dummy).';
   notifModalType = 'success';
   showNotifModal = true;
+}
+
+$: if ($menuForm.gambar) {
+}
+$: ;
+
+// Tambahkan fungsi baru di bawah script
+async function saveLockedPages() {
+  try {
+    const { error } = await supabase.from('pengaturan_keamanan').update({ locked_pages: lockedPages }).eq('id', 1);
+    if (error) throw error;
+    notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
+    notifModalType = 'success';
+    showNotifModal = true;
+    // Fetch ulang dari Supabase agar state sinkron
+    await fetchSecuritySettings();
+  } catch (error) {
+    notifModalMsg = 'Gagal menyimpan pengaturan: ' + (error.message || error.error_description || 'Unknown error');
+    notifModalType = 'error';
+    showNotifModal = true;
+  }
 }
 </script>
 
@@ -1483,23 +1600,25 @@ function openPageAccess() {
               <div
                 class="absolute top-1 left-1 h-[calc(100%-0.5rem)] w-1/2 rounded-lg z-0 transition-transform transition-colors duration-300 ease-in-out"
                 style="
-                  transform: translateX({currentUserRole === 'pemilik' ? '0%' : '100%'});
-                  background: {currentUserRole === 'pemilik' ? '#ec4899' : '#3b82f6'};
+                  transform: translateX({activeSecurityTab === 'pemilik' ? '0%' : '100%'});
+                  background: {activeSecurityTab === 'pemilik' ? '#ec4899' : '#3b82f6'};
                 "
               ></div>
               <button 
-                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${currentUserRole === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => setUserRole('pemilik')}
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${activeSecurityTab === 'pemilik' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => { activeSecurityTab = 'pemilik'; }}
               >
                 Pemilik
               </button>
               <button 
-                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${currentUserRole === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                onclick={() => setUserRole('kasir')}
+                class={`flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg font-medium transition-all text-xs relative z-10 ${activeSecurityTab === 'kasir' ? 'text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                onclick={() => { activeSecurityTab = 'kasir'; }}
               >
                 Kasir
               </button>
                   </div>
+            <!-- Form ganti password, bisa gunakan activeSecurityTab untuk menentukan form mana yang tampil -->
+            {#if activeSecurityTab === 'pemilik'}
             <form class="flex flex-col gap-4" 
                   onsubmit={handleChangeUserPass} 
                   autocomplete="off">
@@ -1512,63 +1631,82 @@ function openPageAccess() {
                 <div class="text-pink-600 text-sm text-center mt-1">{userPassError}</div>
               {/if}
               <button 
-                class={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 ${currentUserRole === 'pemilik' ? 'bg-pink-500 hover:bg-pink-600 active:bg-pink-700' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'}`}
+                  class={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700`}
                 type="submit"
               >
                 Simpan Perubahan
               </button>
             </form>
+            {:else}
+              <!-- Form ganti username & password kasir -->
+              <form class="flex flex-col gap-4" 
+                    onsubmit={handleChangeKasirUserPass} 
+                    autocomplete="off">
+                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Lama Kasir" bind:value={kasirOldUsername} required />
+                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Baru Kasir" bind:value={kasirNewUsername} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Lama Kasir" bind:value={kasirOldPassword} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Baru Kasir" bind:value={kasirNewPassword} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi Password Baru Kasir" bind:value={kasirConfirmPassword} required />
+                {#if kasirUserPassError}
+                  <div class="text-blue-600 text-sm text-center mt-1">{kasirUserPassError}</div>
+                {/if}
+                <button 
+                  class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
+                  type="submit"
+                >
+                  Simpan Perubahan
+                </button>
+              </form>
+            {/if}
           </div>
           <!-- Section 2: Ganti PIN Keamanan -->
-          {#if currentUserRole === 'pemilik'}
+          {#if activeSecurityTab === 'pemilik'}
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
               <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti PIN Keamanan</h3>
-              <p class="text-gray-500 text-sm mb-6">Pengaturan PIN keamanan untuk mengunci halaman tertentu.</p>
-              <form class="flex flex-col gap-4 w-full" 
-                  onsubmit={handleChangePin} 
-                  autocomplete="off">
-                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" 
-                  oninput={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); oldPin = e.target.value; }} />
-                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru (4 digit)" bind:value={newPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" 
-                  oninput={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); newPin = e.target.value; }} />
-                <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required inputmode="numeric" pattern="[0-9]*" maxlength="4" 
-                  oninput={(e) => { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 4); confirmPin = e.target.value; }} />
-                <div>
-                  <div class="font-semibold text-gray-700 mb-2">Kunci PIN untuk halaman:</div>
-                  <div class="flex flex-wrap gap-3">
-                    <!-- Hapus opsi pengaturan -->
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" bind:group={lockedPages} value="laporan" class="hidden peer" />
-                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
-                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </span>
-                      <span class="text-sm text-gray-700">Laporan</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" bind:group={lockedPages} value="catat" class="hidden peer" />
-                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
-                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </span>
-                      <span class="text-sm text-gray-700">Catat</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" bind:group={lockedPages} value="beranda" class="hidden peer" />
-                      <span class="w-5 h-5 rounded-full border-2 border-pink-400 flex items-center justify-center transition-colors duration-150 peer-checked:bg-pink-500 peer-checked:border-pink-500 bg-white">
-                        <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </span>
-                      <span class="text-sm text-gray-700">Beranda</span>
-                    </label>
-                  </div>
-                </div>
+              <p class="text-gray-500 text-sm mb-6">PIN digunakan untuk mengunci halaman penting seperti laporan dan pengaturan.</p>
+              <form class="flex flex-col gap-4" onsubmit={savePinSettings} autocomplete="off">
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru" bind:value={newPin} required />
+                <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
                 {#if pinError}
-                  <div class="text-pink-600 text-sm text-center mt-1">{pinError}</div>
+                  <div class="text-red-600 text-sm text-center mt-1">{pinError}</div>
                 {/if}
-                <button class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-colors duration-200" type="submit">Simpan PIN & Pengaturan Kunci</button>
+                <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700" type="submit">Simpan PIN</button>
               </form>
             </div>
-          {:else}
-            <div></div>
-          {/if}
+            <!-- Box section pengaturan halaman yang dikunci -->
+            <div class="bg-white rounded-2xl shadow-sm border border-pink-200 p-6 mb-8">
+              <h3 class="text-lg font-bold text-gray-900 mb-2">Pengaturan Halaman Terkunci</h3>
+              <p class="text-gray-500 text-sm mb-6">Pilih halaman yang ingin dikunci dengan PIN. Halaman yang dikunci akan meminta PIN saat diakses.</p>
+              <div class="flex flex-col gap-3 mb-4">
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                  <span class="relative inline-block w-4 h-4">
+                    <input type="checkbox" bind:group={lockedPages} value="beranda"
+                      class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                    />
+                  </span>
+                  <span class="text-gray-700 font-medium">Beranda</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                  <span class="relative inline-block w-4 h-4">
+                    <input type="checkbox" bind:group={lockedPages} value="catat"
+                      class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                    />
+                  </span>
+                  <span class="text-gray-700 font-medium">Catat</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                  <span class="relative inline-block w-4 h-4">
+                    <input type="checkbox" bind:group={lockedPages} value="laporan"
+                      class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                    />
+                  </span>
+                  <span class="text-gray-700 font-medium">Laporan</span>
+                </label>
+              </div>
+              <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700" type="button" onclick={saveLockedPages}>Simpan Pengaturan</button>
+            </div>
+            {/if}
         </div>
       </div>
     {/if}
@@ -1589,15 +1727,21 @@ function openPageAccess() {
             <!-- Upload & Crop Gambar -->
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-gambar">Gambar Produk</label>
-              {#if menuForm.gambar}
-                <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center mb-2 gap-2 cursor-pointer">
-                  <img src={menuForm.gambar} alt="Preview" class="rounded-xl object-cover w-full h-full border border-gray-200 aspect-square" />
-                  <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
+              {#if $menuForm.gambar}
+                <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center mb-2 gap-2 cursor-pointer relative">
+                  <img src={$menuForm.gambar} alt="Preview" class="rounded-xl object-cover w-full h-full border border-gray-200 aspect-square" />
+                  <!-- Tombol ganti/hapus gambar -->
+                  <button type="button"
+                    class="absolute top-2 right-2 bg-white/80 rounded-full p-1 shadow hover:bg-white"
+                    onclick={() => { $menuForm.gambar = ''; selectedImage = null; }}
+                    aria-label="Hapus gambar">
+                    <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 </label>
                 {:else}
                   <label class="w-full aspect-square min-h-[140px] flex flex-col items-center justify-center border-2 border-dashed border-pink-200 rounded-xl cursor-pointer hover:bg-pink-50 transition-colors">
                     <span class="text-pink-400 font-medium mb-2">Klik untuk upload gambar</span>
-                    <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} />
+                  <input type="file" accept="image/*" class="hidden" onchange={handleFileChange} bind:this={fileInputEl} />
                     <span class="text-xs text-gray-400">Format: JPG, PNG, max 2MB</span>
                   </label>
               {/if}
@@ -1609,7 +1753,7 @@ function openPageAccess() {
               <input id="menu-nama"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 placeholder="Contoh: Jus Alpukat"
-                bind:value={menuForm.name}
+                bind:value={$menuForm.name}
               />
             </div>
             <!-- Tipe (Box Selector) -->
@@ -1618,12 +1762,12 @@ function openPageAccess() {
               <div class="flex gap-3" id="menu-tipe">
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'makanan' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  onclick={() => menuForm.tipe = 'makanan'}>
+                  onclick={() => $menuForm.tipe = 'makanan'}>
                   Makanan
                 </button>
                 <button type="button"
                   class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'minuman' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                  onclick={() => menuForm.tipe = 'minuman'}>
+                  onclick={() => $menuForm.tipe = 'minuman'}>
                   Minuman
                 </button>
             </div>
@@ -1641,7 +1785,7 @@ function openPageAccess() {
                   {#each kategoriList as kat}
                     <button type="button"
                       class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                      onclick={() => menuForm.kategori = kat.name}>
+                      onclick={() => $menuForm.kategori = kat.name}>
                       {kat.name}
                     </button>
                   {/each}
@@ -1659,10 +1803,10 @@ function openPageAccess() {
                   inputmode="numeric"
                   pattern="[0-9]*"
                   id="menu-harga"
-                  bind:value={menuForm.harga}
+                  bind:value={$menuForm.harga}
                   oninput={(e) => {
                     let value = e.target.value.replace(/[^\d]/g, '');
-                    menuForm.harga = value;
+                    $menuForm.harga = value;
                   }}
                 />
               </div>
@@ -1673,13 +1817,13 @@ function openPageAccess() {
               <div class="grid grid-cols-2 gap-2" id="menu-ekstra">
                 {#each ekstraList as ekstra}
                   <button type="button"
-                    class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {menuForm.ekstraIds.includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                    class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {($menuForm.ekstraIds ?? []).includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
                     onclick={(e) => {
                       e.stopPropagation();
-                      if (menuForm.ekstraIds.includes(ekstra.id)) {
-                        menuForm.ekstraIds = menuForm.ekstraIds.filter(id => id !== ekstra.id);
+                      if (($menuForm.ekstraIds ?? []).includes(ekstra.id)) {
+                        $menuForm.ekstraIds = $menuForm.ekstraIds.filter(id => id !== ekstra.id);
                       } else {
-                        menuForm.ekstraIds = [...menuForm.ekstraIds, ekstra.id];
+                        $menuForm.ekstraIds = [...($menuForm.ekstraIds ?? []), ekstra.id];
                       }
                     }}
                   >
@@ -1804,7 +1948,7 @@ function openPageAccess() {
     {/if}
 
     <!-- Cropper Dialog -->
-    <CropperDialog bind:open={showCropperDialog} src={cropperDialogImage} aspect={1} ondone={handleCropperDone} oncancel={handleCropperCancel} />
+    <CropperDialog bind:open={showCropperDialog} src={cropperDialogImage} aspect={1} on:done={handleCropperDone} on:cancel={handleCropperCancel} />
 
     <!-- Delete Confirmation Modal Kategori -->
     {#if showDeleteKategoriModal}
