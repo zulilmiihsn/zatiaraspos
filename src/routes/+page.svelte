@@ -313,8 +313,9 @@ async function fetchDashboardStatsPOS() {
   if (!error && kas) {
     // Item terjual: sum semua qty (jika ada), fallback ke jumlah baris
     itemTerjual = kas.reduce((sum, t) => sum + (t.qty || 1), 0);
-    // Jumlah transaksi: jumlah transaksi unik per waktu transaksi (atau jumlah baris jika 1 transaksi = 1 insert)
-    jumlahTransaksi = kas.length;
+    // Jumlah transaksi: hitung unique transaction_id
+    const transactionIds = new Set((kas || []).map(t => t.transaction_id).filter(Boolean));
+    jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
     // Pendapatan: sum amount
     omzet = kas.reduce((sum, t) => sum + (t.amount || 0), 0);
   } else {

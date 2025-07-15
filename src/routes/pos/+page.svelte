@@ -576,7 +576,7 @@ function showErrorNotif(message: string) {
                 {/if}
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
+                <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
               </div>
             </div>
           {/each}
@@ -597,8 +597,8 @@ function showErrorNotif(message: string) {
         {:else}
           {#each filteredProducts as p}
             <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
-              {#if p.image && !imageError[String(p.id)]}
-                <img class="w-20 h-20 object-cover rounded-lg bg-gray-100 mb-2 aspect-square" src={p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+              {#if (p.gambar || p.image) && !imageError[String(p.id)]}
+                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
               {:else}
                 <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
               {/if}
@@ -609,7 +609,7 @@ function showErrorNotif(message: string) {
                 {:else}
                   <span class="text-xs text-gray-400 truncate min-h-[18px] invisible">Kategori</span>
                 {/if}
-                <div class="text-pink-500 font-bold text-base">Rp {(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+                <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
               </div>
             </div>
           {/each}
@@ -629,7 +629,7 @@ function showErrorNotif(message: string) {
       >
         <div class="flex flex-col justify-center flex-1 cursor-pointer select-none" onclick={openCartModal} onkeydown={(e) => e.key === 'Enter' && openCartModal()} role="button" tabindex="0" aria-label="Buka keranjang belanja" style="min-width:0;">
           <div class="text-sm text-gray-500 truncate">{totalItems} item pesanan</div>
-          <div class="font-bold text-pink-500 text-lg truncate">Rp {totalHarga.toLocaleString('id-ID')}</div>
+          <div class="font-bold text-pink-500 text-lg truncate">Rp {Number(totalHarga ?? 0).toLocaleString('id-ID')}</div>
         </div>
         <div class="flex items-center justify-center ml-4">
           <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700 flex items-center justify-center" onclick={(e) => { e.stopPropagation(); goToBayar(); }}>Bayar</button>
@@ -656,6 +656,7 @@ function showErrorNotif(message: string) {
                     item.product.tipe === 'minuman' && item.ice !== 'normal' ? (iceOptions.find(i => i.id === item.ice)?.label ?? item.ice) : ''
                   ].filter(Boolean).join(', ')}
                 </div>
+                <div class="text-pink-500 font-bold text-base mt-1">Rp {Number(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</div>
               </div>
               <button class="bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-semibold" onclick={() => removeCartItem(idx)}>Hapus</button>
             </div>
@@ -723,7 +724,7 @@ function showErrorNotif(message: string) {
                   onclick={() => toggleAddOn(a.id)}
                 >
                   <span class="truncate w-full">{a.name}</span>
-                  <span class="font-semibold mt-0 text-sm {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
+                  <span class="font-semibold mt-0 text-sm {selectedAddOns.includes(a.id) ? 'text-white' : 'text-pink-500'}">+Rp {Number(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span>
                 </button>
               {/each}
             </div>

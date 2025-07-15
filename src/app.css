@@ -1,11 +1,10 @@
+@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap&display=swap');
 
 :root, html, body {
   font-family: 'Plus Jakarta Sans', 'Segoe UI', 'Roboto', 'Arial', sans-serif;
   font-display: swap;
 }
-
-@import 'tailwindcss';
 
 :global(html), :global(body) {
   scroll-behavior: smooth;

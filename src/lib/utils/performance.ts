@@ -1,6 +1,4 @@
-// Performance optimization utilities
-
-// Debounce function untuk search input
+// Performance utilities
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -12,7 +10,6 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-// Throttle function untuk scroll events
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number
@@ -27,36 +24,74 @@ export function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-// Memoization untuk computed values
+// Memoization untuk expensive calculations
 export function memoize<T extends (...args: any[]) => any>(
-  fn: T,
-  getKey?: (...args: Parameters<T>) => string
+  func: T,
+  resolver?: (...args: Parameters<T>) => string
 ): T {
-  const cache = new Map<string, ReturnType<T>>();
-  
+  const cache = new Map();
   return ((...args: Parameters<T>) => {
-    const key = getKey ? getKey(...args) : JSON.stringify(args);
+    const key = resolver ? resolver(...args) : JSON.stringify(args);
     if (cache.has(key)) {
       return cache.get(key);
     }
-    const result = fn(...args);
+    const result = func(...args);
     cache.set(key, result);
     return result;
   }) as T;
 }
 
-// Virtual scrolling helper
-export function createVirtualScroller<T>(
-  items: T[],
+// Performance measurement
+export function measurePerformance(name: string, fn: () => void) {
+  const start = performance.now();
+  fn();
+  const end = performance.now();
+  console.log(`${name} took ${end - start}ms`);
+}
+
+export async function measureAsyncPerformance(name: string, fn: () => Promise<void>) {
+  const start = performance.now();
+  await fn();
+  const end = performance.now();
+  console.log(`${name} took ${end - start}ms`);
+}
+
+// Cart calculations dengan memoization
+export const calculateCartTotal = memoize((cart: any[]) => {
+  let items = 0;
+  let total = 0;
+  for (const item of cart) {
+    const itemTotal = (item.product?.price ?? item.product?.harga ?? 0) * (item.qty ?? 1);
+    const addOnsTotal = (item.addOns || []).reduce((sum: number, addon: any) => sum + (addon.price ?? addon.harga ?? 0), 0) * (item.qty ?? 1);
+    total += itemTotal + addOnsTotal;
+    items += item.qty ?? 1;
+  }
+  return { items, total };
+});
+
+// Fuzzy search dengan optimasi
+export function fuzzySearch(query: string, items: any[], key: string = 'name'): any[] {
+  if (!query.trim()) return items;
+  
+  const searchTerm = query.toLowerCase();
+  return items.filter(item => {
+    const text = String(item[key]).toLowerCase();
+    return text.includes(searchTerm) || 
+           searchTerm.split('').every(char => text.includes(char));
+  });
+}
+
+// Virtual scrolling utilities
+export function createVirtualScroller(
+  items: any[],
   itemHeight: number,
   containerHeight: number,
-  scrollTop: number
+  scrollTop: number,
+  overscan: number = 5
 ) {
+  const visibleCount = Math.ceil(containerHeight / itemHeight) + overscan;
   const startIndex = Math.floor(scrollTop / itemHeight);
-  const endIndex = Math.min(
-    startIndex + Math.ceil(containerHeight / itemHeight) + 1,
-    items.length
-  );
+  const endIndex = Math.min(startIndex + visibleCount, items.length);
   
   return {
     visibleItems: items.slice(startIndex, endIndex),
@@ -67,107 +102,64 @@ export function createVirtualScroller<T>(
   };
 }
 
-// Image lazy loading
-export function createImageObserver(
-  callback: (entry: IntersectionObserverEntry) => void,
-  options: IntersectionObserverInit = {}
-) {
+// Image optimization
+export function createImageObserver(callback: (entry: IntersectionObserverEntry) => void) {
   return new IntersectionObserver((entries) => {
     entries.forEach(callback);
   }, {
     rootMargin: '50px',
-    threshold: 0.1,
-    ...options
+    threshold: 0.1
   });
 }
 
-// Efficient array operations
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
-
-// Efficient filtering dengan index
-export function createFilterIndex<T>(
-  items: T[],
-  filterFn: (item: T) => boolean
-): number[] {
-  const indices: number[] = [];
-  for (let i = 0; i < items.length; i++) {
-    if (filterFn(items[i])) {
-      indices.push(i);
-    }
-  }
-  return indices;
-}
-
-// Performance measurement
-export function measurePerformance<T>(
-  name: string,
-  fn: () => T
-): T {
-  const start = performance.now();
-  const result = fn();
-  const end = performance.now();
-  console.log(`${name} took ${(end - start).toFixed(2)}ms`);
-  return result;
-}
-
-// Async performance measurement
-export async function measureAsyncPerformance<T>(
-  name: string,
-  fn: () => Promise<T>
-): Promise<T> {
-  const start = performance.now();
-  const result = await fn();
-  const end = performance.now();
-  console.log(`${name} took ${(end - start).toFixed(2)}ms`);
-  return result;
-}
-
-// Efficient search dengan fuzzy matching
-export function fuzzySearch(text: string, query: string): boolean {
-  const normalizedText = text.toLowerCase();
-  const normalizedQuery = query.toLowerCase();
+// Cache management
+export class CacheManager {
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   
-  let queryIndex = 0;
-  for (let i = 0; i < normalizedText.length && queryIndex < normalizedQuery.length; i++) {
-    if (normalizedText[i] === normalizedQuery[queryIndex]) {
-      queryIndex++;
-    }
+  set(key: string, data: any, ttl: number = 60000) {
+    this.cache.set(key, { data, timestamp: Date.now(), ttl });
   }
   
-  return queryIndex === normalizedQuery.length;
+  get(key: string): any | null {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() - item.timestamp > item.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.data;
+  }
+  
+  clear() {
+    this.cache.clear();
+  }
+  
+  size(): number {
+    return this.cache.size;
+  }
 }
 
-// Efficient sorting dengan memoization
-export function createSortFunction<T>(
-  keyFn: (item: T) => any,
-  direction: 'asc' | 'desc' = 'asc'
-) {
-  return (a: T, b: T) => {
-    const aVal = keyFn(a);
-    const bVal = keyFn(b);
+// Bundle size analyzer
+export function analyzeBundleSize() {
+  if (typeof window !== 'undefined') {
+    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    const totalSize = resources.reduce((sum, resource) => {
+      return sum + (resource.transferSize || 0);
+    }, 0);
     
-    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
-    return 0;
-  };
-}
-
-// Efficient cart calculations
-export function calculateCartTotal(cart: any[]): { items: number; total: number } {
-  return cart.reduce((acc, item) => {
-    const itemPrice = (item.product.price ?? item.product.harga ?? 0) * item.qty;
-    const addOnsPrice = (item.addOns || []).reduce((sum: number, addon: any) => 
-      sum + ((addon.price ?? addon.harga ?? 0) * item.qty), 0);
+    console.log(`Total bundle size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
     
-    return {
-      items: acc.items + item.qty,
-      total: acc.total + itemPrice + addOnsPrice
-    };
-  }, { items: 0, total: 0 });
+    // Log largest resources
+    const sortedResources = resources
+      .filter(r => r.transferSize > 0)
+      .sort((a, b) => (b.transferSize || 0) - (a.transferSize || 0))
+      .slice(0, 5);
+    
+    console.log('Largest resources:', sortedResources.map(r => ({
+      name: r.name,
+      size: `${((r.transferSize || 0) / 1024).toFixed(2)}KB`
+    })));
+  }
 } 

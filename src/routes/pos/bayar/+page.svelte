@@ -271,7 +271,8 @@ async function catatTransaksiKeLaporan() {
     description: `Penjualan ${item.product.name}`,
     transaction_date,
     payment_method: payment,
-    jenis: 'pendapatan_usaha'
+    jenis: 'pendapatan_usaha',
+    transaction_id: transactionId // tambahkan ini
   }));
   if (navigator.onLine) {
     await supabase.from('buku_kas').insert(inserts);
