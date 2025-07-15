@@ -79,7 +79,6 @@ export default defineConfig({
 					// Vendor chunks
 					'vendor-svelte': ['svelte', '@sveltejs/kit'],
 					'vendor-ui': ['lucide-svelte'],
-					'vendor-db': ['@supabase/supabase-js'],
 					// Route chunks
 					'route-pos': ['./src/routes/pos/+page.svelte'],
 					'route-pengaturan': ['./src/routes/pengaturan/+page.svelte'],
