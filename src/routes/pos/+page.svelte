@@ -27,6 +27,29 @@ import {
   calculateCartTotal,
   fuzzySearch
 } from '$lib/utils/performance';
+import { userRole } from '$lib/stores/userRole';
+let currentUserRole = '';
+userRole.subscribe(val => currentUserRole = val || '');
+
+import { browser } from '$app/environment';
+let sesiAktif = null;
+async function cekSesiTokoAktif() {
+  const { data } = await supabase
+    .from('sesi_toko')
+    .select('*')
+    .eq('is_active', true)
+    .order('opening_time', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  sesiAktif = data || null;
+}
+
+onMount(() => {
+  cekSesiTokoAktif();
+  if (browser) {
+    window.addEventListener('openTokoModal', cekSesiTokoAktif);
+  }
+});
 
 let produkData: any[] | null = null;
 produkCache.subscribe(val => produkData = val.data);
@@ -332,6 +355,11 @@ function toggleAddOn(id) {
 
 // Optimized cart operations
 function addToCart() {
+  // Blokir kasir jika sesi toko belum dibuka
+  if (currentUserRole === 'kasir' && !sesiAktif) {
+    showErrorNotif('Toko belum dibuka. Silakan buka toko terlebih dahulu!');
+    return;
+  }
   // Validate quantity
   const qtyValidation = validateNumber(qty, { required: true, min: 1, max: 99 });
   if (!qtyValidation.isValid) {
@@ -674,7 +702,7 @@ function showErrorNotif(message: string) {
 
     {#if showErrorNotification}
       <div 
-        class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+        class="fixed top-20 left-1/2 z-[9999] bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out w-full max-w-xs md:max-w-md"
         style="transform: translateX(-50%);"
         in:fly={{ y: -32, duration: 300, easing: cubicOut }}
         out:fade={{ duration: 200 }}
