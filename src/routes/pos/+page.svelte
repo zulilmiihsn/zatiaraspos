@@ -516,6 +516,31 @@ function showErrorNotif(message: string) {
     showErrorNotification = false;
   }, 3000);
 }
+
+let showCustomItemModal = false;
+let customItemName = '';
+let customItemPrice = '';
+let customItemNote = '';
+
+function addCustomItemToCart(e?: Event) {
+  if (e) e.preventDefault();
+  if (!customItemName.trim() || !customItemPrice || isNaN(Number(customItemPrice)) || Number(customItemPrice) <= 0) return;
+  cart = [
+    ...cart,
+    {
+      product: { id: `custom-${Date.now()}`, name: customItemName.trim(), harga: Number(customItemPrice), price: Number(customItemPrice), tipe: 'custom' },
+      addOns: [],
+      sugar: '',
+      ice: '',
+      qty: qty, // Gunakan qty dari modal
+      note: customItemNote.trim(),
+    },
+  ];
+  showCustomItemModal = false;
+  customItemName = '';
+  customItemPrice = '';
+  customItemNote = '';
+}
 </script>
 
 <div 
@@ -560,9 +585,13 @@ function showErrorNotif(message: string) {
           <div class="flex-shrink-0 min-w-[96px] h-[40px] rounded-lg bg-gray-100 animate-pulse mb-1"></div>
         {/each}
       {:else if (categories ?? []).length === 0}
+        <!-- Button Custom Item di samping 'Semua' jika tidak ada kategori -->
+        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={() => showCustomItemModal = true}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+          Menu Kustom
+        </button>
         <div class="flex items-center gap-2 h-[40px] px-4 text-sm text-gray-400">
-          <span class="text-base" style="position:relative;top:-2px;">📁</span>
-          <span>Belum ada Kategori</span>
+          <span>Belum ada kategori</span>
         </div>
       {:else}
         {#each categories ?? [] as c}
@@ -572,6 +601,11 @@ function showErrorNotif(message: string) {
             onclick={() => selectedCategory = c.id}
           >{c.name}</button>
         {/each}
+        <!-- Button Custom Item di paling kanan -->
+        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={() => showCustomItemModal = true}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+          Custom Item
+        </button>
       {/if}
     </div>
     <div class="flex-1 w-full max-w-full px-0" style="min-height:0;">
@@ -639,6 +673,38 @@ function showErrorNotif(message: string) {
               {/each}
             {/if}
           </div>
+        {/if}
+        <!-- Tombol Custom Item -->
+        <!-- Modal Custom Item -->
+        {#if showCustomItemModal}
+          <ModalSheet bind:open={showCustomItemModal} title={customItemName ? customItemName : 'Menu Kustom'} on:close={() => showCustomItemModal = false}>
+            <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()} style="scrollbar-width:none;-ms-overflow-style:none;" role="button" tabindex="0">
+              <div class="mb-6 mt-4">
+                <label class="font-semibold text-gray-800 text-base mb-2 block" for="custom-nama">Nama Menu</label>
+                <input id="custom-nama" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" type="text" bind:value={customItemName} required maxlength="50" placeholder="Contoh: Jus Mangga Spesial" />
+              </div>
+              <div class="mb-6">
+                <label class="font-semibold text-gray-800 text-base mb-2 block mt-4" for="custom-harga">Harga</label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Rp</span>
+                  <input id="custom-harga" class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-base font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" type="number" min="1" max="99999999" bind:value={customItemPrice} required placeholder="0" />
+                </div>
+              </div>
+              <div class="mb-6">
+                <label class="font-semibold text-gray-800 text-base mb-2 block mt-4" for="custom-catatan">Catatan</label>
+                <textarea id="custom-catatan" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-normal focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" bind:value={customItemNote} maxlength="100" rows="2" placeholder="Contoh: Tanpa gula, es sedikit, dsb"></textarea>
+              </div>
+              <div class="font-semibold text-gray-800 mb-2 mt-0 text-base">Jumlah</div>
+              <div class="flex items-center justify-center gap-3 mb-4">
+                <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={decQty}>-</button>
+                <input class="w-12 text-center text-lg font-semibold border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-800 outline-none" type="number" min="1" max="99" bind:value={qty} />
+                <button class="w-10 h-10 rounded-lg border border-pink-400 text-pink-400 text-xl font-bold flex items-center justify-center transition-colors duration-150" type="button" onclick={incQty}>+</button>
+              </div>
+              <div class="flex gap-3 mt-2">
+                <button type="button" class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={addCustomItemToCart}>Tambah ke Keranjang</button>
+              </div>
+            </div>
+          </ModalSheet>
         {/if}
       </div>
     </div>
