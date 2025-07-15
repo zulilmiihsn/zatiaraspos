@@ -10,6 +10,7 @@ import { formatWitaDateTime } from '$lib/index';
 import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { fly, fade } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
+import { userRole } from '$lib/stores/userRole';
 
 let cart = [];
 let customerName = '';
@@ -39,6 +40,16 @@ let errorNotificationTimeout: any = null;
 let showSuccessNotification = false;
 let successNotificationMessage = '';
 let successNotificationTimeout: any = null;
+
+let showNoSessionModal = false;
+let noSessionModalMsg = '';
+
+let currentUserRole = '';
+userRole.subscribe(val => currentUserRole = val || '');
+
+let showNotifModal = false;
+let notifModalMsg = '';
+let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
 function showErrorNotif(message: string) {
   errorNotificationMessage = message;
@@ -276,8 +287,17 @@ function getLocalOffsetString() {
 async function catatTransaksiKeLaporan() {
   await cekSesiTokoAktif();
   const id_sesi_toko = sesiAktif?.id || null;
-  if (!id_sesi_toko) {
-    alert('PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.');
+  if (!id_sesi_toko && currentUserRole === 'kasir') {
+    notifModalMsg = 'Kasir tidak boleh melakukan transaksi saat toko tutup!';
+    notifModalType = 'error';
+    showNotifModal = true;
+    return;
+  }
+  if (!id_sesi_toko && currentUserRole !== 'kasir') {
+    notifModalMsg = 'PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.';
+    notifModalType = 'warning';
+    showNotifModal = true;
+    return;
   }
   const now = new Date();
   const transaction_date = now.toISOString();
@@ -332,6 +352,10 @@ async function catatTransaksiKeLaporan() {
       console.error('Gagal insert item_transaksi:', insertError, itemInserts);
     }
   }
+}
+
+function closeNotifModal() {
+  showNotifModal = false;
 }
 </script>
 
@@ -532,6 +556,45 @@ async function catatTransaksiKeLaporan() {
     out:fade={{ duration: 200 }}
   >
     {successNotificationMessage}
+  </div>
+{/if}
+
+{#if showNoSessionModal}
+  <ModalSheet open={showNoSessionModal} title="Peringatan" on:close={() => showNoSessionModal = false}>
+    <div class="text-center text-gray-700 text-base py-6">{noSessionModalMsg}</div>
+    <div slot="footer" class="flex flex-col gap-2">
+      <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600" onclick={() => showNoSessionModal = false}>Tutup</button>
+    </div>
+  </ModalSheet>
+{/if}
+
+{#if showNotifModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div class="bg-white rounded-2xl shadow-2xl border-2 px-8 py-7 max-w-xs w-full flex flex-col items-center animate-slideUpModal"
+      style="border-color: {notifModalType === 'success' ? '#facc15' : notifModalType === 'error' ? '#ef4444' : '#facc15'};">
+      <div class="flex items-center justify-center w-16 h-16 rounded-full mb-3"
+        style="background: {notifModalType === 'success' ? '#fef9c3' : notifModalType === 'error' ? '#fee2e2' : '#fef9c3'};">
+        {#if notifModalType === 'success'}
+          <svg class="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" fill="#fef9c3" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" stroke="#facc15" stroke-width="2" />
+          </svg>
+        {:else if notifModalType === 'error'}
+          <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" fill="#fee2e2" />
+            <line x1="9" y1="9" x2="15" y2="15" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+            <line x1="15" y1="9" x2="9" y2="15" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        {:else}
+          <svg class="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" fill="#fef9c3" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01" stroke="#facc15" stroke-width="2" />
+          </svg>
+        {/if}
+      </div>
+      <div class="text-center text-gray-700 font-medium text-base mb-4">{notifModalMsg}</div>
+      <button class="mt-2 px-6 py-2 rounded-xl bg-pink-500 text-white font-bold shadow hover:bg-pink-600 transition-colors" on:click={closeNotifModal}>Tutup</button>
+    </div>
   </div>
 {/if}
 
