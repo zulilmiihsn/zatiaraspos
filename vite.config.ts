@@ -34,7 +34,7 @@ export default defineConfig({
 					}
 				]
 			},
-			includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
+			includeAssets: ['favicon.svg', '180x180.png', '192x192.png', '144x144.png', '512x512.png'],
 			manifest: {
 				name: 'Zatiaras POS',
 				short_name: 'ZatiarasPOS',
@@ -47,26 +47,24 @@ export default defineConfig({
 				start_url: '/',
 				icons: [
 					{
-						src: 'img/android-chrome-192x192.png',
+						src: 'img/192x192.png',
 						sizes: '192x192',
 						type: 'image/png'
 					},
 					{
-						src: 'img/android-chrome-512x512.png',
+						src: 'img/512x512.png',
 						sizes: '512x512',
 						type: 'image/png'
 					},
 					{
-						src: 'img/android-chrome-maskable-192x192.png',
-						sizes: '192x192',
-						type: 'image/png',
-						purpose: 'maskable'
+						src: 'img/180x180.png',
+						sizes: '180x180',
+						type: 'image/png'
 					},
 					{
-						src: 'img/android-chrome-maskable-512x512.png',
-						sizes: '512x512',
-						type: 'image/png',
-						purpose: 'maskable'
+						src: 'img/144x144.png',
+						sizes: '144x144',
+						type: 'image/png'
 					}
 				]
 			}
