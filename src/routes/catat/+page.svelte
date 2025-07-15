@@ -10,7 +10,6 @@ import { validateNumber, validateText, validateDate, validateTime, sanitizeInput
 import { SecurityMiddleware } from '$lib/security.js';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
-import { supabase } from '$lib/database/supabaseClient';
 import { formatWitaDateTime } from '$lib/index';
 import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
@@ -201,7 +200,12 @@ async function saveTransaksi(form) {
     id_sesi_toko
   };
   if (navigator.onLine) {
-    await supabase.from('buku_kas').insert([trx]);
+    const { error, data } = await supabase.from('buku_kas').insert([trx]);
+    console.log('DEBUG | Hasil insert Supabase:', { error, data });
+    if (error) {
+      alert('Gagal menyimpan transaksi ke database: ' + error.message);
+      return;
+    }
   } else {
     await saveTransaksiOffline(trx);
   }
@@ -209,10 +213,11 @@ async function saveTransaksi(form) {
 }
 
 // Optimized reactive statements for better performance
-$: if (mode === 'pemasukan' && jenis !== 'pendapatan_usaha' && jenis !== 'lainnya') {
+// Inisialisasi default jenis saat mode berubah
+$: if (mode === 'pemasukan' && (!jenis || (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya'))) {
   jenis = 'pendapatan_usaha';
 }
-$: if (mode === 'pengeluaran' && jenis !== 'beban_usaha' && jenis !== 'lainnya') {
+$: if (mode === 'pengeluaran' && (!jenis || (jenis !== 'beban_usaha' && jenis !== 'lainnya'))) {
   jenis = 'beban_usaha';
 }
 
@@ -305,12 +310,14 @@ function setTemplateNominal(val) {
 }
 
 async function handleSubmit(e) {
+  console.log('DEBUG | handleSubmit terpanggil');
   e.preventDefault();
   error = '';
   
   // Check rate limiting
   if (!SecurityMiddleware.checkFormRateLimit('catat_form')) {
     error = 'Terlalu banyak submission. Silakan tunggu sebentar.';
+    console.log('DEBUG | Gagal rate limit');
     return;
   }
   
@@ -318,7 +325,10 @@ async function handleSubmit(e) {
   const sanitizedDate = sanitizeInput(date);
   const sanitizedTime = sanitizeInput(time);
   const sanitizedNominal = sanitizeInput(nominal);
-  const sanitizedJenis = sanitizeInput(jenis);
+  let sanitizedJenis = sanitizeInput(jenis);
+  if (!sanitizedJenis) {
+    sanitizedJenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
+  }
   const sanitizedNamaJenis = sanitizeInput(namaJenis);
   const sanitizedNama = sanitizeInput(nama);
   const sanitizedPaymentMethod = sanitizeInput(paymentMethod);
@@ -334,6 +344,7 @@ async function handleSubmit(e) {
   const allInputs = `${sanitizedDate}${sanitizedTime}${sanitizedNominal}${sanitizedJenis}${sanitizedNamaJenis}${sanitizedNama}${sanitizedPaymentMethod}`;
   if (SecurityMiddleware.detectSuspiciousActivity('catat_form', allInputs)) {
     error = 'Input mencurigakan terdeteksi. Silakan coba lagi.';
+    console.log('DEBUG | Input mencurigakan');
     SecurityMiddleware.logSecurityEvent('suspicious_input_blocked', {
       form: 'catat',
       inputs: { date: sanitizedDate, time: sanitizedTime, nominal: sanitizedNominal }
@@ -359,44 +370,33 @@ async function handleSubmit(e) {
   
   if (errors.length > 0) {
     error = errors.join('\n');
+    console.log('DEBUG | Error validasi:', error);
     return;
   }
   
   // Validate complete data object
   const dataToValidate = {
     amount: parseFloat(sanitizedNominal.replace(/\D/g, '')),
-    type: sanitizedJenis,
-    description: sanitizedNama
-  };
-  
-  const completeValidation = validateIncomeExpense(dataToValidate);
-  if (!completeValidation.isValid) {
-    error = completeValidation.errors.join('\n');
-    return;
-  }
-  
-  // Simpan ke database: tanggal + jam input user (UTC ISO)
-  const inputDateTime = new Date(`${sanitizedDate}T${sanitizedTime}`);
-  const trx = {
-    amount: dataToValidate.amount,
-    type: mode === 'pemasukan' ? 'in' : 'out',
     description: sanitizedNama,
-    transaction_date: inputDateTime.toISOString(),
+    transaction_date: sanitizedDate,
+    transaction_time: sanitizedTime,
     payment_method: sanitizedPaymentMethod,
     jenis: sanitizedJenis
   };
-  if (navigator.onLine) {
-    await supabase.from('buku_kas').insert([trx]);
-  } else {
-    await saveTransaksiOffline(trx);
+  console.log('DEBUG | Data untuk validasi lanjutan:', dataToValidate);
+  const completeValidation = validateIncomeExpense(dataToValidate);
+  if (!completeValidation.isValid) {
+    error = completeValidation.errors.join('\n');
+    console.log('DEBUG | Error validasi lanjutan:', error);
+    return;
   }
-  await fetchTransaksi();
   
+  // Simpan transaksi via saveTransaksi agar id_sesi_toko selalu terisi
+  await saveTransaksi(dataToValidate);
   // Tampilkan snackbar sukses
   snackbarMsg = 'Transaksi berhasil dicatat!';
   showSnackbar = true;
   setTimeout(() => { showSnackbar = false; }, 1800);
-  
   // Reset form
   rawNominal = '';
   namaJenis = '';
@@ -697,6 +697,7 @@ main {
       </div>
     </div>
   </main>
+  <!-- Pindahkan button Simpan ke dalam form -->
   <div class="fixed left-0 right-0 bottom-[56px] z-30 pt-2 pb-3 transition-all duration-500" class:px-2={!isBottomVisible} class:px-4={isBottomVisible}>
     <div
       class:w-full={!isBottomVisible}
