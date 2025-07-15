@@ -90,6 +90,19 @@ let userProfileData = null;
 userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
 
+import { supabase } from '$lib/database/supabaseClient';
+let sesiAktif = null;
+async function cekSesiTokoAktif() {
+  const { data } = await supabase
+    .from('sesi_toko')
+    .select('*')
+    .eq('is_active', true)
+    .order('opening_time', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  sesiAktif = data || null;
+}
+
 onMount(async () => {
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   // Hapus query role dari Supabase, gunakan store
@@ -131,6 +144,7 @@ onMount(async () => {
   time = new Date().toTimeString().slice(0, 5);
   jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
   await fetchTransaksi();
+  await cekSesiTokoAktif();
 
   observer = new IntersectionObserver(
     ([entry]) => {
@@ -170,13 +184,21 @@ function getLocalOffsetString() {
 }
 
 async function saveTransaksi(form) {
+  await cekSesiTokoAktif();
+  const id_sesi_toko = sesiAktif?.id || null;
+  console.log('DEBUG | Sesi Aktif:', sesiAktif);
+  console.log('DEBUG | ID Sesi Toko yang akan disimpan:', id_sesi_toko);
+  if (!id_sesi_toko) {
+    alert('PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.');
+  }
   const trx = {
     amount: form.amount,
     type: mode === 'pemasukan' ? 'in' : 'out',
     description: form.description,
     transaction_date: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
     payment_method: form.payment_method,
-    jenis: form.jenis
+    jenis: form.jenis,
+    id_sesi_toko
   };
   if (navigator.onLine) {
     await supabase.from('buku_kas').insert([trx]);

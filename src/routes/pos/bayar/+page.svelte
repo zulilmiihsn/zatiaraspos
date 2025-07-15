@@ -66,7 +66,20 @@ function generateTransactionCode() {
   return `JUS${lastNum.toString().padStart(5, '0')}`;
 }
 
+let sesiAktif = null;
+async function cekSesiTokoAktif() {
+  const { data } = await supabase
+    .from('sesi_toko')
+    .select('*')
+    .eq('is_active', true)
+    .order('opening_time', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  sesiAktif = data || null;
+}
+
 onMount(() => {
+  cekSesiTokoAktif();
   const saved = localStorage.getItem('pos_cart');
   if (saved) {
     try {
@@ -261,6 +274,13 @@ function getLocalOffsetString() {
 }
 
 async function catatTransaksiKeLaporan() {
+  await cekSesiTokoAktif();
+  const id_sesi_toko = sesiAktif?.id || null;
+  console.log('DEBUG | Sesi Aktif:', sesiAktif);
+  console.log('DEBUG | ID Sesi Toko yang akan disimpan:', id_sesi_toko);
+  if (!id_sesi_toko) {
+    alert('PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.');
+  }
   const now = new Date();
   const transaction_date = now.toISOString();
   const payment = paymentMethod === 'qris' ? 'non-tunai' : 'tunai';
@@ -272,7 +292,8 @@ async function catatTransaksiKeLaporan() {
     transaction_date,
     payment_method: payment,
     jenis: 'pendapatan_usaha',
-    transaction_id: transactionId // tambahkan ini
+    transaction_id: transactionId,
+    id_sesi_toko
   }));
   if (navigator.onLine) {
     await supabase.from('buku_kas').insert(inserts);

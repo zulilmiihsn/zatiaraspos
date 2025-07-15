@@ -494,29 +494,18 @@ async function handleBukaToko() {
 
 async function hitungRingkasanTutup() {
   if (!sesiAktif) return;
-  // Ambil rentang waktu sesi toko, tambahkan toleransi 2 menit ke belakang
-  const waktuMulaiObj = new Date(sesiAktif.opening_time);
-  waktuMulaiObj.setMinutes(waktuMulaiObj.getMinutes() - 2);
-  const waktuMulai = waktuMulaiObj.toISOString();
-  const waktuSelesai = sesiAktif.closing_time || new Date().toISOString();
   const { data: kasRaw } = await supabase
     .from('buku_kas')
     .select('*')
-    .gte('transaction_date', waktuMulai)
-    .lte('transaction_date', waktuSelesai);
-  type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string };
+    .eq('id_sesi_toko', sesiAktif.id);
+  type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string; id_sesi_toko?: string };
   let kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
-  
   // Integrasi transaksi offline: gabungkan transaksi pending dari IndexedDB
   if (navigator.onLine === false) {
     const pendingTransaksi = await getPendingTransaksi();
     if (pendingTransaksi.length) {
-      // Filter transaksi pending yang masuk dalam rentang waktu sesi toko
-      const pendingDalamSesi = pendingTransaksi.filter((t: any) => {
-        const tDate = new Date(t.transaction_date || t.created_at);
-        return tDate >= new Date(waktuMulai) && tDate <= new Date(waktuSelesai);
-      });
-      // Gabungkan ke array kas
+      // Filter transaksi pending yang id_sesi_toko sama dengan sesiAktif.id
+      const pendingDalamSesi = pendingTransaksi.filter((t: any) => t.id_sesi_toko === sesiAktif.id);
       kas = [...kas, ...pendingDalamSesi];
     }
   }

@@ -16,7 +16,7 @@ onDestroy(unsubscribe);
 
 <div class="flex items-center justify-between px-4 pt-4 pb-3 bg-white z-10 nav-transition">
   <div class="flex items-center gap-3">
-    <img class="w-[38px] h-[38px] rounded-lg object-cover shadow-lg shadow-pink-500/7 bg-white" src="/img/logo.svg" alt="Logo Zatiaras" />
+    <img class="w-[38px] h-[38px] p-1.5 rounded-lg object-contain shadow-lg shadow-pink-500/7 bg-white" src="/img/logo.svg" alt="Logo Zatiaras" />
     {#if pendingCount > 0}
       <div class="flex items-center" style="gap: 12px;">
         <div class="w-6 h-6 flex items-center justify-center bg-yellow-400 text-white text-xs font-semibold rounded-full shadow border-2 border-white animate-pulse transition-transform duration-300" style="animation-delay: 0.2s;">

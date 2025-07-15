@@ -297,23 +297,17 @@ $: totalHarga = cartTotal.total;
 
 // Memoized filtered products dengan optimasi
 const memoizedFilter = memoize((products: any[], categories: any[], selectedCategory: string, search: string) => {
-  return products.filter(p => {
-    // Filter berdasarkan kategori dengan optimasi
-    if (selectedCategory !== 'all') {
-      const categoryName = categories.find(c => c.id === selectedCategory)?.name;
-      if (p.kategori !== categoryName) {
-        return false;
-      }
-    }
-    
-    // Filter berdasarkan search dengan fuzzy search
-    if (search) {
-      return fuzzySearch(p.name, search) || 
-             fuzzySearch(p.kategori || '', search);
-    }
-    
-    return true;
-  });
+  let filtered = products;
+  // Filter berdasarkan search
+  if (search) {
+    filtered = fuzzySearch(search, products);
+  }
+  // Filter berdasarkan kategori
+  if (selectedCategory !== 'all') {
+    const categoryName = categories.find(c => c.id === selectedCategory)?.name;
+    filtered = filtered.filter(p => p.kategori === categoryName);
+  }
+  return filtered;
 }, (products, categories, selectedCategory, search) => 
   `${products.length}-${categories.length}-${selectedCategory}-${search}`
 );
