@@ -320,11 +320,11 @@ async function catatTransaksiKeLaporan() {
   // 2. Insert ke item_transaksi (detail)
   const itemInserts = cart.map(item => ({
     transaction_id: transactionId,
-    menu_id: item.product.id,
+    menu_id: item.product.id && item.product.id.startsWith('custom-') ? null : item.product.id,
     qty: item.qty,
     price: item.product.price ?? item.product.harga ?? 0
   }));
-  if (itemInserts.some(i => !i.menu_id || typeof i.menu_id !== 'string' || i.menu_id.length < 10)) {
+  if (itemInserts.some(i => !i.menu_id && i.menu_id !== null && (typeof i.menu_id !== 'string' || i.menu_id.length < 10))) {
     console.error('Gagal insert item_transaksi: menu_id bukan UUID', itemInserts);
   } else if (itemInserts.length > 0) {
     const { error: insertError } = await supabase.from('item_transaksi').insert(itemInserts);
