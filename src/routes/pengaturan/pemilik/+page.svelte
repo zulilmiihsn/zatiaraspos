@@ -1184,7 +1184,7 @@ async function saveLockedPages() {
 {#if currentUserRole === 'admin' || currentUserRole === 'pemilik'}
   <div class="min-h-screen bg-gray-50 flex flex-col page-content">
     <!-- Header -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
+    <div class="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-4xl mx-auto px-4 py-4">
         <div class="flex items-center">
           <button onclick={() => currentPage === 'main' ? goto('/pengaturan') : currentPage = 'main'} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
@@ -1761,12 +1761,12 @@ async function saveLockedPages() {
               <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-tipe">Tipe</label>
               <div class="flex gap-3" id="menu-tipe">
                 <button type="button"
-                  class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'makanan' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                  class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {$menuForm.tipe === 'makanan' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
                   onclick={() => $menuForm.tipe = 'makanan'}>
                   Makanan
                 </button>
                 <button type="button"
-                  class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {menuForm.tipe === 'minuman' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                  class="flex-1 px-0 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 {$menuForm.tipe === 'minuman' ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
                   onclick={() => $menuForm.tipe = 'minuman'}>
                   Minuman
                 </button>
@@ -1784,7 +1784,7 @@ async function saveLockedPages() {
                 {:else}
                   {#each kategoriList as kat}
                     <button type="button"
-                      class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                      class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {$menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
                       onclick={() => $menuForm.kategori = kat.name}>
                       {kat.name}
                     </button>
