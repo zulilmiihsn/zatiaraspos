@@ -217,7 +217,7 @@ export function validateIncomeExpense(data: any): ValidationResult {
   }
   
   // Validasi jenis
-  if (!data.type) {
+  if (!data.jenis) {
     errors.push('Jenis harus dipilih');
   }
   
