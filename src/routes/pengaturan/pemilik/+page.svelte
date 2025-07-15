@@ -86,9 +86,10 @@ let cropperDialogImage = '';
 
 let touchStartX = 0;
 let touchEndX = 0;
+let touchStartY = 0; // tambahkan deklarasi ini
 let menuTouchStartX = 0;
 let menuTouchStartY = 0;
-let menuTouchStartTime = 0;
+let menuTouchStartTime = 0; // tambahkan deklarasi ini kembali
 let menuSwipeDetected = false;
 
 // State untuk modal hapus kategori
@@ -279,16 +280,21 @@ function handleTabTouchStart(e: TouchEvent) {
   }
   // Reset touch coordinates
   touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY; // tambahkan baris ini
 }
 function handleTabTouchMove(e: TouchEvent) {
   // Update touch coordinates
   touchEndX = e.touches[0].clientX;
 }
 function handleTabTouchEnd(e: TouchEvent) {
-  const swipeThreshold = window.innerWidth * 0.25; // kurangi threshold dari 0.4 ke 0.25
-  if (Math.abs(touchEndX - touchStartX) < 10) return; // kurangi threshold tap dari 20 ke 10
-  if (Math.abs(touchEndX - touchStartX) > swipeThreshold) {
-    if (touchEndX - touchStartX < 0) {
+  const swipeThreshold = window.innerWidth * 0.25; // threshold swipe
+  const touch = e.changedTouches[0];
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - (touchStartY ?? 0);
+  // Hanya proses swipe jika gesture horizontal lebih dominan dari vertikal
+  if (Math.abs(deltaX) < 10 || Math.abs(Math.abs(deltaX)) < Math.abs(deltaY) * 2) return;
+  if (Math.abs(deltaX) > swipeThreshold) {
+    if (deltaX < 0) {
       // Swipe kiri: next tab
       if (activeTab === 'menu') activeTab = 'kategori';
       else if (activeTab === 'kategori') activeTab = 'ekstra';
