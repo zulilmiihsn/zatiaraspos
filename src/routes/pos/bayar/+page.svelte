@@ -276,16 +276,15 @@ function getLocalOffsetString() {
 async function catatTransaksiKeLaporan() {
   await cekSesiTokoAktif();
   const id_sesi_toko = sesiAktif?.id || null;
-  console.log('DEBUG | Sesi Aktif:', sesiAktif);
-  console.log('DEBUG | ID Sesi Toko yang akan disimpan:', id_sesi_toko);
   if (!id_sesi_toko) {
     alert('PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.');
   }
   const now = new Date();
   const transaction_date = now.toISOString();
   const payment = paymentMethod === 'qris' ? 'non-tunai' : 'tunai';
+  // Catat menu utama, harga sudah termasuk ekstra
   const inserts = cart.map(item => ({
-    amount: item.qty * (item.product.price ?? item.product.harga ?? 0),
+    amount: item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)),
     qty: item.qty,
     type: 'in',
     description: `Penjualan ${item.product.name}`,
@@ -363,14 +362,21 @@ async function catatTransaksiKeLaporan() {
               </div>
               <span class="font-bold text-pink-500">Rp {(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</span>
             </div>
-            {#if (item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
-              <div class="text-xs text-gray-500 font-medium ml-1">
-                {[
-                  item.addOns && item.addOns.length > 0 ? `+ ${item.addOns.map(a => a.name).join(', ')}` : null,
-                  item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
+            {#if item.addOns && item.addOns.length > 0}
+              <div class="flex flex-col ml-1 mt-1 gap-0.5">
+                {#each item.addOns as ekstra}
+                  <div class="flex justify-between text-xs text-gray-500 font-medium">
+                    <span>+ {ekstra.name}</span>
+                    <span>Rp {(ekstra.price ?? ekstra.harga ?? 0).toLocaleString('id-ID')}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+            {#if (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
+              <div class="text-xs text-gray-400 font-medium ml-1">
+                {[item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
                   item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
-                  item.note && item.note.trim() ? item.note : null
-                ].filter(Boolean).join(', ')}
+                  item.note && item.note.trim() ? item.note : null].filter(Boolean).join(', ')}
               </div>
             {/if}
           </li>
