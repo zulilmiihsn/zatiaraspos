@@ -593,7 +593,7 @@ function closeNotifModal() {
         {/if}
       </div>
       <div class="text-center text-gray-700 font-medium text-base mb-4">{notifModalMsg}</div>
-      <button class="mt-2 px-6 py-2 rounded-xl bg-pink-500 text-white font-bold shadow hover:bg-pink-600 transition-colors" on:click={closeNotifModal}>Tutup</button>
+      <button class="mt-2 px-6 py-2 rounded-xl bg-pink-500 text-white font-bold shadow hover:bg-pink-600 transition-colors" onclick={closeNotifModal}>Tutup</button>
     </div>
   </div>
 {/if}
