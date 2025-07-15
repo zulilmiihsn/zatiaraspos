@@ -680,7 +680,7 @@ main {
               inputmode="numeric"
               class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
               value={nominal}
-              on:input={handleNominalInput}
+              oninput={handleNominalInput}
               required
               placeholder="Masukkan nominal"
               autocomplete="off"
