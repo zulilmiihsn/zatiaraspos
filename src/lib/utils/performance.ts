@@ -69,16 +69,24 @@ export const calculateCartTotal = memoize((cart: any[]) => {
   return { items, total };
 });
 
-// Fuzzy search dengan optimasi
+// Fuzzy search dengan hasil lebih relevan
 export function fuzzySearch(query: string, items: any[], key: string = 'name'): any[] {
   if (!query.trim()) return items;
-  
   const searchTerm = query.toLowerCase();
-  return items.filter(item => {
-    const text = String(item[key]).toLowerCase();
-    return text.includes(searchTerm) || 
-           searchTerm.split('').every(char => text.includes(char));
-  });
+  // Cari di name dan kategori (jika ada)
+  return items
+    .map(item => {
+      const name = String(item[key] ?? '').toLowerCase();
+      const kategori = String(item.kategori ?? '').toLowerCase();
+      let score = 0;
+      if (name.startsWith(searchTerm)) score = 3;
+      else if (name.includes(searchTerm)) score = 2;
+      else if (kategori && kategori.includes(searchTerm)) score = 1;
+      return { item, score };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(x => x.item);
 }
 
 // Virtual scrolling utilities

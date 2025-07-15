@@ -519,7 +519,7 @@ function showErrorNotif(message: string) {
 </script>
 
 <div 
-  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden"
+  class="flex flex-col h-100vh bg-white w-full max-w-full overflow-x-hidden overflow-y-auto"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
@@ -528,13 +528,13 @@ function showErrorNotif(message: string) {
   role="button"
   tabindex="0"
 >
-  <main class="flex-1 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
+  <main class="flex-1 w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
   >
-    <div class="sticky top-0 z-10 bg-white px-4 py-4 md:py-8 lg:py-10 flex items-center gap-3">
+    <div class="bg-white px-4 py-4 md:py-8 lg:py-10 flex items-center gap-3">
       <div class="relative w-full">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" /></svg>
@@ -549,7 +549,7 @@ function showErrorNotif(message: string) {
         />
       </div>
     </div>
-    <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white" style="scrollbar-width:none;-ms-overflow-style:none;" onwheel={(e) => { e.currentTarget.scrollLeft += e.deltaY; }}>
+    <div class="flex gap-2 overflow-x-auto px-4 py-2 bg-white -mt-2 md:-mt-4 lg:-mt-6" style="scrollbar-width:none;-ms-overflow-style:none;">
       <button
         class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
         type="button"
@@ -574,70 +574,74 @@ function showErrorNotif(message: string) {
         {/each}
       {/if}
     </div>
-    {#if $posGridView}
-      <div class="flex flex-col gap-1 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
-        {#if isLoadingProducts}
-          {#each Array(skeletonCount) as _, i}
-            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-lg shadow-md flex items-center justify-between px-3 py-2 min-h-[56px] max-h-[80px] cursor-pointer transition-shadow border border-gray-100"></div>
-          {/each}
-        {:else if filteredProducts.length === 0}
-          <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
-            <div class="text-6xl mb-2">🍽️</div>
-            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
-            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+    <div class="flex-1 w-full max-w-full px-0" style="min-height:0;">
+      <div class="overflow-y-auto h-[calc(100vh-112px-48px)] md:h-[calc(100vh-128px-48px)] lg:h-[calc(100vh-160px-48px)]" style="scrollbar-width:none;-ms-overflow-style:none;">
+        {#if $posGridView}
+          <div class="flex flex-col gap-1 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
+            {#if isLoadingProducts}
+              {#each Array(skeletonCount) as _, i}
+                <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-lg shadow-md flex items-center justify-between px-3 py-2 min-h-[56px] max-h-[80px] cursor-pointer transition-shadow border border-gray-100"></div>
+              {/each}
+            {:else if filteredProducts.length === 0}
+              <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+                <div class="text-6xl mb-2">🍽️</div>
+                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+                <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+              </div>
+            {:else}
+              {#each filteredProducts as p}
+                <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+                  <div class="flex flex-col flex-1 min-w-0">
+                    <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
+                    {#if p.kategori}
+                      <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{p.kategori}</span>
+                    {:else}
+                      <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5 invisible">Kategori</span>
+                    {/if}
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+              {/each}
+            {/if}
           </div>
         {:else}
-          {#each filteredProducts as p}
-            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
-              <div class="flex flex-col flex-1 min-w-0">
-                <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
-                {#if p.kategori}
-                  <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{p.kategori}</span>
-                {:else}
-                  <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5 invisible">Kategori</span>
-                {/if}
+          <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
+            {#if isLoadingProducts}
+              {#each Array(skeletonCount) as _, i}
+                <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
+              {/each}
+            {:else if filteredProducts.length === 0}
+              <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+                <div class="text-6xl mb-2">🍽️</div>
+                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+                <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-          {/each}
-        {/if}
-      </div>
-    {:else}
-      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
-        {#if isLoadingProducts}
-          {#each Array(skeletonCount) as _, i}
-            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
-          {/each}
-        {:else if filteredProducts.length === 0}
-          <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
-            <div class="text-6xl mb-2">🍽️</div>
-            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
-            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+            {:else}
+              {#each filteredProducts as p}
+                <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+                  {#if (p.gambar || p.image) && !imageError[String(p.id)]}
+                    <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+                  {:else}
+                    <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
+                  {/if}
+                  <div class="w-full flex flex-col items-center">
+                    <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
+                    {#if p.kategori}
+                      <span class="text-xs text-gray-400 truncate min-h-[18px]">{p.kategori}</span>
+                    {:else}
+                      <span class="text-xs text-gray-400 truncate min-h-[18px] invisible">Kategori</span>
+                    {/if}
+                    <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+                  </div>
+                </div>
+              {/each}
+            {/if}
           </div>
-        {:else}
-          {#each filteredProducts as p}
-            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
-              {#if (p.gambar || p.image) && !imageError[String(p.id)]}
-                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
-              {:else}
-                <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
-              {/if}
-              <div class="w-full flex flex-col items-center">
-                <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
-                {#if p.kategori}
-                  <span class="text-xs text-gray-400 truncate min-h-[18px]">{p.kategori}</span>
-                {:else}
-                  <span class="text-xs text-gray-400 truncate min-h-[18px] invisible">Kategori</span>
-                {/if}
-                <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
-              </div>
-            </div>
-          {/each}
         {/if}
       </div>
-    {/if}
+    </div>
 
     {#if cart.length > 0}
       <div
