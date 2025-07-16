@@ -10,6 +10,7 @@
 	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView';
 	import { slide, fade, fly } from 'svelte/transition';
+	import { auth } from '$lib/auth';
 
 	export const data = {};
 	
@@ -36,18 +37,16 @@
 			return;
 		}
 		
-		// Cek session Supabase
-		const { data: { session } } = await supabase.auth.getSession();
-		if (!session) {
+		// Cek session lokal manual
+		if (!auth.isAuthenticated()) {
 			goto('/login');
 			return;
 		}
 		
 		// Cek role jika akses /admin
+		const user = auth.getCurrentUser();
 		if (currentPath.startsWith('/admin')) {
-			const userId = session.user.id;
-			const { data: profile } = await supabase.from('profil').select('role').eq('id', userId).single();
-			if (!profile || profile.role !== 'admin') {
+			if (!user || user.role !== 'admin') {
 				goto('/unauthorized');
 				return;
 			}
@@ -63,6 +62,8 @@
 	$: if (isPosPage) {
 		const unsubscribe = posGridView.subscribe(v => posGridViewValue = v);
 	}
+
+	$: hideNav = $page.url.pathname === '/pengaturan/pemilik/riwayat';
 </script>
 
 <!-- Loading indicator -->
@@ -86,31 +87,33 @@
 {:else}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
 		{#if $page.url.pathname !== '/laporan'}
-			<div class="sticky top-0 z-30 bg-white shadow-md">
-				<Topbar onSettings={undefined}>
-					<svelte:fragment slot="actions">
-						{#if $page.url.pathname === '/'}
-							<!-- Button Buka/Tutup Toko dihapus sesuai permintaan user -->
-						{/if}
-						{#if $page.url.pathname === '/pos'}
-							<button
-								class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
-								on:click={() => posGridView.update(v => !v)}
-								aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
-								type="button"
-							>
-								{#if $posGridView}
-									<!-- Icon Grid -->
-									<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
-								{:else}
-									<!-- Icon List -->
-									<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-								{/if}
-							</button>
-						{/if}
-					</svelte:fragment>
-				</Topbar>
-			</div>
+			{#if !hideNav}
+				<div class="sticky top-0 z-30 bg-white shadow-md">
+					<Topbar onSettings={undefined}>
+						<svelte:fragment slot="actions">
+							{#if $page.url.pathname === '/'}
+								<!-- Button Buka/Tutup Toko dihapus sesuai permintaan user -->
+							{/if}
+							{#if $page.url.pathname === '/pos'}
+								<button
+									class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
+									on:click={() => posGridView.update(v => !v)}
+									aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
+									type="button"
+								>
+									{#if $posGridView}
+										<!-- Icon Grid -->
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+									{:else}
+										<!-- Icon List -->
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+									{/if}
+								</button>
+							{/if}
+						</svelte:fragment>
+					</Topbar>
+				</div>
+			{/if}
 		{/if}
 		{#if $page.url.pathname === '/laporan'}
 			<div class="sticky top-0 z-30 bg-white shadow-md">
@@ -132,7 +135,7 @@
 	</div>
 {/if}
 
-{#if $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar'}
+{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar'}
 	<div class="sticky bottom-0 z-30 bg-white">
 		<BottomNav />
 	</div>

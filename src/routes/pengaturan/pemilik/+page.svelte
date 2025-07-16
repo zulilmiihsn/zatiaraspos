@@ -56,10 +56,10 @@ let editEkstraId = null;
 // Ganti deklarasi menuForm menjadi store writable
 let menuForm = writable({
   name: '',
-  kategori: '',
+  kategori_id: '',
   tipe: 'minuman',
-  harga: '',
-  ekstraIds: [],
+  price: '',
+  ekstra_ids: [],
   gambar: '',
 });
 
@@ -188,7 +188,7 @@ async function handleChangeKasirUserPass(e) {
   // Cari user kasir di profil
   const { data: kasirProfile, error: kasirProfileError } = await supabase
     .from('profil')
-    .select('id, email, username')
+    .select('id, username')
     .eq('role', 'kasir')
     .single();
   if (kasirProfileError || !kasirProfile) {
@@ -222,26 +222,17 @@ async function handleChangeKasirUserPass(e) {
 
 // Load saved settings on mount
 onMount(async () => {
-  // Validasi role user
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) {
+  if (!auth.isAuthenticated()) {
     goto('/login');
     return;
   }
-  
-  const { data: profile } = await supabase
-    .from('profil')
-    .select('role, username')
-    .eq('id', session.user.id)
-    .single();
-    
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'pemilik')) {
+  const user = auth.getCurrentUser();
+  if (!user || (user.role !== 'admin' && user.role !== 'pemilik')) {
     goto('/unauthorized');
     return;
   }
-  
-  userProfileData = profile;
-  setUserRole(profile.role, profile);
+  userProfileData = user;
+  setUserRole(user.role, user);
   
   await fetchSecuritySettings();
   await fetchMenus();
@@ -389,10 +380,10 @@ function openMenuForm(menu = null) {
   showMenuForm = true;
   if (menu) {
     editMenuId = menu.id;
-    $menuForm = { ...menu, harga: menu.harga.toString() };
+    $menuForm = { ...menu, ekstra_ids: menu.ekstra_ids ?? [] };
   } else {
     editMenuId = null;
-    $menuForm = { name: '', kategori: '', tipe: 'minuman', harga: '', ekstraIds: [], gambar: '' };
+    $menuForm = { name: '', kategori_id: '', tipe: 'minuman', price: '', ekstra_ids: [], gambar: '' };
   }
 }
 
@@ -464,15 +455,15 @@ async function uploadMenuImageFromDataUrl(dataUrl, menuId) {
 
 async function saveMenu() {
   // Validasi field harga
-  if (!$menuForm.harga || $menuForm.harga.toString().trim() === '') {
+  if (!$menuForm.price || $menuForm.price.toString().trim() === '') {
     notifModalMsg = 'Harga menu wajib diisi!';
     notifModalType = 'warning';
     showNotifModal = true;
     return;
   }
   // Pastikan kategori null jika tidak dipilih
-  if (!$menuForm.kategori || $menuForm.kategori.trim() === '') {
-    $menuForm = { ...$menuForm, kategori: null };
+  if (!$menuForm.kategori_id || $menuForm.kategori_id.trim() === '') {
+    $menuForm = { ...$menuForm, kategori_id: null };
   }
   let imageUrl = $menuForm.gambar;
   // Jika gambar berupa data URL (hasil crop)
@@ -486,7 +477,7 @@ async function saveMenu() {
       return;
     }
   }
-  const payload = { ...$menuForm, gambar: imageUrl, harga: parseInt($menuForm.harga) };
+  const payload = { ...$menuForm, gambar: imageUrl, price: parseInt($menuForm.price), ekstra_ids: $menuForm.ekstra_ids };
   let result;
   try {
   if (editMenuId) {
@@ -604,16 +595,16 @@ function openKategoriForm(kat) {
     showKategoriDetailModal = true;
     kategoriDetailName = '';
     selectedMenuIds = [];
-    unselectedMenuIds = menus.filter(m => !m.kategori).map(m => m.id);
+    unselectedMenuIds = menus.filter(m => !m.kategori_id).map(m => m.id);
     return;
   }
   kategoriDetail = kat;
   showKategoriDetailModal = true;
   kategoriDetailName = kat.name;
-  // Menu yang sudah masuk kategori (berdasarkan field kategori di produk)
-  selectedMenuIds = menus.filter(m => m.kategori === kat.name).map(m => m.id);
+  // Menu yang sudah masuk kategori (berdasarkan kategori_id di produk)
+  selectedMenuIds = menus.filter(m => m.kategori_id === kat.id).map(m => m.id);
   // Menu non-kategori
-  unselectedMenuIds = menus.filter(m => !m.kategori || m.kategori === '').map(m => m.id).filter(id => !selectedMenuIds.includes(id));
+  unselectedMenuIds = menus.filter(m => !m.kategori_id).map(m => m.id).filter(id => !selectedMenuIds.includes(id));
 }
 
 function closeKategoriDetailModal() {
@@ -634,6 +625,22 @@ function toggleMenuInKategori(id) {
   }
 }
 
+// Update kategori pada tabel menu/products
+async function updateMenusKategori(kategoriIdBaru, menuIdsBaru, kategoriIdLama) {
+  // Set kategori pada menu yang baru masuk kategori
+  for (const id of menuIdsBaru) {
+    await supabase.from('produk').update({ kategori_id: kategoriIdBaru ?? null }).eq('id', id);
+  }
+  // Hapus kategori pada menu yang sebelumnya ada tapi sekarang tidak
+  if (kategoriIdLama) {
+    const produkLama = menus.filter(m => m.kategori_id === kategoriIdLama && !menuIdsBaru.includes(m.id));
+    for (const m of produkLama) {
+      await supabase.from('produk').update({ kategori_id: null }).eq('id', m.id);
+    }
+  }
+}
+
+// Pada saveKategoriDetail, pastikan parameter updateMenusKategori benar
 async function saveKategoriDetail() {
   if (kategoriDetail) {
     // Update nama kategori
@@ -645,7 +652,7 @@ async function saveKategoriDetail() {
       return;
     }
     // Update kategori pada produk
-    await updateMenusKategori(kategoriDetailName, selectedMenuIds, kategoriDetail.name);
+    await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
   } else {
     // INSERT kategori baru
     const { data, error } = await supabase.from('kategori').insert([{ name: kategoriDetailName }]).select();
@@ -656,7 +663,8 @@ async function saveKategoriDetail() {
       return;
     }
     // Update kategori pada produk
-    await updateMenusKategori(kategoriDetailName, selectedMenuIds, null);
+    const newKategoriId = data?.[0]?.id ?? null;
+    await updateMenusKategori(newKategoriId, selectedMenuIds, null);
   }
   notifModalMsg = 'Kategori berhasil disimpan.';
   notifModalType = 'success';
@@ -666,21 +674,6 @@ async function saveKategoriDetail() {
   await fetchKategori();
   await fetchMenus();
   clearMasterCache();
-}
-
-// Update kategori pada tabel menu/products
-async function updateMenusKategori(namaKategori, menuIdsBaru, namaKategoriLama) {
-  // Set kategori pada menu yang baru masuk kategori
-  for (const id of menuIdsBaru) {
-    await supabase.from('produk').update({ kategori: namaKategori }).eq('id', id);
-  }
-  // Hapus kategori pada menu yang sebelumnya ada tapi sekarang tidak
-  if (namaKategoriLama) {
-    const produkLama = menus.filter(m => m.kategori === namaKategoriLama && !menuIdsBaru.includes(m.id));
-    for (const m of produkLama) {
-      await supabase.from('produk').update({ kategori: null }).eq('id', m.id);
-    }
-  }
 }
 
 function confirmDeleteKategori(id: number) {
@@ -821,20 +814,12 @@ function getEkstraTotalPrice(ekstraIds) {
   }, 0);
 }
 
-function getFilteredMenus() {
-  if (selectedKategori === 'Semua') return menus;
-  return menus.filter(menu => menu.kategori === selectedKategori);
-}
-
-function getKategoriNames() {
-  return kategoriList.map(k => k.name);
-}
-
 $: filteredMenus = menus.filter(menu => {
   const keyword = searchKeyword.trim().toLowerCase();
-  if (!keyword) return selectedKategori === 'Semua' ? true : menu.kategori === selectedKategori;
-  const match = menu.name.toLowerCase().includes(keyword) || (menu.kategori && menu.kategori.toLowerCase().includes(keyword));
-  return (selectedKategori === 'Semua' ? true : menu.kategori === selectedKategori) && match;
+  if (!keyword) return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
+  const kategoriNama = kategoriList.find(k => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
+  const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
+  return (selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match;
 });
 
 function handleFileChange(e) {
@@ -883,7 +868,7 @@ function handleImgError(id: string) {
 function formatRupiahInput(e) {
   let value = e.target.value.replace(/[^\d]/g, '');
   value = value ? parseInt(value).toLocaleString('id-ID') : '';
-  $menuForm.harga = value;
+  $menuForm.price = value;
 }
 
 // Tambahkan state untuk tap vs swipe ekstra
@@ -1181,6 +1166,48 @@ async function saveLockedPages() {
     showNotifModal = true;
   }
 }
+
+// Pada tab kategori, gunakan kategoriWithCount untuk badge jumlah menu
+// ... existing code ...
+// ... existing code ...
+
+// Pada modal detail kategori:
+// Sinkronkan selectedMenuIds dan unselectedMenuIds setiap kali showKategoriDetailModal dibuka atau data menus berubah
+$: if (showKategoriDetailModal && kategoriDetail) {
+  selectedMenuIds = menus.filter(m => m.kategori_id === kategoriDetail.id).map(m => m.id);
+  unselectedMenuIds = menus.filter(m => !m.kategori_id).map(m => m.id).filter(id => !selectedMenuIds.includes(id));
+}
+
+// Saat klik menu di modal, update field kategori di produk secara langsung
+async function toggleMenuInKategoriRealtime(id) {
+  const menuIdx = menus.findIndex(m => m.id === id);
+  if (menuIdx === -1) return;
+  if (menus[menuIdx].kategori_id === kategoriDetail.id) {
+    // Unassign kategori
+    await supabase.from('produk').update({ kategori_id: null }).eq('id', id);
+    // Update state lokal
+    menus[menuIdx] = { ...menus[menuIdx], kategori_id: null };
+  } else {
+    // Assign kategori
+    await supabase.from('produk').update({ kategori_id: kategoriDetail.id }).eq('id', id);
+    // Update state lokal
+    menus[menuIdx] = { ...menus[menuIdx], kategori_id: kategoriDetail.id };
+  }
+  // Blok reaktif akan otomatis update selectedMenuIds/unselectedMenuIds
+}
+// ... existing code ...
+// Pada modal, ganti onclick/toggleMenuInKategori menjadi toggleMenuInKategoriRealtime
+// ... existing code ...
+
+// Tambahkan kembali deklarasi kategoriWithCount di dalam <script>
+type KategoriWithCount = { id: number|string, name: string, count: number };
+$: kategoriWithCount = kategoriList.map(kat => ({
+  ...kat,
+  count: menus.filter(m => m.kategori_id === kat.id).length
+}));
+// ... existing code ...
+// Pastikan tidak ada blok {#each kategoriWithCount ...} di dalam <script> atau di luar markup
+// ... existing code ...
 </script>
 
 <svelte:head>
@@ -1348,12 +1375,12 @@ async function saveLockedPages() {
               <span>Belum ada Kategori</span>
             </div>
           {:else}
-          {#each getKategoriNames() as kategori}
+          {#each kategoriList as kat}
             <button 
-                  class="w-full px-2.5 py-2 rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kategori ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
-                  onclick={() => { selectedKategori = kategori; touchStartX = 0; touchEndX = 0; }}
+              class="w-full px-2.5 py-2 rounded-md font-medium transition-colors whitespace-nowrap text-xs {selectedKategori === kat.id ? 'bg-pink-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}"
+              onclick={() => { selectedKategori = kat.id; touchStartX = 0; touchEndX = 0; }}
             >
-              {kategori}
+              {kat.name}
             </button>
           {/each}
           {/if}
@@ -1405,8 +1432,8 @@ async function saveLockedPages() {
                   </div>
                   <div class="w-full flex flex-col items-center">
                     <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{menu.name}</h3>
-                    <div class="text-xs text-gray-400 mb-0.5 min-h-[20px]">{menu.kategori ? menu.kategori : '\u00A0'}</div>
-                    <div class="text-pink-500 font-bold text-base">Rp {menu.harga.toLocaleString('id-ID')}</div>
+                    <div class="text-xs text-gray-400 mb-0.5 min-h-[20px]">{kategoriList.find(k => k.id === menu.kategori_id)?.name ?? '\u00A0'}</div>
+                    <div class="text-pink-500 font-bold text-base">Rp {(menu.price ?? 0).toLocaleString('id-ID')}</div>
                   </div>
                 </div>
               {/each}
@@ -1427,10 +1454,10 @@ async function saveLockedPages() {
                 >
                   <div class="flex flex-col flex-1 min-w-0">
                     <span class="font-medium text-gray-800 text-sm truncate">{menu.name}</span>
-                    <span class="text-xs text-gray-400 truncate">{menu.kategori ? menu.kategori : '\u00A0'}</span>
+                    <span class="text-xs text-gray-400 truncate">{kategoriList.find(k => k.id === menu.kategori_id)?.name ?? '\u00A0'}</span>
                   </div>
                   <div class="flex items-center gap-2">
-                    <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {menu.harga.toLocaleString('id-ID')}</span>
+                    <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {(menu.price ?? 0).toLocaleString('id-ID')}</span>
                     <button 
                       class="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors ml-1"
                       onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }}
@@ -1488,7 +1515,7 @@ async function saveLockedPages() {
                 </div>
               {:else}
                 <div class="space-y-3">
-                  {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
+                  {#each kategoriWithCount.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
                     <div class="bg-blue-50 rounded-xl shadow border border-blue-100 p-3 flex items-center justify-between group cursor-pointer hover:bg-blue-100 transition-colors"
                       data-kategori-box
                       ontouchstart={handleKategoriTouchStart}
@@ -1498,22 +1525,16 @@ async function saveLockedPages() {
                       onkeydown={(e) => e.key === 'Enter' && handleKategoriClick(e, kat)}
                       role="button"
                       tabindex="0"
-                      aria-label="Edit kategori {kat.name}"
-                    >
-                      <div>
-                        <div class="font-semibold text-blue-700 text-sm">{kat.name}</div>
-                        <div class="text-xs text-blue-400">
-                          {menus.filter(m => m.kategori === kat.name).length} menu
-                        </div>
+                      aria-label="Edit kategori {kat.name}">
+                      <div class="flex flex-col gap-0.5">
+                        <span class="font-semibold text-blue-700 text-sm">{kat.name}</span>
+                        <span class="text-xs text-blue-400">{kat.count} menu</span>
                       </div>
-                      <div class="flex gap-2" role="group">
-                        <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md"
-                          onclick={(e) => { e.stopPropagation(); confirmDeleteKategori(kat.id); }}
-                          ontouchend={(e) => { e.stopPropagation(); e.preventDefault(); confirmDeleteKategori(kat.id); }}
-                        >
-                          <svelte:component this={Trash} class="w-5 h-5" />
-                        </button>
-                      </div>
+                      <button class="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors ml-1"
+                        onclick={(e) => { e.stopPropagation(); openKategoriForm(kat); }}
+                        aria-label="Edit kategori {kat.name}">
+                        <svelte:component this={Edit} class="w-5 h-5" />
+                      </button>
                     </div>
                   {/each}
                 </div>
@@ -1583,7 +1604,7 @@ async function saveLockedPages() {
                     </div>
                     <div class="w-full flex flex-col items-start">
                       <h3 class="font-semibold text-green-700 text-sm truncate w-full mb-0.5 text-left">{ekstra.name}</h3>
-                      <div class="text-green-400 font-bold text-xs text-left">Rp {ekstra.harga.toLocaleString('id-ID')}</div>
+                      <div class="text-green-400 font-bold text-xs text-left">Rp {(ekstra.harga ?? 0).toLocaleString('id-ID')}</div>
                     </div>
                   </div>
                 {/each}
@@ -1799,8 +1820,8 @@ async function saveLockedPages() {
                 {:else}
                   {#each kategoriList as kat}
                     <button type="button"
-                      class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {$menuForm.kategori === kat.name ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
-                      onclick={() => $menuForm.kategori = kat.name}>
+                      class="px-4 py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 whitespace-nowrap {$menuForm.kategori_id === kat.id ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                      onclick={() => $menuForm.kategori_id = kat.id}>
                       {kat.name}
                     </button>
                   {/each}
@@ -1809,7 +1830,7 @@ async function saveLockedPages() {
             </div>
             <!-- Harga (Input Format Rupiah) -->
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-harga">Harga</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2" for="menu-price">Harga</label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Rp</span>
                 <input 
@@ -1817,11 +1838,11 @@ async function saveLockedPages() {
                   placeholder="0"
                   inputmode="numeric"
                   pattern="[0-9]*"
-                  id="menu-harga"
-                  bind:value={$menuForm.harga}
+                  id="menu-price"
+                  bind:value={$menuForm.price}
                   oninput={(e) => {
                     let value = e.target.value.replace(/[^\d]/g, '');
-                    $menuForm.harga = value;
+                    $menuForm.price = value;
                   }}
                 />
               </div>
@@ -1832,13 +1853,13 @@ async function saveLockedPages() {
               <div class="grid grid-cols-2 gap-2" id="menu-ekstra">
                 {#each ekstraList as ekstra}
                   <button type="button"
-                    class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {($menuForm.ekstraIds ?? []).includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
+                    class="w-full justify-center py-2.5 rounded-lg border border-pink-400 font-medium text-sm cursor-pointer transition-colors duration-150 flex items-center text-center whitespace-normal overflow-hidden {($menuForm.ekstra_ids ?? []).includes(ekstra.id) ? 'bg-pink-500 text-white shadow' : 'bg-white text-pink-500'}"
                     onclick={(e) => {
                       e.stopPropagation();
-                      if (($menuForm.ekstraIds ?? []).includes(ekstra.id)) {
-                        $menuForm.ekstraIds = $menuForm.ekstraIds.filter(id => id !== ekstra.id);
+                      if (($menuForm.ekstra_ids ?? []).includes(ekstra.id)) {
+                        $menuForm.ekstra_ids = $menuForm.ekstra_ids.filter(id => id !== ekstra.id);
                       } else {
-                        $menuForm.ekstraIds = [...($menuForm.ekstraIds ?? []), ekstra.id];
+                        $menuForm.ekstra_ids = [...($menuForm.ekstra_ids ?? []), ekstra.id];
                       }
                     }}
                   >
@@ -1893,10 +1914,10 @@ async function saveLockedPages() {
                 {#each selectedMenuIds as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-200"
                     transition:fly={{ y: -16, duration: 200 }}
-                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}
+                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategoriRealtime(id); }}
                     role="button"
                     tabindex="0"
-                    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleMenuInKategori(id)}>
+                    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleMenuInKategoriRealtime(id)}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}
@@ -1911,10 +1932,10 @@ async function saveLockedPages() {
                 {#each unselectedMenuIds as id (id)}
                   <div class="px-3 py-2 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium cursor-pointer select-none transition-all duration-200 shadow-sm hover:bg-blue-50"
                     transition:fly={{ y: 16, duration: 200 }}
-                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategori(id); }}
+                    onclick={(e) => { e.stopPropagation(); toggleMenuInKategoriRealtime(id); }}
                     role="button"
                     tabindex="0"
-                    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleMenuInKategori(id)}>
+                    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleMenuInKategoriRealtime(id)}>
                     {menus.find(m => m.id === id)?.name}
                   </div>
                 {/each}

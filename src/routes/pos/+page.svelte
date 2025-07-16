@@ -154,7 +154,7 @@ async function fetchProducts() {
       }
     }
   } catch (error) {
-    console.error('Gagal mengambil menu pending:', error);
+    // Hapus semua baris console.log, console.warn, dan console.error
   }
 }
 
@@ -304,8 +304,7 @@ const memoizedFilter = memoize((products: any[], categories: any[], selectedCate
   }
   // Filter berdasarkan kategori
   if (selectedCategory !== 'all') {
-    const categoryName = categories.find(c => c.id === selectedCategory)?.name;
-    filtered = filtered.filter(p => p.kategori === categoryName);
+    filtered = filtered.filter(p => p.kategori_id === selectedCategory);
   }
   return filtered;
 }, (products, categories, selectedCategory, search) => 
@@ -541,6 +540,13 @@ function addCustomItemToCart(e?: Event) {
   customItemPrice = '';
   customItemNote = '';
 }
+
+// Helper untuk ambil nama kategori dari kategori_id
+function getKategoriNameById(id) {
+  if (!id) return '';
+  const kat = categories?.find(k => k.id === id);
+  return kat?.name || '';
+}
 </script>
 
 <div 
@@ -610,70 +616,62 @@ function addCustomItemToCart(e?: Event) {
     </div>
     <div class="flex-1 w-full max-w-full px-0" style="min-height:0;">
       <div class="overflow-y-auto h-[calc(100vh-112px-48px)] md:h-[calc(100vh-128px-48px)] lg:h-[calc(100vh-160px-48px)]" style="scrollbar-width:none;-ms-overflow-style:none;">
-        {#if $posGridView}
-          <div class="flex flex-col gap-1 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
-            {#if isLoadingProducts}
-              {#each Array(skeletonCount) as _, i}
-                <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-lg shadow-md flex items-center justify-between px-3 py-2 min-h-[56px] max-h-[80px] cursor-pointer transition-shadow border border-gray-100"></div>
-              {/each}
-            {:else if filteredProducts.length === 0}
-              <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
-                <div class="text-6xl mb-2">🍽️</div>
-                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
-                <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
-              </div>
-            {:else}
-              {#each filteredProducts as p}
-                <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
-                  <div class="flex flex-col flex-1 min-w-0">
-                    <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
-                    {#if p.kategori}
-                      <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{p.kategori}</span>
-                    {:else}
-                      <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5 invisible">Kategori</span>
-                    {/if}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
-                  </div>
-                </div>
-              {/each}
-            {/if}
+    {#if $posGridView}
+      <div class="flex flex-col gap-1 px-4 pb-4 min-h-[60vh]" transition:slide={{ duration: 250 }}>
+        {#if isLoadingProducts}
+          {#each Array(skeletonCount) as _, i}
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-lg shadow-md flex items-center justify-between px-3 py-2 min-h-[56px] max-h-[80px] cursor-pointer transition-shadow border border-gray-100"></div>
+          {/each}
+        {:else if filteredProducts.length === 0}
+          <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+            <div class="text-6xl mb-2">🍽️</div>
+            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
           </div>
         {:else}
-          <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
-            {#if isLoadingProducts}
-              {#each Array(skeletonCount) as _, i}
-                <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
-              {/each}
-            {:else if filteredProducts.length === 0}
-              <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
-                <div class="text-6xl mb-2">🍽️</div>
-                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
-                <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+          {#each filteredProducts as p}
+            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
+                <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{getKategoriNameById(p.kategori_id)}</span>
               </div>
-            {:else}
-              {#each filteredProducts as p}
-                <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
-                  {#if (p.gambar || p.image) && !imageError[String(p.id)]}
-                    <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
-                  {:else}
-                    <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
-                  {/if}
-                  <div class="w-full flex flex-col items-center">
-                    <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
-                    {#if p.kategori}
-                      <span class="text-xs text-gray-400 truncate min-h-[18px]">{p.kategori}</span>
-                    {:else}
-                      <span class="text-xs text-gray-400 truncate min-h-[18px] invisible">Kategori</span>
-                    {/if}
-                    <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
-                  </div>
-                </div>
-              {/each}
-            {/if}
-          </div>
+              <div class="flex items-center gap-2">
+                <span class="text-pink-500 font-bold text-base whitespace-nowrap">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+          {/each}
         {/if}
+      </div>
+    {:else}
+      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
+        {#if isLoadingProducts}
+          {#each Array(skeletonCount) as _, i}
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
+          {/each}
+        {:else if filteredProducts.length === 0}
+          <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+            <div class="text-6xl mb-2">🍽️</div>
+            <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+            <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+          </div>
+        {:else}
+          {#each filteredProducts as p}
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+              {#if (p.gambar || p.image) && !imageError[String(p.id)]}
+                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+              {:else}
+                <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
+              {/if}
+              <div class="w-full flex flex-col items-center">
+                <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
+                <span class="text-xs text-gray-400 truncate min-h-[18px]">{getKategoriNameById(p.kategori_id)}</span>
+                <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    {/if}
         <!-- Tombol Custom Item -->
         <!-- Modal Custom Item -->
         {#if showCustomItemModal}
@@ -807,9 +805,9 @@ function addCustomItemToCart(e?: Event) {
             </div>
           {/if}
           <div class="font-semibold text-gray-800 mb-2 mt-4 text-base">Ekstra</div>
-          {#if selectedProduct && selectedProduct.ekstraIds && selectedProduct.ekstraIds.length > 0 && addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)).length > 0}
+          {#if selectedProduct && selectedProduct.ekstra_ids && selectedProduct.ekstra_ids.length > 0 && addOns.filter(a => selectedProduct.ekstra_ids.includes(a.id)).length > 0}
             <div class="grid grid-cols-2 gap-3 mb-6">
-              {#each addOns.filter(a => selectedProduct.ekstraIds.includes(a.id)) as a}
+              {#each addOns.filter(a => selectedProduct.ekstra_ids.includes(a.id)) as a}
                 <button
                   class="w-full justify-center py-1.5 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 flex flex-col items-center text-center whitespace-normal overflow-hidden {selectedAddOns.includes(a.id) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
                   type="button"

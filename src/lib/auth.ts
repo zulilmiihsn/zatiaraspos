@@ -89,7 +89,7 @@ export const auth = {
   // Check if user is authenticated
   isAuthenticated(): boolean {
     const currentSession = get(session) as any;
-    return currentSession?.isAuthenticated === true;
+    return Boolean(currentSession?.isAuthenticated);
   },
 
   // Get current user
@@ -126,27 +126,29 @@ function generateDummyToken(user: any): string {
 }
 
 export async function loginWithUsername(username: string, password: string) {
-  // Cari email user dari tabel profil
-  const { data: profile, error: profileError } = await supabase
-    .from('profil')
-    .select('email, role, username')
-    .eq('username', username)
-    .single();
-
-  if (profileError || !profile) throw new Error('Username tidak ditemukan');
-
-  // Login dengan email dan password
-  const { data, error: loginError } = await supabase.auth.signInWithPassword({
-    email: profile.email,
-    password
+  // Kirim ke endpoint API custom untuk verifikasi login
+  const res = await fetch('/api/verify-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
   });
+  const result = await res.json();
+  if (!result.success) throw new Error(result.message || 'Login gagal');
 
-  if (loginError) throw new Error('Password salah');
-  
   // Set user role dan profile ke store (hanya sekali saat login)
-  setUserRole(profile.role, profile);
-  
-  return data;
+  setUserRole(result.user.role, result.user);
+
+  // Simpan session ke localStorage
+  const sessionData = {
+    isAuthenticated: true,
+    user: result.user,
+    token: null // Tidak pakai token Supabase Auth
+  };
+  session.set(sessionData);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('zatiaras_session', JSON.stringify(sessionData));
+  }
+  return result.user;
 }
 
 export async function getUserRole(userId: string) {

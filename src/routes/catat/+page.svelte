@@ -15,6 +15,7 @@ import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import { dashboardCache } from '$lib/stores/dashboardCache';
 let pendingCount = 0;
 transaksiPendingCount.subscribe(val => pendingCount = val);
 
@@ -72,9 +73,9 @@ let transaksiList = [];
 let showSnackbar = false;
 let snackbarMsg = '';
 
-let observer;
+let observer: IntersectionObserver | null;
 let isBottomVisible = false;
-let bottomRef;
+let bottomRef: HTMLElement | null;
 
 // Helper untuk tanggal lokal user (YYYY-MM-DD)
 function getLocalDateString() {
@@ -91,7 +92,7 @@ userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
 
 import { supabase } from '$lib/database/supabaseClient';
-let sesiAktif = null;
+let sesiAktif: any = null;
 async function cekSesiTokoAktif() {
   const { data } = await supabase
     .from('sesi_toko')
@@ -169,7 +170,7 @@ async function fetchPin() {
 }
 
 async function fetchTransaksi() {
-  const { data, error } = await supabase.from('buku_kas').select('*').order('transaction_date', { ascending: false });
+  const { data, error } = await supabase.from('buku_kas').select('*').order('waktu', { ascending: false });
   if (!error) transaksiList = data;
 }
 
@@ -177,7 +178,7 @@ async function fetchTransaksi() {
 function getLocalOffsetString() {
   const offset = -new Date().getTimezoneOffset();
   const sign = offset >= 0 ? '+' : '-';
-  const pad = n => n.toString().padStart(2, '0');
+  const pad = (n: number) => n.toString().padStart(2, '0');
   const hours = pad(Math.floor(Math.abs(offset) / 60));
   const minutes = pad(Math.abs(offset) % 60);
   return `${sign}${hours}:${minutes}`;
@@ -194,7 +195,7 @@ function closeNotifModal() {
   showNotifModal = false;
 }
 
-async function saveTransaksi(form) {
+async function saveTransaksi(form: any) {
   await cekSesiTokoAktif();
   const id_sesi_toko = sesiAktif?.id || null;
   if (!id_sesi_toko && currentUserRole === 'kasir') {
@@ -207,25 +208,35 @@ async function saveTransaksi(form) {
     notifModalMsg = 'PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.';
     notifModalType = 'warning';
     showNotifModal = true;
-    return;
+    // Tidak ada return di sini, agar insert tetap lanjut untuk pemilik
   }
   console.log('DEBUG | Sesi Aktif:', sesiAktif);
   console.log('DEBUG | ID Sesi Toko yang akan disimpan:', id_sesi_toko);
   const trx = {
-    amount: form.amount,
-    type: mode === 'pemasukan' ? 'in' : 'out',
-    description: form.description,
-    transaction_date: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
+    tipe: mode === 'pemasukan' ? 'in' : 'out',
+    sumber: 'catat',
     payment_method: form.payment_method,
-    jenis: form.jenis,
-    id_sesi_toko
+    amount: form.amount,
+    description: form.description,
+    id_sesi_toko,
+    waktu: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
+    jenis: form.jenis
   };
+  console.log('DEBUG | Payload insert buku_kas:', trx);
   if (navigator.onLine) {
     const { error, data } = await supabase.from('buku_kas').insert([trx]);
     console.log('DEBUG | Hasil insert Supabase:', { error, data });
     if (error) {
-      alert('Gagal menyimpan transaksi ke database: ' + error.message);
+      notifModalMsg = 'Gagal menyimpan transaksi ke database: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
       return;
+    }
+    // Clear cache dashboard dan trigger refresh
+    dashboardCache.set({ data: null, lastFetched: 0 });
+    localStorage.removeItem('dashboardCache');
+    if (typeof window !== 'undefined' && window.fetchDashboardStats) {
+      window.fetchDashboardStats();
     }
   } else {
     await saveTransaksiOffline(trx);

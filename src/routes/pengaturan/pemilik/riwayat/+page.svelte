@@ -12,6 +12,7 @@ let transaksiToDelete = null;
 let notifMsg = '';
 let showNotif = false;
 let searchKeyword = '';
+let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 
 function todayRange() {
   const now = new Date();
@@ -26,31 +27,18 @@ function todayRange() {
 async function fetchTransaksiHariIni() {
   loading = true;
   const { start, end } = todayRange();
-  // Ambil dari buku_kas (catat) dan transaksi (POS)
-  const [catat, pos] = await Promise.all([
-    supabase.from('buku_kas').select('*').gte('transaction_date', start).lte('transaction_date', end).order('transaction_date', { ascending: false }),
-    supabase.from('transaksi').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false })
-  ]);
+  // Ambil hanya dari buku_kas
+  const { data, error } = await supabase.from('buku_kas').select('*').gte('waktu', start).lte('waktu', end).order('waktu', { ascending: false });
   transaksiHariIni = [];
-  if (catat.data) {
-    transaksiHariIni.push(...catat.data.map(t => ({
+  if (data) {
+    transaksiHariIni.push(...data.map(t => ({
       id: t.id,
-      waktu: t.transaction_date,
-      nama: t.description,
+      waktu: t.waktu,
+      nama: t.description || t.nama || '-',
       nominal: t.amount,
       tipe: t.type,
-      sumber: 'catat',
-    })));
-  }
-  if (pos.data) {
-    transaksiHariIni.push(...pos.data.map(t => ({
-      id: t.id,
-      waktu: t.created_at,
-      nama: t.customer_name || 'Transaksi POS',
-      nominal: t.total,
-      tipe: 'in',
-      sumber: 'pos',
-      payment_method: t.payment_method // tambahkan ini
+      sumber: t.sumber || 'catat',
+      payment_method: t.payment_method || 'tunai',
     })));
   }
   // Urutkan terbaru dulu
@@ -61,6 +49,14 @@ async function fetchTransaksiHariIni() {
   if (searchKeyword.trim()) {
     const keyword = searchKeyword.trim().toLowerCase();
     transaksiHariIni = transaksiHariIni.filter(t => (t.nama?.toLowerCase().includes(keyword) || t.kategori?.toLowerCase().includes(keyword)));
+  }
+  // Filter berdasarkan payment method
+  if (filterPayment !== 'all') {
+    transaksiHariIni = transaksiHariIni.filter(t => {
+      if (filterPayment === 'qris') return t.payment_method === 'qris' || t.payment_method === 'non-tunai';
+      if (filterPayment === 'tunai') return t.payment_method === 'tunai';
+      return true;
+    });
   }
   loading = false;
 }
@@ -110,6 +106,12 @@ onDestroy(() => {
 <div class="px-4 pt-3 pb-2 bg-white sticky top-[64px] z-30">
   <input type="text" class="w-full border border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100" placeholder="Cari transaksi atau kategori..." bind:value={searchKeyword} oninput={fetchTransaksiHariIni} />
 </div>
+<!-- Filter Payment Method -->
+<div class="px-4 pb-2 bg-white sticky top-[112px] z-30 flex gap-2">
+  <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'all'; fetchTransaksiHariIni(); }}>Semua</button>
+  <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'qris' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'qris'; fetchTransaksiHariIni(); }}>QRIS</button>
+  <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'tunai' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'tunai'; fetchTransaksiHariIni(); }}>Tunai</button>
+</div>
 
 <div class="max-w-2xl mx-auto w-full pt-[2px] px-4 pb-4">
   {#if loading}
@@ -128,11 +130,9 @@ onDestroy(() => {
                 {trx.tipe === 'in' ? 'Pemasukan' : 'Pengeluaran'}
                 {trx.sumber === 'pos' ? ' | ' : ''}
               </span>
-              {#if trx.sumber === 'pos'}
-                <span class="uppercase font-semibold text-pink-500">
-                  {trx.payment_method === 'qris' || trx.payment_method === 'non-tunai' ? 'QRIS' : 'Tunai'}
-                </span>
-              {/if}
+              <span class="uppercase font-semibold text-pink-500">
+                {trx.payment_method === 'qris' || trx.payment_method === 'non-tunai' ? 'QRIS' : 'Tunai'}
+              </span>
             </div>
             <div class="text-xs text-gray-400">{new Date(trx.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>

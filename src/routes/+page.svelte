@@ -137,16 +137,17 @@ async function fetchDashboardStats() {
     
     const { data: omzetData } = await supabase
       .from('buku_kas')
-      .select('amount')
-      .gte('transaction_date', startUTC)
-      .lte('transaction_date', endUTC)
-      .eq('type', 'in')
+      .select('amount, waktu, jenis, sumber, qty')
+      .gte('waktu', startUTC)
+      .lte('waktu', endUTC)
+      .eq('tipe', 'in')
       .eq('jenis', 'pendapatan_usaha');
     
     omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    itemTerjual = omzetData?.reduce((sum, item) => sum + (item.qty || 1), 0) || 0;
     
     // Total transaksi
-    const { count: transaksiCount } = await supabase.from('transaksi').select('*', { count: 'exact', head: true });
+    const { count: transaksiCount } = await supabase.from('buku_kas').select('*', { count: 'exact', head: true }).eq('tipe', 'in').eq('sumber', 'pos');
     jumlahTransaksi = transaksiCount || 0;
 
     // Statistik 7 hari terakhir
@@ -154,12 +155,13 @@ async function fetchDashboardStats() {
     const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
     const startDate = sevenDaysAgo.toISOString();
 
-    // Rata-rata transaksi/hari dari cash_transactions (group by waktu detik per hari)
+    // Rata-rata transaksi/hari dari buku_kas (group by waktu per hari)
     const { data: transaksiKas } = await supabase
       .from('buku_kas')
-      .select('transaction_date')
-      .gte('transaction_date', startDate)
-      .eq('type', 'in');
+      .select('waktu')
+      .gte('waktu', startDate)
+      .eq('tipe', 'in')
+      .eq('sumber', 'pos');
 
     const transaksiPerHari = {};
     for (let i = 0; i < 7; i++) {
@@ -170,8 +172,8 @@ async function fetchDashboardStats() {
     }
     if (transaksiKas) {
       transaksiKas.forEach(t => {
-        const key = t.transaction_date.slice(0, 10);
-        if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.transaction_date);
+        const key = t.waktu.slice(0, 10);
+        if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.waktu);
       });
     }
     avgTransaksi = Math.round(
@@ -182,7 +184,7 @@ async function fetchDashboardStats() {
     const jamCount = {};
     if (transaksiKas) {
       transaksiKas.forEach(t => {
-        const jam = new Date(t.transaction_date).getHours();
+        const jam = new Date(t.waktu).getHours();
         jamCount[jam] = (jamCount[jam] || 0) + 1;
       });
     }
@@ -199,9 +201,10 @@ async function fetchDashboardStats() {
     // 2. Pendapatan 7 hari terakhir (grafik)
     const { data: pemasukan } = await supabase
       .from('buku_kas')
-      .select('amount, transaction_date')
-      .gte('transaction_date', startDate)
-      .eq('type', 'in');
+      .select('amount, waktu')
+      .gte('waktu', startDate)
+      .eq('tipe', 'in')
+      .eq('sumber', 'pos');
     const pendapatanPerHari = {};
     for (let i = 0; i < 7; i++) {
       const d = new Date(sevenDaysAgo);
@@ -213,7 +216,7 @@ async function fetchDashboardStats() {
     }
     if (pemasukan) {
       pemasukan.forEach(t => {
-        const key = toWITA(t.transaction_date);
+        const key = toWITA(t.waktu);
         if (pendapatanPerHari[key] !== undefined) pendapatanPerHari[key] += t.amount || 0;
       });
     }
@@ -223,41 +226,42 @@ async function fetchDashboardStats() {
     weeklyIncome = weeklyIncome.map(x => (typeof x === 'number' && !isNaN(x) && x > 0 ? x : 0));
     weeklyMax = Math.max(...weeklyIncome, 1);
 
-    // Best sellers: ambil semua transaction_items 7 hari terakhir, group dan sum qty di JS
+    // Best sellers: ambil dari transaksi_kasir 7 hari terakhir, group dan sum qty di JS
     const { data: items, error } = await supabase
-      .from('item_transaksi')
-      .select('menu_id, qty, created_at')
+      .from('transaksi_kasir')
+      .select('produk_id, qty, created_at')
       .gte('created_at', startDate);
     if (!error && items) {
-      // Group by menu_id, sum qty
+      // Group by produk_id, sum qty
       const grouped = {};
       for (const item of items) {
-        if (!grouped[item.menu_id]) grouped[item.menu_id] = 0;
-        grouped[item.menu_id] += item.qty;
+        if (!item.produk_id) continue;
+        if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
+        grouped[item.produk_id] += item.qty || 1;
       }
-      // Ambil 3 menu_id terlaris
-      const topMenuIds = Object.entries(grouped)
+      // Ambil 3 produk_id terlaris
+      const topProdukIds = Object.entries(grouped)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(([menu_id]) => menu_id);
-      if (topMenuIds.length === 0) {
+        .map(([produk_id]) => produk_id);
+      if (topProdukIds.length === 0) {
         bestSellers = [];
       } else {
         // Ambil semua produk
         const { data: allProducts } = await supabase
           .from('produk')
           .select('id, name, gambar');
-        // Filter hanya menu_id yang ada di products
-        const validMenuIds = topMenuIds.filter(id => allProducts && allProducts.some(p => p.id === id));
-        if (validMenuIds.length === 0) {
+        // Filter hanya produk_id yang ada di products
+        const validProdukIds = topProdukIds.filter(id => allProducts && allProducts.some(p => p.id === id));
+        if (validProdukIds.length === 0) {
           bestSellers = [];
         } else {
-          const best = validMenuIds.map(menu_id => {
-            const prod = allProducts.find(p => p.id === menu_id);
+          const best = validProdukIds.map(produk_id => {
+            const prod = allProducts.find(p => p.id === produk_id);
             return {
               name: prod?.name || '-',
               image: prod?.gambar || '',
-              total_qty: grouped[menu_id]
+              total_qty: grouped[produk_id]
             };
           });
           bestSellers = best;
@@ -305,10 +309,9 @@ async function fetchDashboardStatsPOS() {
   const { data: kas, error } = await supabase
     .from('buku_kas')
     .select('*')
-    .gte('transaction_date', startUTC)
-    .lte('transaction_date', endUTC)
-    .eq('jenis', 'pendapatan_usaha')
-    .eq('type', 'in');
+    .gte('waktu', startUTC)
+    .lte('waktu', endUTC)
+    .eq('sumber', 'pos');
 
   if (!error && kas) {
     // Item terjual: sum semua qty (jika ada), fallback ke jumlah baris
@@ -316,12 +319,13 @@ async function fetchDashboardStatsPOS() {
     // Jumlah transaksi: hitung unique transaction_id
     const transactionIds = new Set((kas || []).map(t => t.transaction_id).filter(Boolean));
     jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-    // Pendapatan: sum amount
-    omzet = kas.reduce((sum, t) => sum + (t.amount || 0), 0);
+    // HAPUS assignment omzet di sini
+    // omzet = kas.reduce((sum, t) => sum + (t.amount || 0), 0);
   } else {
     itemTerjual = 0;
     jumlahTransaksi = 0;
-    omzet = 0;
+    // HAPUS assignment omzet di sini
+    // omzet = 0;
   }
 }
 
@@ -498,7 +502,7 @@ async function hitungRingkasanTutup() {
     .from('buku_kas')
     .select('*')
     .eq('id_sesi_toko', sesiAktif.id);
-  type Kas = { payment_method?: string; type?: string; description?: string; amount?: number; transaction_date?: string; id_sesi_toko?: string };
+  type Kas = { payment_method?: string; tipe?: string; amount?: number; transaction_date?: string; id_sesi_toko?: string };
   let kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
   // Integrasi transaksi offline: gabungkan transaksi pending dari IndexedDB
   if (navigator.onLine === false) {
@@ -510,23 +514,19 @@ async function hitungRingkasanTutup() {
     }
   }
 
-  // Penjualan tunai
-  const penjualanTunai = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
-  // Catat pemasukan tunai (bukan penjualan)
-  const pemasukanTunaiCatat = kas.filter((t) => t.type === 'in' && t.payment_method === 'tunai' && (!t.description || !t.description.includes('Penjualan'))).reduce((a, b) => a + (b.amount || 0), 0);
-  // Pemasukan tunai = penjualan tunai + catat pemasukan tunai
-  const pemasukanTunai = penjualanTunai + pemasukanTunaiCatat;
+  // Penjualan tunai (semua pemasukan tunai)
+  const penjualanTunai = kas.filter((t) => t.tipe === 'in' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
   // Pengeluaran tunai
-  const pengeluaranTunai = kas.filter((t) => t.type === 'out' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+  const pengeluaranTunai = kas.filter((t) => t.tipe === 'out' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
   const modalAwal = sesiAktif.opening_cash || 0;
-  // Total penjualan = semua penjualan (tunai + non-tunai)
-  const totalPenjualan = kas.filter((t) => t.type === 'in' && t.description && t.description.includes('Penjualan')).reduce((a, b) => a + (b.amount || 0), 0);
+  // Total penjualan = semua pemasukan (in) dari sumber pos
+  const totalPenjualan = kas.filter((t) => t.tipe === 'in' && t.sumber === 'pos').reduce((a, b) => a + (b.amount || 0), 0);
   // Uang kasir seharusnya
-  const uangKasir = modalAwal + pemasukanTunai - pengeluaranTunai;
+  const uangKasir = modalAwal + penjualanTunai - pengeluaranTunai;
   ringkasanTutup = {
     modalAwal,
     totalPenjualan,
-    pemasukanTunai,
+    pemasukanTunai: penjualanTunai,
     pengeluaranTunai,
     uangKasir
   };

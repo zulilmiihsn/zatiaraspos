@@ -11,6 +11,7 @@ import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { fly, fade } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { userRole } from '$lib/stores/userRole';
+import { dashboardCache } from '$lib/stores/dashboardCache';
 
 let cart = [];
 let customerName = '';
@@ -286,72 +287,96 @@ function getLocalOffsetString() {
 
 async function catatTransaksiKeLaporan() {
   await cekSesiTokoAktif();
+  if (!cart || cart.length === 0 || totalHarga <= 0) {
+    notifModalMsg = 'Transaksi tidak valid: keranjang kosong atau total harga 0.';
+    notifModalType = 'error';
+    showNotifModal = true;
+    return;
+  }
   const id_sesi_toko = sesiAktif?.id || null;
+  // Kasir: tetap dilarang transaksi jika tidak ada sesi toko aktif
   if (!id_sesi_toko && currentUserRole === 'kasir') {
     notifModalMsg = 'Kasir tidak boleh melakukan transaksi saat toko tutup!';
     notifModalType = 'error';
     showNotifModal = true;
     return;
   }
-  if (!id_sesi_toko && currentUserRole !== 'kasir') {
+  // Pemilik: beri warning, tapi lanjutkan proses insert
+  if (!id_sesi_toko && currentUserRole === 'pemilik') {
     notifModalMsg = 'PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.';
     notifModalType = 'warning';
     showNotifModal = true;
-    return;
+    // Tidak ada return di sini, jadi proses insert tetap lanjut
   }
   const now = new Date();
-  const transaction_date = now.toISOString();
-  const payment = paymentMethod === 'qris' ? 'non-tunai' : 'tunai';
+  const waktu = now.toISOString();
+  // Pastikan mapping paymentMethod ke value yang diterima database
+  const payment = paymentMethod === 'cash' ? 'tunai' : 'non-tunai';
   // Catat menu utama, harga sudah termasuk ekstra
   const inserts = cart.map(item => ({
-    amount: item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)),
-    qty: item.qty,
-    type: 'in',
-    description: `Penjualan ${item.product.name}`,
-    transaction_date,
+    tipe: 'in',
+    sumber: 'pos',
     payment_method: payment,
+    amount: item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)),
+    description: `Penjualan ${item.product.name}`,
+    customer_name: customerName || null,
+    id_sesi_toko,
+    waktu,
     jenis: 'pendapatan_usaha',
-    transaction_id: transactionId,
-    id_sesi_toko
+    qty: item.qty, // Tambahkan qty agar dashboard bisa rekap item terjual
+    // id: transactionId, // jika ingin set manual, aktifkan baris ini
+    // created_at: now.toISOString(), // jika ingin set manual, aktifkan baris ini
   }));
+  // Pastikan payment_method tidak null/kosong
+  if (!payment) {
+    notifModalMsg = 'Metode pembayaran tidak valid!';
+    notifModalType = 'error';
+    showNotifModal = true;
+    return;
+  }
   if (navigator.onLine) {
-    await supabase.from('buku_kas').insert(inserts);
+    // Insert ke buku_kas
+    const { error } = await supabase.from('buku_kas').insert(inserts);
+    if (error) {
+      notifModalMsg = 'Gagal mencatat transaksi: ' + (error.message || error.error_description || 'Unknown error');
+      notifModalType = 'error';
+      showNotifModal = true;
+      return;
+    }
+    // Cara utama: ambil id transaksi terakhir dari buku_kas berdasarkan customer_name dan waktu terbaru
+    const { data: lastBukuKas, error: lastBukuKasError } = await supabase
+      .from('buku_kas')
+      .select('id')
+      .eq('customer_name', customerName || null)
+      .order('waktu', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastBukuKas && lastBukuKas.id) {
+      const transaksiKasirInserts = cart.map(item => ({
+        buku_kas_id: lastBukuKas.id,
+        produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
+        qty: item.qty,
+        price: item.product.price ?? item.product.harga ?? 0
+      }));
+      if (transaksiKasirInserts.length) {
+        const { error: errorKasir } = await supabase.from('transaksi_kasir').insert(transaksiKasirInserts);
+        if (errorKasir) {
+        }
+      }
+    } else {
+    }
+    // Clear cache dashboard dan trigger refresh
+    dashboardCache.set({ data: null, lastFetched: 0 });
+    localStorage.removeItem('dashboardCache');
+    if (typeof window !== 'undefined' && window.fetchDashboardStats) {
+      window.fetchDashboardStats();
+    }
   } else {
     for (const trx of inserts) {
       await saveTransaksiOffline(trx);
     }
   }
-
-  // 1. Insert ke transaksi (header)
-  const transaksiHeader = {
-    id: transactionId, // UUID
-    type: 'penjualan',
-    amount: totalHarga,
-    is_cash: paymentMethod === 'cash',
-    description: 'Penjualan kasir',
-    created_at: new Date().toISOString()
-  };
-  const { error: trxError } = await supabase.from('transaksi').insert([transaksiHeader]);
-  if (trxError) {
-    console.error('Gagal insert transaksi:', trxError, transaksiHeader);
-    return;
-  }
-
-  // 2. Insert ke item_transaksi (detail)
-  const itemInserts = cart.map(item => ({
-    transaction_id: transactionId,
-    menu_id: item.product.id && item.product.id.startsWith('custom-') ? null : item.product.id,
-    qty: item.qty,
-    price: item.product.price ?? item.product.harga ?? 0
-  }));
-  if (itemInserts.some(i => !i.menu_id && i.menu_id !== null && (typeof i.menu_id !== 'string' || i.menu_id.length < 10))) {
-    console.error('Gagal insert item_transaksi: menu_id bukan UUID', itemInserts);
-  } else if (itemInserts.length > 0) {
-    const { error: insertError } = await supabase.from('item_transaksi').insert(itemInserts);
-    if (insertError) {
-      console.error('Gagal insert item_transaksi:', insertError, itemInserts);
-    }
-  }
+  // Hapus proses insert ke transaksi dan item_transaksi, karena sudah tidak digunakan
 }
 
 function closeNotifModal() {
@@ -384,14 +409,14 @@ function closeNotifModal() {
                 <span class="font-medium text-gray-900 truncate">{item.product.name}</span>
                 <span class="text-sm text-gray-500 flex-shrink-0">x{item.qty}</span>
               </div>
-              <span class="font-bold text-pink-500">Rp {(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</span>
+              <span class="font-bold text-pink-500">Rp {((item.product.price ?? item.product.harga ?? 0) * item.qty).toLocaleString('id-ID')}</span>
             </div>
             {#if item.addOns && item.addOns.length > 0}
               <div class="flex flex-col ml-1 mt-1 gap-0.5">
                 {#each item.addOns as ekstra}
                   <div class="flex justify-between text-xs text-gray-500 font-medium">
                     <span>+ {ekstra.name}</span>
-                    <span>Rp {(ekstra.price ?? ekstra.harga ?? 0).toLocaleString('id-ID')}</span>
+                    <span>Rp {((ekstra.price ?? ekstra.harga ?? 0) * item.qty).toLocaleString('id-ID')}</span>
                   </div>
                 {/each}
               </div>

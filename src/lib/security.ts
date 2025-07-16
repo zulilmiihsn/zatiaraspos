@@ -1,14 +1,14 @@
 import { supabase } from '$lib/database/supabaseClient';
 import { checkRateLimit } from './validation.js';
 import { browser } from '$app/environment';
+import { auth } from '$lib/auth';
 
 // Security middleware untuk proteksi rute
 export class SecurityMiddleware {
   // Check authentication untuk protected routes
   static async requireAuth(): Promise<boolean> {
     if (!browser) return true;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    if (!auth.isAuthenticated()) {
       window.location.href = '/login';
       return false;
     }
@@ -19,11 +19,8 @@ export class SecurityMiddleware {
   static async requireRole(requiredRole: string): Promise<boolean> {
     const ok = await this.requireAuth();
     if (!ok) return false;
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return false;
-    const { data: profile } = await supabase.from('profil').select('role').eq('id', userId).single();
-    if (!profile || profile.role !== requiredRole) {
+    const user = auth.getCurrentUser();
+    if (!user || user.role !== requiredRole) {
       window.location.href = '/unauthorized';
       return false;
     }

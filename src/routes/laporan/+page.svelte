@@ -332,9 +332,9 @@ async function fetchLaporan(start = startDate, end = endDate) {
   const { data: kas, error: kasError } = await supabase
     .from('buku_kas')
     .select('*')
-    .gte('transaction_date', startUtc)
-    .lte('transaction_date', endUtc)
-    .order('transaction_date', { ascending: false });
+    .gte('waktu', startUtc)
+    .lte('waktu', endUtc)
+    .order('waktu', { ascending: false });
   if (!kasError && kas) {
     laporan = kas;
     // Reset detail
@@ -343,13 +343,13 @@ async function fetchLaporan(start = startDate, end = endDate) {
     bebanUsahaDetail = [];
     bebanLainDetail = [];
     kas.forEach(item => {
-      if (item.type === 'in') {
+      if (item.tipe === 'in') {
         if (item.jenis === 'pendapatan_usaha') {
           pemasukanUsahaDetail.push(item);
         } else {
           pemasukanLainDetail.push(item);
         }
-      } else if (item.type === 'out') {
+      } else if (item.tipe === 'out') {
         if (item.jenis === 'beban_usaha') {
           bebanUsahaDetail.push(item);
         } else {
@@ -410,6 +410,16 @@ $: pemasukanUsahaGrouped = (() => {
   return group;
 })();
 
+// Hitung total QRIS & Tunai untuk setiap sub-group
+$: totalQrisPendapatanUsaha = pemasukanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPendapatanUsaha = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalQrisPemasukanLain = pemasukanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPemasukanLain = pemasukanLainDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalQrisBebanUsaha = bebanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiBebanUsaha = bebanUsahaDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalQrisBebanLain = bebanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiBebanLain = bebanLainDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
 $: if (filterType) {
   const today = getLocalDateString();
   if (filterType === 'harian') {
@@ -463,6 +473,25 @@ function handlePinInput(num) {
     }
   }
 }
+
+// Tambahkan deklarasi variabel reaktif untuk filter QRIS/Tunai pada setiap sub-group
+$: pemasukanUsahaQris = pemasukanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
+$: pemasukanUsahaTunai = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai');
+$: pemasukanLainQris = pemasukanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
+$: pemasukanLainTunai = pemasukanLainDetail.filter(t => t.payment_method === 'tunai');
+$: bebanUsahaQris = bebanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
+$: bebanUsahaTunai = bebanUsahaDetail.filter(t => t.payment_method === 'tunai');
+$: bebanLainQris = bebanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
+$: bebanLainTunai = bebanLainDetail.filter(t => t.payment_method === 'tunai');
+
+// Total QRIS & Tunai keseluruhan
+$: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+// Total QRIS & Tunai per section
+$: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
 </script>
 
 {#if showPinModal}
@@ -602,6 +631,11 @@ function handlePinInput(num) {
             <div class="text-xl font-bold text-cyan-900">Rp {summary.saldo !== null ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
           </div>
         </div>
+        <!-- Insight Total QRIS & Tunai Keseluruhan -->
+        <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold">
+          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
+          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
+        </div>
       </div>
 
       <!-- Section Laporan Detail -->
@@ -613,6 +647,10 @@ function handlePinInput(num) {
             <svg class="w-5 h-5 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukan ? 0 : 180}deg);transform-origin:center"/></svg>
           </button>
           {#if showPemasukan}
+            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPemasukan.toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPemasukan.toLocaleString('id-ID')}</span></span>
+            </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Pendapatan Usaha -->
               <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5" onclick={() => showPendapatanUsaha = !showPendapatanUsaha}>
@@ -620,14 +658,32 @@ function handlePinInput(num) {
                 <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPendapatanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showPendapatanUsaha}
-                <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#each Object.entries(pemasukanUsahaGrouped) as [desc, total]}
-                    <li class="flex justify-between text-sm text-gray-600">
-                      <span>{desc}</span>
-                      <span class="font-bold text-gray-700">Rp {total.toLocaleString('id-ID')}</span>
-                    </li>
-                  {/each}
-                </ul>
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if pemasukanUsahaQris.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each pemasukanUsahaQris as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if pemasukanUsahaTunai.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each pemasukanUsahaTunai as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
               {/if}
               <!-- Sub: Pemasukan Lainnya -->
               <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2" onclick={() => showPemasukanLain = !showPemasukanLain}>
@@ -635,17 +691,32 @@ function handlePinInput(num) {
                 <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukanLain ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showPemasukanLain}
-                <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#if pemasukanLainDetail.length === 0}
-                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
-                  {/if}
-                  {#each pemasukanLainDetail as item}
-                    <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.description || '-'}</span>
-                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
-                    </li>
-                  {/each}
-                </ul>
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if pemasukanLainQris.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each pemasukanLainQris as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if pemasukanLainTunai.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each pemasukanLainTunai as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
               {/if}
             </div>
           {/if}
@@ -657,6 +728,10 @@ function handlePinInput(num) {
             <svg class="w-5 h-5 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPengeluaran ? 0 : 180}deg);transform-origin:center"/></svg>
           </button>
           {#if showPengeluaran}
+            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPengeluaran.toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPengeluaran.toLocaleString('id-ID')}</span></span>
+            </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Beban Usaha -->
               <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5" onclick={() => showBebanUsaha = !showBebanUsaha}>
@@ -664,17 +739,32 @@ function handlePinInput(num) {
                 <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showBebanUsaha}
-                <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#if bebanUsahaDetail.length === 0}
-                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
-                  {/if}
-                  {#each bebanUsahaDetail as item}
-                    <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.description || '-'}</span>
-                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
-                    </li>
-                  {/each}
-                </ul>
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if bebanUsahaQris.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each bebanUsahaQris as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if bebanUsahaTunai.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each bebanUsahaTunai as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
               {/if}
               <!-- Sub: Beban Lainnya -->
               <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2" onclick={() => showBebanLain = !showBebanLain}>
@@ -682,17 +772,32 @@ function handlePinInput(num) {
                 <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanLain ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showBebanLain}
-                <ul class="px-4 pb-1 pt-0.5 flex flex-col gap-0.5" transition:slide|local>
-                  {#if bebanLainDetail.length === 0}
-                    <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
-                  {/if}
-                  {#each bebanLainDetail as item}
-                    <li class="flex justify-between text-sm text-gray-600">
-                      <span>{item.description || '-'}</span>
-                      <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
-                    </li>
-                  {/each}
-                </ul>
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if bebanLainQris.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each bebanLainQris as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
+                  <ul class="flex flex-col gap-0.5">
+                    {#if bebanLainTunai.length === 0}
+                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                    {/if}
+                    {#each bebanLainTunai as item}
+                      <li class="flex justify-between text-sm text-gray-600">
+                        <span>{item.description || '-'}</span>
+                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
               {/if}
             </div>
           {/if}
