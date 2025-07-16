@@ -1212,7 +1212,7 @@ async function saveLockedPages() {
           <!-- Manajemen Menu -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-pink-300 group text-left flex flex-col justify-center"
-                          onclick={() => currentPage = 'menu'}
+            onclick={() => currentPage = 'menu'}
           >
             <div class="flex items-center gap-2 mb-2">
               <svelte:component this={Utensils} class="w-5 h-5 text-pink-500" />
@@ -1224,7 +1224,7 @@ async function saveLockedPages() {
           <!-- Ganti Keamanan -->
           <button 
             class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-blue-300 group text-left flex flex-col justify-center"
-                          onclick={() => currentPage = 'security'}
+            onclick={() => currentPage = 'security'}
           >
             <div class="flex items-center gap-2 mb-2">
               <svelte:component this={Shield} class="w-5 h-5 text-blue-500" />
@@ -1234,8 +1234,17 @@ async function saveLockedPages() {
             </div>
             <p class="text-xs text-gray-500 leading-tight">Ubah password dan pengaturan keamanan</p>
           </button>
-          
 
+          <!-- Riwayat Transaksi (baris kedua, kolom pertama) -->
+          <a href="/pengaturan/pemilik/riwayat" class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all hover:border-yellow-300 group text-left flex flex-col justify-center" style="text-decoration:none;">
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <h3 class="text-sm font-semibold text-gray-800 leading-tight">Riwayat Transaksi</h3>
+            </div>
+            <p class="text-xs text-gray-500 leading-tight">Lihat & hapus transaksi hari ini</p>
+          </a>
+          <!-- Kolom kedua baris kedua dibiarkan kosong -->
+          <div></div>
         </div>
       </div>
     {/if}
