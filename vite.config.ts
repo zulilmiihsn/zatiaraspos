@@ -72,6 +72,14 @@ export default defineConfig({
 	],
 	build: {
 		rollupOptions: {
+			external: [
+				'bcryptjs',
+				'bcrypt',
+				'crypto',
+				'fs',
+				'path',
+				'os'
+			],
 			output: {
 				manualChunks: {
 					// Vendor chunks
@@ -100,6 +108,14 @@ export default defineConfig({
 			'@sveltejs/kit',
 			'lucide-svelte',
 			'@supabase/supabase-js'
+		],
+		exclude: [
+			'bcryptjs',
+			'bcrypt',
+			'crypto',
+			'fs',
+			'path',
+			'os'
 		]
 	},
 	server: {
