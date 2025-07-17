@@ -189,6 +189,31 @@ async function fetchAddOns() {
   }
 }
 
+// Fungsi untuk refresh cache secara manual
+async function refreshCache() {
+  isLoadingProducts = true;
+  
+  // Clear semua cache
+  localStorage.removeItem('produkCache');
+  localStorage.removeItem('kategoriCache');
+  localStorage.removeItem('tambahanCache');
+  
+  // Reset cache stores
+  produkCache.set({ data: null, lastFetched: 0 });
+  kategoriCache.set({ data: null, lastFetched: 0 });
+  tambahanCache.set({ data: null, lastFetched: 0 });
+  
+  // Fetch ulang data
+  await Promise.all([
+    fetchCategories(),
+    fetchAddOns(),
+    fetchProducts()
+  ]);
+  
+  isLoadingProducts = false;
+  showSuccessNotif('Data berhasil diperbarui!');
+}
+
 // Touch handling dengan throttling
 let touchStartX = 0;
 let touchStartY = 0;

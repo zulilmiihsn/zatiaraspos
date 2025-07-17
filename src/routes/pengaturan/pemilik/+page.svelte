@@ -415,7 +415,11 @@ async function fetchEkstra() {
   try {
     const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    ekstraList = data || [];
+    // Mapping: price → harga agar kompatibel dengan kode lama
+    ekstraList = (data || []).map(e => ({
+      ...e,
+      harga: e.price // mapping kolom price ke harga
+    }));
   } catch (error) {
     notifModalMsg = 'Gagal mengambil data ekstra: ' + error.message;
     notifModalType = 'error';
@@ -666,9 +670,6 @@ async function saveKategoriDetail() {
     const newKategoriId = data?.[0]?.id ?? null;
     await updateMenusKategori(newKategoriId, selectedMenuIds, null);
   }
-  notifModalMsg = 'Kategori berhasil disimpan.';
-  notifModalType = 'success';
-  showNotifModal = true;
   showKategoriDetailModal = false;
   kategoriDetail = null;
   await fetchKategori();
@@ -748,7 +749,7 @@ async function saveEkstra() {
         .from('tambahan')
         .update({ 
           name: ekstraForm.name,
-          harga: harga
+          price: harga // GANTI dari 'harga' ke 'price'
         })
         .eq('id', editEkstraId);
       if (error) throw error;
@@ -757,7 +758,7 @@ async function saveEkstra() {
         .from('tambahan')
         .insert([{ 
           name: ekstraForm.name,
-          harga: harga
+          price: harga // GANTI dari 'harga' ke 'price'
         }]);
       if (error) throw error;
     }
