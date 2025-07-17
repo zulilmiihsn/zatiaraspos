@@ -12,6 +12,8 @@ import { fly, fade } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { userRole } from '$lib/stores/userRole';
 import { dashboardCache } from '$lib/stores/dashboardCache';
+import pako from 'pako';
+import { Base64 } from 'js-base64';
 
 let cart = [];
 let customerName = '';
@@ -195,86 +197,6 @@ function handleKeypad(val) {
     cashReceived = (cashReceived + val).replace(/^0+(?!$)/, '');
   }
 }
-function printReceipt() {
-  // Ambil printer yang sudah dipilih user
-  const printerData = localStorage.getItem('connectedPrinter');
-  if (!printerData) {
-    showErrorNotif('Belum ada printer yang tersambung. Silakan sandingkan printer di pengaturan.');
-    return;
-  }
-  const printer = JSON.parse(printerData);
-
-  // Format struk
-  let receipt = '';
-  receipt += '      Zatiaras Juice\n';
-  receipt += '-----------------------------\n';
-  receipt += `Pelanggan : ${customerName.trim() || 'Pelanggan'}\n`;
-  receipt += `Waktu     : ${new Date().toLocaleString('id-ID')}\n`;
-  receipt += '-----------------------------\n';
-  cart.forEach(item => {
-    receipt += `${item.product.name} x${item.qty}  Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}\n`;
-    if ((item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())) {
-      receipt += '  ';
-      if (item.addOns && item.addOns.length > 0) receipt += `+ ${item.addOns.map(a => a.name).join(', ')}; `;
-      if (item.sugar && item.sugar !== 'normal') receipt += item.sugar === 'no' ? 'Tanpa Gula; ' : item.sugar === 'less' ? 'Sedikit Gula; ' : item.sugar + '; ';
-      if (item.ice && item.ice !== 'normal') receipt += item.ice === 'no' ? 'Tanpa Es; ' : item.ice === 'less' ? 'Sedikit Es; ' : item.ice + '; ';
-      if (item.note && item.note.trim()) receipt += item.note + '; ';
-      receipt += '\n';
-    }
-  });
-  receipt += '-----------------------------\n';
-  receipt += `Total     : Rp${totalHarga.toLocaleString('id-ID')}\n`;
-  receipt += `Metode    : ${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}\n`;
-  if (paymentMethod === 'cash') {
-    receipt += `Dibayar   : Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}\n`;
-    receipt += `Kembalian : Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}\n`;
-  }
-  receipt += '-----------------------------\n';
-  receipt += 'Terima kasih sudah ngejus di\n          Zatiaras Juice!\n\n';
-
-  // Kirim ke printer bluetooth
-  sendToBluetoothPrinter(printer.id, receipt);
-}
-
-// Helper untuk kirim data ke printer bluetooth
-async function sendToBluetoothPrinter(deviceId, text) {
-  try {
-    // Deteksi iOS/iPhone
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
-    if (isIOS) {
-      showErrorNotif('Maaf, fitur print Bluetooth tidak didukung di iPhone/iOS karena keterbatasan browser. Silakan gunakan Android atau desktop.');
-      return;
-    }
-    // Cari device berdasarkan id
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['generic_access', 'device_information']
-    });
-    if (!device) throw new Error('Printer tidak ditemukan');
-    const server = await device.gatt.connect();
-    // Biasanya printer thermal pakai service custom, perlu disesuaikan dengan printer yang digunakan
-    // Di sini contoh: cari service & characteristic yang bisa write
-    const services = await server.getPrimaryServices();
-    let found = false;
-    for (const service of services) {
-      const characteristics = await service.getCharacteristics();
-      for (const char of characteristics) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          // Kirim data (convert ke Uint8Array)
-          const encoder = new TextEncoder();
-          await char.writeValue(encoder.encode(text));
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
-    }
-    if (!found) throw new Error('Tidak ada karakteristik write pada printer');
-    showSuccessNotif('Struk berhasil dikirim ke printer!');
-  } catch (err) {
-    showErrorNotif('Gagal mencetak struk: ' + err.message);
-  }
-}
 
 function getLocalOffsetString() {
   const offset = -new Date().getTimezoneOffset();
@@ -381,6 +303,38 @@ async function catatTransaksiKeLaporan() {
 
 function closeNotifModal() {
   showNotifModal = false;
+}
+
+function printStrukViaEscPosService() {
+  // 1. Generate HTML struk sederhana
+  let html = `<html><body style='font-family:monospace;font-size:13px;margin:0;padding:0;'>`;
+  html += `<div style='text-align:center;font-weight:bold;'>Zatiaras Juice</div>`;
+  html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
+  html += `<div>Pelanggan: ${customerName.trim() || 'Pelanggan'}</div>`;
+  html += `<div>Waktu: ${new Date().toLocaleString('id-ID')}</div>`;
+  html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
+  cart.forEach(item => {
+    html += `<div>${item.product.name} x${item.qty} - Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</div>`;
+    if (item.addOns && item.addOns.length > 0) {
+      html += `<div style='margin-left:10px;font-size:12px;'>+ ${item.addOns.map(a => a.name).join(', ')}</div>`;
+    }
+  });
+  html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
+  html += `<div>Total: <b>Rp${totalHarga.toLocaleString('id-ID')}</b></div>`;
+  html += `<div>Metode: ${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}</div>`;
+  if (paymentMethod === 'cash') {
+    html += `<div>Dibayar: Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</div>`;
+    html += `<div>Kembalian: Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</div>`;
+  }
+  html += `<div style='margin-top:8px;text-align:center;'>Terima kasih sudah ngejus di<br/>Zatiaras Juice!</div>`;
+  html += `</body></html>`;
+
+  // 2. Gzip + base64 encode
+  const gzip = pako.gzip(JSON.stringify([html]));
+  const base64 = Base64.fromUint8Array(gzip);
+  // 3. Intent URL
+  const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
+  window.location.href = intentUrl;
 }
 </script>
 
@@ -555,9 +509,26 @@ function closeNotifModal() {
         <div class="flex justify-between text-sm text-gray-500"><span>Kembalian</span><span class="font-bold text-green-600">Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span></div>
       </div>
       <div class="flex flex-col gap-2 w-full">
-        <button class="w-full bg-green-500 text-white font-bold rounded-lg py-3 text-base active:bg-green-600 transition-all" onclick={printReceipt}>Cetak Struk</button>
+        <button class="w-full bg-green-500 text-white font-bold rounded-lg py-3 text-base active:bg-green-600 transition-all" onclick={printStrukViaEscPosService}>Cetak Struk</button>
         <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600 transition-all" onclick={() => { showSuccessModal = false; goto('/pos'); }}>Kembali ke Kasir</button>
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if showSuccessModal}
+  <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-t-2xl shadow-lg animate-slideUpModal p-8 pb-6 flex flex-col items-center gap-4">
+      <div class="flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-2 animate-bounceIn">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4ade80" opacity="0.18"/><path d="M7 13l3 3 7-7" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="text-2xl font-bold text-green-600 mb-1 text-center">Transaksi Berhasil!</div>
+      <div class="text-gray-700 text-center mb-2">
+        Struk siap dicetak.
+      </div>
+      <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600 transition-all mt-2" onclick={printStrukViaEscPosService}>
+        Print Struk
+      </button>
     </div>
   </div>
 {/if}
