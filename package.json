@@ -21,6 +21,7 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/postcss": "^4.1.11",
 		"@tailwindcss/vite": "^4.0.0",
+		"@types/bcryptjs": "^3.0.0",
 		"autoprefixer": "^10.4.21",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
@@ -41,6 +42,7 @@
 		"@lottiefiles/dotlottie-svelte": "^0.6.2",
 		"@supabase/supabase-js": "^2.50.3",
 		"@vite-pwa/sveltekit": "^1.0.0",
+		"bcryptjs": "^3.0.2",
 		"idb-keyval": "^6.2.2",
 		"lucide-svelte": "^0.525.0",
 		"uuid": "^11.1.0"
