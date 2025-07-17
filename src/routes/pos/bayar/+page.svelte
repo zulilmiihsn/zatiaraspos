@@ -54,6 +54,8 @@ let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
+let pengaturanStruk = null;
+
 function showErrorNotif(message: string) {
   errorNotificationMessage = message;
   showErrorNotification = true;
@@ -92,8 +94,26 @@ async function cekSesiTokoAktif() {
   sesiAktif = data || null;
 }
 
+async function fetchPengaturanStruk() {
+  try {
+    const { data, error } = await supabase.from('pengaturan_struk').select('*').single();
+    if (data) {
+      pengaturanStruk = data;
+      localStorage.setItem('pengaturan_struk', JSON.stringify(data));
+    } else if (error) {
+      // fallback ke localStorage
+      const local = localStorage.getItem('pengaturan_struk');
+      if (local) pengaturanStruk = JSON.parse(local);
+    }
+  } catch {
+    const local = localStorage.getItem('pengaturan_struk');
+    if (local) pengaturanStruk = JSON.parse(local);
+  }
+}
+
 onMount(() => {
   cekSesiTokoAktif();
+  fetchPengaturanStruk();
   const saved = localStorage.getItem('pos_cart');
   if (saved) {
     try {
@@ -195,86 +215,6 @@ function handleKeypad(val) {
     cashReceived = cashReceived.slice(0, -1);
   } else {
     cashReceived = (cashReceived + val).replace(/^0+(?!$)/, '');
-  }
-}
-function printReceipt() {
-  // Ambil printer yang sudah dipilih user
-  const printerData = localStorage.getItem('connectedPrinter');
-  if (!printerData) {
-    showErrorNotif('Belum ada printer yang tersambung. Silakan sandingkan printer di pengaturan.');
-    return;
-  }
-  const printer = JSON.parse(printerData);
-
-  // Format struk
-  let receipt = '';
-  receipt += '      Zatiaras Juice\n';
-  receipt += '-----------------------------\n';
-  receipt += `Pelanggan : ${customerName.trim() || 'Pelanggan'}\n`;
-  receipt += `Waktu     : ${new Date().toLocaleString('id-ID')}\n`;
-  receipt += '-----------------------------\n';
-  cart.forEach(item => {
-    receipt += `${item.product.name} x${item.qty}  Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}\n`;
-    if ((item.addOns && item.addOns.length > 0) || (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())) {
-      receipt += '  ';
-      if (item.addOns && item.addOns.length > 0) receipt += `+ ${item.addOns.map(a => a.name).join(', ')}; `;
-      if (item.sugar && item.sugar !== 'normal') receipt += item.sugar === 'no' ? 'Tanpa Gula; ' : item.sugar === 'less' ? 'Sedikit Gula; ' : item.sugar + '; ';
-      if (item.ice && item.ice !== 'normal') receipt += item.ice === 'no' ? 'Tanpa Es; ' : item.ice === 'less' ? 'Sedikit Es; ' : item.ice + '; ';
-      if (item.note && item.note.trim()) receipt += item.note + '; ';
-      receipt += '\n';
-    }
-  });
-  receipt += '-----------------------------\n';
-  receipt += `Total     : Rp${totalHarga.toLocaleString('id-ID')}\n`;
-  receipt += `Metode    : ${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}\n`;
-  if (paymentMethod === 'cash') {
-    receipt += `Dibayar   : Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}\n`;
-    receipt += `Kembalian : Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}\n`;
-  }
-  receipt += '-----------------------------\n';
-  receipt += 'Terima kasih sudah ngejus di\n          Zatiaras Juice!\n\n';
-
-  // Kirim ke printer bluetooth
-  sendToBluetoothPrinter(printer.id, receipt);
-}
-
-// Helper untuk kirim data ke printer bluetooth
-async function sendToBluetoothPrinter(deviceId, text) {
-  try {
-    // Deteksi iOS/iPhone
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
-    if (isIOS) {
-      showErrorNotif('Maaf, fitur print Bluetooth tidak didukung di iPhone/iOS karena keterbatasan browser. Silakan gunakan Android atau desktop.');
-      return;
-    }
-    // Cari device berdasarkan id
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['generic_access', 'device_information']
-    });
-    if (!device) throw new Error('Printer tidak ditemukan');
-    const server = await device.gatt.connect();
-    // Biasanya printer thermal pakai service custom, perlu disesuaikan dengan printer yang digunakan
-    // Di sini contoh: cari service & characteristic yang bisa write
-    const services = await server.getPrimaryServices();
-    let found = false;
-    for (const service of services) {
-      const characteristics = await service.getCharacteristics();
-      for (const char of characteristics) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          // Kirim data (convert ke Uint8Array)
-          const encoder = new TextEncoder();
-          await char.writeValue(encoder.encode(text));
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
-    }
-    if (!found) throw new Error('Tidak ada karakteristik write pada printer');
-    showSuccessNotif('Struk berhasil dikirim ke printer!');
-  } catch (err) {
-    showErrorNotif('Gagal mencetak struk: ' + err.message);
   }
 }
 
@@ -386,18 +326,35 @@ function closeNotifModal() {
 }
 
 function printStrukViaEscPosService() {
-  // 1. Generate HTML struk sederhana
+  // Gunakan pengaturanStruk jika ada, fallback default
+  const pengaturan = pengaturanStruk || {
+    logo_url: 'https://zatiaraspos.vercel.app/img/144x144.png',
+    nama_toko: 'Zatiaras Juice',
+    alamat: 'Jl. Contoh Alamat No. 123, Kota',
+    telepon: '0812-3456-7890',
+    instagram: '@zatiarasjuice',
+    ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
+  };
   let html = `<html><body style='font-family:monospace;font-size:13px;margin:0;padding:0;'>`;
-  html += `<div style='text-align:center;font-weight:bold;'>Zatiaras Juice</div>`;
+  html += `<div style='text-align:center;font-weight:bold;'>`;
+  if (pengaturan.logo_url) html += `<img src='${pengaturan.logo_url}' style='width:48px;height:48px;object-fit:contain;margin:0 auto 4px auto;display:block;' />`;
+  html += `${pengaturan.nama_toko}</div>`;
   html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
-  html += `<div>Pelanggan: ${customerName.trim() || 'Pelanggan'}</div>`;
-  html += `<div>Waktu: ${new Date().toLocaleString('id-ID')}</div>`;
+  html += `<div style='white-space:pre-line;'>${pengaturan.alamat}</div>`;
+  html += `<div>Telp: ${pengaturan.telepon}</div>`;
+  if (pengaturan.instagram) html += `<div>IG: ${pengaturan.instagram}</div>`;
   html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
   cart.forEach(item => {
     html += `<div>${item.product.name} x${item.qty} - Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</div>`;
     if (item.addOns && item.addOns.length > 0) {
       html += `<div style='margin-left:10px;font-size:12px;'>+ ${item.addOns.map(a => a.name).join(', ')}</div>`;
     }
+    const detail = [
+      item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
+      item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
+      item.note && item.note.trim() ? item.note : null
+    ].filter(Boolean).join(', ');
+    if (detail) html += `<div style='margin-left:10px;font-size:12px;color:#888;'>${detail}</div>`;
   });
   html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
   html += `<div>Total: <b>Rp${totalHarga.toLocaleString('id-ID')}</b></div>`;
@@ -406,7 +363,7 @@ function printStrukViaEscPosService() {
     html += `<div>Dibayar: Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</div>`;
     html += `<div>Kembalian: Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</div>`;
   }
-  html += `<div style='margin-top:8px;text-align:center;'>Terima kasih sudah ngejus di<br/>Zatiaras Juice!</div>`;
+  html += `<div style='margin-top:8px;text-align:center;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
   html += `</body></html>`;
 
   // 2. Gzip + base64 encode
