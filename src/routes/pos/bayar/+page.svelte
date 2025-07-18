@@ -336,9 +336,7 @@ function printStrukViaEscPosService() {
     ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
   };
   let html = `<html><body style='font-family:monospace;font-size:13px;margin:0;padding:0;'>`;
-  html += `<div style='text-align:center;font-weight:bold;'>`;
-  if (pengaturan.logo_url) html += `<img src='${pengaturan.logo_url}' style='width:48px;height:48px;object-fit:contain;margin:0 auto 4px auto;display:block;' />`;
-  html += `${pengaturan.nama_toko}</div>`;
+  html += `<div style='text-align:center;font-weight:bold;font-size:24px;'>${pengaturan.nama_toko}</div>`;
   html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
   html += `<div style='white-space:pre-line;'>${pengaturan.alamat}</div>`;
   html += `<div>Telp: ${pengaturan.telepon}</div>`;
@@ -354,7 +352,7 @@ function printStrukViaEscPosService() {
       item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
       item.note && item.note.trim() ? item.note : null
     ].filter(Boolean).join(', ');
-    if (detail) html += `<div style='margin-left:10px;font-size:12px;color:#888;'>${detail}</div>`;
+    if (detail) html += `<div style='margin-left:10px;font-size:12px;'>${detail}</div>`;
   });
   html += `<div style='border-bottom:1px dashed #000;margin:4px 0;'></div>`;
   html += `<div>Total: <b>Rp${totalHarga.toLocaleString('id-ID')}</b></div>`;
