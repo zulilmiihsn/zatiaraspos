@@ -328,16 +328,14 @@ function closeNotifModal() {
 function printStrukViaEscPosService() {
   // Gunakan pengaturanStruk jika ada, fallback default
   const pengaturan = pengaturanStruk || {
-    logo_url: 'https://zatiaraspos.vercel.app/img/144x144.png',
     nama_toko: 'Zatiaras Juice',
     alamat: 'Jl. Contoh Alamat No. 123, Kota',
     telepon: '0812-3456-7890',
     instagram: '@zatiarasjuice',
     ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
   };
-  let html = `<html><body style='font-family:monospace;font-size:16px;line-height:1.7;margin:0;padding:0;'>`;
+  let html = `<html><body style='font-family:monospace;font-size:16px;line-height:1.0;margin:0;padding:0;'>`;
   html += `<div style='text-align:center;font-weight:bold;'>`;
-  if (pengaturan.logo_url) html += `<img src='${pengaturan.logo_url}' style='width:48px;height:48px;object-fit:contain;margin:0 auto 8px auto;display:block;' />`;
   html += `${pengaturan.nama_toko}</div>`;
   html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
   html += `<div style='white-space:pre-line;'>${pengaturan.alamat}</div>`;
@@ -355,7 +353,6 @@ function printStrukViaEscPosService() {
       item.note && item.note.trim() ? item.note : null
     ].filter(Boolean).join(', ');
     if (detail) html += `${detail}<br/>`;
-    // Tambahkan baris kosong setelah setiap item
     html += `<br/>`;
   });
   html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;

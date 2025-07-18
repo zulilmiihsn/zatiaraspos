@@ -3,7 +3,6 @@ import { onMount } from 'svelte';
 import { supabase } from '$lib/database/supabaseClient';
 import { goto } from '$app/navigation';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-let logoUrl = 'https://zatiaraspos.vercel.app/img/144x144.png';
 let namaToko = '';
 let alamat = '';
 let telepon = '';
@@ -11,7 +10,6 @@ let instagram = '';
 let ucapan = '';
 let isSaving = false;
 let isUploading = false;
-let previewUrl = logoUrl;
 let errorMsg = '';
 let successMsg = '';
 let showToast = false;
@@ -20,7 +18,6 @@ let toastType = 'success'; // 'success' | 'error'
 let toastTimeout: any = null;
 
 const defaultData = {
-  logoUrl: 'https://zatiaraspos.vercel.app/img/144x144.png',
   namaToko: 'Zatiaras Juice',
   alamat: 'Jl. Contoh Alamat No. 123, Kota',
   telepon: '0812-3456-7890',
@@ -33,13 +30,11 @@ async function loadPengaturan() {
   try {
     const { data, error } = await supabase.from('pengaturan_struk').select('*').limit(1).maybeSingle();
     if (data) {
-      logoUrl = data.logo_url || defaultData.logoUrl;
       namaToko = data.nama_toko || defaultData.namaToko;
       alamat = data.alamat || defaultData.alamat;
       telepon = data.telepon || defaultData.telepon;
       instagram = data.instagram || defaultData.instagram;
       ucapan = data.ucapan || defaultData.ucapan;
-      previewUrl = logoUrl;
     } else {
       loadFromLocal();
     }
@@ -53,13 +48,11 @@ function loadFromLocal() {
   if (local) {
     try {
       const d = JSON.parse(local);
-      logoUrl = d.logoUrl || defaultData.logoUrl;
       namaToko = d.namaToko || defaultData.namaToko;
       alamat = d.alamat || defaultData.alamat;
       telepon = d.telepon || defaultData.telepon;
       instagram = d.instagram || defaultData.instagram;
       ucapan = d.ucapan || defaultData.ucapan;
-      previewUrl = logoUrl;
     } catch {}
   } else {
     resetToDefault();
@@ -67,13 +60,11 @@ function loadFromLocal() {
 }
 
 function resetToDefault() {
-  logoUrl = defaultData.logoUrl;
   namaToko = defaultData.namaToko;
   alamat = defaultData.alamat;
   telepon = defaultData.telepon;
   instagram = defaultData.instagram;
   ucapan = defaultData.ucapan;
-  previewUrl = logoUrl;
 }
 
 function showFloatingNotif(msg: string, type: 'success' | 'error' = 'success') {
@@ -90,7 +81,6 @@ async function simpanPengaturan(event: Event) {
   errorMsg = '';
   successMsg = '';
   const data = {
-    logo_url: logoUrl,
     nama_toko: namaToko,
     alamat,
     telepon,
@@ -101,13 +91,13 @@ async function simpanPengaturan(event: Event) {
     const { error } = await supabase.from('pengaturan_struk').upsert([data]);
     if (error) throw error;
     localStorage.setItem('pengaturan_struk', JSON.stringify({
-      logoUrl, namaToko, alamat, telepon, instagram, ucapan
+      namaToko, alamat, telepon, instagram, ucapan
     }));
     showFloatingNotif('Pengaturan berhasil disimpan!', 'success');
   } catch (e) {
     showFloatingNotif('Gagal menyimpan ke Supabase. Disimpan ke localStorage.', 'error');
     localStorage.setItem('pengaturan_struk', JSON.stringify({
-      logoUrl, namaToko, alamat, telepon, instagram, ucapan
+      namaToko, alamat, telepon, instagram, ucapan
     }));
   } finally {
     isSaving = false;
@@ -126,8 +116,7 @@ async function handleLogoUpload(e: Event) {
     const { data, error } = await supabase.storage.from('public').upload(`logo/${fileName}`, file, { upsert: true });
     if (error) throw error;
     const { data: publicUrl } = supabase.storage.from('public').getPublicUrl(`logo/${fileName}`);
-    logoUrl = publicUrl.publicUrl;
-    previewUrl = logoUrl;
+    // logoUrl = publicUrl.publicUrl;
   } catch (e) {
     errorMsg = 'Gagal upload logo.';
   } finally {
@@ -157,25 +146,17 @@ onMount(() => {
     <h1 class="text-lg font-bold text-pink-600 mb-6 text-center">Pengaturan Draft Struk</h1>
     <form class="space-y-5" onsubmit={simpanPengaturan}>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Logo</label>
-        <div class="flex items-center gap-4">
-          <img src={previewUrl} alt="Logo Preview" class="w-16 h-16 rounded-lg border border-gray-200 bg-white object-contain" />
-          <input type="file" accept="image/*" onchange={handleLogoUpload} disabled={isUploading} class="block" />
-            </div>
-        <div class="text-xs text-gray-400 mt-1">Default: <a href="https://zatiaraspos.vercel.app/img/144x144.png" target="_blank" class="underline">https://zatiaraspos.vercel.app/img/144x144.png</a></div>
-              </div>
-      <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Toko</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={namaToko} maxlength="50" required />
-          </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={alamat} maxlength="100" required />
-        </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor Telepon</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={telepon} maxlength="20" required />
-            </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={instagram} maxlength="30" />
@@ -183,17 +164,16 @@ onMount(() => {
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Ucapan di Bawah Struk</label>
         <textarea class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" rows="3" bind:value={ucapan} maxlength="120"></textarea>
-    </div>
+      </div>
       <div class="flex flex-col sm:flex-row gap-3 mt-6">
         <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" onclick={resetToDefault} disabled={isSaving}>Reset ke Default</button>
         <button type="submit" class="bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg px-6 py-2 transition-colors disabled:opacity-50 w-full sm:w-1/2 order-2 sm:order-2" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
-  </div>
+      </div>
     </form>
     <div class="mt-10">
       <div class="font-semibold text-gray-700 mb-2">Preview Struk</div>
-      <div class="bg-gray-50 border border-pink-200 rounded-lg p-4 text-sm font-mono whitespace-pre-line" style="max-width:350px;font-size:16px;line-height:1.7;">
+      <div class="bg-gray-50 border border-pink-200 rounded-lg p-4 text-sm font-mono whitespace-pre-line" style="max-width:350px;font-size:16px;line-height:1.0;">
         <div style="text-align:center;font-weight:bold;">
-          <img src={previewUrl} alt="Logo" style="width:48px;height:48px;object-fit:contain;margin:0 auto 8px auto;" />
           <div>{namaToko}</div>
         </div>
         <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
