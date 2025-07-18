@@ -187,7 +187,7 @@ onMount(() => {
       <div class="flex flex-col sm:flex-row gap-3 mt-6">
         <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" onclick={resetToDefault} disabled={isSaving}>Reset ke Default</button>
         <button type="submit" class="bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg px-6 py-2 transition-colors disabled:opacity-50 w-full sm:w-1/2 order-2 sm:order-2" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
-      </div>
+  </div>
     </form>
     <div class="mt-10">
       <div class="font-semibold text-gray-700 mb-2">Preview Struk</div>
@@ -203,19 +203,22 @@ onMount(() => {
           <div>IG: {instagram}</div>
         {/if}
         <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
-        <div style="margin-bottom:2px;">Jus Mangga x2 - Rp20.000</div>
-        <div style="margin-left:10px;font-size:14px;margin-bottom:2px;">+ Topping Nata</div>
-        <div style="margin-left:10px;font-size:14px;margin-bottom:4px;">Tanpa Gula, Sedikit Es, Catatan khusus</div>
+        Jus Mangga x2 - Rp20.000<br/>
+        + Topping Nata<br/>
+        Tanpa Gula, Sedikit Es, Catatan khusus<br/>
+        <br/>
+        Jus Alpukat x1 - Rp15.000<br/>
+        <br/>
         <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
-        <div>Total: <b>Rp20.000</b></div>
+        <div>Total: <b>Rp35.000</b></div>
         <div>Metode: Tunai</div>
         <div>Dibayar: Rp50.000</div>
-        <div>Kembalian: Rp30.000</div>
+        <div>Kembalian: Rp15.000</div>
         <div style="margin-top:12px;text-align:center;white-space:pre-line;">{ucapan}</div>
       </div>
     </div>
   </div>
-</div>
+</div> 
 
 {#if showToast}
   <div class="fixed top-6 left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold"

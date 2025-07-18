@@ -345,16 +345,18 @@ function printStrukViaEscPosService() {
   if (pengaturan.instagram) html += `<div>IG: ${pengaturan.instagram}</div>`;
   html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
   cart.forEach(item => {
-    html += `<div style='margin-bottom:2px;'>${item.product.name} x${item.qty} - Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</div>`;
+    html += `${item.product.name} x${item.qty} - Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}<br/>`;
     if (item.addOns && item.addOns.length > 0) {
-      html += `<div style='margin-left:10px;font-size:14px;margin-bottom:2px;'>+ ${item.addOns.map(a => a.name).join(', ')}</div>`;
+      html += `+ ${item.addOns.map(a => a.name).join(', ')}<br/>`;
     }
     const detail = [
       item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
       item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
       item.note && item.note.trim() ? item.note : null
     ].filter(Boolean).join(', ');
-    if (detail) html += `<div style='margin-left:10px;font-size:14px;margin-bottom:4px;'>${detail}</div>`;
+    if (detail) html += `${detail}<br/>`;
+    // Tambahkan baris kosong setelah setiap item
+    html += `<br/>`;
   });
   html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
   html += `<div>Total: <b>Rp${totalHarga.toLocaleString('id-ID')}</b></div>`;
