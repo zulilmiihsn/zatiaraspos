@@ -12,6 +12,8 @@ import { cubicOut } from 'svelte/easing';
 import { userRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import * as pako from 'pako';
+import { Base64 } from 'js-base64';
 
 let cart = [];
 let customerName = '';

@@ -210,8 +210,7 @@ async function saveTransaksi(form: any) {
     showNotifModal = true;
     // Tidak ada return di sini, agar insert tetap lanjut untuk pemilik
   }
-  console.log('DEBUG | Sesi Aktif:', sesiAktif);
-  console.log('DEBUG | ID Sesi Toko yang akan disimpan:', id_sesi_toko);
+  console.log('DEBUG | handleSubmit terpanggil');
   const trx = {
     tipe: mode === 'pemasukan' ? 'in' : 'out',
     sumber: 'catat',
@@ -222,10 +221,10 @@ async function saveTransaksi(form: any) {
     waktu: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
     jenis: form.jenis
   };
-  console.log('DEBUG | Payload insert buku_kas:', trx);
+  console.log('DEBUG | handleSubmit terpanggil');
   if (navigator.onLine) {
     const { error, data } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert([trx]);
-    console.log('DEBUG | Hasil insert Supabase:', { error, data });
+    console.log('DEBUG | handleSubmit terpanggil');
     if (error) {
       notifModalMsg = 'Gagal menyimpan transaksi ke database: ' + error.message;
       notifModalType = 'error';
@@ -711,7 +710,7 @@ main {
           {#if jenis === 'lainnya'}
             <div>
                           <label class="block text-sm font-medium text-pink-500 mb-1" for="nama-jenis-input">Nama Jenis</label>
-            <input id="nama-jenis-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
+             <input id="nama-jenis-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
             </div>
           {/if}
           <div>

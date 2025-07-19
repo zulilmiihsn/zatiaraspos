@@ -155,7 +155,6 @@ onDestroy(() => {
 });
 
 function openMenuForm(menu = null) {
-  console.log('openMenuForm called with:', menu);
   if (showMenuForm && menu && editMenuId === menu.id) {
     return;
   }
@@ -167,7 +166,6 @@ function openMenuForm(menu = null) {
     editMenuId = null;
     $menuForm = { name: '', kategori_id: '', tipe: 'minuman', price: '', ekstra_ids: [], gambar: '' };
   }
-  console.log('showMenuForm set to:', showMenuForm);
 }
 
 function closeMenuForm() {
@@ -438,7 +436,6 @@ function handleFileChange(e) {
   if (isCropping) return;
   const file = e.target.files[0];
   if (!file) return;
-  console.log('File dipilih:', file);
   selectedImage = file;
     const reader = new FileReader();
   reader.onload = (ev) => {
@@ -447,7 +444,6 @@ function handleFileChange(e) {
       cropperDialogImage = ev.target.result as string;
       showCropperDialog = true;
       isCropping = true;
-      console.log('showCropperDialog:', showCropperDialog, 'cropperDialogImage:', cropperDialogImage);
     }, 10);
     };
     reader.readAsDataURL(file);
