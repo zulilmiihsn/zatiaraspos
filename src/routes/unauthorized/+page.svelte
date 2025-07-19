@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/auth.js';
+  import { auth } from '$lib/auth/auth';
   import { SecurityMiddleware } from '$lib/utils/security';
 
   // Log unauthorized access attempt
@@ -10,11 +10,7 @@
   });
 
   function goBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
-    } else {
-      goto('/');
-    }
+    goto('/pengaturan');
   }
 
   function goToLogin() {

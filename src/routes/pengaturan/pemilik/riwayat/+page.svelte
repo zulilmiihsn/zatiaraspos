@@ -19,6 +19,7 @@ let showNotif = false;
 let searchKeyword = '';
 let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 let Trash;
+let pollingInterval;
 
 function todayRange() {
   // Hari ini dalam zona waktu WITA
@@ -101,11 +102,13 @@ onMount(async () => {
   }
   await fetchTransaksiHariIni();
   Trash = (await import('lucide-svelte/icons/trash')).default;
+  pollingInterval = setInterval(fetchTransaksiHariIni, 5000); // polling setiap 5 detik
 });
 onDestroy(() => {
   if (typeof window !== 'undefined') {
     document.body.classList.remove('hide-nav');
   }
+  clearInterval(pollingInterval);
 });
 </script>
 
@@ -117,22 +120,24 @@ onDestroy(() => {
     </button>
     <h1 class="text-xl font-bold text-gray-800">Riwayat Transaksi Hari Ini</h1>
   </div>
-  <!-- Search Bar di bawah top bar -->
-  <div class="px-4 pt-3 pb-2 bg-white sticky top-[64px] z-30">
+  <!-- Search Bar dan Filter Payment Method digabung -->
+  <div class="px-4 pt-3 pb-3 bg-white sticky top-[64px] z-30 space-y-3">
     <input type="text" class="w-full border border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100" placeholder="Cari transaksi atau kategori..." bind:value={searchKeyword} oninput={fetchTransaksiHariIni} />
-  </div>
-  <!-- Filter Payment Method -->
-  <div class="px-4 pb-2 bg-white sticky top-[112px] z-30 flex gap-2">
-    <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'all'; fetchTransaksiHariIni(); }}>Semua</button>
-    <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'qris' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'qris'; fetchTransaksiHariIni(); }}>QRIS</button>
-    <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'tunai' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'tunai'; fetchTransaksiHariIni(); }}>Tunai</button>
+    <div class="flex gap-2">
+      <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'all'; fetchTransaksiHariIni(); }}>Semua</button>
+      <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'qris' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'qris'; fetchTransaksiHariIni(); }}>QRIS</button>
+      <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'tunai' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'tunai'; fetchTransaksiHariIni(); }}>Tunai</button>
+    </div>
   </div>
 
   <div class="max-w-2xl mx-auto w-full pt-[2px] px-4 pb-4">
     {#if loading}
       <div class="text-center text-gray-400 py-10">Memuat data...</div>
     {:else if transaksiHariIni.length === 0}
-      <div class="text-center text-gray-400 py-10">Belum ada transaksi hari ini.</div>
+      <div class="flex flex-col items-center justify-center h-64 w-full" style="min-height:16rem;">
+        <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" /></svg>
+        <div class="text-base md:text-lg font-normal text-gray-300">Belum ada transaksi hari ini</div>
+      </div>
     {:else}
       <div class="flex flex-col gap-2">
         {#each transaksiHariIni as trx}

@@ -240,6 +240,14 @@ async function fetchDashboardStats() {
   }
 }
 
+let pollingInterval;
+onMount(() => {
+  pollingInterval = setInterval(fetchDashboardStatsPOS, 5000); // setiap 5 detik
+});
+onDestroy(() => {
+  clearInterval(pollingInterval);
+});
+
 async function fetchDashboardStatsPOS() {
   // Hitung range hari ini (00:00 - 23:59 waktu lokal)
   const now = new Date();
@@ -964,18 +972,28 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
           <div class="mt-3 md:mt-4">
             <div class="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col" bind:this={incomeChartRef}>
               <div class="text-xs text-gray-500 mt-1 md:text-sm mb-2">Pendapatan 7 Hari Terakhir</div>
+              <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
               {#if weeklyIncome.length === 0}
-                <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data grafik pendapatan</div>
+                  <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56 w-full relative">
+                    {#each getLast7DaysLabelsWITA() as label, i}
+                      <div class="flex flex-col items-center flex-1">
+                        <div class="bg-gray-100 rounded-t w-6 md:w-8 lg:w-10" style="height: 8px;"></div>
+                        <div class="text-xs mt-1 md:text-sm text-gray-400">{label}</div>
+                      </div>
+                    {/each}
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span class="text-gray-400 text-base md:text-lg text-center">Belum ada data grafik pendapatan</span>
+                    </div>
+                  </div>
               {:else}
-                <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
                   {#each weeklyIncome as income, i}
                     <div class="flex flex-col items-center flex-1">
                       <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
                       <div class="text-xs mt-1 md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
                     </div>
                   {/each}
-                </div>
               {/if}
+              </div>
             </div>
           </div>
         </div>

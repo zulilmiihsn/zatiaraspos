@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import Topbar from '$lib/components/shared/Topbar.svelte';
 import { slide, fade, fly } from 'svelte/transition';
 import { cubicOut, cubicIn } from 'svelte/easing';
@@ -97,6 +97,9 @@ let isSwiping = false;
 let isTouchDevice = false;
 let clickBlocked = false;
 
+// Polling interval
+let pollingInterval;
+
 const navs = [
   { label: 'Beranda', path: '/' },
   { label: 'Kasir', path: '/pos' },
@@ -174,6 +177,14 @@ onMount(() => {
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
+
+  pollingInterval = setInterval(() => {
+    if (startDate && endDate) fetchLaporan(startDate, endDate);
+  }, 5000);
+});
+
+onDestroy(() => {
+  clearInterval(pollingInterval);
 });
 
 function handleTouchStart(e) {
@@ -431,9 +442,9 @@ $: if (filterType === 'bulanan' && filterMonth && filterYear) {
   const m = parseInt(filterMonth) - 1;
   const first = new Date(y, m, 1);
   const last = new Date(y, m + 1, 0);
-  const pad = n => n.toString().padStart(2, '0');
-  startDate = `${y}-${pad(m + 1)}-01`;
-  endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+    const pad = n => n.toString().padStart(2, '0');
+    startDate = `${y}-${pad(m + 1)}-01`;
+    endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
 }
 
 // Tambahkan watcher khusus untuk filter tahunan

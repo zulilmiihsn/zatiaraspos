@@ -13,6 +13,7 @@
 	import { posGridView } from '$lib/stores/posGridView';
 	import { slide, fade, fly } from 'svelte/transition';
 	import { auth } from '$lib/auth/auth';
+	import { userRole } from '$lib/stores/userRole';
 
 	export const data = {};
 	
@@ -46,9 +47,22 @@
 		}
 		
 		// Cek role jika akses /admin
-		const user = auth.getCurrentUser();
+		const user = auth.getCurrentUser() as any;
 		if (currentPath.startsWith('/admin')) {
 			if (!user || user.role !== 'admin') {
+				goto('/unauthorized');
+				return;
+			}
+		}
+
+		// Proteksi akses halaman pemilik
+		if (currentPath.startsWith('/pengaturan/pemilik')) {
+			let role = user?.role;
+			// Jika role belum ada di user, ambil dari store
+			if (!role) {
+				userRole.subscribe(val => { role = val; })();
+			}
+			if (role !== 'pemilik') {
 				goto('/unauthorized');
 				return;
 			}
