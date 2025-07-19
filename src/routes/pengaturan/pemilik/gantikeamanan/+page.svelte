@@ -119,6 +119,10 @@ async function savePinSettings(event) {
 function closeNotifModal() {
   showNotifModal = false;
 }
+
+function handleBackToPengaturan() { goto('/pengaturan/pemilik'); }
+function handleSetTabPemilik() { activeSecurityTab = 'pemilik'; }
+function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
 </script>
 
 <svelte:head>
@@ -128,7 +132,7 @@ function closeNotifModal() {
 <div class="min-h-screen bg-gray-50 flex flex-col">
   <!-- Top Bar -->
   <div class="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 py-4">
-    <button onclick={() => goto('/pengaturan/pemilik')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
+    <button onclick={handleBackToPengaturan} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
       <ArrowLeft class="w-5 h-5 text-gray-600" />
     </button>
     <h1 class="text-xl font-bold text-gray-800">Ganti Keamanan</h1>
@@ -139,14 +143,14 @@ function closeNotifModal() {
       <div class="flex gap-2 mb-4">
         <button
           class="flex-1 py-2 rounded-lg font-bold text-base transition-all focus:outline-none {activeSecurityTab === 'pemilik' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}"
-          onclick={() => activeSecurityTab = 'pemilik'}
+          onclick={handleSetTabPemilik}
           type="button"
         >
           <User class="inline w-5 h-5 mr-1" /> Pemilik
         </button>
         <button
           class="flex-1 py-2 rounded-lg font-bold text-base transition-all focus:outline-none {activeSecurityTab === 'kasir' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}"
-          onclick={() => activeSecurityTab = 'kasir'}
+          onclick={handleSetTabKasir}
           type="button"
         >
           <Shield class="inline w-5 h-5 mr-1" /> Kasir

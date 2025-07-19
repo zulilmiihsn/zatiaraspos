@@ -11,6 +11,7 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+import { memoize } from '$lib/utils/performance';
 let laporanData = [];
 
 // Lazy load icons
@@ -363,27 +364,8 @@ async function fetchLaporan(start = startDate, end = endDate) {
   }
 }
 
-// Tambahkan reactive statement untuk summary box
-$: {
-  const totalPemasukan = (pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0));
-  const totalPengeluaran = (bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0));
-  const totalPendapatanUsaha = pemasukanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalBebanUsaha = bebanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const labaKotor = totalPendapatanUsaha - totalBebanUsaha;
-  const pajak = Math.round(totalPendapatanUsaha * 0.005);
-  const labaBersih = labaKotor - pajak;
-  summary = {
-    pendapatan: totalPemasukan,
-    pengeluaran: totalPengeluaran,
-    saldo: totalPemasukan - totalPengeluaran,
-    labaKotor,
-    pajak,
-    labaBersih
-  };
-}
-
-// Akumulasi pemasukanUsahaDetail per produk sebelum render
-$: pemasukanUsahaGrouped = (() => {
+// Memoize untuk grouping pemasukan usaha
+const memoizedPemasukanUsahaGrouped = memoize((pemasukanUsahaDetail) => {
   const group = {};
   for (const item of pemasukanUsahaDetail) {
     if (!item.description) continue;
@@ -391,17 +373,52 @@ $: pemasukanUsahaGrouped = (() => {
     group[item.description] += item.amount || 0;
   }
   return group;
-})();
+}, (pemasukanUsahaDetail) => `${pemasukanUsahaDetail.length}`);
 
-// Hitung total QRIS & Tunai untuk setiap sub-group
-$: totalQrisPendapatanUsaha = pemasukanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiPendapatanUsaha = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalQrisPemasukanLain = pemasukanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiPemasukanLain = pemasukanLainDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalQrisBebanUsaha = bebanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiBebanUsaha = bebanUsahaDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalQrisBebanLain = bebanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiBebanLain = bebanLainDetail.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: pemasukanUsahaGrouped = memoizedPemasukanUsahaGrouped(pemasukanUsahaDetail);
+
+// Memoize untuk filter QRIS/Tunai per sub-group
+const memoizedFilter = memoize((arr, method) => arr.filter(t => t.payment_method === method), (arr, method) => `${arr.length}-${method}`);
+
+$: pemasukanUsahaQris = memoizedFilter(pemasukanUsahaDetail, 'qris').concat(memoizedFilter(pemasukanUsahaDetail, 'non-tunai'));
+$: pemasukanUsahaTunai = memoizedFilter(pemasukanUsahaDetail, 'tunai');
+$: pemasukanLainQris = memoizedFilter(pemasukanLainDetail, 'qris').concat(memoizedFilter(pemasukanLainDetail, 'non-tunai'));
+$: pemasukanLainTunai = memoizedFilter(pemasukanLainDetail, 'tunai');
+$: bebanUsahaQris = memoizedFilter(bebanUsahaDetail, 'qris').concat(memoizedFilter(bebanUsahaDetail, 'non-tunai'));
+$: bebanUsahaTunai = memoizedFilter(bebanUsahaDetail, 'tunai');
+$: bebanLainQris = memoizedFilter(bebanLainDetail, 'qris').concat(memoizedFilter(bebanLainDetail, 'non-tunai'));
+$: bebanLainTunai = memoizedFilter(bebanLainDetail, 'tunai');
+
+// Memoize untuk total QRIS/Tunai
+const memoizedTotal = memoize((arr, method) => arr.filter(t => t.payment_method === method || (method === 'qris' && t.payment_method === 'non-tunai')).reduce((a, b) => a + (b.amount || 0), 0), (arr, method) => `${arr.length}-${method}`);
+
+$: totalQrisAll = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail], 'qris');
+$: totalTunaiAll = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail], 'tunai');
+$: totalQrisPemasukan = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail], 'qris');
+$: totalTunaiPemasukan = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail], 'tunai');
+$: totalQrisPengeluaran = memoizedTotal([...bebanUsahaDetail, ...bebanLainDetail], 'qris');
+$: totalTunaiPengeluaran = memoizedTotal([...bebanUsahaDetail, ...bebanLainDetail], 'tunai');
+
+// Memoize untuk summary box
+const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail) => {
+  const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalPendapatanUsaha = pemasukanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalBebanUsaha = bebanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const labaKotor = totalPendapatanUsaha - totalBebanUsaha;
+  const pajak = Math.round(totalPendapatanUsaha * 0.005);
+  const labaBersih = labaKotor - pajak;
+  return {
+    pendapatan: totalPemasukan,
+    pengeluaran: totalPengeluaran,
+    saldo: totalPemasukan - totalPengeluaran,
+    labaKotor,
+    pajak,
+    labaBersih
+  };
+}, (a, b, c, d) => `${a.length}-${b.length}-${c.length}-${d.length}`);
+
+$: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail);
 
 $: if (filterType) {
   const today = getLocalDateString();
@@ -457,16 +474,6 @@ function handlePinInput(num) {
   }
 }
 
-// Tambahkan deklarasi variabel reaktif untuk filter QRIS/Tunai pada setiap sub-group
-$: pemasukanUsahaQris = pemasukanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
-$: pemasukanUsahaTunai = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai');
-$: pemasukanLainQris = pemasukanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
-$: pemasukanLainTunai = pemasukanLainDetail.filter(t => t.payment_method === 'tunai');
-$: bebanUsahaQris = bebanUsahaDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
-$: bebanUsahaTunai = bebanUsahaDetail.filter(t => t.payment_method === 'tunai');
-$: bebanLainQris = bebanLainDetail.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai');
-$: bebanLainTunai = bebanLainDetail.filter(t => t.payment_method === 'tunai');
-
 // Total QRIS & Tunai keseluruhan
 $: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
 $: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
@@ -475,6 +482,16 @@ $: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter
 $: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
 $: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
 $: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
+// Memoize untuk total QRIS/Tunai per sub-group
+$: totalQrisPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'qris');
+$: totalTunaiPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'tunai');
+$: totalQrisPemasukanLain = memoizedTotal(pemasukanLainDetail, 'qris');
+$: totalTunaiPemasukanLain = memoizedTotal(pemasukanLainDetail, 'tunai');
+$: totalQrisBebanUsaha = memoizedTotal(bebanUsahaDetail, 'qris');
+$: totalTunaiBebanUsaha = memoizedTotal(bebanUsahaDetail, 'tunai');
+$: totalQrisBebanLain = memoizedTotal(bebanLainDetail, 'qris');
+$: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
 </script>
 
 {#if showPinModal}

@@ -14,6 +14,7 @@ import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import * as pako from 'pako';
 import { Base64 } from 'js-base64';
+import { memoize } from '$lib/utils/performance';
 
 let cart = [];
 let customerName = '';
@@ -126,8 +127,20 @@ onMount(() => {
   transactionCode = generateTransactionCode(); // Untuk tampilan/struk
 });
 
-$: totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
-$: totalHarga = cart.reduce((sum, item) => sum + (item.qty * (item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0) : 0)), 0);
+const calculateCartSummary = memoize((cart) => {
+  let totalQty = 0;
+  let totalHarga = 0;
+  for (const item of cart) {
+    totalQty += item.qty;
+    totalHarga += item.qty * (item.product.price ?? item.product.harga ?? 0);
+    if (item.addOns) {
+      totalHarga += item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0);
+    }
+  }
+  return { totalQty, totalHarga };
+});
+
+$: ({ totalQty, totalHarga } = calculateCartSummary(cart));
 $: kembalian = (parseInt(cashReceived) || 0) - totalHarga;
 $: formattedCashReceived = cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '';
 
@@ -235,25 +248,22 @@ async function catatTransaksiKeLaporan() {
     return;
   }
   const id_sesi_toko = sesiAktif?.id || null;
-  // Kasir: tetap dilarang transaksi jika tidak ada sesi toko aktif
   if (!id_sesi_toko && currentUserRole === 'kasir') {
     notifModalMsg = 'Kasir tidak boleh melakukan transaksi saat toko tutup!';
     notifModalType = 'error';
     showNotifModal = true;
     return;
   }
-  // Pemilik: beri warning, tapi lanjutkan proses insert
   if (!id_sesi_toko && currentUserRole === 'pemilik') {
     notifModalMsg = 'PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.';
     notifModalType = 'warning';
     showNotifModal = true;
-    // Tidak ada return di sini, jadi proses insert tetap lanjut
   }
   const now = new Date();
   const waktu = now.toISOString();
-  // Pastikan mapping paymentMethod ke value yang diterima database
   const payment = paymentMethod === 'cash' ? 'tunai' : 'non-tunai';
-  // Catat menu utama, harga sudah termasuk ekstra
+  // Generate transaction_id sekali per transaksi
+  const transactionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : uuidv4();
   const inserts = cart.map(item => ({
     tipe: 'in',
     sumber: 'pos',
@@ -264,11 +274,9 @@ async function catatTransaksiKeLaporan() {
     id_sesi_toko,
     waktu,
     jenis: 'pendapatan_usaha',
-    qty: item.qty, // Tambahkan qty agar dashboard bisa rekap item terjual
-    // id: transactionId, // jika ingin set manual, aktifkan baris ini
-    // created_at: now.toISOString(), // jika ingin set manual, aktifkan baris ini
+    qty: item.qty,
+    transaction_id: transactionId
   }));
-  // Pastikan payment_method tidak null/kosong
   if (!payment) {
     notifModalMsg = 'Metode pembayaran tidak valid!';
     notifModalType = 'error';
@@ -276,7 +284,6 @@ async function catatTransaksiKeLaporan() {
     return;
   }
   if (navigator.onLine) {
-    // Insert ke buku_kas
     const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert(inserts);
     if (error) {
       notifModalMsg = 'Gagal mencatat transaksi: ' + (error.message || error.error_description || 'Unknown error');
@@ -284,11 +291,11 @@ async function catatTransaksiKeLaporan() {
       showNotifModal = true;
       return;
     }
-    // Cara utama: ambil id transaksi terakhir dari buku_kas berdasarkan customer_name dan waktu terbaru
     const { data: lastBukuKas, error: lastBukuKasError } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('id')
       .eq('customer_name', customerName || null)
+      .eq('transaction_id', transactionId)
       .order('waktu', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -297,7 +304,8 @@ async function catatTransaksiKeLaporan() {
         buku_kas_id: lastBukuKas.id,
         produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
         qty: item.qty,
-        price: item.product.price ?? item.product.harga ?? 0
+        price: item.product.price ?? item.product.harga ?? 0,
+        transaction_id: transactionId
       }));
       if (transaksiKasirInserts.length) {
         const { error: errorKasir } = await getSupabaseClient(storeGet(selectedBranch)).from('transaksi_kasir').insert(transaksiKasirInserts);
@@ -365,6 +373,12 @@ function printStrukViaEscPosService() {
   const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
   window.location.href = intentUrl;
 }
+
+function handleAddCashTemplate(t) { addCashTemplate(t); }
+function handleKeypadButton(key) { if (key === 'C') cashReceived = ''; else handleKeypad(key); }
+function handleSetPaymentMethod(id) { paymentMethod = id; }
+function handleBackToKasir() { showSuccessModal = false; goto('/pos'); }
+function handleCloseNoSessionModal() { showNoSessionModal = false; }
 </script>
 
 <main class="flex-1 overflow-y-auto px-2 pt-2 page-content">
@@ -422,7 +436,7 @@ function printStrukViaEscPosService() {
         {#each paymentOptions as opt}
           <button type="button" class="rounded-lg border-2 px-4 py-3 font-semibold text-base transition-all
             {paymentMethod === opt.id ? 'border-pink-500 bg-pink-50 text-pink-500' : 'border-pink-200 bg-white text-gray-700'}"
-            onclick={() => paymentMethod = opt.id}>
+            onclick={() => handleSetPaymentMethod(opt.id)}>
             {opt.label}
           </button>
         {/each}
@@ -480,7 +494,7 @@ function printStrukViaEscPosService() {
       }} placeholder="0" />
       <div class="flex flex-wrap gap-2 md:gap-4 justify-center mb-4 md:mb-6">
         {#each cashTemplates as t}
-          <button type="button" class="bg-pink-100 text-pink-500 font-bold rounded-lg px-4 md:px-8 py-2 md:py-3 text-base md:text-lg" onclick={() => addCashTemplate(t)}>
+          <button type="button" class="bg-pink-100 text-pink-500 font-bold rounded-lg px-4 md:px-8 py-2 md:py-3 text-base md:text-lg" onclick={() => handleAddCashTemplate(t)}>
             Rp {t.toLocaleString('id-ID')}
           </button>
         {/each}
@@ -488,7 +502,7 @@ function printStrukViaEscPosService() {
       <div class="grid grid-cols-3 gap-2 md:gap-6 w-full mx-auto">
         {#each keypad as row}
           {#each row as key}
-            <button type="button" class="w-full bg-gray-100 text-gray-700 font-bold rounded-xl py-3 md:py-8 text-xl md:text-3xl active:bg-pink-100 transition-all {key === '⌫' ? 'col-span-1 text-pink-500' : ''} {key === 'C' ? 'text-red-500' : ''}" onclick={() => key === 'C' ? cashReceived = '' : handleKeypad(key)}>{key}</button>
+            <button type="button" class="w-full bg-gray-100 text-gray-700 font-bold rounded-xl py-3 md:py-8 text-xl md:text-3xl active:bg-pink-100 transition-all {key === '⌫' ? 'col-span-1 text-pink-500' : ''} {key === 'C' ? 'text-red-500' : ''}" onclick={() => handleKeypadButton(key)}>{key}</button>
           {/each}
         {/each}
       </div>
@@ -539,7 +553,7 @@ function printStrukViaEscPosService() {
       </div>
       <div class="flex flex-col gap-2 w-full">
         <button class="w-full bg-green-500 text-white font-bold rounded-lg py-3 text-base active:bg-green-600 transition-all" onclick={printStrukViaEscPosService}>Cetak Struk</button>
-        <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600 transition-all" onclick={() => { showSuccessModal = false; goto('/pos'); }}>Kembali ke Kasir</button>
+        <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600 transition-all" onclick={handleBackToKasir}>Kembali ke Kasir</button>
       </div>
     </div>
   </div>
@@ -568,10 +582,10 @@ function printStrukViaEscPosService() {
 {/if}
 
 {#if showNoSessionModal}
-  <ModalSheet open={showNoSessionModal} title="Peringatan" on:close={() => showNoSessionModal = false}>
+  <ModalSheet open={showNoSessionModal} title="Peringatan" on:close={handleCloseNoSessionModal}>
     <div class="text-center text-gray-700 text-base py-6">{noSessionModalMsg}</div>
     <div slot="footer" class="flex flex-col gap-2">
-      <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600" onclick={() => showNoSessionModal = false}>Tutup</button>
+      <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600" onclick={handleCloseNoSessionModal}>Tutup</button>
     </div>
   </ModalSheet>
 {/if}

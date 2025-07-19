@@ -136,15 +136,17 @@ function handleNavClick(path, e) {
   ontouchend={handleTouchEnd}
 >
   {#each navs as nav, i}
-    <button
+    <a
       class="flex-1 text-center text-pink-500 text-xs font-medium py-1 border-none bg-transparent flex flex-col items-center gap-0 min-w-0 relative z-10 transition-colors duration-200 ease-out {nav.path === '/' ? ($page.url.pathname === '/' ? 'text-pink-600' : 'text-pink-300') : (($page.url.pathname === nav.path || $page.url.pathname.startsWith(nav.path + '/')) ? 'text-pink-600' : 'text-pink-300')}"
       aria-label={nav.label}
       bind:this={navRefs[i]}
+      href={nav.path}
+      sveltekit:prefetch
       onclick={(e) => handleNavClick(nav.path, e)}
     >
       <svelte:component this={nav.icon} size={18} class="block mb-0.5 w-[18px] h-[18px] stroke-[1.7] transition-colors duration-200 ease-out" />
       {nav.label}
-    </button>
+    </a>
   {/each}
   <div class="nav-indicator" style="left:{indicatorLeft}px; width:{indicatorWidth}px;"></div>
 </nav> 

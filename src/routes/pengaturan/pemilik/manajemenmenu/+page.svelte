@@ -10,6 +10,8 @@ import { cubicOut } from 'svelte/easing';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import { get as getCache, set as setCache } from 'idb-keyval';
+import { memoize } from '$lib/utils/performance';
 
 // Data Menu
 let menus: any[] = [];
@@ -76,20 +78,27 @@ let isLoadingMenus = true;
 let isLoadingKategori = true;
 let isLoadingEkstra = true;
 
-// Seluruh fungsi, onMount, CRUD, helper, dsb terkait menu, kategori, ekstra, upload/crop gambar
-type KategoriWithCount = { id: number|string, name: string, count: number };
-$: kategoriWithCount = kategoriList.map(kat => ({
-  ...kat,
-  count: menus.filter(m => m.kategori_id === kat.id).length
-}));
+const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
+  kategoriList.map(kat => ({
+    ...kat,
+    count: menus.filter(m => m.kategori_id === kat.id).length
+  })),
+  (menus, kategoriList) => `${menus.length}-${kategoriList.length}`
+);
 
-$: filteredMenus = menus.filter(menu => {
+$: kategoriWithCount = memoizedKategoriWithCount(menus, kategoriList);
+
+const memoizedFilteredMenus = memoize((menus, kategoriList, selectedKategori, searchKeyword) => {
   const keyword = searchKeyword.trim().toLowerCase();
-  if (!keyword) return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
-  const kategoriNama = kategoriList.find(k => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
-  const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
-  return (selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match;
-});
+  return menus.filter(menu => {
+    if (!keyword) return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
+    const kategoriNama = kategoriList.find(k => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
+    const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
+    return (selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match;
+  });
+}, (menus, kategoriList, selectedKategori, searchKeyword) => `${menus.length}-${kategoriList.length}-${selectedKategori}-${searchKeyword}`);
+
+$: filteredMenus = memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword);
 
 async function fetchMenus() {
   isLoadingMenus = true;
@@ -134,9 +143,26 @@ async function fetchEkstra() {
 }
 
 onMount(async () => {
+  // 1. Tampilkan cache POS jika ada
+  const cachedPOS = await getCache('pos-data');
+  if (cachedPOS) {
+    menus = cachedPOS.produkData || [];
+    kategoriList = cachedPOS.kategoriData || [];
+    ekstraList = cachedPOS.tambahanData || [];
+  }
+
+  // 2. Fetch data terbaru dari server
   await fetchMenus();
   await fetchKategori();
   await fetchEkstra();
+
+  // 3. Update cache POS setelah fetch sukses
+  await setCache('pos-data', {
+    produkData: menus,
+    kategoriData: kategoriList,
+    tambahanData: ekstraList
+  });
+
   if (typeof window !== 'undefined') {
     document.body.classList.add('hide-nav');
   }
@@ -220,6 +246,7 @@ async function saveMenu() {
   }
   showMenuForm = false;
   await fetchMenus();
+  await afterUpdateCachePOS();
 }
 
 function confirmDeleteMenu(id: number) {
@@ -256,6 +283,7 @@ async function doDeleteMenu() {
     showDeleteModal = false;
     menuIdToDelete = null;
     await fetchMenus();
+    await afterUpdateCachePOS();
   }
 }
 
@@ -318,6 +346,7 @@ async function saveKategoriDetail() {
   kategoriDetail = null;
   await fetchKategori();
   await fetchMenus();
+  await afterUpdateCachePOS();
 }
 
 function confirmDeleteKategori(id: number) {
@@ -342,6 +371,7 @@ async function doDeleteKategori() {
     kategoriIdToDelete = null;
     await fetchKategori();
     await fetchMenus();
+    await afterUpdateCachePOS();
   }
 }
 
@@ -400,6 +430,7 @@ async function saveEkstra() {
     notifModalType = 'error';
     showNotifModal = true;
   }
+  await afterUpdateCachePOS();
 }
 
 function confirmDeleteEkstra(id) {
@@ -418,6 +449,7 @@ async function doDeleteEkstra() {
     showDeleteEkstraModal = false;
     ekstraIdToDelete = null;
     await fetchEkstra();
+    await afterUpdateCachePOS();
   }
 }
 
@@ -538,6 +570,14 @@ function toggleEkstra(ekstraId) {
   } else {
     $menuForm = { ...$menuForm, ekstra_ids: [...$menuForm.ekstra_ids, ekstraId] };
   }
+}
+
+async function afterUpdateCachePOS() {
+  await setCache('pos-data', {
+    produkData: menus,
+    kategoriData: kategoriList,
+    tambahanData: ekstraList
+  });
 }
 </script>
 

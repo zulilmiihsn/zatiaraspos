@@ -25,6 +25,7 @@ import {
 } from '$lib/utils/performance';
 import { userRole } from '$lib/stores/userRole';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import { get as getCache, set as setCache } from 'idb-keyval';
 let currentUserRole = '';
 userRole.subscribe(val => currentUserRole = val || '');
 
@@ -77,12 +78,28 @@ async function fetchAddOns() {
 }
 
 onMount(async () => {
+  // 1. Tampilkan cache produk/kategori/ekstra
+  const cachedPOS = await getCache('pos-data');
+  if (cachedPOS) {
+    produkData = cachedPOS.produkData || [];
+    kategoriData = cachedPOS.kategoriData || [];
+    tambahanData = cachedPOS.tambahanData || [];
+  }
+
+  // 2. Fetch data terbaru dari server
   await Promise.all([
     fetchCategories(),
     fetchAddOns(),
     fetchProducts()
   ]);
   isLoadingProducts = false;
+
+  // 3. Update cache setelah fetch sukses
+  await setCache('pos-data', {
+    produkData,
+    kategoriData,
+    tambahanData
+  });
 });
 
 // Lazy load icons dengan optimasi
@@ -493,6 +510,16 @@ function getKategoriNameById(id) {
 $: if (typeof window !== 'undefined') {
   localStorage.setItem('pos_cart', JSON.stringify(cart));
 }
+
+function handleSelectCategoryAll() { selectedCategory = 'all'; }
+function handleSelectCategory(id) { selectedCategory = id; }
+function handleOpenAddOnModal(product) { openAddOnModal(product); }
+function handleShowCustomItemModal() { showCustomItemModal = true; }
+function handleImgErrorId(id) { handleImgError(String(id)); }
+function handleGoToBayar(e) { e.stopPropagation(); goToBayar(); }
+function handleStopPropagation(e) { e.stopPropagation(); }
+function handleRemoveCartItem(idx) { removeCartItem(idx); }
+function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAddOnModal(product); }
 </script>
 
 <div 
@@ -530,7 +557,7 @@ $: if (typeof window !== 'undefined') {
       <button
         class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
         type="button"
-        onclick={() => selectedCategory = 'all'}
+        onclick={handleSelectCategoryAll}
       >Semua</button>
       {#if (categories ?? []).length === 0 && isLoadingProducts}
         {#each Array(4) as _, i}
@@ -538,7 +565,7 @@ $: if (typeof window !== 'undefined') {
         {/each}
       {:else if (categories ?? []).length === 0}
         <!-- Button Custom Item di samping 'Semua' jika tidak ada kategori -->
-        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={() => showCustomItemModal = true}>
+        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={handleShowCustomItemModal}>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
           Menu Kustom
         </button>
@@ -550,11 +577,11 @@ $: if (typeof window !== 'undefined') {
           <button
             class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 {selectedCategory === c.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-500'}"
             type="button"
-            onclick={() => selectedCategory = c.id}
+            onclick={() => handleSelectCategory(c.id)}
           >{c.name}</button>
         {/each}
         <!-- Button Custom Item di paling kanan -->
-        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={() => showCustomItemModal = true}>
+        <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={handleShowCustomItemModal}>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
           Custom Item
         </button>
@@ -576,7 +603,7 @@ $: if (typeof window !== 'undefined') {
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-lg border border-gray-100 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-pink-50 transition-colors" tabindex="0" onclick={() => handleOpenAddOnModal(p)} onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)} role="button" aria-label="Tambah {p.name} ke keranjang">
               <div class="flex flex-col flex-1 min-w-0">
                 <span class="font-medium text-gray-800 text-sm truncate mb-0.5">{p.name}</span>
                 <span class="text-xs text-gray-400 truncate min-h-[18px] mb-0.5">{getKategoriNameById(p.kategori_id)}</span>
@@ -602,9 +629,9 @@ $: if (typeof window !== 'undefined') {
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => openAddOnModal(p)} onkeydown={(e) => { if (e.key === 'Enter') openAddOnModal(p); }} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => handleOpenAddOnModal(p)} onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)} role="button" aria-label="Tambah {p.name} ke keranjang">
               {#if (p.gambar || p.image) && !imageError[String(p.id)]}
-                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgError(String(p.id))} />
+                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgErrorId(p.id)} />
               {:else}
                 <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
               {/if}
@@ -622,7 +649,7 @@ $: if (typeof window !== 'undefined') {
         <!-- Modal Custom Item -->
         {#if showCustomItemModal}
           <ModalSheet bind:open={showCustomItemModal} title={customItemName ? customItemName : 'Menu Kustom'} on:close={() => showCustomItemModal = false}>
-            <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()} style="scrollbar-width:none;-ms-overflow-style:none;" role="button" tabindex="0">
+            <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={handleStopPropagation} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()} style="scrollbar-width:none;-ms-overflow-style:none;" role="button" tabindex="0">
               <div class="mb-6 mt-4">
                 <label class="font-semibold text-gray-800 text-base mb-2 block" for="custom-nama">Nama Menu</label>
                 <input id="custom-nama" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" type="text" bind:value={customItemName} required maxlength="50" placeholder="Contoh: Jus Mangga Spesial" />
@@ -668,14 +695,14 @@ $: if (typeof window !== 'undefined') {
           <div class="font-bold text-pink-500 text-lg truncate">Rp {Number(totalHarga ?? 0).toLocaleString('id-ID')}</div>
         </div>
         <div class="flex items-center justify-center ml-4">
-          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700 flex items-center justify-center" onclick={(e) => { e.stopPropagation(); goToBayar(); }}>Bayar</button>
+          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-2 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700 flex items-center justify-center" onclick={handleGoToBayar}>Bayar</button>
         </div>
       </div>
     {/if}
 
     {#if showCartModal}
       <ModalSheet bind:open={showCartModal} title="Keranjang" on:close={closeCartModal}>
-        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
+        <div class="flex-1 overflow-y-auto px-0 py-2 min-h-0" onclick={handleStopPropagation} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
           style="scrollbar-width:none;-ms-overflow-style:none;"
           role="button"
           tabindex="0"
@@ -694,12 +721,12 @@ $: if (typeof window !== 'undefined') {
                 </div>
                 <div class="text-pink-500 font-bold text-base mt-1">Rp {Number(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</div>
               </div>
-              <button class="bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-semibold" onclick={() => removeCartItem(idx)}>Hapus</button>
+              <button class="bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-semibold" onclick={() => handleRemoveCartItem(idx)}>Hapus</button>
             </div>
           {/each}
         </div>
         <div slot="footer">
-          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={goToBayar}>Bayar</button>
+          <button class="bg-pink-500 text-white font-bold text-lg rounded-lg px-6 py-3 w-full mb-1 shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700" onclick={handleGoToBayar}>Bayar</button>
         </div>
       </ModalSheet>
     {/if}
@@ -721,7 +748,7 @@ $: if (typeof window !== 'undefined') {
 
     {#if showModal}
       <ModalSheet bind:open={showModal} title={selectedProduct ? selectedProduct.name : ''} on:close={closeModal}>
-        <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
+        <div class="overflow-y-auto flex-1 min-h-0 addon-list addon-modal-content pb-48" onclick={handleStopPropagation} onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
           style="scrollbar-width:none;-ms-overflow-style:none;"
           role="button"
           tabindex="0"

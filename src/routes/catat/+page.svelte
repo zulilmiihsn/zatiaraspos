@@ -476,14 +476,31 @@ function handlePinSubmit() {
   }
 }
 
-function handlePinInput(num) {
-  if (pinInput.length < 4) {
-    pinInput += num.toString();
-    if (pinInput.length === 4) {
-      setTimeout(() => handlePinSubmit(), 200);
+function handleSetPemasukan() {
+  if (mode !== 'pemasukan') {
+    mode = 'pemasukan';
+    if (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya') {
+      jenis = 'pendapatan_usaha';
     }
+    if (jenis === 'lainnya') {
+      namaJenis = '';
+    }
+    nama = '';
   }
 }
+function handleSetPengeluaran() {
+  if (mode !== 'pengeluaran') {
+    mode = 'pengeluaran';
+    if (jenis !== 'beban_usaha' && jenis !== 'lainnya') {
+      jenis = 'beban_usaha';
+    }
+    if (jenis === 'lainnya') {
+      namaJenis = '';
+    }
+    nama = '';
+  }
+}
+function handleSetTemplateNominal(val) { return () => setTemplateNominal(val); }
 </script>
 
 <style>
@@ -538,7 +555,7 @@ main {
             <button
               type="button"
               class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-              onclick={() => handlePinInput(num)}
+              onclick={handlePinInputNum(num)}
             >
               {num}
             </button>
@@ -547,7 +564,7 @@ main {
           <button
             type="button"
             class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-            onclick={() => handlePinInput(0)}
+            onclick={handlePinInputZero}
           >
             0
           </button>
@@ -628,18 +645,7 @@ main {
             class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pemasukan' ? 'text-pink-500' : 'text-gray-400'}"
             type="button"
             aria-current={mode === 'pemasukan' ? 'page' : undefined}
-            onclick={() => { 
-              if (mode !== 'pemasukan') {
-                mode = 'pemasukan'; 
-                if (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya') {
-                  jenis = 'pendapatan_usaha';
-                }
-                if (jenis === 'lainnya') {
-                  namaJenis = '';
-                }
-                nama = '';
-              }
-            }}
+            onclick={handleSetPemasukan}
           >
             Catat Pemasukan
           </button>
@@ -647,18 +653,7 @@ main {
             class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pengeluaran' ? 'text-pink-500' : 'text-gray-400'}"
             type="button"
             aria-current={mode === 'pengeluaran' ? 'page' : undefined}
-            onclick={() => { 
-              if (mode !== 'pengeluaran') {
-                mode = 'pengeluaran'; 
-                if (jenis !== 'beban_usaha' && jenis !== 'lainnya') {
-                  jenis = 'beban_usaha';
-                }
-                if (jenis === 'lainnya') {
-                  namaJenis = '';
-                }
-                nama = '';
-              }
-            }}
+            onclick={handleSetPengeluaran}
           >
             Catat Pengeluaran
           </button>
@@ -703,11 +698,11 @@ main {
             />
             <div class="flex flex-col items-center mt-2 mb-1">
               <div class="grid grid-cols-3 md:grid-cols-5 gap-2 w-full">
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(5000)}>Rp 5.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(10000)}>Rp 10.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(20000)}>Rp 20.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(50000)}>Rp 50.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={() => setTemplateNominal(100000)}>Rp 100.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(5000)}>Rp 5.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(10000)}>Rp 10.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(20000)}>Rp 20.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(50000)}>Rp 50.000</button>
+                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(100000)}>Rp 100.000</button>
               </div>
             </div>
           </div>
