@@ -8,6 +8,7 @@ import { fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
+import { userRole } from '$lib/stores/userRole';
 
 let transaksiHariIni = [];
 let loading = true;
@@ -85,6 +86,14 @@ async function deleteTransaksi() {
   await fetchTransaksiHariIni();
   loading = false;
 }
+
+onMount(() => {
+  userRole.subscribe(role => {
+    if (role !== 'pemilik') {
+      goto('/unauthorized');
+    }
+  })();
+});
 
 onMount(async () => {
   if (typeof window !== 'undefined') {

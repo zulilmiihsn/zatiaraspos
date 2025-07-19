@@ -12,6 +12,7 @@ import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import { memoize } from '$lib/utils/performance';
+import { userRole } from '$lib/stores/userRole';
 
 // Data Menu
 let menus: any[] = [];
@@ -172,6 +173,12 @@ onMount(async () => {
   Coffee = (await import('lucide-svelte/icons/coffee')).default;
   Utensils = (await import('lucide-svelte/icons/utensils')).default;
   Tag = (await import('lucide-svelte/icons/tag')).default;
+
+  userRole.subscribe(role => {
+    if (role !== 'pemilik') {
+      goto('/unauthorized');
+    }
+  })();
 });
 
 onDestroy(() => {

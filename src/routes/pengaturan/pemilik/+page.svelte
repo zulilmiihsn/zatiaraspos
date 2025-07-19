@@ -2,7 +2,15 @@
 import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import { userRole } from '$lib/stores/userRole';
 let Utensils, Shield;
+onMount(() => {
+  userRole.subscribe(role => {
+    if (role !== 'pemilik') {
+      goto('/unauthorized');
+    }
+  })();
+});
 onMount(async () => {
   Utensils = (await import('lucide-svelte/icons/utensils')).default;
   Shield = (await import('lucide-svelte/icons/shield')).default;

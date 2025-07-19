@@ -39,6 +39,9 @@ let kasirUserPassError = '';
 
 onMount(() => {
   userRole.subscribe(role => {
+    if (role !== 'pemilik') {
+      goto('/unauthorized');
+    }
     currentUserRole = role || '';
   });
 });
