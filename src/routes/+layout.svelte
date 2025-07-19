@@ -3,10 +3,12 @@
 	import Topbar from '$lib/components/shared/Topbar.svelte';
 	import BottomNav from '$lib/components/shared/BottomNav.svelte';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
-	import { supabase } from '$lib/database/supabaseClient';
+	import { getSupabaseClient } from '$lib/database/supabaseClient';
+	import { get as storeGet } from 'svelte/store';
+	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView';
 	import { slide, fade, fly } from 'svelte/transition';
@@ -51,6 +53,16 @@
 				return;
 			}
 		}
+
+		if (typeof window !== 'undefined' && currentPath === '/pengaturan/pemilik/gantikeamanan') {
+			document.body.classList.add('hide-nav');
+		}
+	});
+
+	onDestroy(() => {
+		if (typeof window !== 'undefined' && $page.url.pathname === '/pengaturan/pemilik/gantikeamanan') {
+			document.body.classList.remove('hide-nav');
+		}
 	});
 
 	let isPosPage = false;
@@ -86,7 +98,7 @@
 	</div>
 {:else}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		{#if $page.url.pathname !== '/laporan'}
+		{#if $page.url.pathname !== '/laporan' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
 			{#if !hideNav}
 				<div class="sticky top-0 z-30 bg-white shadow-md">
 					<Topbar onSettings={undefined}>
@@ -97,7 +109,7 @@
 							{#if $page.url.pathname === '/pos'}
 								<button
 									class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
-									on:click={() => posGridView.update(v => !v)}
+									onclick={() => posGridView.update(v => !v)}
 									aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
 									type="button"
 								>
@@ -135,7 +147,7 @@
 	</div>
 {/if}
 
-{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar'}
+{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
 	<div class="sticky bottom-0 z-30 bg-white">
 		<BottomNav />
 	</div>

@@ -5,15 +5,13 @@ import { slide, fade, fly } from 'svelte/transition';
 import { cubicOut, cubicIn } from 'svelte/easing';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
-import { laporanCache } from '$lib/stores/laporanCache';
-import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
-let laporanData;
-laporanCache.subscribe(val => laporanData = val.data);
-const LAPORAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
+let laporanData = [];
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
@@ -45,7 +43,7 @@ onMount(async () => {
   await fetchLaporan();
 
   // Ambil session Supabase
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
   const user = session?.user;
   // Hapus query role dari Supabase, gunakan store
   // const { data: profile } = await supabase
@@ -57,8 +55,7 @@ onMount(async () => {
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
     if (user) {
-      const { data: profile } = await supabase
-        .from('profil')
+      const { data: profile } = await getSupabaseClient(storeGet(selectedBranch)).from('profil')
         .select('role, username')
         .eq('id', user.id)
         .single();
@@ -68,7 +65,7 @@ onMount(async () => {
     }
   }
   if (currentUserRole === 'kasir') {
-    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('laporan')) {
       showPinModal = true;
@@ -86,7 +83,7 @@ onMount(async () => {
 });
 
 async function fetchPin() {
-  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
+  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -329,8 +326,7 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
 async function fetchLaporan(start = startDate, end = endDate) {
   // Konversi filter ke UTC ISO string berbasis WITA
   const { startUtc, endUtc } = getWitaDateRangeUtc(start);
-  const { data: kas, error: kasError } = await supabase
-    .from('buku_kas')
+  const { data: kas, error: kasError } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas')
     .select('*')
     .gte('waktu', startUtc)
     .lte('waktu', endUtc)
@@ -364,19 +360,6 @@ async function fetchLaporan(start = startDate, end = endDate) {
     showBebanLain = bebanLainDetail.length > 0;
     showPemasukan = pemasukanUsahaDetail.length > 0 || pemasukanLainDetail.length > 0;
     showPengeluaran = bebanUsahaDetail.length > 0 || bebanLainDetail.length > 0;
-  }
-  let pendingTransaksi = [];
-  if (navigator.onLine === false) {
-    pendingTransaksi = await getPendingTransaksi();
-    if (pendingTransaksi.length) {
-      // Gabungkan transaksi pending ke laporan
-      // Asumsi laporan adalah array transaksi, atau sesuaikan struktur laporan
-      laporan = [...laporan, ...pendingTransaksi];
-      // Update summary, detail, dsb jika perlu
-      // Misal:
-      // summary.pendapatan += pendingTransaksi.filter(t => t.type === 'pemasukan').reduce((a, b) => a + b.amount, 0);
-      // dst.
-    }
   }
 }
 

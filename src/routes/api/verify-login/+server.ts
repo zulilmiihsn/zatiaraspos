@@ -1,13 +1,15 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
 import bcrypt from 'bcryptjs';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { username, password } = await request.json();
-    if (!username || !password) {
+    const { username, password, branch } = await request.json();
+    if (!username || !password || !branch) {
       return new Response(JSON.stringify({ success: false, message: 'Username dan password wajib diisi' }), { status: 400 });
     }
+    // Pilih Supabase client sesuai branch
+    const supabase = getSupabaseClient(branch);
     // Ambil user dari tabel profil
     const { data: user, error } = await supabase
       .from('profil')

@@ -11,11 +11,12 @@ import { SecurityMiddleware } from '$lib/security.js';
 import { auth } from '$lib/auth.js';
 import { goto } from '$app/navigation';
 import { formatWitaDateTime } from '$lib/index';
-import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
-import { dashboardCache } from '$lib/stores/dashboardCache';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 let pendingCount = 0;
 transaksiPendingCount.subscribe(val => pendingCount = val);
 
@@ -91,10 +92,9 @@ let userProfileData = null;
 userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
 
-import { supabase } from '$lib/database/supabaseClient';
 let sesiAktif: any = null;
 async function cekSesiTokoAktif() {
-  const { data } = await supabase
+  const { data } = await getSupabaseClient(storeGet(selectedBranch))
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -120,9 +120,9 @@ onMount(async () => {
   // }
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
     if (session?.user) {
-      const { data: profile } = await supabase
+      const { data: profile } = await getSupabaseClient(storeGet(selectedBranch))
         .from('profil')
         .select('role, username')
         .eq('id', session.user.id)
@@ -134,7 +134,7 @@ onMount(async () => {
   }
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('catat')) {
       showPinModal = true;
@@ -165,12 +165,12 @@ onDestroy(() => {
 });
 
 async function fetchPin() {
-  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
+  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
 async function fetchTransaksi() {
-  const { data, error } = await supabase.from('buku_kas').select('*').order('waktu', { ascending: false });
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*').order('waktu', { ascending: false });
   if (!error) transaksiList = data;
 }
 
@@ -224,7 +224,7 @@ async function saveTransaksi(form: any) {
   };
   console.log('DEBUG | Payload insert buku_kas:', trx);
   if (navigator.onLine) {
-    const { error, data } = await supabase.from('buku_kas').insert([trx]);
+    const { error, data } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert([trx]);
     console.log('DEBUG | Hasil insert Supabase:', { error, data });
     if (error) {
       notifModalMsg = 'Gagal menyimpan transaksi ke database: ' + error.message;
@@ -232,14 +232,9 @@ async function saveTransaksi(form: any) {
       showNotifModal = true;
       return;
     }
-    // Clear cache dashboard dan trigger refresh
-    dashboardCache.set({ data: null, lastFetched: 0 });
-    localStorage.removeItem('dashboardCache');
     if (typeof window !== 'undefined' && window.fetchDashboardStats) {
       window.fetchDashboardStats();
     }
-  } else {
-    await saveTransaksiOffline(trx);
   }
   await fetchTransaksi();
 }

@@ -11,13 +11,9 @@ import { SecurityMiddleware } from '$lib/security.js';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get as storeGet } from 'svelte/store';
 import { posGridView } from '$lib/stores/posGridView';
-import { produkCache } from '$lib/stores/produkCache';
-import { kategoriCache } from '$lib/stores/kategoriCache';
-import { tambahanCache } from '$lib/stores/tambahanCache';
-import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
-import { getPendingMenus } from '$lib/stores/transaksiOffline';
 import { 
   debounce, 
   throttle, 
@@ -28,13 +24,14 @@ import {
   fuzzySearch
 } from '$lib/utils/performance';
 import { userRole } from '$lib/stores/userRole';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 let currentUserRole = '';
 userRole.subscribe(val => currentUserRole = val || '');
 
 import { browser } from '$app/environment';
 let sesiAktif = null;
 async function cekSesiTokoAktif() {
-  const { data } = await supabase
+  const { data } = await getSupabaseClient(storeGet(selectedBranch))
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -51,16 +48,42 @@ onMount(() => {
   }
 });
 
-let produkData: any[] | null = null;
-produkCache.subscribe(val => produkData = val.data);
-let kategoriData: any[] | null = null;
-kategoriCache.subscribe(val => kategoriData = val.data);
-let tambahanData: any[] | null = null;
-tambahanCache.subscribe(val => tambahanData = val.data);
+let produkData = [];
+let kategoriData = [];
+let tambahanData = [];
 
-const PRODUK_CACHE_TTL = 60 * 60 * 1000; // 1 jam
-const KATEGORI_CACHE_TTL = 60 * 60 * 1000; // 1 jam
-const TAMBAHAN_CACHE_TTL = 60 * 60 * 1000; // 1 jam
+async function fetchCategories() {
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+    .from('kategori')
+    .select('*')
+    .order('created_at', { ascending: false });
+  kategoriData = !error ? data : [];
+}
+
+async function fetchProducts() {
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+    .from('produk')
+    .select('*')
+    .order('created_at', { ascending: false });
+  produkData = !error ? data : [];
+}
+
+async function fetchAddOns() {
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+    .from('tambahan')
+    .select('*')
+    .order('created_at', { ascending: false });
+  tambahanData = !error ? data : [];
+}
+
+onMount(async () => {
+  await Promise.all([
+    fetchCategories(),
+    fetchAddOns(),
+    fetchProducts()
+  ]);
+  isLoadingProducts = false;
+});
 
 // Lazy load icons dengan optimasi
 let Home, ShoppingBag, FileText, Book, Settings;
@@ -97,9 +120,6 @@ onMount(async () => {
   // Sync otomatis saat online dengan throttling
   if (typeof window !== 'undefined') {
     const throttledSync = throttle(async () => {
-      localStorage.removeItem('produkCache');
-      localStorage.removeItem('kategoriCache');
-      localStorage.removeItem('tambahanCache');
       await Promise.all([
         fetchCategories(),
         fetchAddOns(),
@@ -110,109 +130,6 @@ onMount(async () => {
     window.addEventListener('online', throttledSync);
   }
 });
-
-async function fetchCategories() {
-  let lastFetched;
-  kategoriCache.subscribe(val => lastFetched = val.lastFetched)();
-  if (kategoriData && Date.now() - lastFetched < KATEGORI_CACHE_TTL) {
-    categories = kategoriData;
-    return;
-  }
-  const { data, error } = await supabase.from('kategori').select('*').order('created_at', { ascending: false });
-  if (!error) {
-    categories = data;
-    kategoriCache.set({ data, lastFetched: Date.now() });
-    localStorage.setItem('kategoriCache', JSON.stringify({ data, lastFetched: Date.now() }));
-  }
-}
-
-async function fetchProducts() {
-  let lastFetched;
-  produkCache.subscribe(val => lastFetched = val.lastFetched)();
-  if (produkData && Date.now() - lastFetched < PRODUK_CACHE_TTL) {
-    products = produkData;
-  } else {
-    const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false });
-    if (!error) {
-      products = data;
-      produkCache.set({ data, lastFetched: Date.now() });
-      localStorage.setItem('produkCache', JSON.stringify({ data, lastFetched: Date.now() }));
-    }
-  }
-  
-  // Integrasi menu pending: gabungkan menu pending dari IndexedDB
-  try {
-    const pendingMenus = await getPendingMenus();
-    if (pendingMenus.length) {
-      // Gabungkan menu pending ke products, tapi filter yang sudah dihapus
-      const validPendingMenus = pendingMenus.filter((menu: any) => {
-        // Cek apakah menu ini sudah dihapus dari database online
-        return !products.some((onlineMenu: any) => onlineMenu.id === menu.id);
-      });
-      if (validPendingMenus.length) {
-        products = [...products, ...validPendingMenus];
-      }
-    }
-  } catch (error) {
-    // Hapus semua baris console.log, console.warn, dan console.error
-  }
-}
-
-// Saat inisialisasi, load cache dari localStorage jika ada
-if (typeof window !== 'undefined') {
-  const cache = localStorage.getItem('produkCache');
-  if (cache) {
-    produkCache.set(JSON.parse(cache));
-  }
-  const kategoriCacheRaw = localStorage.getItem('kategoriCache');
-  if (kategoriCacheRaw) {
-    kategoriCache.set(JSON.parse(kategoriCacheRaw));
-  }
-  const tambahanCacheRaw = localStorage.getItem('tambahanCache');
-  if (tambahanCacheRaw) {
-    tambahanCache.set(JSON.parse(tambahanCacheRaw));
-  }
-}
-
-async function fetchAddOns() {
-  let lastFetched;
-  tambahanCache.subscribe(val => lastFetched = val.lastFetched)();
-  if (tambahanData && Date.now() - lastFetched < TAMBAHAN_CACHE_TTL) {
-    addOns = tambahanData;
-    return;
-  }
-  const { data, error } = await supabase.from('tambahan').select('*').order('created_at', { ascending: false });
-  if (!error) {
-    addOns = data;
-    tambahanCache.set({ data, lastFetched: Date.now() });
-    localStorage.setItem('tambahanCache', JSON.stringify({ data, lastFetched: Date.now() }));
-  }
-}
-
-// Fungsi untuk refresh cache secara manual
-async function refreshCache() {
-  isLoadingProducts = true;
-  
-  // Clear semua cache
-  localStorage.removeItem('produkCache');
-  localStorage.removeItem('kategoriCache');
-  localStorage.removeItem('tambahanCache');
-  
-  // Reset cache stores
-  produkCache.set({ data: null, lastFetched: 0 });
-  kategoriCache.set({ data: null, lastFetched: 0 });
-  tambahanCache.set({ data: null, lastFetched: 0 });
-  
-  // Fetch ulang data
-  await Promise.all([
-    fetchCategories(),
-    fetchAddOns(),
-    fetchProducts()
-  ]);
-  
-  isLoadingProducts = false;
-  showSuccessNotif('Data berhasil diperbarui!');
-}
 
 // Touch handling dengan throttling
 let touchStartX = 0;
@@ -272,9 +189,11 @@ let selectedCategory = 'all';
 
 // Produk mock dengan kategori
 let products: any[] = [];
+$: products = produkData;
 
 // Topping mock tanpa emoji/icon
 let addOns: any[] = [];
+$: addOns = tambahanData;
 
 // Jenis gula dan es
 const sugarOptions = [
@@ -452,7 +371,6 @@ function handleImgError(id: string) {
 }
 
 function goToBayar() {
-  localStorage.setItem('pos_cart', JSON.stringify(cart));
   showCartModal = false;
   goto('/pos/bayar');
 }
@@ -519,14 +437,12 @@ function capitalizeFirst(str) {
 }
 
 let categories = [];
+$: categories = kategoriData;
 
 let skeletonCount = 9;
 if (typeof window !== 'undefined' && window.innerWidth < 768) {
   skeletonCount = 6;
 }
-
-let pendingCount = 0;
-transaksiPendingCount.subscribe(val => pendingCount = val);
 
 let showErrorNotification = false;
 let errorNotificationMessage = '';

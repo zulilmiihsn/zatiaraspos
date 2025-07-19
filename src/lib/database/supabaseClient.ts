@@ -1,7 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// Ganti dengan URL dan anon key Supabase Anda
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
- 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey); 
+const supabaseClients: Record<string, SupabaseClient> = {
+  samarinda: createClient(
+    import.meta.env.VITE_SUPABASE_URL_SAMARINDA,
+    import.meta.env.VITE_SUPABASE_ANON_KEY_SAMARINDA
+  ),
+  berau: createClient(
+    import.meta.env.VITE_SUPABASE_URL_BERAU,
+    import.meta.env.VITE_SUPABASE_ANON_KEY_BERAU
+  )
+};
+
+export function getSupabaseClient(branch: 'samarinda' | 'berau'): SupabaseClient {
+  return supabaseClients[branch];
+} 

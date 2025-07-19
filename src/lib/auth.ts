@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import { supabase } from '$lib/database/supabaseClient';
 import { setUserRole, clearUserRole } from '$lib/stores/userRole';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
 
 // Dummy credentials - dalam produksi ini harus dari database
 const DUMMY_CREDENTIALS = {
@@ -20,35 +20,20 @@ const DUMMY_CREDENTIALS = {
 };
 
 // Session store
-export const session = writable<{
-  isAuthenticated: boolean;
-  user: any;
-  token: string | null;
-}>({
+export const session = writable({
   isAuthenticated: false,
   user: null,
   token: null
 });
 
-// Initialize session from localStorage
-if (browser) {
-  const savedSession = localStorage.getItem('zatiaras_session');
-  if (savedSession) {
+if (typeof window !== 'undefined') {
+  const saved = sessionStorage.getItem('zatiaras_session');
+  if (saved) {
     try {
-      const parsed = JSON.parse(savedSession);
-      session.set(parsed);
-    } catch (error) {
-      console.error('Error parsing saved session:', error);
-      localStorage.removeItem('zatiaras_session');
-    }
+      session.set(JSON.parse(saved));
+    } catch {}
   }
-}
-
-// Subscribe to session changes and save to localStorage
-if (browser) {
-  session.subscribe((value) => {
-    localStorage.setItem('zatiaras_session', JSON.stringify(value));
-  });
+  session.subscribe(val => sessionStorage.setItem('zatiaras_session', JSON.stringify(val)));
 }
 
 // Authentication functions
@@ -84,6 +69,7 @@ export const auth = {
       user: null,
       token: null
     });
+    sessionStorage.removeItem('zatiaras_session');
   },
 
   // Check if user is authenticated
@@ -125,12 +111,12 @@ function generateDummyToken(user: any): string {
   return `${header}.${payload}.${signature}`;
 }
 
-export async function loginWithUsername(username: string, password: string) {
+export async function loginWithUsername(username: string, password: string, branch: 'samarinda' | 'berau') {
   // Kirim ke endpoint API custom untuk verifikasi login
   const res = await fetch('/api/verify-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ username, password, branch })
   });
   const result = await res.json();
   if (!result.success) throw new Error(result.message || 'Login gagal');
@@ -138,16 +124,15 @@ export async function loginWithUsername(username: string, password: string) {
   // Set user role dan profile ke store (hanya sekali saat login)
   setUserRole(result.user.role, result.user);
 
-  // Simpan session ke localStorage
+  // Tidak perlu reset/fetch cache apapun
+
+  // Simpan session hanya ke store
   const sessionData = {
     isAuthenticated: true,
     user: result.user,
     token: null // Tidak pakai token Supabase Auth
   };
   session.set(sessionData);
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('zatiaras_session', JSON.stringify(sessionData));
-  }
   return result.user;
 }
 
@@ -165,4 +150,6 @@ export async function logout() {
   await supabase.auth.signOut();
   // Clear user role dari store saat logout
   clearUserRole();
+  session.set({ isAuthenticated: false, user: null, token: null });
+  sessionStorage.removeItem('zatiaras_session');
 } 

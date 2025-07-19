@@ -5,17 +5,15 @@ import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { auth } from '$lib/auth.js';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
-import { dashboardCache } from '$lib/stores/dashboardCache';
-import { getPendingTransaksi } from '$lib/stores/transaksiOffline';
+
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 
-let dashboardData;
-dashboardCache.subscribe(val => dashboardData = val.data);
-
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 1 hari
+let dashboardData = null;
 
 let barsVisible = false;
 let incomeChartRef: HTMLDivElement | null = null;
@@ -79,9 +77,9 @@ onMount(async () => {
   
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
     if (session?.user) {
-      const { data: profile } = await supabase
+      const { data: profile } = await getSupabaseClient(storeGet(selectedBranch))
         .from('profil')
         .select('role, username')
         .eq('id', session.user.id)
@@ -94,7 +92,7 @@ onMount(async () => {
   
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await supabase.from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
@@ -117,14 +115,6 @@ function applyDashboardData(data) {
 }
 
 async function fetchDashboardStats() {
-  let lastFetched;
-  dashboardCache.subscribe(val => lastFetched = val.lastFetched)();
-  if (dashboardData && Date.now() - lastFetched < CACHE_TTL) {
-    applyDashboardData(dashboardData);
-    isLoadingBestSellers = false;
-    errorBestSellers = '';
-    return;
-  }
   isLoadingBestSellers = true;
   errorBestSellers = '';
   try {
@@ -135,34 +125,27 @@ async function fetchDashboardStats() {
     const startUTC = startOfDay.toISOString();
     const endUTC = endOfDay.toISOString();
     
-    const { data: omzetData } = await supabase
+    const { data: omzetData } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('amount, waktu, jenis, sumber, qty')
       .gte('waktu', startUTC)
       .lte('waktu', endUTC)
       .eq('tipe', 'in')
       .eq('jenis', 'pendapatan_usaha');
-    
     omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
     itemTerjual = omzetData?.reduce((sum, item) => sum + (item.qty || 1), 0) || 0;
-    
     // Total transaksi
-    const { count: transaksiCount } = await supabase.from('buku_kas').select('*', { count: 'exact', head: true }).eq('tipe', 'in').eq('sumber', 'pos');
+    const { count: transaksiCount } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*', { count: 'exact', head: true }).eq('tipe', 'in').eq('sumber', 'pos');
     jumlahTransaksi = transaksiCount || 0;
-
     // Statistik 7 hari terakhir
     const now = new Date();
     const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
     const startDate = sevenDaysAgo.toISOString();
-
     // Rata-rata transaksi/hari dari buku_kas (group by waktu per hari)
-    const { data: transaksiKas } = await supabase
+    const { data: transaksiKas } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('waktu')
-      .gte('waktu', startDate)
-      .eq('tipe', 'in')
-      .eq('sumber', 'pos');
-
+      .gte('waktu', startDate);
     const transaksiPerHari = {};
     for (let i = 0; i < 7; i++) {
       const d = new Date(sevenDaysAgo);
@@ -199,7 +182,7 @@ async function fetchDashboardStats() {
       return date.toISOString().slice(0, 10);
     }
     // 2. Pendapatan 7 hari terakhir (grafik)
-    const { data: pemasukan } = await supabase
+    const { data: pemasukan } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('amount, waktu')
       .gte('waktu', startDate)
@@ -227,7 +210,7 @@ async function fetchDashboardStats() {
     weeklyMax = Math.max(...weeklyIncome, 1);
 
     // Best sellers: ambil dari transaksi_kasir 7 hari terakhir, group dan sum qty di JS
-    const { data: items, error } = await supabase
+    const { data: items, error } = await getSupabaseClient(storeGet(selectedBranch))
       .from('transaksi_kasir')
       .select('produk_id, qty, created_at')
       .gte('created_at', startDate);
@@ -248,7 +231,7 @@ async function fetchDashboardStats() {
         bestSellers = [];
       } else {
         // Ambil semua produk
-        const { data: allProducts } = await supabase
+        const { data: allProducts } = await getSupabaseClient(storeGet(selectedBranch))
           .from('produk')
           .select('id, name, gambar');
         // Filter hanya produk_id yang ada di products
@@ -292,8 +275,6 @@ async function fetchDashboardStats() {
       bestSellers
     };
     applyDashboardData(newData);
-    dashboardCache.set({ data: newData, lastFetched: Date.now() });
-    localStorage.setItem('dashboardCache', JSON.stringify({ data: newData, lastFetched: Date.now() }));
   }
 }
 
@@ -306,7 +287,7 @@ async function fetchDashboardStatsPOS() {
   const endUTC = end.toISOString();
 
   // Ambil semua transaksi kasir hari ini
-  const { data: kas, error } = await supabase
+  const { data: kas, error } = await getSupabaseClient(storeGet(selectedBranch))
     .from('buku_kas')
     .select('*')
     .gte('waktu', startUTC)
@@ -330,7 +311,7 @@ async function fetchDashboardStatsPOS() {
 }
 
 async function fetchPin() {
-  const { data } = await supabase.from('pengaturan_keamanan').select('pin').single();
+  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -425,7 +406,7 @@ function updateTokoAktif(val) {
 }
 
 async function cekSesiToko() {
-  const { data } = await supabase
+  const { data } = await getSupabaseClient(storeGet(selectedBranch))
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -487,7 +468,7 @@ async function handleBukaToko() {
     pinErrorToko = 'Modal awal wajib diisi dan valid';
     return;
   }
-  await supabase.from('sesi_toko').insert({
+  await getSupabaseClient(storeGet(selectedBranch)).from('sesi_toko').insert({
     opening_cash: modalAwalRaw,
     opening_time: new Date().toISOString(),
     is_active: true
@@ -498,21 +479,13 @@ async function handleBukaToko() {
 
 async function hitungRingkasanTutup() {
   if (!sesiAktif) return;
-  const { data: kasRaw } = await supabase
+  const { data: kasRaw } = await getSupabaseClient(storeGet(selectedBranch))
     .from('buku_kas')
     .select('*')
     .eq('id_sesi_toko', sesiAktif.id);
   type Kas = { payment_method?: string; tipe?: string; amount?: number; transaction_date?: string; id_sesi_toko?: string };
   let kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
-  // Integrasi transaksi offline: gabungkan transaksi pending dari IndexedDB
-  if (navigator.onLine === false) {
-    const pendingTransaksi = await getPendingTransaksi();
-    if (pendingTransaksi.length) {
-      // Filter transaksi pending yang id_sesi_toko sama dengan sesiAktif.id
-      const pendingDalamSesi = pendingTransaksi.filter((t: any) => t.id_sesi_toko === sesiAktif.id);
-      kas = [...kas, ...pendingDalamSesi];
-    }
-  }
+
 
   // Penjualan tunai (semua pemasukan tunai)
   const penjualanTunai = kas.filter((t) => t.tipe === 'in' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
@@ -534,7 +507,7 @@ async function hitungRingkasanTutup() {
 
 async function handleTutupToko() {
   if (!sesiAktif) return;
-  await supabase.from('sesi_toko').update({
+  await getSupabaseClient(storeGet(selectedBranch)).from('sesi_toko').update({
     closing_time: new Date().toISOString(),
     is_active: false
   }).eq('id', sesiAktif.id);

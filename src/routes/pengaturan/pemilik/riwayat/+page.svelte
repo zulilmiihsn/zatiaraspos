@@ -1,6 +1,8 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 import Trash from 'lucide-svelte/icons/trash';
 import { goto } from '$app/navigation';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -28,7 +30,7 @@ async function fetchTransaksiHariIni() {
   loading = true;
   const { start, end } = todayRange();
   // Ambil hanya dari buku_kas
-  const { data, error } = await supabase.from('buku_kas').select('*').gte('waktu', start).lte('waktu', end).order('waktu', { ascending: false });
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*').gte('waktu', start).lte('waktu', end).order('waktu', { ascending: false });
   transaksiHariIni = [];
   if (data) {
     transaksiHariIni.push(...data.map(t => ({
@@ -70,10 +72,10 @@ async function deleteTransaksi() {
   if (!transaksiToDelete) return;
   loading = true;
   if (transaksiToDelete.sumber === 'catat') {
-    await supabase.from('buku_kas').delete().eq('id', transaksiToDelete.id);
+    await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').delete().eq('id', transaksiToDelete.id);
   } else if (transaksiToDelete.sumber === 'pos') {
-    await supabase.from('transaksi').delete().eq('id', transaksiToDelete.id);
-    await supabase.from('item_transaksi').delete().eq('transaction_id', transaksiToDelete.id);
+    await getSupabaseClient(storeGet(selectedBranch)).from('transaksi').delete().eq('id', transaksiToDelete.id);
+    await getSupabaseClient(storeGet(selectedBranch)).from('item_transaksi').delete().eq('transaction_id', transaksiToDelete.id);
   }
   showDeleteModal = false;
   notifMsg = 'Transaksi berhasil dihapus.';

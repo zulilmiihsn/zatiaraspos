@@ -1,6 +1,8 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 import { goto } from '$app/navigation';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 let namaToko = '';
@@ -28,34 +30,16 @@ const defaultData = {
 async function loadPengaturan() {
   // Coba load dari Supabase, fallback ke localStorage
   try {
-    const { data, error } = await supabase.from('pengaturan_struk').select('*').limit(1).maybeSingle();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').select('*').limit(1).maybeSingle();
     if (data) {
       namaToko = data.nama_toko || defaultData.namaToko;
       alamat = data.alamat || defaultData.alamat;
       telepon = data.telepon || defaultData.telepon;
       instagram = data.instagram || defaultData.instagram;
       ucapan = data.ucapan || defaultData.ucapan;
-    } else {
-      loadFromLocal();
     }
   } catch {
-    loadFromLocal();
-  }
-}
-
-function loadFromLocal() {
-  const local = localStorage.getItem('pengaturan_struk');
-  if (local) {
-    try {
-      const d = JSON.parse(local);
-      namaToko = d.namaToko || defaultData.namaToko;
-      alamat = d.alamat || defaultData.alamat;
-      telepon = d.telepon || defaultData.telepon;
-      instagram = d.instagram || defaultData.instagram;
-      ucapan = d.ucapan || defaultData.ucapan;
-    } catch {}
-  } else {
-    resetToDefault();
+    // loadFromLocal();
   }
 }
 
@@ -88,17 +72,11 @@ async function simpanPengaturan(event: Event) {
     ucapan
   };
   try {
-    const { error } = await supabase.from('pengaturan_struk').upsert([data]);
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').upsert([data]);
     if (error) throw error;
-    localStorage.setItem('pengaturan_struk', JSON.stringify({
-      namaToko, alamat, telepon, instagram, ucapan
-    }));
     showFloatingNotif('Pengaturan berhasil disimpan!', 'success');
   } catch (e) {
-    showFloatingNotif('Gagal menyimpan ke Supabase. Disimpan ke localStorage.', 'error');
-    localStorage.setItem('pengaturan_struk', JSON.stringify({
-      namaToko, alamat, telepon, instagram, ucapan
-    }));
+    showFloatingNotif('Gagal menyimpan ke Supabase.', 'error');
   } finally {
     isSaving = false;
   }
@@ -113,9 +91,9 @@ async function handleLogoUpload(e: Event) {
   const fileExt = file.name.split('.').pop();
   const fileName = `logo_${Date.now()}.${fileExt}`;
   try {
-    const { data, error } = await supabase.storage.from('public').upload(`logo/${fileName}`, file, { upsert: true });
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).storage.from('public').upload(`logo/${fileName}`, file, { upsert: true });
     if (error) throw error;
-    const { data: publicUrl } = supabase.storage.from('public').getPublicUrl(`logo/${fileName}`);
+    const { data: publicUrl } = getSupabaseClient(storeGet(selectedBranch)).storage.from('public').getPublicUrl(`logo/${fileName}`);
     // logoUrl = publicUrl.publicUrl;
   } catch (e) {
     errorMsg = 'Gagal upload logo.';
@@ -148,23 +126,23 @@ onMount(() => {
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Toko</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={namaToko} maxlength="50" required />
-      </div>
+            </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={alamat} maxlength="100" required />
-      </div>
+              </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor Telepon</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={telepon} maxlength="20" required />
-      </div>
+          </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={instagram} maxlength="30" />
-      </div>
+        </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Ucapan di Bawah Struk</label>
         <textarea class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" rows="3" bind:value={ucapan} maxlength="120"></textarea>
-      </div>
+            </div>
       <div class="flex flex-col sm:flex-row gap-3 mt-6">
         <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" onclick={resetToDefault} disabled={isSaving}>Reset ke Default</button>
         <button type="submit" class="bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg px-6 py-2 transition-colors disabled:opacity-50 w-full sm:w-1/2 order-2 sm:order-2" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
@@ -178,7 +156,6 @@ onMount(() => {
         </div>
         <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
         <div style="white-space:pre-line;">{alamat}</div>
-        <div>Telp: {telepon}</div>
         {#if instagram}
           <div>IG: {instagram}</div>
         {/if}

@@ -4,16 +4,14 @@ import { goto } from '$app/navigation';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js';
 import { SecurityMiddleware } from '$lib/security.js';
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { formatWitaDateTime } from '$lib/index';
-import { saveTransaksiOffline } from '$lib/stores/transaksiOffline';
 import { fly, fade } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { userRole } from '$lib/stores/userRole';
-import { dashboardCache } from '$lib/stores/dashboardCache';
-import pako from 'pako';
-import { Base64 } from 'js-base64';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 
 let cart = [];
 let customerName = '';
@@ -84,7 +82,7 @@ function generateTransactionCode() {
 
 let sesiAktif = null;
 async function cekSesiTokoAktif() {
-  const { data } = await supabase
+  const { data } = await getSupabaseClient(storeGet(selectedBranch))
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -96,10 +94,9 @@ async function cekSesiTokoAktif() {
 
 async function fetchPengaturanStruk() {
   try {
-    const { data, error } = await supabase.from('pengaturan_struk').select('*').single();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').select('*').single();
     if (data) {
       pengaturanStruk = data;
-      localStorage.setItem('pengaturan_struk', JSON.stringify(data));
     } else if (error) {
       // fallback ke localStorage
       const local = localStorage.getItem('pengaturan_struk');
@@ -155,7 +152,6 @@ function confirmQrisChecked() {
   kembalian = 0;
   // Catat ke laporan
   catatTransaksiKeLaporan();
-  localStorage.removeItem('pos_cart');
 }
 function addCashTemplate(nom) {
   cashReceived = ((parseInt(cashReceived) || 0) + nom).toString();
@@ -207,8 +203,6 @@ function finishCash() {
   showSuccessModal = true;
   // Catat ke laporan
   catatTransaksiKeLaporan();
-  // Kosongkan keranjang di localStorage jika perlu
-  localStorage.removeItem('pos_cart');
 }
 function handleKeypad(val) {
   if (val === '⌫') {
@@ -278,7 +272,7 @@ async function catatTransaksiKeLaporan() {
   }
   if (navigator.onLine) {
     // Insert ke buku_kas
-    const { error } = await supabase.from('buku_kas').insert(inserts);
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert(inserts);
     if (error) {
       notifModalMsg = 'Gagal mencatat transaksi: ' + (error.message || error.error_description || 'Unknown error');
       notifModalType = 'error';
@@ -286,7 +280,7 @@ async function catatTransaksiKeLaporan() {
       return;
     }
     // Cara utama: ambil id transaksi terakhir dari buku_kas berdasarkan customer_name dan waktu terbaru
-    const { data: lastBukuKas, error: lastBukuKasError } = await supabase
+    const { data: lastBukuKas, error: lastBukuKasError } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('id')
       .eq('customer_name', customerName || null)
@@ -301,21 +295,15 @@ async function catatTransaksiKeLaporan() {
         price: item.product.price ?? item.product.harga ?? 0
       }));
       if (transaksiKasirInserts.length) {
-        const { error: errorKasir } = await supabase.from('transaksi_kasir').insert(transaksiKasirInserts);
+        const { error: errorKasir } = await getSupabaseClient(storeGet(selectedBranch)).from('transaksi_kasir').insert(transaksiKasirInserts);
         if (errorKasir) {
         }
       }
     } else {
     }
-    // Clear cache dashboard dan trigger refresh
-    dashboardCache.set({ data: null, lastFetched: 0 });
-    localStorage.removeItem('dashboardCache');
-    if (typeof window !== 'undefined' && window.fetchDashboardStats) {
-      window.fetchDashboardStats();
-    }
   } else {
     for (const trx of inserts) {
-      await saveTransaksiOffline(trx);
+      // Implementasi saveTransaksiOffline
     }
   }
   // Hapus proses insert ke transaksi dan item_transaksi, karena sudah tidak digunakan

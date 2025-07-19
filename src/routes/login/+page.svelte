@@ -5,6 +5,8 @@
   import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/validation.js';
   import { SecurityMiddleware } from '$lib/security.js';
   import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
+  import { selectedBranch } from '$lib/stores/selectedBranch';
+  import { get } from 'svelte/store';
 
   let userRole = '';
   let username = '';
@@ -16,6 +18,9 @@
   // Form validation
   let usernameError = '';
   let passwordError = '';
+
+  let branch: 'samarinda' | 'berau' = 'samarinda';
+  $: selectedBranch.set(branch);
 
   // Validate form
   function validateForm(): boolean {
@@ -65,7 +70,7 @@
     }
     isLoading = true;
     try {
-      await loginWithUsername(sanitizedUsername, sanitizedPassword);
+      await loginWithUsername(sanitizedUsername, sanitizedPassword, branch);
       showLottieSuccess = true;
       // isLottiePlaying = true; // Hapus semua logic isLottiePlaying
       await new Promise(resolve => setTimeout(resolve, 1200));
@@ -242,7 +247,21 @@
       </form>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- Dropdown Cabang di pojok kanan bawah tanpa icon -->
+<div class="fixed bottom-4 right-4 z-40">
+  <div class="backdrop-blur-xl bg-white/30 border border-white/40 shadow-lg rounded-2xl px-4 py-2 flex items-center min-w-[120px] justify-end" style="box-shadow: 0 4px 24px 0 rgba(255, 182, 193, 0.12);">
+    <select
+      class="bg-transparent outline-none border-none text-sm font-semibold text-gray-700 px-1 py-0.5 focus:ring-0 focus:outline-none cursor-pointer"
+      bind:value={branch}
+      aria-label="Pilih Cabang"
+    >
+      <option value="samarinda">Samarinda</option>
+      <option value="berau">Berau</option>
+    </select>
+  </div>
+</div>
 
 <style>
 @keyframes fadeInUp {

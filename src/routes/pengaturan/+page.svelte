@@ -16,11 +16,12 @@
   import User from 'lucide-svelte/icons/user';
   import Download from 'lucide-svelte/icons/download';
   import Printer from 'lucide-svelte/icons/printer';
-  import { supabase } from '$lib/database/supabaseClient';
-  import { pengaturanCache } from '$lib/stores/pengaturanCache';
+  import { getSupabaseClient } from '$lib/database/supabaseClient';
   import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+  import { get as storeGet } from 'svelte/store';
+  import { selectedBranch } from '$lib/stores/selectedBranch';
   
   // Type definitions
   interface PengaturanData {
@@ -28,9 +29,7 @@
     pin?: string;
   }
   
-  let pengaturanData: PengaturanData | null = null;
-  pengaturanCache.subscribe(val => pengaturanData = val.data);
-  const PENGATURAN_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 hari
+  let pengaturanData = null;
 
   // State untuk loading
   let isLoading = true;
@@ -74,19 +73,13 @@
     }, 3000);
   }
 
+  async function fetchPengaturan() {
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages, pin').single();
+    pengaturanData = !error ? data : null;
+  }
+
   onMount(async () => {
     try {
-      // Load cache dari localStorage terlebih dahulu
-      if (typeof window !== 'undefined') {
-        const cache = localStorage.getItem('pengaturanCache');
-        if (cache) {
-          const parsedCache = JSON.parse(cache);
-          pengaturanCache.set(parsedCache);
-          pengaturan = parsedCache.data;
-          isPengaturanLoaded = true;
-        }
-      }
-
       // Hapus query profile dari Supabase, gunakan store
       // const { data: { session } } = await supabase.auth.getSession();
       // const userId = session?.user?.id;
@@ -103,10 +96,9 @@
       
       // Jika role belum ada di store, coba validasi dengan Supabase
       if (!currentUserRole) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profil')
+          const { data: profile } = await getSupabaseClient(storeGet(selectedBranch)).from('profil')
             .select('role, username')
             .eq('id', session.user.id)
             .single();
@@ -152,8 +144,8 @@
       // Load pengaturan data
       if (currentUserRole === 'kasir') {
         await fetchPengaturan();
-        const lockedPages = pengaturan?.locked_pages || ['laporan', 'beranda'];
-        pin = pengaturan?.pin || '1234';
+        const lockedPages = pengaturanData?.locked_pages || ['laporan', 'beranda'];
+        pin = pengaturanData?.pin || '1234';
         if (lockedPages.includes('pengaturan')) {
           showPinModal = true;
         }
@@ -167,47 +159,6 @@
       isLoading = false;
     }
   });
-
-  async function fetchPengaturan() {
-    try {
-      let lastFetched: number | undefined;
-      pengaturanCache.subscribe(val => lastFetched = val.lastFetched)();
-      
-      // Jika offline dan ada cache, gunakan cache
-      if (!navigator.onLine && pengaturanData) {
-        pengaturan = pengaturanData;
-        isPengaturanLoaded = true;
-        return;
-      }
-      
-      // Jika cache masih valid, gunakan cache
-      if (pengaturanData && lastFetched && Date.now() - lastFetched < PENGATURAN_CACHE_TTL) {
-        pengaturan = pengaturanData;
-        isPengaturanLoaded = true;
-        return;
-      }
-      
-      // Jika online, fetch baru dari Supabase
-      if (navigator.onLine) {
-        const { data, error } = await supabase.from('pengaturan_keamanan').select('locked_pages, pin').single();
-        if (!error && data) {
-          pengaturan = data as PengaturanData;
-          pengaturanCache.set({ data, lastFetched: Date.now() });
-          localStorage.setItem('pengaturanCache', JSON.stringify({ data, lastFetched: Date.now() }));
-          isPengaturanLoaded = true;
-        }
-      } else {
-        // Jika offline dan tidak ada cache valid, gunakan default
-        pengaturan = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
-        isPengaturanLoaded = true;
-      }
-    } catch (error) {
-      console.error('Error fetching pengaturan:', error);
-      // Fallback ke default jika terjadi error
-      pengaturan = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
-      isPengaturanLoaded = true;
-    }
-  }
 
   function handleLogout() {
     showLogoutModal = true;
@@ -353,10 +304,10 @@
     const ext = file.name.split('.').pop();
     const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
     // Upload ke bucket 'gambar-menu'
-    const { data, error } = await supabase.storage.from('gambar-menu').upload(filePath, file, { upsert: true });
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).storage.from('gambar-menu').upload(filePath, file, { upsert: true });
     if (error) throw error;
     // Dapatkan public URL
-    const { data: publicUrlData } = supabase.storage.from('gambar-menu').getPublicUrl(filePath);
+    const { data: publicUrlData } = getSupabaseClient(storeGet(selectedBranch)).storage.from('gambar-menu').getPublicUrl(filePath);
     return publicUrlData.publicUrl;
   }
 </script>

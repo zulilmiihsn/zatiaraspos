@@ -1,4 +1,6 @@
-import { supabase } from '$lib/database/supabaseClient';
+import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { get } from 'svelte/store';
+import { selectedBranch } from './stores/selectedBranch';
 import { checkRateLimit } from './validation.js';
 import { browser } from '$app/environment';
 import { auth } from '$lib/auth';
@@ -115,7 +117,7 @@ export class SecurityMiddleware {
     let currentUser = 'anonymous';
     if (browser) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSupabaseClient(get(selectedBranch)).auth.getSession();
         const user = session?.user;
         if (user) {
           // Prefer username, fallback ke email, lalu id
