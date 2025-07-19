@@ -271,7 +271,6 @@ function handlePinSubmit() {
 
 function applyFilter() {
   showFilter = false;
-  fetchLaporan(startDate, endDate);
 }
 
 function openDatePicker() {
@@ -325,8 +324,9 @@ function formatDate(dateString: string, isEndDate: boolean = false) {
 
 // Modifikasi fetchLaporan agar filter tanggal pakai waktu sistem user/browser tanpa offset tambahan
 async function fetchLaporan(start = startDate, end = endDate) {
-  // Konversi filter ke UTC ISO string berbasis WITA
-  const { startUtc, endUtc } = getWitaDateRangeUtc(start);
+  // Ambil rentang UTC dari tanggal awal dan akhir berbasis WITA
+  const startUtc = new Date(`${start}T00:00:00+08:00`).toISOString();
+  const endUtc = new Date(`${end}T23:59:59+08:00`).toISOString();
   const { data: kas, error: kasError } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas')
     .select('*')
     .gte('waktu', startUtc)
@@ -420,49 +420,52 @@ const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, beba
 
 $: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail);
 
-$: if (filterType) {
-  const today = getLocalDateString();
-  if (filterType === 'harian') {
-    startDate = today;
-    endDate = today;
-  } else if (filterType === 'mingguan') {
-    startDate = today;
-    const d = new Date(today);
-    d.setDate(d.getDate() + 6);
-    endDate = d.toISOString().slice(0, 10);
-  } else if (filterType === 'bulanan') {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const pad = n => n.toString().padStart(2, '0');
-    startDate = `${y}-${pad(m + 1)}-01`;
-    const last = new Date(y, m + 1, 0);
-    endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
-    filterMonth = pad(m + 1);
-    filterYear = y.toString();
-  } else if (filterType === 'tahunan') {
-    const y = new Date().getFullYear();
-    startDate = `${y}-01-01`;
-    endDate = `${y}-12-31`;
-    filterYear = y.toString();
-  }
+// Tambahkan watcher universal untuk fetch data setiap kali startDate atau endDate berubah
+$: if (startDate && endDate) {
+  fetchLaporan(startDate, endDate);
 }
 
-// Untuk filter mingguan
-$: if (filterType === 'mingguan' && startDate) {
+// Tambahkan watcher khusus untuk filter bulanan
+$: if (filterType === 'bulanan' && filterMonth && filterYear) {
+  const y = parseInt(filterYear);
+  const m = parseInt(filterMonth) - 1;
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m + 1, 0);
+  const pad = n => n.toString().padStart(2, '0');
+  startDate = `${y}-${pad(m + 1)}-01`;
+  endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+}
+
+// Tambahkan watcher khusus untuk filter tahunan
+$: if (filterType === 'tahunan' && filterYear) {
+  startDate = `${filterYear}-01-01`;
+  endDate = `${filterYear}-12-31`;
+}
+
+// Watcher khusus untuk filter mingguan di luar modal filter
+$: if (!showFilter && filterType === 'mingguan' && startDate) {
   const d = new Date(startDate);
   d.setDate(d.getDate() + 6);
   endDate = d.toISOString().slice(0, 10);
 }
 
-// Untuk filter bulanan, reactivity jika startDate berubah
-$: if (filterType === 'bulanan' && startDate) {
+// Perbaiki watcher khusus untuk filter harian agar hanya aktif saat modal filter terbuka
+$: if (showFilter && filterType === 'harian' && startDate) {
+  endDate = startDate;
+}
+
+// Watcher khusus untuk filter bulanan di luar modal filter
+$: if (!showFilter && filterType === 'bulanan' && startDate) {
   const d = new Date(startDate);
-  const end = new Date(d);
-  end.setMonth(end.getMonth() + 1);
-  end.setDate(end.getDate() - 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const pad = n => n.toString().padStart(2, '0');
   endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+}
+
+// Watcher khusus untuk filter tahunan di luar modal filter
+$: if (!showFilter && filterType === 'tahunan' && startDate) {
+  const y = new Date(startDate).getFullYear();
+  endDate = `${y}-12-31`;
 }
 
 function handlePinInput(num) {
