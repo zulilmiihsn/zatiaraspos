@@ -4,10 +4,10 @@ import { slide, fade, fly } from 'svelte/transition';
 import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
-import { auth } from '$lib/auth.js';
+import { auth } from '$lib/auth/auth';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
-import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/index';
+import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
 
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';

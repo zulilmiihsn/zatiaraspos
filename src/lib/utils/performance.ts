@@ -89,27 +89,6 @@ export function fuzzySearch(query: string, items: any[], key: string = 'name'): 
     .map(x => x.item);
 }
 
-// Virtual scrolling utilities
-export function createVirtualScroller(
-  items: any[],
-  itemHeight: number,
-  containerHeight: number,
-  scrollTop: number,
-  overscan: number = 5
-) {
-  const visibleCount = Math.ceil(containerHeight / itemHeight) + overscan;
-  const startIndex = Math.floor(scrollTop / itemHeight);
-  const endIndex = Math.min(startIndex + visibleCount, items.length);
-  
-  return {
-    visibleItems: items.slice(startIndex, endIndex),
-    startIndex,
-    endIndex,
-    totalHeight: items.length * itemHeight,
-    offsetY: startIndex * itemHeight
-  };
-}
-
 // Image optimization
 export function createImageObserver(callback: (entry: IntersectionObserverEntry) => void) {
   return new IntersectionObserver((entries) => {

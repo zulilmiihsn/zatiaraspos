@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth.js';
-  import { SecurityMiddleware } from '$lib/security.js';
+  import { SecurityMiddleware } from '$lib/utils/security';
 
   // Log unauthorized access attempt
   SecurityMiddleware.logSecurityEvent('unauthorized_access', {

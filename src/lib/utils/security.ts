@@ -1,9 +1,9 @@
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get } from 'svelte/store';
-import { selectedBranch } from './stores/selectedBranch';
+import { selectedBranch } from "$lib/stores/selectedBranch";
 import { checkRateLimit } from './validation.js';
 import { browser } from '$app/environment';
-import { auth } from '$lib/auth';
+import { auth } from '$lib/auth/auth';
 
 // Security middleware untuk proteksi rute
 export class SecurityMiddleware {

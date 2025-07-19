@@ -1,27 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/auth.js';
-  import { SecurityMiddleware } from '$lib/security.js';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-  import Crown from 'lucide-svelte/icons/crown';
-  import CreditCard from 'lucide-svelte/icons/credit-card';
-  import LogOut from 'lucide-svelte/icons/log-out';
-  import Shield from 'lucide-svelte/icons/shield';
-  import Palette from 'lucide-svelte/icons/palette';
-  import Database from 'lucide-svelte/icons/database';
-  import HelpCircle from 'lucide-svelte/icons/help-circle';
-  import Settings from 'lucide-svelte/icons/settings';
-  import Bell from 'lucide-svelte/icons/bell';
-  import User from 'lucide-svelte/icons/user';
-  import Download from 'lucide-svelte/icons/download';
-  import Printer from 'lucide-svelte/icons/printer';
+  import { auth } from '$lib/auth/auth';
+  import { SecurityMiddleware } from '$lib/utils/security';
   import { getSupabaseClient } from '$lib/database/supabaseClient';
   import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { get as storeGet } from 'svelte/store';
   import { selectedBranch } from '$lib/stores/selectedBranch';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import Crown from 'lucide-svelte/icons/crown';
+  import CreditCard from 'lucide-svelte/icons/credit-card';
+  import User from 'lucide-svelte/icons/user';
   
   // Type definitions
   interface PengaturanData {
@@ -63,6 +54,8 @@
   let showNotification = false;
   let notificationMessage = '';
   let notificationTimeout: any = null;
+
+  let LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, Download, Printer;
 
   function showNotif(message: string) {
     notificationMessage = message;
@@ -153,6 +146,17 @@
 
       // Set loading selesai
       isLoading = false;
+
+      // Load icons
+      LogOut = (await import('lucide-svelte/icons/log-out')).default;
+      Shield = (await import('lucide-svelte/icons/shield')).default;
+      Palette = (await import('lucide-svelte/icons/palette')).default;
+      Database = (await import('lucide-svelte/icons/database')).default;
+      HelpCircle = (await import('lucide-svelte/icons/help-circle')).default;
+      Settings = (await import('lucide-svelte/icons/settings')).default;
+      Bell = (await import('lucide-svelte/icons/bell')).default;
+      Download = (await import('lucide-svelte/icons/download')).default;
+      Printer = (await import('lucide-svelte/icons/printer')).default;
     } catch (error) {
       console.error('Error loading pengaturan page:', error);
       // Jika terjadi error, tetap tampilkan halaman dengan data yang tersedia
@@ -413,11 +417,8 @@
           <div class="text-lg font-bold mb-1 text-pink-500">Install PWA</div>
           <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Aplikasi</span>
           <div class="text-xs text-gray-500 text-center">Pasang ke Home Screen</div>
-          {#if pwaStatus}
-            <div class="text-xs text-red-400 text-center mt-1">{pwaStatus}</div>
-          {/if}
         </button>
-        <!-- Box Printer -->
+        <!-- Box Printer (Draft Struk) -->
         <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={() => goto('/pengaturan/printer')}>
           {#if Printer}
             <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
@@ -426,9 +427,9 @@
               <span class="block w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></span>
             </div>
           {/if}
-          <div class="text-lg font-bold mb-1 text-blue-700">Printer</div>
-          <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Bluetooth</span>
-          <div class="text-xs text-gray-500 text-center">Koneksikan printer Bluetooth</div>
+          <div class="text-lg font-bold mb-1 text-blue-700">Draft Struk</div>
+          <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Struk</span>
+          <div class="text-xs text-gray-500 text-center">Atur tampilan dan informasi draft struk</div>
         </button>
       {/if}
     </div>
@@ -512,10 +513,19 @@
     </div>
   {/if}
 
-  <!-- Toast instruksi manual -->
+  <!-- Modal instruksi install PWA -->
   {#if showPwaManualToast}
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-pink-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 text-sm font-semibold animate-fadeIn">
-      {pwaStatus}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-slideUpModal">
+        <div class="flex flex-col items-center">
+          {#if Settings}
+            <svelte:component this={Settings} class="w-8 h-8 text-pink-500 mb-2" />
+          {/if}
+          <h3 class="font-bold text-lg text-pink-600 mb-2">Cara Install Aplikasi</h3>
+          <p class="text-gray-600 text-center text-sm mb-4">{pwaStatus}</p>
+          <button class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold mt-2" onclick={() => showPwaManualToast = false}>Tutup</button>
+        </div>
+      </div>
     </div>
   {/if}
 

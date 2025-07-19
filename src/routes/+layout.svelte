@@ -12,7 +12,7 @@
 	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView';
 	import { slide, fade, fly } from 'svelte/transition';
-	import { auth } from '$lib/auth';
+	import { auth } from '$lib/auth/auth';
 
 	export const data = {};
 	

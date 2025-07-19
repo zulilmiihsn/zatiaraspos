@@ -1,8 +1,12 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { onMount } from 'svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-import Utensils from 'lucide-svelte/icons/utensils';
-import Shield from 'lucide-svelte/icons/shield';
+let Utensils, Shield;
+onMount(async () => {
+  Utensils = (await import('lucide-svelte/icons/utensils')).default;
+  Shield = (await import('lucide-svelte/icons/shield')).default;
+});
 </script>
 
 <svelte:head>

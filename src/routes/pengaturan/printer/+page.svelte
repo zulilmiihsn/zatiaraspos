@@ -4,7 +4,7 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { goto } from '$app/navigation';
-import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+let ArrowLeft;
 let namaToko = '';
 let alamat = '';
 let telepon = '';
@@ -102,7 +102,8 @@ async function handleLogoUpload(e: Event) {
   }
 }
 
-onMount(() => {
+onMount(async () => {
+  ArrowLeft = (await import('lucide-svelte/icons/arrow-left')).default;
   loadPengaturan();
 });
 </script>

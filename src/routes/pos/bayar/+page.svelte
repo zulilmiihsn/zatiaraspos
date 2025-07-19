@@ -2,11 +2,11 @@
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
-import { validateNumber, validateText, sanitizeInput } from '$lib/validation.js';
-import { SecurityMiddleware } from '$lib/security.js';
+import { validateNumber, validateText, sanitizeInput } from '$lib/utils/validation';
+import { SecurityMiddleware } from '$lib/utils/security';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
-import { formatWitaDateTime } from '$lib/index';
+import { formatWitaDateTime } from '$lib/utils/index';
 import { fly, fade } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { userRole } from '$lib/stores/userRole';
@@ -94,7 +94,10 @@ async function cekSesiTokoAktif() {
 
 async function fetchPengaturanStruk() {
   try {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').select('*').single();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+      .from('pengaturan_struk')
+      .select('*')
+      .maybeSingle();
     if (data) {
       pengaturanStruk = data;
     } else if (error) {

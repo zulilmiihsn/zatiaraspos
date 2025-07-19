@@ -1,21 +1,15 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
-import Plus from 'lucide-svelte/icons/plus';
-import Edit from 'lucide-svelte/icons/edit';
-import Trash from 'lucide-svelte/icons/trash';
-import Coffee from 'lucide-svelte/icons/coffee';
-import Utensils from 'lucide-svelte/icons/utensils';
-import Tag from 'lucide-svelte/icons/tag';
+import { get as storeGet } from 'svelte/store';
+import { selectedBranch } from '$lib/stores/selectedBranch';
+import { writable } from 'svelte/store';
 import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
 import { fly, fade, slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
-import { get as storeGet } from 'svelte/store';
-import { selectedBranch } from '$lib/stores/selectedBranch';
-import { writable } from 'svelte/store';
-import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
+import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 
 // Data Menu
 let menus: any[] = [];
@@ -77,6 +71,10 @@ let notifModalType = 'warning';
 let isCropping = false;
 let fileInputEl;
 let activeTab = 'menu';
+let Plus, Edit, Trash, Coffee, Utensils, Tag;
+let isLoadingMenus = true;
+let isLoadingKategori = true;
+let isLoadingEkstra = true;
 
 // Seluruh fungsi, onMount, CRUD, helper, dsb terkait menu, kategori, ekstra, upload/crop gambar
 type KategoriWithCount = { id: number|string, name: string, count: number };
@@ -94,6 +92,7 @@ $: filteredMenus = menus.filter(menu => {
 });
 
 async function fetchMenus() {
+  isLoadingMenus = true;
   try {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('produk').select('*').order('created_at', { ascending: false });
     if (error) throw error;
@@ -103,9 +102,11 @@ async function fetchMenus() {
     notifModalType = 'error';
     showNotifModal = true;
   }
+  isLoadingMenus = false;
 }
 
 async function fetchKategori() {
+  isLoadingKategori = true;
   try {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('kategori').select('*').order('created_at', { ascending: false });
     if (error) throw error;
@@ -115,9 +116,11 @@ async function fetchKategori() {
     notifModalType = 'error';
     showNotifModal = true;
   }
+  isLoadingKategori = false;
 }
 
 async function fetchEkstra() {
+  isLoadingEkstra = true;
   try {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('tambahan').select('*').order('created_at', { ascending: false });
     if (error) throw error;
@@ -127,6 +130,7 @@ async function fetchEkstra() {
     notifModalType = 'error';
     showNotifModal = true;
   }
+  isLoadingEkstra = false;
 }
 
 onMount(async () => {
@@ -136,6 +140,12 @@ onMount(async () => {
   if (typeof window !== 'undefined') {
     document.body.classList.add('hide-nav');
   }
+  Plus = (await import('lucide-svelte/icons/plus')).default;
+  Edit = (await import('lucide-svelte/icons/edit')).default;
+  Trash = (await import('lucide-svelte/icons/trash')).default;
+  Coffee = (await import('lucide-svelte/icons/coffee')).default;
+  Utensils = (await import('lucide-svelte/icons/utensils')).default;
+  Tag = (await import('lucide-svelte/icons/tag')).default;
 });
 
 onDestroy(() => {
@@ -205,10 +215,10 @@ async function saveMenu() {
       throw result.error;
     }
   } catch (error) {
-    notifModalMsg = 'Gagal menyimpan menu: ' + error.message;
-    notifModalType = 'error';
-    showNotifModal = true;
-    return;
+      notifModalMsg = 'Gagal menyimpan menu: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
+      return;
   }
   showMenuForm = false;
   await fetchMenus();
@@ -240,10 +250,10 @@ async function doDeleteMenu() {
       notifModalType = 'success';
       showNotifModal = true;
     } catch (error) {
-      notifModalMsg = 'Gagal menghapus menu: ' + error.message;
-      notifModalType = 'error';
-      showNotifModal = true;
-      return;
+        notifModalMsg = 'Gagal menghapus menu: ' + error.message;
+        notifModalType = 'error';
+        showNotifModal = true;
+        return;
     }
     showDeleteModal = false;
     menuIdToDelete = null;
@@ -538,6 +548,7 @@ function toggleEkstra(ekstraId) {
 <!-- Seluruh markup manajemen menu, kategori, ekstra, dan modal dari file src/routes/pengaturan/pemilik/+page.svelte -->
 <!-- Tambahkan seluruh markup (HTML/Svelte) untuk list/tabel menu, kategori, ekstra, form/modal tambah/edit/hapus, modal/modal sheet, komponen upload/crop gambar, dan semua tampilan serta interaksi CRUD menu, kategori, ekstra dari file /pemilik ke sini. Pastikan semua event handler, binding, dan logic tetap berjalan. Jangan sertakan bagian keamanan, riwayat, atau navigasi utama. -->
 
+<div transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
 <!-- Custom Top Bar -->
 <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200 flex items-center px-4 py-4 mb-0">
   <button onclick={() => goto('/pengaturan/pemilik')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
@@ -574,7 +585,7 @@ function toggleEkstra(ekstraId) {
 {/if}
 
 <!-- Konten tab dengan transisi geser -->
-<div class="relative min-h-[200px]">
+<div class="relative min-h-screen">
   {#if activeTab === 'menu'}
     <div transition:slide|local class="flex flex-col h-[calc(100vh-200px)]">
       <!-- Fixed Header Section -->
@@ -612,6 +623,24 @@ function toggleEkstra(ekstraId) {
       <!-- Scrollable Menu List -->
       <div class="flex-1 overflow-y-auto">
         <div class="max-w-4xl mx-auto px-4 pb-6">
+            {#if isLoadingMenus}
+              <div class="grid grid-cols-2 gap-3 pb-4 min-h-screen">
+                {#each Array(6) as _, i}
+                  <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md border border-gray-100 p-4 flex flex-col items-center justify-between aspect-[3/4] min-h-[140px] max-h-[260px] w-full">
+                    <div class="w-full aspect-square rounded-lg border border-gray-100 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 mb-2"></div>
+                    <div class="w-full h-4 bg-gray-200 rounded mb-1"></div>
+                    <div class="w-2/3 h-3 bg-gray-100 rounded mb-1"></div>
+                    <div class="w-1/2 h-3 bg-gray-100 rounded"></div>
+                  </div>
+                {/each}
+              </div>
+            {:else if filteredMenus.length === 0}
+              <div class="flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+                <div class="text-6xl mb-2">🍽️</div>
+                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
+                <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
+              </div>
+            {:else}
           {#if isGridView}
             <div class="grid grid-cols-2 gap-3 pb-4" transition:fade={{ duration: 120 }}>
               {#each filteredMenus as menu}
@@ -658,6 +687,7 @@ function toggleEkstra(ekstraId) {
                 </div>
               {/each}
             </div>
+              {/if}
           {/if}
         </div>
       </div>
@@ -680,6 +710,19 @@ function toggleEkstra(ekstraId) {
       <!-- Scrollable Kategori List -->
       <div class="flex-1 overflow-y-auto">
         <div class="px-4 pb-6">
+            {#if isLoadingKategori}
+              <div class="flex flex-col gap-2 min-h-screen">
+                {#each Array(4) as _, i}
+                  <div class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 animate-pulse rounded-xl shadow-md border border-blue-200 px-4 py-3 flex items-center justify-between"></div>
+                {/each}
+              </div>
+            {:else if kategoriList.length === 0}
+              <div class="flex flex-col items-center justify-center py-12 text-center min-h-[30vh] pointer-events-none">
+                <div class="text-5xl mb-2">📂</div>
+                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Kategori</div>
+                <div class="text-sm text-gray-400">Silakan tambahkan kategori terlebih dahulu.</div>
+              </div>
+            {:else}
           <div class="flex flex-col gap-2">
             {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
               <div class="bg-blue-100 rounded-xl border border-blue-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-blue-200 transition-all cursor-pointer" onclick={() => openKategoriForm(kat)}>
@@ -695,6 +738,7 @@ function toggleEkstra(ekstraId) {
               </div>
             {/each}
           </div>
+            {/if}
         </div>
       </div>
     </div>
@@ -716,6 +760,19 @@ function toggleEkstra(ekstraId) {
       <!-- Scrollable Tambahan List -->
       <div class="flex-1 overflow-y-auto">
         <div class="px-4 pb-6">
+            {#if isLoadingEkstra}
+              <div class="flex flex-col gap-2 min-h-screen">
+                {#each Array(4) as _, i}
+                  <div class="bg-gradient-to-br from-green-50 via-purple-50 to-green-100 animate-pulse rounded-xl shadow-md border border-green-200 px-4 py-3 flex items-center justify-between"></div>
+                {/each}
+              </div>
+            {:else if ekstraList.length === 0}
+              <div class="flex flex-col items-center justify-center py-12 text-center min-h-[30vh] pointer-events-none">
+                <div class="text-5xl mb-2">➕</div>
+                <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Tambahan</div>
+                <div class="text-sm text-gray-400">Silakan tambahkan tambahan terlebih dahulu.</div>
+              </div>
+            {:else}
           <div class="flex flex-col gap-2">
             {#each ekstraList.filter(ekstra => ekstra.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra}
               <div class="bg-green-100 rounded-xl border border-green-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-green-200 transition-all cursor-pointer" onclick={() => openEkstraForm(ekstra)}>
@@ -731,6 +788,7 @@ function toggleEkstra(ekstraId) {
               </div>
             {/each}
           </div>
+            {/if}
         </div>
       </div>
     </div>
@@ -843,6 +901,7 @@ function toggleEkstra(ekstraId) {
                 <div class="text-xs text-pink-600 font-semibold">+Rp {ekstra.harga?.toLocaleString('id-ID')}</div>
               </button>
             {/each}
+        </div>
         </div>
       </form>
 
@@ -1022,6 +1081,7 @@ function toggleEkstra(ekstraId) {
 {#if showCropperDialog}
   <CropperDialog src={cropperDialogImage} open={true} on:done={handleCropperDone} on:cancel={handleCropperCancel} />
 {/if}
+</div>
 
 <style>
 @keyframes slideUpModal {

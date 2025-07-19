@@ -6,8 +6,8 @@ import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
 import BottomNav from '$lib/components/shared/BottomNav.svelte';
-import { validateNumber, sanitizeInput } from '$lib/validation.js';
-import { SecurityMiddleware } from '$lib/security.js';
+import { validateNumber, sanitizeInput } from '$lib/utils/validation';
+import { SecurityMiddleware } from '$lib/utils/security';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
@@ -487,6 +487,11 @@ function getKategoriNameById(id) {
   if (!id) return '';
   const kat = categories?.find(k => k.id === id);
   return kat?.name || '';
+}
+
+// Sinkronisasi cart ke localStorage setiap kali cart berubah
+$: if (typeof window !== 'undefined') {
+  localStorage.setItem('pos_cart', JSON.stringify(cart));
 }
 </script>
 

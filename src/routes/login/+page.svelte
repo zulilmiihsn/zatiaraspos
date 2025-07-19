@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { loginWithUsername } from '$lib/auth';
-  import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/validation.js';
-  import { SecurityMiddleware } from '$lib/security.js';
+  import { loginWithUsername } from '$lib/auth/auth';
+  import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/utils/validation';
+  import { SecurityMiddleware } from '$lib/utils/security';
   import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
   import { selectedBranch } from '$lib/stores/selectedBranch';
   import { get } from 'svelte/store';

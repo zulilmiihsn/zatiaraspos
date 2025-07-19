@@ -1,12 +1,14 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import Shield from 'lucide-svelte/icons/shield';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { userRole, setUserRole } from '$lib/stores/userRole';
-import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import Shield from 'lucide-svelte/icons/shield';
+import User from 'lucide-svelte/icons/user';
+import Lock from 'lucide-svelte/icons/lock';
 
 let currentUserRole = '';
 let oldUsername = '';
@@ -27,11 +29,18 @@ let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
+// Tambahkan state untuk kasir
+let kasirOldUsername = '';
+let kasirNewUsername = '';
+let kasirOldPassword = '';
+let kasirNewPassword = '';
+let kasirConfirmPassword = '';
+let kasirUserPassError = '';
+
 onMount(() => {
-  const unsubscribe = userRole.subscribe(role => {
+  userRole.subscribe(role => {
     currentUserRole = role || '';
   });
-  return unsubscribe;
 });
 
 async function handleChangeUserPass(e) {
@@ -116,64 +125,158 @@ function closeNotifModal() {
   <title>Ganti Keamanan | ZatiarasPOS</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 flex flex-col page-content">
-  <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200 flex items-center px-4 py-4 mb-0">
+<div class="min-h-screen bg-gray-50 flex flex-col">
+  <!-- Top Bar -->
+  <div class="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 py-4">
     <button onclick={() => goto('/pengaturan/pemilik')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
-      <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
+      <ArrowLeft class="w-5 h-5 text-gray-600" />
     </button>
     <h1 class="text-xl font-bold text-gray-800">Ganti Keamanan</h1>
   </div>
-  <div class="max-w-2xl px-4 py-6 flex-1 overflow-y-auto" style="scrollbar-width:none;-ms-overflow-style:none;">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-      <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti Username & Password</h3>
+  <div class="max-w-md w-full mx-auto px-4 py-8 flex-1">
+    <!-- Card: Ganti Username/Password untuk Pemilik & Kasir -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <div class="flex gap-2 mb-4">
+        <button
+          class="flex-1 py-2 rounded-lg font-bold text-base transition-all focus:outline-none {activeSecurityTab === 'pemilik' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}"
+          onclick={() => activeSecurityTab = 'pemilik'}
+          type="button"
+        >
+          <User class="inline w-5 h-5 mr-1" /> Pemilik
+        </button>
+        <button
+          class="flex-1 py-2 rounded-lg font-bold text-base transition-all focus:outline-none {activeSecurityTab === 'kasir' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}"
+          onclick={() => activeSecurityTab = 'kasir'}
+          type="button"
+        >
+          <Shield class="inline w-5 h-5 mr-1" /> Kasir
+        </button>
+      </div>
+      {#if activeSecurityTab === 'pemilik'}
+        <h3 class="font-bold text-lg text-pink-600 mb-1 flex items-center gap-2">
+          <User class="w-5 h-5" /> Ganti Username & Password Pemilik
+        </h3>
+        <p class="text-gray-500 text-sm mb-4">
+          Ubah username dan password akun pemilik untuk keamanan akses penuh aplikasi.
+        </p>
       <form class="flex flex-col gap-4" onsubmit={handleChangeUserPass} autocomplete="off">
-        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Lama" bind:value={oldUsername} required />
-        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Username Baru" bind:value={newUsername} required />
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Lama" bind:value={oldPassword} required />
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Password Baru" bind:value={newPassword} required />
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
+            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Username Baru</label>
+            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Baru" bind:value={newUsername} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
+            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Lama" bind:value={oldPassword} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Baru" bind:value={newPassword} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
+          </div>
         {#if userPassError}
-          <div class="text-pink-600 text-sm text-center mt-1">{userPassError}</div>
+            <div class="text-pink-600 text-xs text-center mt-1">{userPassError}</div>
+          {/if}
+          <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="submit">Simpan Perubahan</button>
+        </form>
+      {:else}
+        <h3 class="font-bold text-lg text-blue-600 mb-1 flex items-center gap-2">
+          <Shield class="w-5 h-5" /> Ganti Username & Password Kasir
+        </h3>
+        <p class="text-gray-500 text-sm mb-4">
+          Ubah username dan password akun kasir untuk keamanan akses kasir.
+        </p>
+        <form class="flex flex-col gap-4" onsubmit={handleChangeKasirUserPass} autocomplete="off">
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-1">Username Lama</label>
+            <input type="text" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Username Lama" bind:value={kasirOldUsername} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-1">Username Baru</label>
+            <input type="text" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Username Baru" bind:value={kasirNewUsername} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-1">Password Lama</label>
+            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Password Lama" bind:value={kasirOldPassword} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-1">Password Baru</label>
+            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Password Baru" bind:value={kasirNewPassword} required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-1">Konfirmasi Password Baru</label>
+            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Konfirmasi Password Baru" bind:value={kasirConfirmPassword} required />
+          </div>
+          {#if kasirUserPassError}
+            <div class="text-blue-600 text-xs text-center mt-1">{kasirUserPassError}</div>
         {/if}
-        <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700" type="submit">Simpan Perubahan</button>
+          <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 mt-2" type="submit">Simpan Perubahan</button>
       </form>
+      {/if}
     </div>
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-      <h3 class="text-lg font-bold text-gray-800 mb-2">Ganti PIN Keamanan</h3>
+    <!-- Card: Ganti PIN -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <h3 class="font-bold text-lg text-pink-600 mb-4 flex items-center gap-2">
+        <Shield class="w-5 h-5" /> Ganti PIN Keamanan
+      </h3>
+      <p class="text-gray-500 text-sm mb-4">
+        Ubah PIN keamanan untuk mengunci akses ke halaman penting. PIN harus 4-6 digit angka.
+      </p>
       <form class="flex flex-col gap-4" onsubmit={savePinSettings} autocomplete="off">
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Lama" bind:value={oldPin} required />
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="PIN Baru" bind:value={newPin} required />
-        <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
+          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Baru</label>
+          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Baru" bind:value={newPin} required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
+          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
+        </div>
         {#if pinError}
-          <div class="text-red-600 text-sm text-center mt-1">{pinError}</div>
+          <div class="text-pink-600 text-xs text-center mt-1">{pinError}</div>
         {/if}
-        <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700" type="submit">Simpan PIN</button>
+        <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="submit">Simpan PIN</button>
       </form>
     </div>
-    <div class="bg-white rounded-2xl shadow-sm border border-pink-200 p-6 mb-8">
-      <h3 class="text-lg font-bold text-gray-900 mb-2">Pengaturan Halaman Terkunci</h3>
+    <!-- Card: Pengaturan Halaman Terkunci -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <h3 class="font-bold text-lg text-pink-600 mb-4 flex items-center gap-2">
+        <Lock class="w-5 h-5" /> Pengaturan Halaman Terkunci
+      </h3>
       <p class="text-gray-500 text-sm mb-6">Pilih halaman yang ingin dikunci dengan PIN. Halaman yang dikunci akan meminta PIN saat diakses.</p>
       <div class="flex flex-col gap-3 mb-4">
         <label class="flex items-center gap-3 cursor-pointer select-none">
-          <span class="relative inline-block w-4 h-4">
-            <input type="checkbox" bind:group={lockedPages} value="beranda" class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200" />
+          <span class="relative inline-block w-5 h-5">
+            <input type="checkbox" bind:group={lockedPages} value="beranda" class="peer absolute opacity-0 w-5 h-5 cursor-pointer" />
+            <span class="block w-5 h-5 rounded-full border-2 border-pink-400 bg-white peer-checked:bg-pink-500 transition-colors duration-200"></span>
           </span>
           <span class="text-gray-700 font-medium">Beranda</span>
         </label>
         <label class="flex items-center gap-3 cursor-pointer select-none">
-          <span class="relative inline-block w-4 h-4">
-            <input type="checkbox" bind:group={lockedPages} value="catat" class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200" />
+          <span class="relative inline-block w-5 h-5">
+            <input type="checkbox" bind:group={lockedPages} value="catat" class="peer absolute opacity-0 w-5 h-5 cursor-pointer" />
+            <span class="block w-5 h-5 rounded-full border-2 border-pink-400 bg-white peer-checked:bg-pink-500 transition-colors duration-200"></span>
           </span>
           <span class="text-gray-700 font-medium">Catat</span>
         </label>
         <label class="flex items-center gap-3 cursor-pointer select-none">
-          <span class="relative inline-block w-4 h-4">
-            <input type="checkbox" bind:group={lockedPages} value="laporan" class="appearance-none w-4 h-4 rounded-full border-2 border-pink-300 bg-white checked:bg-pink-500 checked:border-pink-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200" />
+          <span class="relative inline-block w-5 h-5">
+            <input type="checkbox" bind:group={lockedPages} value="laporan" class="peer absolute opacity-0 w-5 h-5 cursor-pointer" />
+            <span class="block w-5 h-5 rounded-full border-2 border-pink-400 bg-white peer-checked:bg-pink-500 transition-colors duration-200"></span>
           </span>
           <span class="text-gray-700 font-medium">Laporan</span>
         </label>
       </div>
-      <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700" type="button">Simpan Pengaturan</button>
+      <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="button">Simpan Pengaturan</button>
     </div>
     {#if showNotifModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">

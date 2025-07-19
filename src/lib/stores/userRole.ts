@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get } from 'svelte/store';
 import { selectedBranch } from './selectedBranch';
-import { session } from '$lib/auth';
+import { session } from '$lib/auth/auth';
 
 // Store untuk user role dan profile
 export const userRole = writable<string | null>(null);
