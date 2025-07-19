@@ -10,7 +10,7 @@ import { validateNumber, validateText, validateDate, validateTime, sanitizeInput
 import { SecurityMiddleware } from '$lib/utils/security';
 import { auth } from '$lib/auth/auth';
 import { goto } from '$app/navigation';
-import { formatWitaDateTime } from '$lib/utils/index';
+import { formatWitaDateTime, getWitaDateRangeUtc } from '$lib/utils/index';
 import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
@@ -170,7 +170,18 @@ async function fetchPin() {
 }
 
 async function fetchTransaksi() {
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*').order('waktu', { ascending: false });
+  // Ambil transaksi hari ini (WITA)
+  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  const yyyy = todayWita.getFullYear();
+  const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
+  const dd = String(todayWita.getDate()).padStart(2, '0');
+  const { startUtc, endUtc } = getWitaDateRangeUtc(`${yyyy}-${mm}-${dd}`);
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+    .from('buku_kas')
+    .select('*')
+    .gte('waktu', startUtc)
+    .lte('waktu', endUtc)
+    .order('waktu', { ascending: false });
   if (!error) transaksiList = data;
 }
 

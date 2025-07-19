@@ -118,102 +118,77 @@ async function fetchDashboardStats() {
   isLoadingBestSellers = true;
   errorBestSellers = '';
   try {
-    // Hitung omzet hari ini dari tabel buku_kas (ganti RPC yang error)
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-    const startUTC = startOfDay.toISOString();
-    const endUTC = endOfDay.toISOString();
-    
+    // OMZET HARI INI (WITA)
+    const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+    const yyyy = todayWita.getFullYear();
+    const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
+    const dd = String(todayWita.getDate()).padStart(2, '0');
+    const { startUtc, endUtc } = getWitaDateRangeUtc(`${yyyy}-${mm}-${dd}`);
+
     const { data: omzetData } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('amount, waktu, jenis, sumber, qty')
-      .gte('waktu', startUTC)
-      .lte('waktu', endUTC)
+      .gte('waktu', startUtc)
+      .lte('waktu', endUtc)
       .eq('tipe', 'in')
       .eq('jenis', 'pendapatan_usaha');
     omzet = omzetData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
     itemTerjual = omzetData?.reduce((sum, item) => sum + (item.qty || 1), 0) || 0;
-    // Total transaksi
-    const { count: transaksiCount } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*', { count: 'exact', head: true }).eq('tipe', 'in').eq('sumber', 'pos');
-    jumlahTransaksi = transaksiCount || 0;
-    // Statistik 7 hari terakhir
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
-    const startDate = sevenDaysAgo.toISOString();
-    // Rata-rata transaksi/hari dari buku_kas (group by waktu per hari)
-    const { data: transaksiKas } = await getSupabaseClient(storeGet(selectedBranch))
+    // JUMLAH TRANSAKSI HARI INI
+    const { count: transaksiCount } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
-      .select('waktu')
-      .gte('waktu', startDate);
-    const transaksiPerHari = {};
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(sevenDaysAgo);
-      d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      transaksiPerHari[key] = new Set();
-    }
-    if (transaksiKas) {
-      transaksiKas.forEach(t => {
-        const key = t.waktu.slice(0, 10);
-        if (transaksiPerHari[key] !== undefined) transaksiPerHari[key].add(t.waktu);
-      });
-    }
-    avgTransaksi = Math.round(
-      Object.values(transaksiPerHari).reduce((a, b) => a + b.size, 0) / 7
-    );
+      .select('*', { count: 'exact', head: true })
+      .gte('waktu', startUtc)
+      .lte('waktu', endUtc)
+      .eq('tipe', 'in')
+      .eq('sumber', 'pos');
+    jumlahTransaksi = transaksiCount || 0;
 
-    // Jam paling ramai (pakai transaksiKas)
-    const jamCount = {};
-    if (transaksiKas) {
-      transaksiKas.forEach(t => {
-        const jam = new Date(t.waktu).getHours();
-        jamCount[jam] = (jamCount[jam] || 0) + 1;
-      });
+    // --- GRAFIK 7 HARI TERAKHIR (WITA) ---
+    // Generate 7 tanggal WITA terakhir
+    const hariLabels = [];
+    const pendapatanPerHari = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(todayWita);
+      d.setDate(todayWita.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const tanggal = `${yyyy}-${mm}-${dd}`;
+      hariLabels.push(tanggal);
+      pendapatanPerHari[tanggal] = 0;
     }
-    const jamRamaiVal = Object.entries(jamCount)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || '--';
-    jamRamai = jamRamaiVal !== '--' ? `${jamRamaiVal}.00–${parseInt(jamRamaiVal) + 1}.00` : '--';
-
-    // Fungsi konversi tanggal UTC ke tanggal WITA (YYYY-MM-DD)
-    function toWITA(dateStr) {
-      const date = new Date(dateStr);
-      date.setHours(date.getHours() + 8);
-      return date.toISOString().slice(0, 10);
-    }
-    // 2. Pendapatan 7 hari terakhir (grafik)
+    // Query semua pemasukan 7 hari terakhir (pakai rentang hari pertama & terakhir)
+    const { startUtc: start7Utc, endUtc: end7Utc } = getWitaDateRangeUtc(hariLabels[0]);
+    const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
     const { data: pemasukan } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
       .select('amount, waktu')
-      .gte('waktu', startDate)
+      .gte('waktu', start7Utc)
+      .lte('waktu', end7LastUtc)
       .eq('tipe', 'in')
       .eq('sumber', 'pos');
-    const pendapatanPerHari = {};
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(sevenDaysAgo);
-      d.setDate(d.getDate() + i);
-      // Konversi ke tanggal WITA
-      d.setHours(d.getHours() + 8);
-      const key = d.toISOString().slice(0, 10);
-      pendapatanPerHari[key] = 0;
-    }
     if (pemasukan) {
       pemasukan.forEach(t => {
-        const key = toWITA(t.waktu);
-        if (pendapatanPerHari[key] !== undefined) pendapatanPerHari[key] += t.amount || 0;
+        // Konversi waktu UTC ke tanggal WITA
+        const witaDate = utcToWita(t.waktu);
+        const yyyy = witaDate.getFullYear();
+        const mm = String(witaDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(witaDate.getDate()).padStart(2, '0');
+        const tanggal = `${yyyy}-${mm}-${dd}`;
+        if (pendapatanPerHari[tanggal] !== undefined) pendapatanPerHari[tanggal] += t.amount || 0;
       });
     }
-    weeklyIncome = Object.values(pendapatanPerHari);
-
-    // Setelah weeklyIncome diisi:
+    weeklyIncome = hariLabels.map(tgl => pendapatanPerHari[tgl]);
     weeklyIncome = weeklyIncome.map(x => (typeof x === 'number' && !isNaN(x) && x > 0 ? x : 0));
     weeklyMax = Math.max(...weeklyIncome, 1);
 
-    // Best sellers: ambil dari transaksi_kasir 7 hari terakhir, group dan sum qty di JS
+    // --- BEST SELLERS 7 HARI TERAKHIR (WITA) ---
     const { data: items, error } = await getSupabaseClient(storeGet(selectedBranch))
       .from('transaksi_kasir')
       .select('produk_id, qty, created_at')
-      .gte('created_at', startDate);
+      .gte('created_at', start7Utc)
+      .lte('created_at', end7LastUtc);
     if (!error && items) {
       // Group by produk_id, sum qty
       const grouped = {};

@@ -7,6 +7,7 @@ import { goto } from '$app/navigation';
 import { fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import { getWitaDateRangeUtc } from '$lib/utils/index';
 
 let transaksiHariIni = [];
 let loading = true;
@@ -19,18 +20,17 @@ let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 let Trash;
 
 function todayRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  return {
-    start: start.toISOString(),
-    end: end.toISOString()
-  };
+  // Hari ini dalam zona waktu WITA
+  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  const yyyy = todayWita.getFullYear();
+  const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
+  const dd = String(todayWita.getDate()).padStart(2, '0');
+  return getWitaDateRangeUtc(`${yyyy}-${mm}-${dd}`);
 }
 
 async function fetchTransaksiHariIni() {
   loading = true;
-  const { start, end } = todayRange();
+  const { startUtc: start, endUtc: end } = todayRange();
   // Ambil hanya dari buku_kas
   const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*').gte('waktu', start).lte('waktu', end).order('waktu', { ascending: false });
   transaksiHariIni = [];
