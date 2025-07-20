@@ -703,9 +703,9 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
 {/if}
 
 <!-- Top Bar Status Toko -->
-<div class="relative w-full min-h-[64px] overflow-hidden md:rounded-2xl md:shadow-lg md:mx-auto md:mt-4 mb-2">
+<div class="relative w-full min-h-[64px] overflow-hidden md:mx-0 md:mt-4 mb-2">
   {#key tokoAktifLocal}
-    <div bind:this={topbarRef} class="absolute left-0 top-0 w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-pink-400 to-pink-500 text-white gap-4 transition-transform duration-500 ease-in-out md:rounded-2xl" style="height:64px"
+    <div bind:this={topbarRef} class="absolute left-0 top-0 w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-pink-400 to-pink-500 text-white gap-4 transition-transform duration-500 ease-in-out" style="height:64px"
       in:fly={{ x: -64, duration: 350 }} out:fly={{ x: 64, duration: 350 }}>
       <div class="flex items-center gap-3">
         <span class="text-3xl md:text-4xl">{tokoAktifLocal ? '🍹' : '🔒'}</span>
@@ -737,51 +737,50 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
     <div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
       <div class="flex flex-col space-y-3 md:space-y-10">
       <!-- Metrik Utama -->
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3">
-          <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-2 md:grid-rows-2 md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-lg md:border md:border-gray-100">
+          <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-sky-200">
             {#if ShoppingBag}
-              <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-sky-500" />
+              <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-sky-500" />
             {:else}
-              <div class="w-6 h-6 md:w-8 md:h-8 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-            <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Item Terjual</div>
-            <div class="text-xl md:text-3xl font-bold text-sky-600">{itemTerjual ?? '--'}</div>
+            <div class="text-xs md:text-base font-medium text-gray-500 mb-1 md:mb-0 md:text-center">Item Terjual</div>
+            <div class="text-xl md:text-3xl font-bold text-sky-600 md:text-center">{itemTerjual ?? '--'}</div>
           </div>
-          <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+          <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-purple-200">
             {#if TrendingUp}
-              <svelte:component this={TrendingUp} class="w-6 h-6 md:w-8 md:h-8 mb-2 text-purple-500" />
+              <svelte:component this={TrendingUp} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-purple-500" />
             {:else}
-              <div class="w-6 h-6 md:w-8 md:h-8 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-            <div class="text-xs md:text-base font-medium text-gray-500 mb-1">Jumlah Transaksi</div>
-            <div class="text-xl md:text-3xl font-bold text-purple-600">{jumlahTransaksi ?? '--'}</div>
+            <div class="text-xs md:text-base font-medium text-gray-500 mb-1 md:mb-0 md:text-center">Jumlah Transaksi</div>
+            <div class="text-xl md:text-3xl font-bold text-purple-600 md:text-center">{jumlahTransaksi ?? '--'}</div>
           </div>
-          <!-- Di md+ dua box berikut tetap grid, di mobile mereka di luar grid -->
-          <div class="hidden md:block bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+          <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-green-200 hidden md:block">
             {#if Wallet}
-              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-green-900" />
+              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-green-900" />
             {:else}
-              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-            <div class="text-sm font-medium text-green-900/80">Pendapatan</div>
-            <div class="text-xl font-bold text-green-900">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
+            <div class="text-sm md:text-base font-medium text-green-900/80 md:text-center">Pendapatan</div>
+            <div class="text-xl md:text-3xl font-bold text-green-900 md:text-center">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
           </div>
-          <div class="hidden md:block bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start">
+          <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-cyan-200 hidden md:block">
             {#if Wallet}
-              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
+              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-cyan-900" />
             {:else}
-              <div class="w-6 h-6 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-            <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
-            <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
+            <div class="text-sm md:text-base font-medium text-cyan-900/80 md:text-center">Modal Awal</div>
+            <div class="text-xl md:text-3xl font-bold text-cyan-900 md:text-center">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
           </div>
         </div>
         <!-- Box pendapatan & modal awal satu baris penuh di mobile, hilang di md+ -->
@@ -810,16 +809,16 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
           </div>
         </div>
         <!-- Menu Terlaris -->
-        <div>
-          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Menu Terlaris</div>
+        <div class="mt-6 md:mt-12">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-6 md:mt-0 md:font-bold md:text-2xl md:tracking-tight">Menu Terlaris</div>
           {#if isLoadingBestSellers}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
               {#each Array(3) as _, i}
-                <div class="flex items-center bg-gray-100 rounded-xl shadow-md p-3 gap-3 relative animate-pulse md:p-4 lg:p-5 h-16 md:h-20">
-                  <div class="w-12 h-12 rounded-lg bg-gray-200"></div>
+                <div class="flex items-center bg-gray-100 rounded-xl shadow-md p-3 gap-3 relative animate-pulse md:p-6 md:rounded-2xl md:shadow-none md:bg-white md:gap-6 md:min-h-[88px] md:items-center">
+                  <div class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-gray-200"></div>
                   <div class="flex-1 min-w-0">
-                    <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                    <div class="h-3 bg-gray-200 rounded w-16"></div>
+                    <div class="h-4 bg-gray-200 rounded w-24 mb-2 md:w-32 md:mb-3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-16 md:w-24"></div>
                   </div>
                 </div>
               {/each}
@@ -829,24 +828,24 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
           {:else if bestSellers.length === 0}
             <div class="text-center text-gray-400 py-6 text-base md:text-lg">Belum ada data menu terlaris</div>
           {:else}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {#each bestSellers as m, i}
-                <div class="flex items-center bg-white rounded-xl shadow-md p-3 gap-3 relative {i === 0 ? 'border-2 border-yellow-400' : ''} md:p-4 lg:p-5">
+            <div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
+              {#each bestSellers.slice(0,3) as m, i}
+                <div class="flex items-center bg-white rounded-xl shadow-md p-3 gap-3 relative md:p-6 md:rounded-2xl md:shadow-none md:bg-white md:gap-6 md:min-h-[88px] md:items-center md:border md:border-pink-200 {i === 0 ? 'border-2 border-yellow-400 md:border-pink-200 md:border-2 md:border-yellow-400' : ''}">
                   {#if i === 0}
-                    <span class="absolute -left-3 -top-4 text-2xl">👑</span>
+                    <span class="absolute -left-3 -top-4 text-2xl md:static md:mr-4 md:text-3xl">👑</span>
                   {:else if i === 1}
-                    <span class="absolute -left-3 -top-3 text-2xl">🥈</span>
+                    <span class="absolute -left-3 -top-3 text-2xl md:static md:mr-4 md:text-3xl">🥈</span>
                   {:else if i === 2}
-                    <span class="absolute -left-3 -top-3 text-2xl">🥉</span>
+                    <span class="absolute -left-3 -top-3 text-2xl md:static md:mr-4 md:text-3xl">🥉</span>
                   {/if}
                   {#if m.image && !imageError[i]}
-                    <img class="w-12 h-12 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
+                    <img class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
                   {:else}
-                    <div class="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center text-xl text-pink-400">🍹</div>
+                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 flex items-center justify-center text-xl md:text-2xl text-pink-400">🍹</div>
                   {/if}
                   <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-gray-900 truncate text-base md:text-lg lg:text-xl">{m.name}</div>
-                    <div class="text-sm text-pink-400 md:text-base">{m.total_qty} terjual</div>
+                    <div class="font-semibold text-gray-900 truncate text-base md:text-xl lg:text-2xl md:mb-1">{m.name}</div>
+                    <div class="text-sm text-pink-400 md:text-lg">{m.total_qty} terjual</div>
                   </div>
                 </div>
               {/each}
@@ -854,14 +853,14 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
           {/if}
         </div>
         <!-- Statistik -->
-        <div>
-          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-4">Statistik</div>
-          <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
-            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6">
+        <div class="mt-6 md:mt-12">
+          <div class="text-pink-500 font-medium mb-2 text-base mt-2 md:text-lg md:mb-6 md:mt-0 md:font-bold md:text-2xl md:tracking-tight">Statistik</div>
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 md:mb-6">
+            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6 md:rounded-2xl md:shadow-none md:border md:border-pink-100">
               <div class="text-pink-400 text-xl font-bold md:text-2xl lg:text-3xl">{avgTransaksi ?? '--'}</div>
               <div class="text-xs text-gray-500 mt-1 md:text-sm">Rata-rata transaksi/hari</div>
             </div>
-            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6">
+            <div class="bg-white rounded-xl shadow p-3 flex flex-col items-center md:p-6 md:rounded-2xl md:shadow-none md:border md:border-pink-100">
               <div class="text-pink-400 text-xl font-bold md:text-2xl lg:text-3xl">
                 {#if jamRamai}
                   {jamRamai}
@@ -873,12 +872,12 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
             </div>
           </div>
           <!-- Grafik Pendapatan 7 Hari -->
-          <div class="mt-3 md:mt-4">
-            <div class="bg-white rounded-xl shadow p-4 md:p-6 flex flex-col" bind:this={incomeChartRef}>
+          <div class="mt-3 md:mt-0">
+            <div class="bg-white rounded-xl shadow p-4 md:p-8 flex flex-col md:rounded-2xl md:shadow-none md:border md:border-pink-100" bind:this={incomeChartRef}>
               <div class="text-xs text-gray-500 mt-1 md:text-sm mb-2">Pendapatan 7 Hari Terakhir</div>
-              <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56">
-              {#if weeklyIncome.length === 0}
-                  <div class="flex items-end gap-2 h-32 md:h-40 lg:h-56 w-full relative">
+              <div class="flex items-end gap-2 h-32 md:h-56 lg:h-64">
+                {#if weeklyIncome.length === 0}
+                  <div class="flex items-end gap-2 h-32 md:h-56 lg:h-64 w-full relative">
                     {#each getLast7DaysLabelsWITA() as label, i}
                       <div class="flex flex-col items-center flex-1">
                         <div class="bg-gray-100 rounded-t w-6 md:w-8 lg:w-10" style="height: 8px;"></div>
@@ -889,14 +888,14 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
                       <span class="text-gray-400 text-base md:text-lg text-center">Belum ada data grafik pendapatan</span>
                     </div>
                   </div>
-              {:else}
+                {:else}
                   {#each weeklyIncome as income, i}
                     <div class="flex flex-col items-center flex-1">
                       <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
                       <div class="text-xs mt-1 md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
                     </div>
                   {/each}
-              {/if}
+                {/if}
               </div>
             </div>
           </div>
