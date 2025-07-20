@@ -614,43 +614,43 @@ async function applyFilter() {
           {/if}
         </div>
         <!-- Accordion: Pengeluaran -->
-        <div class="rounded-xl bg-white shadow-sm overflow-hidden">
-          <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px]" onclick={() => showPengeluaran = !showPengeluaran}>
+        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4">
+          <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px] md:rounded-2xl md:px-6 md:py-4 md:text-lg md:mb-2" onclick={() => showPengeluaran = !showPengeluaran}>
             <span>Pengeluaran</span>
-            <svg class="w-5 h-5 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPengeluaran ? 0 : 180}deg);transform-origin:center"/></svg>
+            <svg class="w-5 h-5 ml-2 md:w-6 md:h-6" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPengeluaran ? 0 : 180}deg);transform-origin:center"/></svg>
           </button>
           {#if showPengeluaran}
-            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
+            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold md:gap-6 md:px-6 md:text-base md:pb-4 md:pt-2">
               <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPengeluaran.toLocaleString('id-ID')}</span></span>
               <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPengeluaran.toLocaleString('id-ID')}</span></span>
             </div>
-            <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
+            <div class="bg-white flex flex-col gap-0.5 py-2 md:gap-2 md:py-4" transition:slide|local>
               <!-- Sub: Beban Usaha -->
-              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5" onclick={() => showBebanUsaha = !showBebanUsaha}>
+              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 md:px-6 md:py-2 md:text-base md:mb-1" onclick={() => showBebanUsaha = !showBebanUsaha}>
                 <span>Beban Usaha</span>
-                <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
+                <svg class="w-4 h-4 ml-2 md:w-5 md:h-5" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showBebanUsaha}
-                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
-                  <ul class="flex flex-col gap-0.5">
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1 md:px-6 md:pb-2 md:pt-1 md:gap-2" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1 md:text-sm md:mb-2 md:mt-2">QRIS</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if bebanUsahaQris.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each bebanUsahaQris as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
                   </ul>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
-                  <ul class="flex flex-col gap-0.5">
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2 md:text-sm md:mb-2 md:mt-3">Tunai</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if bebanUsahaTunai.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each bebanUsahaTunai as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
@@ -659,31 +659,31 @@ async function applyFilter() {
                 </div>
               {/if}
               <!-- Sub: Beban Lainnya -->
-              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2" onclick={() => showBebanLain = !showBebanLain}>
+              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2 md:px-6 md:py-2 md:text-base md:mb-1 md:mt-3" onclick={() => showBebanLain = !showBebanLain}>
                 <span>Beban Lainnya</span>
-                <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanLain ? 0 : 180}deg);transform-origin:center"/></svg>
+                <svg class="w-4 h-4 ml-2 md:w-5 md:h-5" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showBebanLain ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showBebanLain}
-                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
-                  <ul class="flex flex-col gap-0.5">
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1 md:px-6 md:pb-2 md:pt-1 md:gap-2" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1 md:text-sm md:mb-2 md:mt-2">QRIS</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if bebanLainQris.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each bebanLainQris as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
                   </ul>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
-                  <ul class="flex flex-col gap-0.5">
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2 md:text-sm md:mb-2 md:mt-3">Tunai</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if bebanLainTunai.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each bebanLainTunai as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
@@ -695,17 +695,17 @@ async function applyFilter() {
           {/if}
         </div>
         <!-- Laba (Rugi) Kotor -->
-        <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
+        <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
           <span>Laba (Rugi) Kotor</span>
           <span>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
         </div>
         <!-- Pajak Penghasilan -->
-        <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
+        <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
           <span>Pajak Penghasilan (0,5%)</span>
           <span>Rp {summary?.pajak !== null && summary?.pajak !== undefined ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
         </div>
         <!-- Laba (Rugi) Bersih -->
-        <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm">
+        <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
           <span>Laba (Rugi) Bersih</span>
           <span>Rp {summary?.labaBersih !== null && summary?.labaBersih !== undefined ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
         </div>

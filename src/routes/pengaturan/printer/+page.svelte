@@ -128,28 +128,34 @@ onMount(async () => {
     </form>
     <div class="mt-10">
       <div class="font-semibold text-gray-700 mb-2">Preview Struk</div>
-      <div class="bg-gray-50 border border-pink-200 rounded-lg p-4 text-sm font-mono whitespace-pre-line" style="max-width:350px;font-size:16px;line-height:1.0;">
-        <div style="text-align:center;font-weight:bold;">
-          <div>{namaToko}</div>
+      <div class="bg-gray-50 border border-pink-200 rounded-lg p-4 text-sm font-mono whitespace-pre-line" style="max-width:350px;font-size:24px;line-height:2.0;">
+        <div style="text-align:center;margin-bottom:16px;line-height:1.5;">
+          <div style="font-weight:bold;font-size:26px;">{namaToko}</div>
+          <div style="font-weight:bold;font-size:18px;">{alamat}</div>
+          {#if instagram || telepon}
+            <div style="font-weight:bold;font-size:18px;">{instagram}{instagram && telepon ? ' ' : ''}{telepon}</div>
+          {/if}
         </div>
-        <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
-        <div style="white-space:pre-line;">{alamat}</div>
-        {#if instagram}
-          <div>IG: {instagram}</div>
-        {/if}
-        <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
-        Jus Mangga x2 - Rp20.000<br/>
-        + Topping Nata<br/>
-        Tanpa Gula, Sedikit Es, Catatan khusus<br/>
-        <br/>
-        Jus Alpukat x1 - Rp15.000<br/>
-        <br/>
-        <div style="border-bottom:1px dashed #000;margin:8px 0;"></div>
-        <div>Total: <b>Rp35.000</b></div>
-        <div>Metode: Tunai</div>
-        <div>Dibayar: Rp50.000</div>
-        <div>Kembalian: Rp15.000</div>
-        <div style="margin-top:12px;text-align:center;white-space:pre-line;">{ucapan}</div>
+        <div style="border-bottom:1px dashed #000;margin-bottom:16px;"></div>
+        <div style="text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;">
+          nama pelanggan<br/>
+          01/01/2024 10.00<br/>
+        </div>
+        <table style="width:100%;font-size:24px;margin-bottom:16px;"><tbody>
+          <tr style="line-height:1.5;"><td style="text-align:left;">Jus Mangga x2</td><td style="text-align:right;">Rp20.000</td></tr>
+          <tr style="line-height:1.5;"><td style="font-size:18px;padding-left:8px;color:#000;">+ Topping Nata</td><td style="font-size:18px;text-align:right;color:#000;">Rp4.000</td></tr>
+          <tr style="line-height:1.5;"><td colspan="2" style="font-size:18px;padding-left:8px;color:#000;">Tanpa Gula, Sedikit Es, Catatan khusus</td></tr>
+          <tr><td colspan="2" style="height:20px;"></td></tr>
+          <tr style="line-height:1.5;"><td style="text-align:left;">Jus Alpukat x1</td><td style="text-align:right;">Rp15.000</td></tr>
+        </tbody></table>
+        <div style="border-bottom:1px dashed #000;margin-bottom:16px;"></div>
+        <table style="width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;"><tbody>
+          <tr><td style="text-align:left;">Total:</td><td style="text-align:right;"><b>Rp35.000</b></td></tr>
+          <tr><td style="text-align:left;">Metode:</td><td style="text-align:right;">Tunai</td></tr>
+          <tr><td style="text-align:left;">Dibayar:</td><td style="text-align:right;">Rp50.000</td></tr>
+          <tr><td style="text-align:left;">Kembalian:</td><td style="text-align:right;">Rp15.000</td></tr>
+        </tbody></table>
+        <div style="margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;">{ucapan}</div>
       </div>
     </div>
   </div>

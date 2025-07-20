@@ -335,35 +335,51 @@ function printStrukViaEscPosService() {
     instagram: '@zatiarasjuice',
     ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
   };
-  let html = `<html><body style='font-family:monospace;font-size:16px;line-height:1.0;margin:0;padding:0;'>`;
-  html += `<div style='text-align:center;font-weight:bold;'>`;
-  html += `${pengaturan.nama_toko}</div>`;
-  html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
-  html += `<div style='white-space:pre-line;'>${pengaturan.alamat}</div>`;
-  html += `<div>Telp: ${pengaturan.telepon}</div>`;
-  if (pengaturan.instagram) html += `<div>IG: ${pengaturan.instagram}</div>`;
-  html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
-  cart.forEach(item => {
-    html += `${item.product.name} x${item.qty} - Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}<br/>`;
+  let html = `<html><body style='font-family:monospace;font-size:24px;line-height:2.0;margin:0;padding:0;'>`;
+  // Header
+  html += `<div style='text-align:center;margin-bottom:16px;line-height:1.5;'>`;
+  html += `<div style='font-weight:bold;font-size:26px;'>${pengaturan.nama_toko}</div>`;
+  html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.alamat}</div>`;
+  if (pengaturan.instagram || pengaturan.telepon) {
+    html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+  }
+  html += `</div>`;
+  html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+  // Info pelanggan & waktu
+  html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
+  html += `${customerName ? customerName + '<br/>' : ''}`;
+  html += `${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
+  html += `</div>`;
+  // Daftar pesanan
+  html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
+  cart.forEach((item, idx) => {
+    html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
     if (item.addOns && item.addOns.length > 0) {
-      html += `+ ${item.addOns.map(a => a.name).join(', ')}<br/>`;
+      item.addOns.forEach(a => {
+        html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
+      });
     }
     const detail = [
       item.sugar && item.sugar !== 'normal' ? (item.sugar === 'no' ? 'Tanpa Gula' : item.sugar === 'less' ? 'Sedikit Gula' : item.sugar) : null,
       item.ice && item.ice !== 'normal' ? (item.ice === 'no' ? 'Tanpa Es' : item.ice === 'less' ? 'Sedikit Es' : item.ice) : null,
       item.note && item.note.trim() ? item.note : null
     ].filter(Boolean).join(', ');
-    if (detail) html += `${detail}<br/>`;
-    html += `<br/>`;
+    if (detail) html += `<tr style='line-height:1.5;'><td colspan='2' style='font-size:18px;padding-left:8px;color:#000;'>${detail}</td></tr>`;
+    if (idx < cart.length-1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
   });
-  html += `<div style='border-bottom:1px dashed #000;margin:8px 0;'></div>`;
-  html += `<div>Total: <b>Rp${totalHarga.toLocaleString('id-ID')}</b></div>`;
-  html += `<div>Metode: ${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}</div>`;
+  html += `</tbody></table>`;
+  html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+  // Ringkasan
+  html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
+  html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${totalHarga.toLocaleString('id-ID')}</b></td></tr>`;
+  html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}</td></tr>`;
   if (paymentMethod === 'cash') {
-    html += `<div>Dibayar: Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</div>`;
-    html += `<div>Kembalian: Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</div>`;
+    html += `<tr><td style='text-align:left;'>Dibayar:</td><td style='text-align:right;'>Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</td></tr>`;
+    html += `<tr><td style='text-align:left;'>Kembalian:</td><td style='text-align:right;'>Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</td></tr>`;
   }
-  html += `<div style='margin-top:12px;text-align:center;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
+  html += `</tbody></table>`;
+  // Ucapan
+  html += `<div style='margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;'>${pengaturan.ucapan}</div>`;
   html += `</body></html>`;
 
   // 2. Gzip + base64 encode

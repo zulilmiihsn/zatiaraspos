@@ -602,29 +602,29 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
         {/if}
       </div>
     {:else}
-      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0" transition:slide={{ duration: 250 }}>
+      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0 md:grid-cols-3 md:gap-6 md:px-8 md:pb-8" transition:slide={{ duration: 250 }}>
         {#if isLoadingProducts}
           {#each Array(skeletonCount) as _, i}
-            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100"></div>
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100 md:p-6 md:max-h-[320px] md:min-h-[180px]" />
           {/each}
         {:else if filteredProducts.length === 0}
-          <div class="col-span-2 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
+          <div class="col-span-2 md:col-span-3 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">
             <div class="text-6xl mb-2">🍽️</div>
             <div class="text-base font-semibold text-gray-700 mb-1">Belum ada Menu</div>
             <div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
           </div>
         {:else}
           {#each filteredProducts as p}
-            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow" tabindex="0" onclick={() => handleOpenAddOnModal(p)} onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)} role="button" aria-label="Tambah {p.name} ke keranjang">
+            <div class="bg-white rounded-xl shadow-md border border-gray-100 p-3 flex flex-col items-center justify-between aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow md:p-6 md:max-h-[320px] md:min-h-[180px] md:gap-3 md:hover:shadow-lg md:rounded-2xl" tabindex="0" onclick={() => handleOpenAddOnModal(p)} onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)} role="button" aria-label="Tambah {p.name} ke keranjang">
               {#if (p.gambar || p.image) && !imageError[String(p.id)]}
-                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgErrorId(p.id)} />
+                <img class="w-full h-full object-cover rounded-xl aspect-square min-h-[80px] mb-2 md:mb-3 md:rounded-2xl" src={p.gambar || p.image} alt={p.name} loading="lazy" onerror={() => handleImgErrorId(p.id)} />
               {:else}
-                <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 overflow-hidden text-4xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">🍹</div>
+                <div class="w-full aspect-square min-h-[80px] rounded-xl flex items-center justify-center mb-2 md:mb-3 overflow-hidden text-4xl md:text-5xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 md:rounded-2xl">🍹</div>
               {/if}
               <div class="w-full flex flex-col items-center">
-                <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5">{p.name}</h3>
-                <span class="text-xs text-gray-400 truncate min-h-[18px]">{getKategoriNameById(p.kategori_id)}</span>
-                <div class="text-pink-500 font-bold text-base">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
+                <h3 class="font-semibold text-gray-800 text-sm truncate w-full text-center mb-0.5 md:text-lg md:mb-1">{p.name}</h3>
+                <span class="text-xs text-gray-400 truncate min-h-[18px] md:text-sm">{getKategoriNameById(p.kategori_id)}</span>
+                <div class="text-pink-500 font-bold text-base md:text-xl md:mt-1">Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</div>
               </div>
             </div>
           {/each}

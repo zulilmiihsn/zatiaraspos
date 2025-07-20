@@ -371,8 +371,8 @@
   {/if}
 
   <!-- Grid Menu Pengaturan -->
-  <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0">
-    <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2">
+  <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0 md:justify-start">
+    <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2 md:grid-cols-3 md:gap-8 md:max-w-4xl md:mx-auto md:py-8 md:mt-4">
       {#if isLoading || !isProfileLoaded}
         {#each Array(4) as _, i}
           <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-lg border-2 border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4">
@@ -384,7 +384,7 @@
       {:else}
         <!-- Box Pemilik (selalu tampil, disable jika bukan admin/pemilik) -->
         <button
-          class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200 overflow-hidden {currentUserRole === 'admin' || currentUserRole === 'pemilik' ? 'shimmer-highlight hover:scale-105' : ''}"
+          class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200 overflow-hidden {currentUserRole === 'admin' || currentUserRole === 'pemilik' ? 'shimmer-highlight hover:scale-105' : ''} md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full"
           onclick={() => (currentUserRole === 'admin' || currentUserRole === 'pemilik') && goto('/pengaturan/pemilik')}
           disabled={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
           class:opacity-60={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
@@ -397,12 +397,12 @@
               <span class="block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             </div>
           {/if}
-          <div class="text-lg font-bold mb-1">Pemilik</div>
-          <span class="inline-block bg-white/20 text-xs font-semibold px-3 py-1 rounded-full mb-2 border border-white/30">Privileged</span>
-          <div class="text-xs text-white/80 text-center">Akses penuh ke seluruh sistem</div>
+          <div class="text-lg font-bold mb-1 md:text-base md:mb-1">Pemilik</div>
+          <span class="inline-block bg-white/20 text-xs font-semibold px-3 py-1 rounded-full mb-2 border border-white/30 md:text-base md:px-3 md:py-1 md:mb-2">Privileged</span>
+          <div class="text-xs text-white/80 text-center md:text-base md:mt-1 md:mb-0">Akses penuh ke seluruh sistem</div>
         </button>
         <!-- Box Install PWA -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={handleInstallPWA}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" onclick={handleInstallPWA}>
           {#if Download}
             <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
           {:else}
@@ -410,12 +410,12 @@
               <span class="block w-6 h-6 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
             </div>
           {/if}
-          <div class="text-lg font-bold mb-1 text-pink-500">Install PWA</div>
-          <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Aplikasi</span>
-          <div class="text-xs text-gray-500 text-center">Pasang ke Home Screen</div>
+          <div class="text-lg font-bold mb-1 text-pink-500 md:text-base md:mb-1">Install PWA</div>
+          <span class="inline-block bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full mb-2 md:text-base md:px-3 md:py-1 md:mb-2">Aplikasi</span>
+          <div class="text-xs text-gray-500 text-center md:text-base md:mt-1 md:mb-0">Pasang ke Home Screen</div>
         </button>
         <!-- Box Printer (Draft Struk) -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none" onclick={() => goto('/pengaturan/printer')}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" onclick={() => goto('/pengaturan/printer')}>
           {#if Printer}
             <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
           {:else}
@@ -423,9 +423,9 @@
               <span class="block w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></span>
             </div>
           {/if}
-          <div class="text-lg font-bold mb-1 text-blue-700">Draft Struk</div>
-          <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2">Struk</span>
-          <div class="text-xs text-gray-500 text-center">Atur tampilan dan informasi draft struk</div>
+          <div class="text-lg font-bold mb-1 text-blue-700 md:text-base md:mb-1">Draft Struk</div>
+          <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mb-2 md:text-base md:px-3 md:py-1 md:mb-2">Struk</span>
+          <div class="text-xs text-gray-500 text-center md:text-base md:mt-1 md:mb-0">Atur tampilan dan informasi draft struk</div>
         </button>
       {/if}
     </div>
