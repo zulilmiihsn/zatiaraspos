@@ -497,19 +497,36 @@ function calculateTotalTunai(transactions) {
   return transactions.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
 }
 
-// Total QRIS & Tunai keseluruhan
-$: allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
-$: totalQrisAll = calculateTotalQris(allTransactions);
-$: totalTunaiAll = calculateTotalTunai(allTransactions);
+// Computed values untuk total
+function getTotalQrisAll() {
+  const allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
+  return calculateTotalQris(allTransactions);
+}
 
-// Total QRIS & Tunai per section
-$: pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
-$: totalQrisPemasukan = calculateTotalQris(pemasukanTransactions);
-$: totalTunaiPemasukan = calculateTotalTunai(pemasukanTransactions);
+function getTotalTunaiAll() {
+  const allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
+  return calculateTotalTunai(allTransactions);
+}
 
-$: pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
-$: totalQrisPengeluaran = calculateTotalQris(pengeluaranTransactions);
-$: totalTunaiPengeluaran = calculateTotalTunai(pengeluaranTransactions);
+function getTotalQrisPemasukan() {
+  const pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
+  return calculateTotalQris(pemasukanTransactions);
+}
+
+function getTotalTunaiPemasukan() {
+  const pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
+  return calculateTotalTunai(pemasukanTransactions);
+}
+
+function getTotalQrisPengeluaran() {
+  const pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
+  return calculateTotalQris(pengeluaranTransactions);
+}
+
+function getTotalTunaiPengeluaran() {
+  const pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
+  return calculateTotalTunai(pengeluaranTransactions);
+}
 
 // Memoize untuk total QRIS/Tunai per sub-group
 $: totalQrisPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'qris');
@@ -661,8 +678,8 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
         </div>
         <!-- Insight Total QRIS & Tunai Keseluruhan -->
         <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold">
-          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
-          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
+          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisAll().toLocaleString('id-ID')}</span></span>
+          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiAll().toLocaleString('id-ID')}</span></span>
         </div>
       </div>
 
@@ -676,8 +693,8 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
           </button>
           {#if showPemasukan}
             <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
-              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPemasukan.toLocaleString('id-ID')}</span></span>
-              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPemasukan.toLocaleString('id-ID')}</span></span>
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisPemasukan().toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiPemasukan().toLocaleString('id-ID')}</span></span>
             </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Pendapatan Usaha -->
@@ -757,8 +774,8 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
           </button>
           {#if showPengeluaran}
             <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
-              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPengeluaran.toLocaleString('id-ID')}</span></span>
-              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPengeluaran.toLocaleString('id-ID')}</span></span>
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisPengeluaran().toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiPengeluaran().toLocaleString('id-ID')}</span></span>
             </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Beban Usaha -->
