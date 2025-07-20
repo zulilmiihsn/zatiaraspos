@@ -4,7 +4,7 @@
   import { auth } from '$lib/auth/auth';
   import { SecurityMiddleware } from '$lib/utils/security';
   import { getSupabaseClient } from '$lib/database/supabaseClient';
-  import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+  import { userRole, setUserRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { get as storeGet } from 'svelte/store';
@@ -28,18 +28,14 @@
   let isPengaturanLoaded = false;
 
   let currentUserRole = '';
-  let userProfileData = null;
 
   // Subscribe ke store
   userRole.subscribe(val => currentUserRole = val || '');
-  userProfile.subscribe(val => userProfileData = val);
-
-  let currentUser: any = null;
   let showLogoutModal = false;
   let deferredPrompt: any = null;
   let canInstallPWA = false;
   let currentPage = 'security';
-  let userName = '';
+
   let showPinModal = false;
   let pin = '';
   let pinInput = '';
@@ -170,7 +166,7 @@
 
   function confirmLogout() {
     SecurityMiddleware.logSecurityEvent('user_logout', {
-      user: currentUser?.username,
+      user: currentUserRole,
       from: 'settings_page'
     });
     auth.logout();

@@ -1,6 +1,8 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
+import { fly } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { userRole, setUserRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';
@@ -8,7 +10,6 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import Shield from 'lucide-svelte/icons/shield';
 import User from 'lucide-svelte/icons/user';
-import Lock from 'lucide-svelte/icons/lock';
 
 let currentUserRole = '';
 let oldUsername = '';
@@ -29,13 +30,7 @@ let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
-// Tambahkan state untuk kasir
-let kasirOldUsername = '';
-let kasirNewUsername = '';
-let kasirOldPassword = '';
-let kasirNewPassword = '';
-let kasirConfirmPassword = '';
-let kasirUserPassError = '';
+
 
 onMount(() => {
   userRole.subscribe(role => {
@@ -132,7 +127,7 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
   <title>Ganti Keamanan | ZatiarasPOS</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 flex flex-col">
+<div class="min-h-screen bg-gray-50 flex flex-col" transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
   <!-- Top Bar -->
   <div class="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 py-4">
     <button onclick={handleBackToPengaturan} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
@@ -140,7 +135,7 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
     </button>
     <h1 class="text-xl font-bold text-gray-800">Ganti Keamanan</h1>
   </div>
-  <div class="max-w-md w-full mx-auto px-4 py-8 flex-1">
+  <div class="max-w-md w-full mx-auto px-4 py-3 flex-1">
     <!-- Card: Ganti Username/Password untuk Pemilik & Kasir -->
     <div class="bg-white rounded-2xl shadow p-6 mb-8">
       <div class="flex gap-2 mb-4">
@@ -193,38 +188,11 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
           <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="submit">Simpan Perubahan</button>
         </form>
       {:else}
-        <h3 class="font-bold text-lg text-blue-600 mb-1 flex items-center gap-2">
-          <Shield class="w-5 h-5" /> Ganti Username & Password Kasir
-        </h3>
-        <p class="text-gray-500 text-sm mb-4">
-          Ubah username dan password akun kasir untuk keamanan akses kasir.
-        </p>
-        <form class="flex flex-col gap-4" onsubmit={handleChangeKasirUserPass} autocomplete="off">
-          <div>
-            <label class="block text-sm font-medium text-blue-700 mb-1">Username Lama</label>
-            <input type="text" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Username Lama" bind:value={kasirOldUsername} required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-blue-700 mb-1">Username Baru</label>
-            <input type="text" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Username Baru" bind:value={kasirNewUsername} required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-blue-700 mb-1">Password Lama</label>
-            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Password Lama" bind:value={kasirOldPassword} required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-blue-700 mb-1">Password Baru</label>
-            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Password Baru" bind:value={kasirNewPassword} required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-blue-700 mb-1">Konfirmasi Password Baru</label>
-            <input type="password" class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Konfirmasi Password Baru" bind:value={kasirConfirmPassword} required />
-          </div>
-          {#if kasirUserPassError}
-            <div class="text-blue-600 text-xs text-center mt-1">{kasirUserPassError}</div>
-        {/if}
-          <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 mt-2" type="submit">Simpan Perubahan</button>
-      </form>
+        <div class="text-center py-8">
+          <Shield class="w-16 h-16 text-blue-300 mx-auto mb-4" />
+          <h3 class="font-bold text-lg text-blue-600 mb-2">Fitur Kasir</h3>
+          <p class="text-gray-500 text-sm">Fitur ganti username & password kasir akan segera hadir.</p>
+        </div>
       {/if}
     </div>
     <!-- Card: Ganti PIN -->
@@ -257,7 +225,7 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
     <!-- Card: Pengaturan Halaman Terkunci -->
     <div class="bg-white rounded-2xl shadow p-6 mb-8">
       <h3 class="font-bold text-lg text-pink-600 mb-4 flex items-center gap-2">
-        <Lock class="w-5 h-5" /> Pengaturan Halaman Terkunci
+        <Shield class="w-5 h-5" /> Pengaturan Halaman Terkunci
       </h3>
       <p class="text-gray-500 text-sm mb-6">Pilih halaman yang ingin dikunci dengan PIN. Halaman yang dikunci akan meminta PIN saat diakses.</p>
       <div class="flex flex-col gap-3 mb-4">

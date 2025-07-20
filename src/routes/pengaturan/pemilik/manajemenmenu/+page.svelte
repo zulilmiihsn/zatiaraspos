@@ -8,7 +8,6 @@ import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
 import { fly, fade, slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
-import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import { memoize } from '$lib/utils/performance';
@@ -66,7 +65,6 @@ let isTouchDevice = false;
 if (typeof window !== 'undefined') {
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
-let justTapped = false;
 let isGridView = true;
 let showNotifModal = false;
 let notifModalMsg = '';

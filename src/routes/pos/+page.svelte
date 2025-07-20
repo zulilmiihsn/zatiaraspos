@@ -1,11 +1,9 @@
 <script lang="ts">
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
-import ImagePlaceholder from '$lib/components/shared/ImagePlaceholder.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
-import BottomNav from '$lib/components/shared/BottomNav.svelte';
 import { validateNumber, sanitizeInput } from '$lib/utils/validation';
 import { SecurityMiddleware } from '$lib/utils/security';
 import { fly, fade } from 'svelte/transition';
@@ -18,7 +16,6 @@ import {
   debounce, 
   throttle, 
   memoize, 
-  measurePerformance, 
   measureAsyncPerformance,
   calculateCartTotal,
   fuzzySearch
@@ -102,27 +99,9 @@ onMount(async () => {
   });
 });
 
-// Lazy load icons dengan optimasi
-let Home, ShoppingBag, FileText, Book, Settings;
 let isLoadingProducts = true;
 
 onMount(async () => {
-  // Measure performance untuk icon loading
-  await measureAsyncPerformance('icon loading', async () => {
-    const icons = await Promise.all([
-      import('lucide-svelte/icons/home'),
-      import('lucide-svelte/icons/shopping-bag'),
-      import('lucide-svelte/icons/file-text'),
-      import('lucide-svelte/icons/book'),
-      import('lucide-svelte/icons/settings')
-    ]);
-    Home = icons[0].default;
-    ShoppingBag = icons[1].default;
-    FileText = icons[2].default;
-    Book = icons[3].default;
-    Settings = icons[4].default;
-  });
-
   // Measure performance untuk data fetching
   await measureAsyncPerformance('data fetching', async () => {
     await Promise.all([

@@ -54,7 +54,7 @@ async function fetchTransaksiHariIni() {
   // Filter berdasarkan search
   if (searchKeyword.trim()) {
     const keyword = searchKeyword.trim().toLowerCase();
-    transaksiHariIni = transaksiHariIni.filter(t => (t.nama?.toLowerCase().includes(keyword) || t.kategori?.toLowerCase().includes(keyword)));
+    transaksiHariIni = transaksiHariIni.filter(t => t.nama?.toLowerCase().includes(keyword));
   }
   // Filter berdasarkan payment method
   if (filterPayment !== 'all') {
@@ -126,7 +126,7 @@ onDestroy(() => {
   </div>
   <!-- Search Bar dan Filter Payment Method digabung -->
   <div class="px-4 pt-3 pb-3 bg-white sticky top-[64px] z-30 space-y-3">
-    <input type="text" class="w-full border border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100" placeholder="Cari transaksi atau kategori..." bind:value={searchKeyword} oninput={fetchTransaksiHariIni} />
+    <input type="text" class="w-full border border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100" placeholder="Cari transaksi..." bind:value={searchKeyword} oninput={fetchTransaksiHariIni} />
     <div class="flex gap-2">
       <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'all' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'all'; fetchTransaksiHariIni(); }}>Semua</button>
       <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {filterPayment === 'qris' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => { filterPayment = 'qris'; fetchTransaksiHariIni(); }}>QRIS</button>

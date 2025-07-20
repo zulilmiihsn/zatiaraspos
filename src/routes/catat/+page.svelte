@@ -1,24 +1,19 @@
 <script lang="ts">
 import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
-import { cubicIn, cubicOut } from 'svelte/easing';
+import { cubicOut } from 'svelte/easing';
 import { fade, fly } from 'svelte/transition';
-import DatePickerSheet from '$lib/components/shared/DatePickerSheet.svelte';
-import TimePickerSheet from '$lib/components/shared/TimePickerSheet.svelte';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
 import { validateNumber, validateText, validateDate, validateTime, sanitizeInput, validateIncomeExpense } from '$lib/utils/validation';
 import { SecurityMiddleware } from '$lib/utils/security';
 import { auth } from '$lib/auth/auth';
 import { goto } from '$app/navigation';
 import { formatWitaDateTime, getWitaDateRangeUtc } from '$lib/utils/index';
-import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
-let pendingCount = 0;
-transaksiPendingCount.subscribe(val => pendingCount = val);
 
 // Touch handling variables
 let touchStartX = 0;
@@ -47,8 +42,6 @@ let namaJenis = '';
 let nama = '';
 let error = '';
 
-let showDatePicker = false;
-let showTimePicker = false;
 let showDropdown = false;
 
 // PIN Modal State
@@ -69,14 +62,10 @@ const jenisPengeluaran = [
   { value: 'lainnya', label: 'Lainnya' },
 ];
 
-let transaksiList = [];
-
 let showSnackbar = false;
 let snackbarMsg = '';
 
-let observer: IntersectionObserver | null;
-let isBottomVisible = false;
-let bottomRef: HTMLElement | null;
+
 
 // Helper untuk tanggal lokal user (YYYY-MM-DD)
 function getLocalDateString() {
@@ -88,9 +77,7 @@ function getLocalDateString() {
 }
 
 let currentUserRole = '';
-let userProfileData = null;
 userRole.subscribe(val => currentUserRole = val || '');
-userProfile.subscribe(val => userProfileData = val);
 
 let sesiAktif: any = null;
 async function cekSesiTokoAktif() {
@@ -144,59 +131,21 @@ onMount(async () => {
   date = getLocalDateString();
   time = new Date().toTimeString().slice(0, 5);
   jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
-  await fetchTransaksi();
   await cekSesiTokoAktif();
-
-  observer = new IntersectionObserver(
-    ([entry]) => {
-      isBottomVisible = entry.isIntersecting;
-    },
-    { threshold: 0.1 }
-  );
-  if (bottomRef) observer.observe(bottomRef);
 });
 
-$: if (bottomRef && observer) {
-  observer.observe(bottomRef);
-}
 
-onDestroy(() => {
-  if (observer) observer.disconnect();
-});
 
 async function fetchPin() {
   const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
-async function fetchTransaksi() {
-  // Ambil transaksi hari ini (WITA)
-  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-  const yyyy = todayWita.getFullYear();
-  const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-  const dd = String(todayWita.getDate()).padStart(2, '0');
-  const { startUtc, endUtc } = getWitaDateRangeUtc(`${yyyy}-${mm}-${dd}`);
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
-    .from('buku_kas')
-    .select('*')
-    .gte('waktu', startUtc)
-    .lte('waktu', endUtc)
-    .order('waktu', { ascending: false });
-  if (!error) transaksiList = data;
-}
 
-// Helper untuk offset zona waktu lokal user (misal: +08:00)
-function getLocalOffsetString() {
-  const offset = -new Date().getTimezoneOffset();
-  const sign = offset >= 0 ? '+' : '-';
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const hours = pad(Math.floor(Math.abs(offset) / 60));
-  const minutes = pad(Math.abs(offset) % 60);
-  return `${sign}${hours}:${minutes}`;
-}
 
-let showNoSessionModal = false;
-let noSessionModalMsg = '';
+
+
+
 
 let showNotifModal = false;
 let notifModalMsg = '';
@@ -246,7 +195,6 @@ async function saveTransaksi(form: any) {
       window.fetchDashboardStats();
     }
   }
-  await fetchTransaksi();
 }
 
 // Optimized reactive statements for better performance
@@ -755,17 +703,12 @@ main {
             <div class="text-pink-600 text-sm text-center mt-1">{error}</div>
           {/if}
         </form>
-        <div bind:this={bottomRef}></div>
       </div>
     </div>
   </main>
-  <!-- Pindahkan button Simpan ke dalam form -->
-  <div class="fixed left-0 right-0 bottom-[56px] z-30 pt-2 pb-3 transition-all duration-500" class:px-2={!isBottomVisible} class:px-4={isBottomVisible}>
-    <div
-      class:w-full={!isBottomVisible}
-      class:max-w-md={isBottomVisible}
-      class:mx-auto={isBottomVisible}
-    >
+  <!-- Button Simpan -->
+  <div class="fixed left-0 right-0 bottom-[56px] z-30 pt-2 pb-3 px-4">
+    <div class="max-w-md mx-auto">
       <button type="submit" form="catat-form"
         class="transition-all duration-300 bg-pink-500 text-white font-bold text-lg border-none rounded-xl py-4 mt-1 shadow-lg shadow-pink-500/10 hover:bg-pink-600 active:bg-pink-700 w-full"
       >
@@ -774,13 +717,3 @@ main {
     </div>
   </div>
 </div> 
-
-<!-- Tambahkan modal peringatan -->
-{#if showNoSessionModal}
-  <ModalSheet open={showNoSessionModal} title="Peringatan" on:close={() => showNoSessionModal = false}>
-    <div class="text-center text-gray-700 text-base py-6">{noSessionModalMsg}</div>
-    <div slot="footer" class="flex flex-col gap-2">
-      <button class="w-full bg-pink-500 text-white font-bold rounded-lg py-3 text-base active:bg-pink-600" onclick={() => showNoSessionModal = false}>Tutup</button>
-    </div>
-  </ModalSheet>
-{/if} 

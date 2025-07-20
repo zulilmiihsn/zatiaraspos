@@ -11,9 +11,6 @@ let telepon = '';
 let instagram = '';
 let ucapan = '';
 let isSaving = false;
-let isUploading = false;
-let errorMsg = '';
-let successMsg = '';
 let showToast = false;
 let toastMsg = '';
 let toastType = 'success'; // 'success' | 'error'
@@ -62,8 +59,6 @@ function showFloatingNotif(msg: string, type: 'success' | 'error' = 'success') {
 async function simpanPengaturan(event: Event) {
   event.preventDefault();
   isSaving = true;
-  errorMsg = '';
-  successMsg = '';
   const data = {
     nama_toko: namaToko,
     alamat,
@@ -82,25 +77,7 @@ async function simpanPengaturan(event: Event) {
   }
 }
 
-async function handleLogoUpload(e: Event) {
-  const files = (e.target as HTMLInputElement).files;
-  if (!files || !files[0]) return;
-  isUploading = true;
-  errorMsg = '';
-  const file = files[0];
-  const fileExt = file.name.split('.').pop();
-  const fileName = `logo_${Date.now()}.${fileExt}`;
-  try {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).storage.from('public').upload(`logo/${fileName}`, file, { upsert: true });
-    if (error) throw error;
-    const { data: publicUrl } = getSupabaseClient(storeGet(selectedBranch)).storage.from('public').getPublicUrl(`logo/${fileName}`);
-    // logoUrl = publicUrl.publicUrl;
-  } catch (e) {
-    errorMsg = 'Gagal upload logo.';
-  } finally {
-    isUploading = false;
-  }
-}
+
 
 onMount(async () => {
   ArrowLeft = (await import('lucide-svelte/icons/arrow-left')).default;
