@@ -876,7 +876,7 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
             <div class="bg-white rounded-xl shadow p-4 md:p-8 flex flex-col md:rounded-2xl md:shadow-none md:border md:border-pink-100" bind:this={incomeChartRef}>
               <div class="text-xs text-gray-500 mt-1 md:text-sm mb-2">Pendapatan 7 Hari Terakhir</div>
               <div class="flex items-end gap-2 h-32 md:h-56 lg:h-64">
-                {#if weeklyIncome.length === 0}
+              {#if weeklyIncome.length === 0}
                   <div class="flex items-end gap-2 h-32 md:h-56 lg:h-64 w-full relative">
                     {#each getLast7DaysLabelsWITA() as label, i}
                       <div class="flex flex-col items-center flex-1">
@@ -888,14 +888,14 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
                       <span class="text-gray-400 text-base md:text-lg text-center">Belum ada data grafik pendapatan</span>
                     </div>
                   </div>
-                {:else}
+              {:else}
                   {#each weeklyIncome as income, i}
                     <div class="flex flex-col items-center flex-1">
                       <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
                       <div class="text-xs mt-1 md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
                     </div>
                   {/each}
-                {/if}
+              {/if}
               </div>
             </div>
           </div>

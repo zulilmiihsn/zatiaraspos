@@ -370,7 +370,7 @@ export class DataService {
         .from('buku_kas')
         .select('*')
         .gte('waktu', startUtc)
-        .lte('waktu', endUtcFinal);
+        .lt('waktu', endUtcFinal);
 
       if (error) {
         console.error('Error fetching report data:', error);

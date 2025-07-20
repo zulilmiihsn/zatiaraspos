@@ -4,7 +4,7 @@ import Topbar from '$lib/components/shared/Topbar.svelte';
 import { slide, fade, fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
-import { getWitaDateRangeUtc } from '$lib/utils/index';
+import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { memoize } from '$lib/utils/performance';
@@ -62,7 +62,7 @@ onMount(async () => {
     }
   }
   
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -75,15 +75,19 @@ async function loadLaporanData() {
     // Gunakan startDate saja untuk daily report, atau range untuk multi-day
     const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
     const reportData = await dataService.getReportData(dateRange, 'daily');
-    
     // Apply report data with null checks
     summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0 };
     pemasukanUsaha = reportData?.pemasukanUsaha || [];
     pemasukanLain = reportData?.pemasukanLain || [];
     bebanUsaha = reportData?.bebanUsaha || [];
     bebanLain = reportData?.bebanLain || [];
-    laporan = reportData?.transactions || [];
-    
+    // Filter ulang transaksi agar hanya yang tanggal WITA-nya berada di antara startDate dan endDate (inklusif)
+    laporan = (reportData?.transactions || []).filter(item => {
+      const rawTime = item.created_at || item.waktu;
+      if (!rawTime) return false;
+      const witaDate = new Date(rawTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+      return witaDate >= startDate && witaDate <= endDate;
+    });
   } catch (error) {
     console.error('Error loading laporan data:', error);
     // Set default values on error
@@ -138,11 +142,11 @@ let showFilter = false;
 let showDatePicker = false;
 let showEndDatePicker = false;
 let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
-let filterDate = '';
-let filterMonth = '';
-let filterYear = '';
-let startDate = getLocalDateString();
-let endDate = getLocalDateString();
+let filterDate = getLocalDateStringWITA();
+let filterMonth = (new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' })).getMonth() + 1).toString().padStart(2, '0');
+let filterYear = (new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' })).getFullYear()).toString();
+let startDate = getLocalDateStringWITA();
+let endDate = getLocalDateStringWITA();
 let showPemasukan = true;
 let showPendapatanUsaha = true;
 let showPemasukanLain = true;
@@ -242,11 +246,10 @@ $: if (startDate && endDate) {
 $: if (filterType === 'bulanan' && filterMonth && filterYear) {
   const y = parseInt(filterYear);
   const m = parseInt(filterMonth) - 1;
-  const first = new Date(y, m, 1);
-  const last = new Date(y, m + 1, 0);
-    const pad = n => n.toString().padStart(2, '0');
-    startDate = `${y}-${pad(m + 1)}-01`;
-    endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+  const first = new Date(new Date(`${y}-${String(m + 1).padStart(2, '0')}-01T00:00:00`).toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  const last = new Date(new Date(first).setMonth(first.getMonth() + 1) - 1);
+  startDate = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  endDate = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
 // Tambahkan watcher khusus untuk filter tahunan
@@ -257,9 +260,9 @@ $: if (filterType === 'tahunan' && filterYear) {
 
 // Watcher khusus untuk filter mingguan di luar modal filter
 $: if (!showFilter && filterType === 'mingguan' && startDate) {
-  const d = new Date(startDate);
+  const d = new Date(new Date(startDate + 'T00:00:00').toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   d.setDate(d.getDate() + 6);
-  endDate = d.toISOString().slice(0, 10);
+  endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Perbaiki watcher khusus untuk filter harian agar hanya aktif saat modal filter terbuka
@@ -269,15 +272,14 @@ $: if (showFilter && filterType === 'harian' && startDate) {
 
 // Watcher khusus untuk filter bulanan di luar modal filter
 $: if (!showFilter && filterType === 'bulanan' && startDate) {
-  const d = new Date(startDate);
+  const d = new Date(new Date(startDate + 'T00:00:00').toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  const pad = n => n.toString().padStart(2, '0');
-  endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+  endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 }
 
 // Watcher khusus untuk filter tahunan di luar modal filter
 $: if (!showFilter && filterType === 'tahunan' && startDate) {
-  const y = new Date(startDate).getFullYear();
+  const y = new Date(new Date(startDate + 'T00:00:00').toLocaleString('en-US', { timeZone: 'Asia/Makassar' })).getFullYear();
   endDate = `${y}-12-31`;
 }
 
@@ -351,8 +353,8 @@ function getDeskripsiLaporan(item) {
   return item?.description?.trim() || item?.catatan?.trim() || '-';
 }
 
-function getLocalDateString() {
-  const now = new Date();
+function getLocalDateStringWITA() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -363,7 +365,7 @@ function formatDate(dateString, isEndDate = false) {
   if (!dateString) {
     return isEndDate ? 'Pilih tanggal akhir' : 'Pilih tanggal awal';
   }
-  const date = new Date(dateString);
+  const date = new Date(new Date(dateString + 'T00:00:00').toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   return date.toLocaleDateString('id-ID', { 
     day: 'numeric', 
     month: 'long', 
@@ -489,40 +491,40 @@ async function applyFilter() {
         <div class="md:px-6">
           <div class="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-6">
             <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
-              {#if ArrowDownCircle}
+            {#if ArrowDownCircle}
                 <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500 md:w-10 md:h-10 md:mb-3" />
-              {:else}
+            {:else}
                 <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
-                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-                </div>
-              {/if}
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
               <div class="text-sm font-medium text-green-900/80 md:text-base md:text-center">Pemasukan</div>
               <div class="text-xl font-bold text-green-900 md:text-2xl md:text-center">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
-            </div>
+          </div>
             <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
-              {#if ArrowUpCircle}
+            {#if ArrowUpCircle}
                 <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500 md:w-10 md:h-10 md:mb-3" />
-              {:else}
+            {:else}
                 <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
-                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-                </div>
-              {/if}
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
               <div class="text-sm font-medium text-red-900/80 md:text-base md:text-center">Pengeluaran</div>
               <div class="text-xl font-bold text-red-900 md:text-2xl md:text-center">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
-            </div>
+          </div>
             <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
-              {#if Wallet}
+            {#if Wallet}
                 <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900 md:w-10 md:h-10 md:mb-3" />
-              {:else}
+            {:else}
                 <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
-                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-                </div>
-              {/if}
+                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+              </div>
+            {/if}
               <div class="text-sm font-medium text-cyan-900/80 md:text-base md:text-center">Laba (Rugi)</div>
               <div class="text-xl font-bold text-cyan-900 md:text-2xl md:text-center">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
-            </div>
           </div>
-          <!-- Insight Total QRIS & Tunai Keseluruhan -->
+        </div>
+        <!-- Insight Total QRIS & Tunai Keseluruhan -->
           <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold md:gap-6 md:text-base md:px-0 md:mt-6">
             <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
             <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
@@ -794,11 +796,10 @@ async function applyFilter() {
                     if (filterType === 'bulanan') {
                       const y = parseInt(filterYear);
                       const m = parseInt(filterMonth) - 1;
-                      const first = new Date(y, m, 1);
-                      const last = new Date(y, m + 1, 0);
-                      const pad = n => n.toString().padStart(2, '0');
-                      startDate = `${y}-${pad(m + 1)}-01`;
-                      endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+                      const first = new Date(new Date(`${y}-${String(m + 1).padStart(2, '0')}-01T00:00:00`).toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+                      const last = new Date(new Date(first).setMonth(first.getMonth() + 1) - 1);
+                      startDate = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                      endDate = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
                     }
                   }}>
                     {#each Array(12) as _, i}
@@ -811,11 +812,10 @@ async function applyFilter() {
                     if (filterType === 'bulanan') {
                       const y = parseInt(filterYear);
                       const m = parseInt(filterMonth) - 1;
-                      const first = new Date(y, m, 1);
-                      const last = new Date(y, m + 1, 0);
-                      const pad = n => n.toString().padStart(2, '0');
-                      startDate = `${y}-${pad(m + 1)}-01`;
-                      endDate = `${y}-${pad(m + 1)}-${pad(last.getDate())}`;
+                      const first = new Date(new Date(`${y}-${String(m + 1).padStart(2, '0')}-01T00:00:00`).toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+                      const last = new Date(new Date(first).setMonth(first.getMonth() + 1) - 1);
+                      startDate = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                      endDate = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
                     }
                   }}>
                     {#each Array(6) as _, i}
