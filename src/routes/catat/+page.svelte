@@ -170,7 +170,6 @@ async function saveTransaksi(form: any) {
     showNotifModal = true;
     // Tidak ada return di sini, agar insert tetap lanjut untuk pemilik
   }
-  console.log('DEBUG | handleSubmit terpanggil');
   const trx = {
     tipe: mode === 'pemasukan' ? 'in' : 'out',
     sumber: 'catat',
@@ -181,10 +180,8 @@ async function saveTransaksi(form: any) {
     waktu: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
     jenis: form.jenis
   };
-  console.log('DEBUG | handleSubmit terpanggil');
   if (navigator.onLine) {
     const { error, data } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert([trx]);
-    console.log('DEBUG | handleSubmit terpanggil');
     if (error) {
       notifModalMsg = 'Gagal menyimpan transaksi ke database: ' + error.message;
       notifModalType = 'error';
@@ -295,14 +292,12 @@ function setTemplateNominal(val) {
 }
 
 async function handleSubmit(e) {
-  console.log('DEBUG | handleSubmit terpanggil');
   e.preventDefault();
   error = '';
   
   // Check rate limiting
   if (!SecurityMiddleware.checkFormRateLimit('catat_form')) {
     error = 'Terlalu banyak submission. Silakan tunggu sebentar.';
-    console.log('DEBUG | Gagal rate limit');
     return;
   }
   
@@ -329,7 +324,6 @@ async function handleSubmit(e) {
   const allInputs = `${sanitizedDate}${sanitizedTime}${sanitizedNominal}${sanitizedJenis}${sanitizedNamaJenis}${sanitizedNama}${sanitizedPaymentMethod}`;
   if (SecurityMiddleware.detectSuspiciousActivity('catat_form', allInputs)) {
     error = 'Input mencurigakan terdeteksi. Silakan coba lagi.';
-    console.log('DEBUG | Input mencurigakan');
     SecurityMiddleware.logSecurityEvent('suspicious_input_blocked', {
       form: 'catat',
       inputs: { date: sanitizedDate, time: sanitizedTime, nominal: sanitizedNominal }
@@ -355,7 +349,6 @@ async function handleSubmit(e) {
   
   if (errors.length > 0) {
     error = errors.join('\n');
-    console.log('DEBUG | Error validasi:', error);
     return;
   }
   
@@ -368,11 +361,9 @@ async function handleSubmit(e) {
     payment_method: sanitizedPaymentMethod,
     jenis: sanitizedJenis
   };
-  console.log('DEBUG | Data untuk validasi lanjutan:', dataToValidate);
   const completeValidation = validateIncomeExpense(dataToValidate);
   if (!completeValidation.isValid) {
     error = completeValidation.errors.join('\n');
-    console.log('DEBUG | Error validasi lanjutan:', error);
     return;
   }
   

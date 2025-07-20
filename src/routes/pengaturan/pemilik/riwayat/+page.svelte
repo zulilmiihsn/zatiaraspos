@@ -33,38 +33,56 @@ function todayRange() {
 async function fetchTransaksiHariIni() {
   loading = true;
   const { startUtc: start, endUtc: end } = todayRange();
-  // Ambil hanya dari buku_kas
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').select('*').gte('waktu', start).lte('waktu', end).order('waktu', { ascending: false });
-  transaksiHariIni = [];
-  if (data) {
-    transaksiHariIni.push(...data.map(t => ({
-      id: t.id,
-      waktu: t.waktu,
-      nama: t.description || t.nama || '-',
-      nominal: t.amount,
-      tipe: t.type,
-      sumber: t.sumber || 'catat',
-      payment_method: t.payment_method || 'tunai',
-    })));
+  
+  try {
+    // Ambil data dari buku_kas
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+      .from('buku_kas')
+      .select('*')
+      .gte('waktu', start)
+      .lte('waktu', end)
+      .order('waktu', { ascending: false });
+    
+    transaksiHariIni = [];
+    if (data && !error) {
+      transaksiHariIni.push(...data.map(t => ({
+        id: t.id,
+        transaction_id: t.transaction_id, // Tambahkan transaction_id untuk delete operation
+        waktu: t.waktu,
+        nama: t.description || t.customer_name || t.nama || '-',
+        nominal: t.amount,
+        tipe: t.tipe || t.type, // Handle kemungkinan perbedaan nama kolom
+        sumber: t.sumber || 'catat',
+        payment_method: t.payment_method || 'tunai',
+      })));
+    }
+    
+    // Urutkan terbaru dulu
+    transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
+    
+    // Filter hanya nominal > 0
+    transaksiHariIni = transaksiHariIni.filter(t => t.nominal && t.nominal > 0);
+    
+    // Filter berdasarkan search
+    if (searchKeyword.trim()) {
+      const keyword = searchKeyword.trim().toLowerCase();
+      transaksiHariIni = transaksiHariIni.filter(t => t.nama?.toLowerCase().includes(keyword));
+    }
+    
+    // Filter berdasarkan payment method
+    if (filterPayment !== 'all') {
+      transaksiHariIni = transaksiHariIni.filter(t => {
+        if (filterPayment === 'qris') return t.payment_method === 'qris' || t.payment_method === 'non-tunai';
+        if (filterPayment === 'tunai') return t.payment_method === 'tunai';
+        return true;
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    transaksiHariIni = [];
+  } finally {
+    loading = false;
   }
-  // Urutkan terbaru dulu
-  transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
-  // Filter hanya nominal > 0
-  transaksiHariIni = transaksiHariIni.filter(t => t.nominal && t.nominal > 0);
-  // Filter berdasarkan search
-  if (searchKeyword.trim()) {
-    const keyword = searchKeyword.trim().toLowerCase();
-    transaksiHariIni = transaksiHariIni.filter(t => t.nama?.toLowerCase().includes(keyword));
-  }
-  // Filter berdasarkan payment method
-  if (filterPayment !== 'all') {
-    transaksiHariIni = transaksiHariIni.filter(t => {
-      if (filterPayment === 'qris') return t.payment_method === 'qris' || t.payment_method === 'non-tunai';
-      if (filterPayment === 'tunai') return t.payment_method === 'tunai';
-      return true;
-    });
-  }
-  loading = false;
 }
 
 function confirmDeleteTransaksi(trx) {
@@ -75,21 +93,49 @@ function confirmDeleteTransaksi(trx) {
 async function deleteTransaksi() {
   if (!transaksiToDelete) return;
   loading = true;
-  if (transaksiToDelete.sumber === 'catat') {
-    await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').delete().eq('id', transaksiToDelete.id);
-  } else if (transaksiToDelete.sumber === 'pos') {
-    await getSupabaseClient(storeGet(selectedBranch)).from('transaksi').delete().eq('id', transaksiToDelete.id);
-    await getSupabaseClient(storeGet(selectedBranch)).from('item_transaksi').delete().eq('transaction_id', transaksiToDelete.id);
+  
+  try {
+    if (transaksiToDelete.sumber === 'catat') {
+      // Untuk transaksi manual/catat, hapus dari buku_kas saja
+      await getSupabaseClient(storeGet(selectedBranch))
+        .from('buku_kas')
+        .delete()
+        .eq('id', transaksiToDelete.id);
+    } else if (transaksiToDelete.sumber === 'pos') {
+      // Untuk transaksi POS, hapus detail items dulu, lalu hapus total pembayaran
+      const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
+      
+      // Hapus detail transaksi dari transaksi_kasir
+      await getSupabaseClient(storeGet(selectedBranch))
+        .from('transaksi_kasir')
+        .delete()
+        .eq('transaction_id', transactionId);
+      
+      // Hapus total pembayaran dari buku_kas
+      await getSupabaseClient(storeGet(selectedBranch))
+        .from('buku_kas')
+        .delete()
+        .eq('transaction_id', transactionId);
+    }
+    
+    showDeleteModal = false;
+    notifMsg = 'Transaksi berhasil dihapus.';
+    showNotif = true;
+    // Auto hide notification after 3 seconds
+    setTimeout(() => {
+      showNotif = false;
+    }, 3000);
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    notifMsg = 'Gagal menghapus transaksi. Silakan coba lagi.';
+    showNotif = true;
+    setTimeout(() => {
+      showNotif = false;
+    }, 3000);
+  } finally {
+    await fetchTransaksiHariIni();
+    loading = false;
   }
-  showDeleteModal = false;
-  notifMsg = 'Transaksi berhasil dihapus.';
-  showNotif = true;
-  // Auto hide notification after 3 seconds
-  setTimeout(() => {
-    showNotif = false;
-  }, 3000);
-  await fetchTransaksiHariIni();
-  loading = false;
 }
 
 onMount(() => {

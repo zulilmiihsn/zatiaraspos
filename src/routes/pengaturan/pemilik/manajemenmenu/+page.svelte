@@ -142,20 +142,12 @@ async function fetchEkstra() {
 }
 
 onMount(async () => {
-  // 1. Tampilkan cache POS jika ada
-  const cachedPOS = await getCache('pos-data');
-  if (cachedPOS) {
-    menus = cachedPOS.produkData || [];
-    kategoriList = cachedPOS.kategoriData || [];
-    ekstraList = cachedPOS.tambahanData || [];
-  }
-
-  // 2. Fetch data terbaru dari server
+  // 1. Fetch data terbaru dari server terlebih dahulu
   await fetchMenus();
   await fetchKategori();
   await fetchEkstra();
 
-  // 3. Update cache POS setelah fetch sukses
+  // 2. Update cache POS setelah fetch sukses
   await setCache('pos-data', {
     produkData: menus,
     kategoriData: kategoriList,
@@ -192,7 +184,9 @@ function openMenuForm(menu = null) {
   showMenuForm = true;
   if (menu) {
     editMenuId = menu.id;
-    $menuForm = { ...menu, ekstra_ids: menu.ekstra_ids ?? [] };
+    // Format harga untuk display jika ada
+    const formattedPrice = menu.price ? menu.price.toLocaleString('id-ID') : '';
+    $menuForm = { ...menu, price: formattedPrice, ekstra_ids: menu.ekstra_ids ?? [] };
   } else {
     editMenuId = null;
     $menuForm = { name: '', kategori_id: '', tipe: 'minuman', price: '', ekstra_ids: [], gambar: '' };
@@ -232,7 +226,12 @@ async function saveMenu() {
       return;
     }
   }
-  const payload = { ...$menuForm, gambar: imageUrl, price: parseInt($menuForm.price), ekstra_ids: $menuForm.ekstra_ids };
+  // Konversi harga dari format Rupiah ke angka
+  const priceValue = typeof $menuForm.price === 'string' 
+    ? parseInt($menuForm.price.replace(/\./g, '')) 
+    : parseInt($menuForm.price);
+    
+  const payload = { ...$menuForm, gambar: imageUrl, price: priceValue, ekstra_ids: $menuForm.ekstra_ids };
   let result;
   try {
     if (editMenuId) {
@@ -250,7 +249,13 @@ async function saveMenu() {
       return;
   }
   showMenuForm = false;
+  
+  // Force refresh data dan clear memoization
   await fetchMenus();
+  
+  // Force reactivity update untuk memastikan UI ter-update
+  menus = [...menus];
+  
   await afterUpdateCachePOS();
 }
 
@@ -287,7 +292,13 @@ async function doDeleteMenu() {
     }
     showDeleteModal = false;
     menuIdToDelete = null;
+    
+    // Force refresh data dan clear memoization
     await fetchMenus();
+    
+    // Force reactivity update untuk memastikan UI ter-update
+    menus = [...menus];
+    
     await afterUpdateCachePOS();
   }
 }
@@ -349,8 +360,15 @@ async function saveKategoriDetail() {
   }
   showKategoriDetailModal = false;
   kategoriDetail = null;
+  
+  // Force refresh data dan clear memoization
   await fetchKategori();
   await fetchMenus();
+  
+  // Force reactivity update untuk memastikan UI ter-update
+  menus = [...menus];
+  kategoriList = [...kategoriList];
+  
   await afterUpdateCachePOS();
 }
 
@@ -366,17 +384,51 @@ function confirmDeleteKategori(id: number) {
 
 async function doDeleteKategori() {
   if (kategoriIdToDelete !== null) {
-    const kategori = kategoriList.find(k => k.id === kategoriIdToDelete);
-    const kategoriName = kategori?.name || '';
-    await getSupabaseClient(storeGet(selectedBranch)).from('kategori').delete().eq('id', kategoriIdToDelete);
-    if (kategoriName) {
-      await getSupabaseClient(storeGet(selectedBranch)).from('produk').update({ kategori: null }).eq('kategori', kategoriName);
+    try {
+      // Pertama, update semua menu yang menggunakan kategori ini menjadi null
+      const { error: updateError } = await getSupabaseClient(storeGet(selectedBranch))
+        .from('produk')
+        .update({ kategori_id: null })
+        .eq('kategori_id', kategoriIdToDelete);
+      
+      if (updateError) {
+        notifModalMsg = 'Gagal mengupdate menu: ' + updateError.message;
+        notifModalType = 'error';
+        showNotifModal = true;
+        return;
+      }
+      
+      // Kemudian hapus kategori
+      const { error: deleteError } = await getSupabaseClient(storeGet(selectedBranch))
+        .from('kategori')
+        .delete()
+        .eq('id', kategoriIdToDelete);
+      
+      if (deleteError) {
+        notifModalMsg = 'Gagal menghapus kategori: ' + deleteError.message;
+        notifModalType = 'error';
+        showNotifModal = true;
+        return;
+      }
+      
+      showDeleteKategoriModal = false;
+      kategoriIdToDelete = null;
+      
+      // Force refresh data dan clear memoization
+      await fetchKategori();
+      await fetchMenus();
+      
+      // Force reactivity update untuk memastikan UI ter-update
+      menus = [...menus];
+      kategoriList = [...kategoriList];
+      
+      await afterUpdateCachePOS();
+      
+    } catch (error) {
+      notifModalMsg = 'Gagal menghapus kategori: ' + error.message;
+      notifModalType = 'error';
+      showNotifModal = true;
     }
-    showDeleteKategoriModal = false;
-    kategoriIdToDelete = null;
-    await fetchKategori();
-    await fetchMenus();
-    await afterUpdateCachePOS();
   }
 }
 
@@ -430,6 +482,9 @@ async function saveEkstra() {
     showEkstraForm = false;
     ekstraForm = { name: '', harga: '' };
     editEkstraId = null;
+    
+    // Force reactivity update untuk memastikan UI ter-update
+    ekstraList = [...ekstraList];
   } catch (error) {
     notifModalMsg = 'Gagal menyimpan ekstra: ' + error.message;
     notifModalType = 'error';
@@ -453,7 +508,13 @@ async function doDeleteEkstra() {
     await getSupabaseClient(storeGet(selectedBranch)).from('tambahan').delete().eq('id', ekstraIdToDelete);
     showDeleteEkstraModal = false;
     ekstraIdToDelete = null;
+    
+    // Force refresh data dan clear memoization
     await fetchEkstra();
+    
+    // Force reactivity update untuk memastikan UI ter-update
+    ekstraList = [...ekstraList];
+    
     await afterUpdateCachePOS();
   }
 }
@@ -510,9 +571,14 @@ function removeImage() {
 function formatRupiahInput(e) {
   let value = e.target.value.replace(/[^\d]/g, '');
   if (value) {
-    value = parseInt(value).toLocaleString('id-ID');
+    // Simpan nilai asli (angka) untuk database
+    const numericValue = parseInt(value);
+    // Tampilkan format Rupiah untuk user
+    const formattedValue = numericValue.toLocaleString('id-ID');
+    $menuForm = { ...$menuForm, price: formattedValue };
+  } else {
+    $menuForm = { ...$menuForm, price: '' };
   }
-  $menuForm = { ...$menuForm, price: value };
 }
 
 function handleImgError(menuId) {
@@ -1053,15 +1119,18 @@ async function afterUpdateCachePOS() {
       <form class="flex flex-col gap-4" onsubmit={saveEkstra} autocomplete="off">
         <div class="flex flex-col gap-2">
           <label for="ekstra-name" class="font-semibold text-gray-700">Nama Tambahan</label>
-          <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" bind:value={ekstraForm.name} required />
+          <input type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" bind:value={ekstraForm.name} required placeholder="Contoh: Es Teh Manis" />
         </div>
         <div class="flex flex-col gap-2">
           <label for="ekstra-harga" class="font-semibold text-gray-700">Harga Tambahan</label>
-          <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base" bind:value={ekstraForm.harga} required />
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">Rp</span>
+            <input type="text" class="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3 text-base focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" bind:value={ekstraForm.harga} required placeholder="0" />
+          </div>
         </div>
         <div class="flex gap-2 mt-4">
-          <button type="submit" class="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors">Simpan</button>
-          <button type="button" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors" onclick={() => { showEkstraForm = false; ekstraForm = { name: '', harga: '' }; editEkstraId = null; }}>Batal</button>
+          <button type="submit" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600 active:bg-green-700 transition-all duration-200 shadow-lg shadow-green-200">Simpan</button>
+          <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 active:bg-gray-300 transition-all duration-200" onclick={() => { showEkstraForm = false; ekstraForm = { name: '', harga: '' }; editEkstraId = null; }}>Batal</button>
         </div>
       </form>
     </div>
@@ -1087,7 +1156,7 @@ async function afterUpdateCachePOS() {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
     <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6 relative flex flex-col items-center animate-slideUpModal">
       <h2 class="text-lg font-bold text-gray-800 mb-2 text-center">Hapus Kategori?</h2>
-      <p class="text-gray-500 text-sm mb-6 text-center">Kategori yang dihapus tidak dapat dikembalikan. Yakin ingin menghapus kategori ini?</p>
+      <p class="text-gray-500 text-sm mb-6 text-center">Kategori yang dihapus tidak dapat dikembalikan. Menu dalam kategori ini akan menjadi tanpa kategori. Yakin ingin menghapus kategori ini?</p>
       <div class="flex gap-3 w-full">
         <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors" onclick={cancelDeleteKategori}>Batal</button>
         <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={doDeleteKategori}>Hapus</button>
