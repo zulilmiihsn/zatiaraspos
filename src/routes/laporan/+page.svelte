@@ -2,20 +2,18 @@
 import { onMount, onDestroy } from 'svelte';
 import Topbar from '$lib/components/shared/Topbar.svelte';
 import { slide, fade, fly } from 'svelte/transition';
-import { cubicOut, cubicIn } from 'svelte/easing';
-import { auth } from '$lib/auth/auth';
+import { cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
-import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
+import { getWitaDateRangeUtc } from '$lib/utils/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { memoize } from '$lib/utils/performance';
-let laporanData = [];
 
 // Lazy load icons
-let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon, DownloadIcon;
+let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
 let pin = '';
 // Hapus variabel userRole yang lama
 // let userRole = '';
@@ -32,14 +30,12 @@ onMount(async () => {
     import('lucide-svelte/icons/wallet'),
     import('lucide-svelte/icons/arrow-down-circle'),
     import('lucide-svelte/icons/arrow-up-circle'),
-    import('lucide-svelte/icons/filter'),
-    import('lucide-svelte/icons/download')
+    import('lucide-svelte/icons/filter')
   ]);
   Wallet = icons[0].default;
   ArrowDownCircle = icons[1].default;
   ArrowUpCircle = icons[2].default;
   FilterIcon = icons[3].default;
-  DownloadIcon = icons[4].default;
   await fetchPin();
   await fetchLaporan();
 
@@ -78,9 +74,7 @@ onMount(async () => {
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
 
-  const handler = () => showDownloadModal = true;
-  window.addEventListener('showDownloadModal', handler);
-  return () => window.removeEventListener('showDownloadModal', handler);
+
 });
 
 async function fetchPin() {
@@ -110,7 +104,6 @@ const navs = [
 let showFilter = false;
 let showDatePicker = false;
 let showEndDatePicker = false;
-let showDownloadModal = false;
 let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
 let filterDate = '';
 let filterMonth = '';
@@ -128,7 +121,6 @@ let showBebanLain = true;
 let showPinModal = false;
 let pinInput = '';
 let pinError = '';
-const DUMMY_PIN = '1234';
 let errorTimeout: number;
 let isClosing = false;
 
@@ -154,8 +146,7 @@ function getLocalDateString() {
   return now.toISOString().slice(0, 10);
 }
 
-let today = getLocalDateString();
-let filterTanggal = today;
+
 
 onMount(() => {
   // Detect touch device
