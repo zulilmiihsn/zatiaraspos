@@ -666,13 +666,12 @@ async function afterUpdateCachePOS() {
 
 <!-- Navigasi Tab Menu/Kategori/Ekstra -->
 <div class="max-w-4xl mx-auto px-4 pt-3">
-  <div class="bg-white rounded-xl shadow border border-gray-100 flex overflow-hidden p-1 mb-3 relative">
+  <div class="bg-white rounded-xl shadow border border-gray-100 flex overflow-hidden p-1 mb-3 relative md:h-16 md:text-lg md:gap-6">
     <!-- Sliding Background -->
     <div class="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out {activeTab === 'menu' ? 'left-1 w-[calc(33.333%-0.25rem)] bg-pink-500' : activeTab === 'kategori' ? 'left-[calc(33.333%+0.125rem)] w-[calc(33.333%-0.25rem)] bg-blue-500' : 'left-[calc(66.666%+0.125rem)] w-[calc(33.333%-0.25rem)] bg-green-500'}"></div>
-    
-    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-700'}" onclick={() => activeTab = 'menu'}>Menu</button>
-    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-700'}" onclick={() => activeTab = 'kategori'}>Kategori</button>
-    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-700'}" onclick={() => activeTab = 'ekstra'}>Tambahan</button>
+    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'menu' ? 'text-white' : 'text-gray-700'} md:py-4 md:px-8" onclick={() => activeTab = 'menu'}>Menu</button>
+    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'kategori' ? 'text-white' : 'text-gray-700'} md:py-4 md:px-8" onclick={() => activeTab = 'kategori'}>Kategori</button>
+    <button class="flex-1 py-2 rounded-lg font-semibold text-base transition-all focus:outline-none relative z-10 {activeTab === 'ekstra' ? 'text-white' : 'text-gray-700'} md:py-4 md:px-8" onclick={() => activeTab = 'ekstra'}>Tambahan</button>
   </div>
 </div>
 
@@ -749,29 +748,29 @@ async function afterUpdateCachePOS() {
               </div>
             {:else}
           {#if isGridView}
-            <div class="grid grid-cols-2 gap-3 pb-4" transition:fade={{ duration: 120 }}>
+            <div class="grid grid-cols-2 gap-3 pb-4 md:grid-cols-3 md:gap-8 md:max-w-4xl md:mx-auto" transition:fade={{ duration: 120 }}>
               {#each filteredMenus as menu}
-                <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex flex-col cursor-pointer transition-shadow relative h-[260px]" onclick={() => openMenuForm(menu)}>
+                <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex flex-col cursor-pointer transition-shadow relative h-[260px] md:p-6 md:rounded-2xl md:shadow-lg md:gap-2 md:h-[300px] md:text-base md:items-center md:justify-center" onclick={() => openMenuForm(menu)}>
                   <!-- Tombol Delete floating di pojok kanan atas -->
                   <div class="absolute top-2 right-2 z-10">
                     <button class="p-2 rounded-full bg-red-50 hover:bg-red-100 border border-red-200" onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }} aria-label="Hapus Menu">
-                      <svelte:component this={Trash} class="w-4 h-4 text-red-600" />
+                      <svelte:component this={Trash} class="w-4 h-4 text-red-600 md:w-5 md:h-5" />
                     </button>
                   </div>
-                  <div class="flex flex-col h-full w-full">
+                  <div class="flex flex-col h-full w-full items-center justify-center">
                     <div class="w-full flex-1 flex items-center justify-center" style="padding-top: 0; margin-top: -8px;">
                       {#if menu.gambar}
-                        <img src={menu.gambar} alt={menu.name} class="w-full aspect-square object-cover rounded-lg border border-gray-100" onerror={() => handleImgError(menu.id)} />
+                        <img src={menu.gambar} alt={menu.name} class="w-full aspect-square object-cover rounded-lg border border-gray-100 md:w-16 md:h-16" onerror={() => handleImgError(menu.id)} />
                       {:else}
-                        <div class="w-full aspect-square rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center text-4xl">
+                        <div class="w-full aspect-square rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center text-4xl md:w-16 md:h-16">
                           🍹
                         </div>
                       {/if}
                     </div>
                     <div class="w-full text-center flex-shrink-0">
-                      <div class="font-semibold text-gray-800 text-base truncate mb-1">{menu.name}</div>
-                      <div class="text-xs text-gray-500 truncate mb-1">{kategoriList.find(k => k.id === menu.kategori_id)?.name || '-'}</div>
-                      <div class="text-xs font-bold text-pink-500">Rp {menu.price.toLocaleString('id-ID')}</div>
+                      <div class="font-semibold text-gray-800 text-base truncate mb-1 md:text-base">{menu.name}</div>
+                      <div class="text-xs text-gray-500 truncate mb-1 md:text-base">{kategoriList.find(k => k.id === menu.kategori_id)?.name || '-'}</div>
+                      <div class="text-xs font-bold text-pink-500 md:text-base">Rp {menu.price.toLocaleString('id-ID')}</div>
                     </div>
                   </div>
                 </div>
