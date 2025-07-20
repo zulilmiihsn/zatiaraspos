@@ -489,13 +489,18 @@ function handlePinInput(num) {
 }
 
 // Total QRIS & Tunai keseluruhan
-$: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
+$: totalQrisAll = allTransactions.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiAll = allTransactions.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
 // Total QRIS & Tunai per section
-$: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
-$: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail].filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
+$: totalQrisPemasukan = pemasukanTransactions.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPemasukan = pemasukanTransactions.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
+$: pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
+$: totalQrisPengeluaran = pengeluaranTransactions.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+$: totalTunaiPengeluaran = pengeluaranTransactions.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
 
 // Memoize untuk total QRIS/Tunai per sub-group
 $: totalQrisPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'qris');

@@ -84,6 +84,10 @@ async function deleteTransaksi() {
   showDeleteModal = false;
   notifMsg = 'Transaksi berhasil dihapus.';
   showNotif = true;
+  // Auto hide notification after 3 seconds
+  setTimeout(() => {
+    showNotif = false;
+  }, 3000);
   await fetchTransaksiHariIni();
   loading = false;
 }
@@ -187,7 +191,6 @@ onDestroy(() => {
   {#if showNotif}
     <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out" style="transform: translateX(-50%);">
       {notifMsg}
-      <button class="ml-4 underline" onclick={() => showNotif = false}>Tutup</button>
     </div>
   {/if}
 </div>
