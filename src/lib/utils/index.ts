@@ -23,9 +23,58 @@ export function witaToUtc(dateStr: string): Date {
 // Dapatkan rentang UTC dari tanggal lokal WITA (YYYY-MM-DD)
 export function getWitaDateRangeUtc(dateStr: string) {
   // dateStr: '2025-07-09'
-  const startUtc = new Date(`${dateStr}T00:00:00+08:00`).toISOString();
-  const endUtc = new Date(`${dateStr}T23:59:59+08:00`).toISOString();
-  return { startUtc, endUtc };
+  // Validasi input
+  if (!dateStr || typeof dateStr !== 'string') {
+    throw new Error('Invalid date string');
+  }
+  
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) {
+    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+  }
+  
+  const [year, month, day] = parts.map(Number);
+  
+  // Validasi nilai tanggal
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    throw new Error('Invalid date values');
+  }
+  
+  if (year < 1900 || year > 2100) {
+    throw new Error('Year out of valid range');
+  }
+  
+  if (month < 1 || month > 12) {
+    throw new Error('Month out of valid range');
+  }
+  
+  if (day < 1 || day > 31) {
+    throw new Error('Day out of valid range');
+  }
+  
+  try {
+    // Start: 00:00:00 WITA
+    const startWita = new Date(year, month - 1, day, 0, 0, 0);
+    if (isNaN(startWita.getTime())) {
+      throw new Error('Invalid start date');
+    }
+    const startUtc = new Date(startWita.getTime() - (8 * 60 * 60 * 1000));
+    
+    // End: 23:59:59 WITA  
+    const endWita = new Date(year, month - 1, day, 23, 59, 59);
+    if (isNaN(endWita.getTime())) {
+      throw new Error('Invalid end date');
+    }
+    const endUtc = new Date(endWita.getTime() - (8 * 60 * 60 * 1000));
+    
+    return { 
+      startUtc: startUtc.toISOString(), 
+      endUtc: endUtc.toISOString() 
+    };
+  } catch (error) {
+    console.error('Error in getWitaDateRangeUtc:', error, 'dateStr:', dateStr);
+    throw new Error(`Failed to convert date: ${dateStr}`);
+  }
 }
 
 // Format UTC ke string waktu WITA untuk tampilan

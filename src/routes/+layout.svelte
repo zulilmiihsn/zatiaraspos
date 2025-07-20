@@ -115,7 +115,7 @@
 		{#if $page.url.pathname !== '/laporan' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
 			{#if !hideNav}
 				<div class="sticky top-0 z-30 bg-white shadow-md">
-					<Topbar onSettings={undefined}>
+					<Topbar>
 						<svelte:fragment slot="actions">
 							{#if $page.url.pathname === '/'}
 								<!-- Button Buka/Tutup Toko dihapus sesuai permintaan user -->
@@ -143,7 +143,7 @@
 		{/if}
 		{#if $page.url.pathname === '/laporan'}
 			<div class="sticky top-0 z-30 bg-white shadow-md">
-				<Topbar onSettings={undefined}>
+				<Topbar>
 					<svelte:fragment slot="download">
 						<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
 							<Download size={22} />
@@ -166,6 +166,8 @@
 		<BottomNav />
 	</div>
 {/if}
+
+
 
 <svelte:head>
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />

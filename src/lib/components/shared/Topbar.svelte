@@ -6,7 +6,6 @@ import { onDestroy } from 'svelte';
 import { get } from 'svelte/store';
 
 export let showSettings: boolean = true;
-export let onSettings: (() => void) | undefined;
 
 let pendingCount = 0;
 let showPopover = false;

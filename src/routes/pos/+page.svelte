@@ -1,6 +1,6 @@
 <script lang="ts">
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
@@ -9,8 +9,6 @@ import { SecurityMiddleware } from '$lib/utils/security';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
-import { get as storeGet } from 'svelte/store';
 import { posGridView } from '$lib/stores/posGridView';
 import { 
   debounce, 
@@ -22,14 +20,14 @@ import {
 } from '$lib/utils/performance';
 import { userRole } from '$lib/stores/userRole';
 import { selectedBranch } from '$lib/stores/selectedBranch';
-import { get as getCache, set as setCache } from 'idb-keyval';
+import { dataService, realtimeManager } from '$lib/services/dataService';
 let currentUserRole = '';
 userRole.subscribe(val => currentUserRole = val || '');
 
 import { browser } from '$app/environment';
 let sesiAktif = null;
 async function cekSesiTokoAktif() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch))
+  const { data } = await dataService.supabaseClient
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -50,65 +48,18 @@ let produkData = [];
 let kategoriData = [];
 let tambahanData = [];
 
-async function fetchCategories() {
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
-    .from('kategori')
-    .select('*')
-    .order('created_at', { ascending: false });
-  kategoriData = !error ? data : [];
-}
-
-async function fetchProducts() {
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
-    .from('produk')
-    .select('*')
-    .order('created_at', { ascending: false });
-  produkData = !error ? data : [];
-}
-
-async function fetchAddOns() {
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
-    .from('tambahan')
-    .select('*')
-    .order('created_at', { ascending: false });
-  tambahanData = !error ? data : [];
-}
-
-onMount(async () => {
-  // 1. Tampilkan cache produk/kategori/ekstra
-  const cachedPOS = await getCache('pos-data');
-  if (cachedPOS) {
-    produkData = cachedPOS.produkData || [];
-    kategoriData = cachedPOS.kategoriData || [];
-    tambahanData = cachedPOS.tambahanData || [];
-  }
-
-  // 2. Fetch data terbaru dari server
-  await Promise.all([
-    fetchCategories(),
-    fetchAddOns(),
-    fetchProducts()
-  ]);
-  isLoadingProducts = false;
-
-  // 3. Update cache setelah fetch sukses
-  await setCache('pos-data', {
-    produkData,
-    kategoriData,
-    tambahanData
-  });
-});
-
 let isLoadingProducts = true;
 
 onMount(async () => {
+  // Load data dengan smart caching
+  await loadPOSData();
+  
+  // Setup real-time subscriptions
+  setupRealtimeSubscriptions();
+  
   // Measure performance untuk data fetching
   await measureAsyncPerformance('data fetching', async () => {
-    await Promise.all([
-      fetchCategories(),
-      fetchAddOns(),
-      fetchProducts()
-    ]);
+    await loadPOSData();
   });
   
   isLoadingProducts = false;
@@ -116,15 +67,54 @@ onMount(async () => {
   // Sync otomatis saat online dengan throttling
   if (typeof window !== 'undefined') {
     const throttledSync = throttle(async () => {
-      await Promise.all([
-        fetchCategories(),
-        fetchAddOns(),
-        fetchProducts()
-      ]);
+      await loadPOSData();
     }, 1000); // Throttle to 1 second
 
     window.addEventListener('online', throttledSync);
   }
+});
+
+// Load POS data dengan smart caching
+async function loadPOSData() {
+  try {
+    // Load products dengan cache
+    produkData = await dataService.getProducts();
+    
+    // Load categories dengan cache
+    kategoriData = await dataService.getCategories();
+    
+    // Load add-ons dengan cache
+    tambahanData = await dataService.getAddOns();
+    
+  } catch (error) {
+    console.error('Error loading POS data:', error);
+  }
+}
+
+// Setup real-time subscriptions
+function setupRealtimeSubscriptions() {
+  // Subscribe to product changes
+  realtimeManager.subscribe('produk', async (payload) => {
+    console.log('Product update received:', payload);
+    produkData = await dataService.getProducts();
+  });
+  
+  // Subscribe to category changes
+  realtimeManager.subscribe('kategori', async (payload) => {
+    console.log('Category update received:', payload);
+    kategoriData = await dataService.getCategories();
+  });
+  
+  // Subscribe to add-on changes
+  realtimeManager.subscribe('tambahan', async (payload) => {
+    console.log('Add-on update received:', payload);
+    tambahanData = await dataService.getAddOns();
+  });
+}
+
+// Cleanup real-time subscriptions on destroy
+onDestroy(() => {
+  realtimeManager.unsubscribeAll();
 });
 
 // Touch handling dengan throttling
@@ -455,16 +445,30 @@ function showErrorNotif(message: string) {
 
 let showCustomItemModal = false;
 let customItemName = '';
-let customItemPrice = '';
+let customItemPriceRaw = '';
+let customItemPriceFormatted = '';
 let customItemNote = '';
+
+function formatRupiahInput(value) {
+  // Hanya angka
+  const numberString = value.replace(/[^\d]/g, '');
+  if (!numberString) return '';
+  return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function handleCustomPriceInput(e) {
+  const raw = e.target.value.replace(/[^\d]/g, '');
+  customItemPriceRaw = raw;
+  customItemPriceFormatted = formatRupiahInput(raw);
+}
 
 function addCustomItemToCart(e?: Event) {
   if (e) e.preventDefault();
-  if (!customItemName.trim() || !customItemPrice || isNaN(Number(customItemPrice)) || Number(customItemPrice) <= 0) return;
+  if (!customItemName.trim() || !customItemPriceRaw || isNaN(Number(customItemPriceRaw)) || Number(customItemPriceRaw) <= 0) return;
   cart = [
     ...cart,
     {
-      product: { id: `custom-${Date.now()}`, name: customItemName.trim(), harga: Number(customItemPrice), price: Number(customItemPrice), tipe: 'custom' },
+      product: { id: `custom-${Date.now()}`, name: customItemName.trim(), harga: Number(customItemPriceRaw), price: Number(customItemPriceRaw), tipe: 'custom' },
       addOns: [],
       sugar: '',
       ice: '',
@@ -474,7 +478,8 @@ function addCustomItemToCart(e?: Event) {
   ];
   showCustomItemModal = false;
   customItemName = '';
-  customItemPrice = '';
+  customItemPriceRaw = '';
+  customItemPriceFormatted = '';
   customItemNote = '';
 }
 
@@ -564,7 +569,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
         <!-- Button Custom Item di paling kanan -->
         <button class="flex-shrink-0 min-w-[96px] px-4 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center gap-2" type="button" onclick={handleShowCustomItemModal}>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
-          +Menu Kustom
+          Menu Kustom
         </button>
       {/if}
     </div>
@@ -639,7 +644,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
                 <label class="font-semibold text-gray-800 text-base mb-2 block mt-4" for="custom-harga">Harga</label>
                 <div class="relative">
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Rp</span>
-                  <input id="custom-harga" class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-base font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" type="number" min="1" max="99999999" bind:value={customItemPrice} required placeholder="0" />
+                  <input id="custom-harga" class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-base font-semibold focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white text-gray-800 outline-none" type="text" inputmode="numeric" pattern="[0-9]*" min="1" max="99999999" value={customItemPriceFormatted} oninput={handleCustomPriceInput} required placeholder="0" />
                 </div>
               </div>
               <div class="mb-6">

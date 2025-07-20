@@ -5,14 +5,11 @@ import { cubicIn, cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { auth } from '$lib/auth/auth';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { browser } from '$app/environment';
-import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
-import { get as getCache, set as setCache } from 'idb-keyval';
-
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import { dataService, realtimeManager } from '$lib/services/dataService';
 
 let dashboardData = null;
 
@@ -42,18 +39,18 @@ let jamRamai = '';
 let weeklyIncome = [];
 let weeklyMax = 1;
 let bestSellers = [];
-// let userRole = ''; // Hapus variabel userRole yang lama
 
-// Ganti dengan subscribe ke store
+// Subscribe ke store
 let currentUserRole = '';
 let userProfileData = null;
 
-// Subscribe ke store
 userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
 
 let isLoadingBestSellers = true;
 let errorBestSellers = '';
+let isLoadingDashboard = true;
+
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -70,43 +67,19 @@ onMount(async () => {
   Clock = icons[4].default;
   TrendingUp = icons[5].default;
 
-  // 1. Tampilkan cache best seller/grafik
-  const cachedDashboard = await getCache('dashboard-data');
-  if (cachedDashboard) {
-    // Hanya bestSellers & weeklyIncome yang di-cache
-    bestSellers = cachedDashboard.bestSellers || [];
-    weeklyIncome = cachedDashboard.weeklyIncome || [];
-    weeklyMax = cachedDashboard.weeklyMax || 1;
-    // (opsional) tampilkan notifikasi kecil jika data dari cache
-    // isCached = true;
-  }
-
-  // 2. Fetch metrik realtime (item terjual, jumlah transaksi, omzet)
-  await fetchDashboardStats(); // fungsi ini sudah fetch langsung ke Supabase
-
-  // 3. Fetch best seller/grafik (boleh async, update cache)
-  try {
-    // fetchDashboardStats sudah update bestSellers & weeklyIncome
-    await setCache('dashboard-data', {
-      bestSellers,
-      weeklyIncome,
-      weeklyMax
-    });
-    // isCached = false;
-  } catch (e) {
-    // Jika fetch gagal, tetap pakai cache
-  }
-
-  await fetchPin();
-  await fetchDashboardStatsPOS();
+  // Load data dengan smart caching
+  await loadDashboardData();
+  
+  // Setup real-time subscriptions
+  setupRealtimeSubscriptions();
 
   isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
-    const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
+    const { data: { session } } = await dataService.supabaseClient.auth.getSession();
     if (session?.user) {
-      const { data: profile } = await getSupabaseClient(storeGet(selectedBranch))
+      const { data: profile } = await dataService.supabaseClient
         .from('profil')
         .select('role, username')
         .eq('id', session.user.id)
@@ -119,13 +92,74 @@ onMount(async () => {
   
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
     }
   }
 });
+
+// Load dashboard data dengan smart caching
+async function loadDashboardData() {
+  try {
+    isLoadingDashboard = true;
+    
+    // Load dashboard stats dengan cache
+    const dashboardStats = await dataService.getDashboardStats();
+    applyDashboardData(dashboardStats);
+    
+    // Load best sellers dengan cache
+    isLoadingBestSellers = true;
+    bestSellers = await dataService.getBestSellers();
+    isLoadingBestSellers = false;
+    
+    // Load weekly income dengan cache
+    const weeklyData = await dataService.getWeeklyIncome();
+    weeklyIncome = weeklyData.weeklyIncome;
+    weeklyMax = weeklyData.weeklyMax;
+    
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    errorBestSellers = 'Gagal memuat data dashboard';
+  } finally {
+    isLoadingDashboard = false;
+    isLoadingBestSellers = false;
+  }
+}
+
+// Setup real-time subscriptions
+function setupRealtimeSubscriptions() {
+  // Subscribe to buku_kas changes for real-time dashboard updates
+  realtimeManager.subscribe('buku_kas', async (payload) => {
+    console.log('Real-time update received:', payload);
+    
+    // Refresh dashboard data in background
+    const dashboardStats = await dataService.getDashboardStats();
+    applyDashboardData(dashboardStats);
+    
+    // Refresh best sellers in background
+    bestSellers = await dataService.getBestSellers();
+    
+    // Refresh weekly income in background
+    const weeklyData = await dataService.getWeeklyIncome();
+    weeklyIncome = weeklyData.weeklyIncome;
+    weeklyMax = weeklyData.weeklyMax;
+  });
+  
+  // Subscribe to transaksi_kasir changes
+  realtimeManager.subscribe('transaksi_kasir', async (payload) => {
+    console.log('Transaction update received:', payload);
+    
+    // Refresh best sellers in background
+    bestSellers = await dataService.getBestSellers();
+    
+    // Refresh weekly income in background
+    const weeklyData = await dataService.getWeeklyIncome();
+    weeklyIncome = weeklyData.weeklyIncome;
+    weeklyMax = weeklyData.weeklyMax;
+  });
+}
 
 function applyDashboardData(data) {
   if (!data) return;
@@ -136,151 +170,23 @@ function applyDashboardData(data) {
   totalItem = data.totalItem;
   avgTransaksi = data.avgTransaksi;
   jamRamai = data.jamRamai;
-  weeklyIncome = data.weeklyIncome;
-  weeklyMax = data.weeklyMax;
-  bestSellers = data.bestSellers;
+  weeklyIncome = data.weeklyIncome || [];
+  weeklyMax = data.weeklyMax || 1;
+  bestSellers = data.bestSellers || [];
 }
 
-async function fetchDashboardStats() {
-  isLoadingBestSellers = true;
-  errorBestSellers = '';
-  try {
-    // OMZET HARI INI (WITA)
-    const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-    const yyyy = todayWita.getFullYear();
-    const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-    const dd = String(todayWita.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-
-    // --- CACHE BEST SELLERS ---
-    const cached = localStorage.getItem('bestSellers');
-    const cachedDate = localStorage.getItem('bestSellersDate');
-    if (cached && cachedDate === todayStr) {
-      bestSellers = JSON.parse(cached);
-      isLoadingBestSellers = false;
-      // Lanjutkan fetch data lain (omzet, dsb) tanpa query best sellers
-    } else {
-      // ...query best sellers seperti biasa...
-      // --- GRAFIK 7 HARI TERAKHIR (WITA) ---
-      const hariLabels = [];
-      const pendapatanPerHari = {};
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(todayWita);
-        d.setDate(todayWita.getDate() - i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const tanggal = `${yyyy}-${mm}-${dd}`;
-        hariLabels.push(tanggal);
-        pendapatanPerHari[tanggal] = 0;
-      }
-      const { startUtc: start7Utc, endUtc: end7Utc } = getWitaDateRangeUtc(hariLabels[0]);
-      const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
-      const { data: items, error } = await getSupabaseClient(storeGet(selectedBranch))
-        .from('transaksi_kasir')
-        .select('produk_id, qty, created_at')
-        .gte('created_at', start7Utc)
-        .lte('created_at', end7LastUtc);
-      let bestSellersResult = [];
-      if (!error && items) {
-        const grouped = {};
-        for (const item of items) {
-          if (!item.produk_id) continue;
-          if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
-          grouped[item.produk_id] += item.qty || 1;
-        }
-        const topProdukIds = Object.entries(grouped)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([produk_id]) => produk_id);
-        if (topProdukIds.length > 0) {
-          const { data: allProducts } = await getSupabaseClient(storeGet(selectedBranch))
-            .from('produk')
-            .select('id, name, gambar');
-          const validProdukIds = topProdukIds.filter(id => allProducts && allProducts.some(p => p.id === id));
-          if (validProdukIds.length > 0) {
-            bestSellersResult = validProdukIds.map(produk_id => {
-              const prod = allProducts.find(p => p.id === produk_id);
-              return {
-                name: prod?.name || '-',
-                image: prod?.gambar || '',
-                total_qty: grouped[produk_id]
-              };
-            });
-          }
-        }
-      }
-      bestSellers = bestSellersResult;
-      localStorage.setItem('bestSellers', JSON.stringify(bestSellers));
-      localStorage.setItem('bestSellersDate', todayStr);
-      isLoadingBestSellers = false;
-    }
-    // ...lanjutkan fetch data lain (omzet, dsb)...
-    // OMZET HARI INI, JUMLAH TRANSAKSI, GRAFIK, dst tetap query seperti biasa
-    // ... existing code ...
-  } catch (e) {
-    bestSellers = [];
-    errorBestSellers = 'Gagal memuat data menu terlaris';
-  } finally {
-    isLoadingBestSellers = false;
-    // Setelah data didapat:
-    const newData = {
-      omzet,
-      jumlahTransaksi,
-      profit,
-      itemTerjual,
-      totalItem,
-      avgTransaksi,
-      jamRamai,
-      weeklyIncome,
-      weeklyMax,
-      bestSellers
-    };
-    applyDashboardData(newData);
-  }
-}
-
-let pollingInterval;
-onMount(() => {
-  pollingInterval = setInterval(fetchDashboardStatsPOS, 5000); // setiap 5 detik
-});
+// Cleanup real-time subscriptions on destroy
 onDestroy(() => {
-  clearInterval(pollingInterval);
+  realtimeManager.unsubscribeAll();
 });
 
-async function fetchDashboardStatsPOS() {
-  // Hitung range hari ini (00:00 - 23:59 waktu lokal)
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-  const startUTC = start.toISOString();
-  const endUTC = end.toISOString();
-
-  // Ambil semua transaksi kasir hari ini
-  const { data: kas, error } = await getSupabaseClient(storeGet(selectedBranch))
-    .from('buku_kas')
-    .select('*')
-    .gte('waktu', startUTC)
-    .lte('waktu', endUTC)
-    .eq('sumber', 'pos');
-
-  if (!error && kas) {
-    // Item terjual: sum semua qty (jika ada), fallback ke jumlah baris
-    itemTerjual = kas.reduce((sum, t) => sum + (t.qty || 1), 0);
-    // Jumlah transaksi: hitung unique transaction_id
-    const transactionIds = new Set((kas || []).map(t => t.transaction_id).filter(Boolean));
-    jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-    // PATCH: Hitung omzet/pendapatan
-    omzet = kas.reduce((sum, t) => sum + (t.amount || 0), 0);
-  } else {
-    itemTerjual = 0;
-    jumlahTransaksi = 0;
-    omzet = 0;
-  }
+// Manual refresh function (for testing)
+async function refreshDashboardData() {
+  await loadDashboardData();
 }
 
 async function fetchPin() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
+  const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -375,7 +281,7 @@ function updateTokoAktif(val) {
 }
 
 async function cekSesiToko() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch))
+  const { data } = await dataService.supabaseClient
     .from('sesi_toko')
     .select('*')
     .eq('is_active', true)
@@ -437,7 +343,7 @@ async function handleBukaToko() {
     pinErrorToko = 'Modal awal wajib diisi dan valid';
     return;
   }
-  await getSupabaseClient(storeGet(selectedBranch)).from('sesi_toko').insert({
+  await dataService.supabaseClient.from('sesi_toko').insert({
     opening_cash: modalAwalRaw,
     opening_time: new Date().toISOString(),
     is_active: true
@@ -448,7 +354,7 @@ async function handleBukaToko() {
 
 async function hitungRingkasanTutup() {
   if (!sesiAktif) return;
-  const { data: kasRaw } = await getSupabaseClient(storeGet(selectedBranch))
+  const { data: kasRaw } = await dataService.supabaseClient
     .from('buku_kas')
     .select('*')
     .eq('id_sesi_toko', sesiAktif.id);
@@ -475,7 +381,7 @@ async function hitungRingkasanTutup() {
 
 async function handleTutupToko() {
   if (!sesiAktif) return;
-  await getSupabaseClient(storeGet(selectedBranch)).from('sesi_toko').update({
+  await dataService.supabaseClient.from('sesi_toko').update({
     closing_time: new Date().toISOString(),
     is_active: false
   }).eq('id', sesiAktif.id);
@@ -737,13 +643,11 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
         </div>
         <div class="mb-4">
           <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 0V4m0 7v7m-7-7h14"/></svg>
-            </span>
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400 font-semibold select-none">Rp</span>
             <input type="text" inputmode="numeric" pattern="[0-9]*" min="0"
               bind:value={modalAwalInput}
               oninput={formatModalAwalInput}
-              class="w-full border-2 border-pink-200 bg-pink-50 rounded-xl pl-10 pr-4 py-3 text-lg font-bold text-gray-800 focus:ring-2 focus:ring-pink-300 outline-none transition placeholder-pink-300 shadow-sm"
+              class="w-full border-2 border-pink-200 bg-pink-50 rounded-xl pl-12 pr-4 py-3 text-lg font-bold text-gray-800 focus:ring-2 focus:ring-pink-300 outline-none transition placeholder-pink-300 shadow-sm"
               placeholder="Modal awal kas hari ini" />
           </div>
         </div>

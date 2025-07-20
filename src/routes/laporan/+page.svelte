@@ -4,13 +4,11 @@ import Topbar from '$lib/components/shared/Topbar.svelte';
 import { slide, fade, fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { goto } from '$app/navigation';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
-import { get as storeGet } from 'svelte/store';
-import { selectedBranch } from '$lib/stores/selectedBranch';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { memoize } from '$lib/utils/performance';
+import { dataService, realtimeManager } from '$lib/services/dataService';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
@@ -36,49 +34,84 @@ onMount(async () => {
   ArrowDownCircle = icons[1].default;
   ArrowUpCircle = icons[2].default;
   FilterIcon = icons[3].default;
+  
   await fetchPin();
-  await fetchLaporan();
+  await loadLaporanData();
+  setupRealtimeSubscriptions();
 
-  // Ambil session Supabase
-  const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
-  const user = session?.user;
-  // Hapus query role dari Supabase, gunakan store
-  // const { data: profile } = await supabase
-  //   .from('profil')
-  //   .select('role')
-  //   .eq('id', user.id)
-  //   .single();
-  // userRole = profile?.role || '';
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
-    if (user) {
-      const { data: profile } = await getSupabaseClient(storeGet(selectedBranch)).from('profil')
+    const { data: { session } } = await dataService.supabaseClient.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await dataService.supabaseClient
+        .from('profil')
         .select('role, username')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
       if (profile) {
         setUserRole(profile.role, profile);
       }
     }
   }
+  
   if (currentUserRole === 'kasir') {
-    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('laporan')) {
       showPinModal = true;
     }
   }
+  
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
+});
 
+// Load laporan data dengan smart caching
+async function loadLaporanData() {
+  try {
+    // Gunakan startDate saja untuk daily report, atau range untuk multi-day
+    const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
+    const reportData = await dataService.getReportData(dateRange, 'daily');
+    
+    // Apply report data with null checks
+    summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    pemasukanUsaha = reportData?.pemasukanUsaha || [];
+    pemasukanLain = reportData?.pemasukanLain || [];
+    bebanUsaha = reportData?.bebanUsaha || [];
+    bebanLain = reportData?.bebanLain || [];
+    laporan = reportData?.transactions || [];
+    
+  } catch (error) {
+    console.error('Error loading laporan data:', error);
+    // Set default values on error
+    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    pemasukanUsaha = [];
+    pemasukanLain = [];
+    bebanUsaha = [];
+    bebanLain = [];
+    laporan = [];
+  }
+}
 
+// Setup real-time subscriptions
+function setupRealtimeSubscriptions() {
+  // Subscribe to buku_kas changes for real-time report updates
+  realtimeManager.subscribe('buku_kas', async (payload) => {
+    console.log('Laporan update received:', payload);
+    await loadLaporanData();
+  });
+}
+
+// Cleanup real-time subscriptions on destroy
+onDestroy(() => {
+  realtimeManager.unsubscribeAll();
 });
 
 async function fetchPin() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
+  const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -134,282 +167,60 @@ let bebanLain = [];
 let laporan = [];
 
 // Tambahan: Data transaksi kas terstruktur untuk accordion
-let pemasukanUsahaDetail = [];
-let pemasukanLainDetail = [];
-let bebanUsahaDetail = [];
-let bebanLainDetail = [];
+$: pemasukanUsahaDetail = laporan.filter(t => t.tipe === 'in' && t.jenis === 'pendapatan_usaha');
+$: pemasukanLainDetail = laporan.filter(t => t.tipe === 'in' && t.jenis === 'lainnya');
+$: bebanUsahaDetail = laporan.filter(t => t.tipe === 'out' && t.jenis === 'beban_usaha');
+$: bebanLainDetail = laporan.filter(t => t.tipe === 'out' && t.jenis === 'lainnya');
 
-// Fungsi untuk tanggal lokal sesuai waktu sistem
-function getLocalDateString() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 10);
-}
+$: pemasukanUsahaQris = pemasukanUsahaDetail.filter(t => t.payment_method === 'non-tunai');
+$: pemasukanUsahaTunai = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai');
+$: pemasukanLainQris = pemasukanLainDetail.filter(t => t.payment_method === 'non-tunai');
+$: pemasukanLainTunai = pemasukanLainDetail.filter(t => t.payment_method === 'tunai');
 
+$: bebanUsahaQris = bebanUsahaDetail.filter(t => t.payment_method === 'non-tunai');
+$: bebanUsahaTunai = bebanUsahaDetail.filter(t => t.payment_method === 'tunai');
+$: bebanLainQris = bebanLainDetail.filter(t => t.payment_method === 'non-tunai');
+$: bebanLainTunai = bebanLainDetail.filter(t => t.payment_method === 'tunai');
 
+// Reactive statements untuk total QRIS/Tunai
+$: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-onMount(() => {
-  // Detect touch device
-  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  
-  // const user = auth.getCurrentUser();
-  // userRole = user?.role || '';
-  
-  // Check if page is locked for kasir
-  if (currentUserRole === 'kasir') {
-    const lockedPages = JSON.parse(localStorage.getItem('lockedPages') || '["laporan", "beranda"]');
-    if (lockedPages.includes('laporan')) {
-    showPinModal = true;
-    }
-  }
-  
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  filterDate = now.toISOString().slice(0, 10);
-  filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-  filterYear = now.getFullYear().toString();
+$: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-  pollingInterval = setInterval(() => {
-    if (startDate && endDate) fetchLaporan(startDate, endDate);
-  }, 5000);
-});
+$: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-onDestroy(() => {
-  clearInterval(pollingInterval);
-});
+$: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-function handleTouchStart(e) {
-  if (!isTouchDevice) return;
-  
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-  isSwiping = false;
-  clickBlocked = false;
-}
+$: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-function handleTouchMove(e) {
-  if (!isTouchDevice) return;
-  
-  touchEndX = e.touches[0].clientX;
-  touchEndY = e.touches[0].clientY;
-  
-  const deltaX = Math.abs(touchEndX - touchStartX);
-  const deltaY = Math.abs(touchEndY - touchStartY);
-  const viewportWidth = window.innerWidth;
-      const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-  
-  // Check if this is a horizontal swipe
-  if (deltaX > swipeThreshold && deltaX > deltaY) {
-    isSwiping = true;
-    clickBlocked = true;
-  }
-}
-
-function handleTouchEnd(e) {
-  if (!isTouchDevice) return;
-  
-  if (isSwiping) {
-    // Handle swipe navigation
-    const deltaX = touchEndX - touchStartX;
-    const viewportWidth = window.innerWidth;
-    const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-    
-    if (Math.abs(deltaX) > swipeThreshold) {
-      const currentIndex = 3; // Laporan is index 3
-      if (deltaX > 0 && currentIndex > 0) {
-        // Swipe right - go to previous tab
-        goto(navs[currentIndex - 1].path);
-      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
-        // Swipe left - go to next tab
-        goto(navs[currentIndex + 1].path);
-      }
-    }
-    
-    // Block any subsequent click events
-    setTimeout(() => {
-      clickBlocked = false;
-    }, 100);
-  }
-}
-
-function handleGlobalClick(e) {
-  // Don't block clicks on interactive elements even if swipe was detected
-  const target = e.target;
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-    return;
-  }
-  
-  if (clickBlocked) {
-    e.preventDefault();
-    e.stopPropagation();
-    return;
-  }
-}
-
-function handlePinSubmit() {
-  if (pinInput === pin) {
-    isClosing = true;
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-    }
-    setTimeout(() => {
-      showPinModal = false;
-      pinError = '';
-      pinInput = '';
-      isClosing = false;
-    }, 300);
-  } else {
-    pinError = 'PIN salah. Silakan coba lagi.';
-    pinInput = '';
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-    }
-    errorTimeout = setTimeout(() => {
-      pinError = '';
-    }, 2000);
-  }
-}
-
-function applyFilter() {
-  showFilter = false;
-}
-
-function openDatePicker() {
-  showDatePicker = true;
-}
-
-function openEndDatePicker() {
-  showEndDatePicker = true;
-}
-
-function calculateEndDate(startDateStr: string, type: string) {
-  if (!startDateStr) return '';
-  
-  const startDate = new Date(startDateStr);
-  const endDate = new Date(startDate);
-  
-  switch (type) {
-    case 'harian':
-      // Untuk harian, endDate sama dengan startDate
-      return startDateStr;
-    case 'mingguan':
-      // Tambah 6 hari (total 7 hari)
-      endDate.setDate(startDate.getDate() + 6);
-      break;
-    case 'bulanan':
-      // Tambah 1 bulan kurang 1 hari
-      endDate.setMonth(startDate.getMonth() + 1);
-      endDate.setDate(startDate.getDate() - 1);
-      break;
-    case 'tahunan':
-      // Tambah 1 tahun kurang 1 hari
-      endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(startDate.getDate() - 1);
-      break;
-  }
-  
-  return endDate.toISOString().slice(0, 10);
-}
-
-function formatDate(dateString: string, isEndDate: boolean = false) {
-  if (!dateString) {
-    return isEndDate ? 'Pilih tanggal akhir' : 'Pilih tanggal awal';
-  }
-  const date = new Date(dateString);
-  return date.toLocaleDateString('id-ID', { 
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
-  });
-}
-
-// Modifikasi fetchLaporan agar filter tanggal pakai waktu sistem user/browser tanpa offset tambahan
-async function fetchLaporan(start = startDate, end = endDate) {
-  // Ambil rentang UTC dari tanggal awal dan akhir berbasis WITA
-  const startUtc = new Date(`${start}T00:00:00+08:00`).toISOString();
-  const endUtc = new Date(`${end}T23:59:59+08:00`).toISOString();
-  const { data: kas, error: kasError } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas')
-    .select('*')
-    .gte('waktu', startUtc)
-    .lte('waktu', endUtc)
-    .order('waktu', { ascending: false });
-  if (!kasError && kas) {
-    laporan = kas;
-    // Reset detail
-    pemasukanUsahaDetail = [];
-    pemasukanLainDetail = [];
-    bebanUsahaDetail = [];
-    bebanLainDetail = [];
-    kas.forEach(item => {
-      if (item.tipe === 'in') {
-        if (item.jenis === 'pendapatan_usaha') {
-          pemasukanUsahaDetail.push(item);
-        } else {
-          pemasukanLainDetail.push(item);
-        }
-      } else if (item.tipe === 'out') {
-        if (item.jenis === 'beban_usaha') {
-          bebanUsahaDetail.push(item);
-        } else {
-          bebanLainDetail.push(item);
-        }
-      }
-    });
-    // Accordion auto-close/expand
-    showPendapatanUsaha = pemasukanUsahaDetail.length > 0;
-    showPemasukanLain = pemasukanLainDetail.length > 0;
-    showBebanUsaha = bebanUsahaDetail.length > 0;
-    showBebanLain = bebanLainDetail.length > 0;
-    showPemasukan = pemasukanUsahaDetail.length > 0 || pemasukanLainDetail.length > 0;
-    showPengeluaran = bebanUsahaDetail.length > 0 || bebanLainDetail.length > 0;
-  }
-}
-
-// Memoize untuk grouping pemasukan usaha
-const memoizedPemasukanUsahaGrouped = memoize((pemasukanUsahaDetail) => {
-  const group = {};
-  for (const item of pemasukanUsahaDetail) {
-    if (!item.description) continue;
-    if (!group[item.description]) group[item.description] = 0;
-    group[item.description] += item.amount || 0;
-  }
-  return group;
-}, (pemasukanUsahaDetail) => `${pemasukanUsahaDetail.length}`);
-
-$: pemasukanUsahaGrouped = memoizedPemasukanUsahaGrouped(pemasukanUsahaDetail);
-
-// Memoize untuk filter QRIS/Tunai per sub-group
-const memoizedFilter = memoize((arr, method) => arr.filter(t => t.payment_method === method), (arr, method) => `${arr.length}-${method}`);
-
-$: pemasukanUsahaQris = memoizedFilter(pemasukanUsahaDetail, 'qris').concat(memoizedFilter(pemasukanUsahaDetail, 'non-tunai'));
-$: pemasukanUsahaTunai = memoizedFilter(pemasukanUsahaDetail, 'tunai');
-$: pemasukanLainQris = memoizedFilter(pemasukanLainDetail, 'qris').concat(memoizedFilter(pemasukanLainDetail, 'non-tunai'));
-$: pemasukanLainTunai = memoizedFilter(pemasukanLainDetail, 'tunai');
-$: bebanUsahaQris = memoizedFilter(bebanUsahaDetail, 'qris').concat(memoizedFilter(bebanUsahaDetail, 'non-tunai'));
-$: bebanUsahaTunai = memoizedFilter(bebanUsahaDetail, 'tunai');
-$: bebanLainQris = memoizedFilter(bebanLainDetail, 'qris').concat(memoizedFilter(bebanLainDetail, 'non-tunai'));
-$: bebanLainTunai = memoizedFilter(bebanLainDetail, 'tunai');
-
-// Memoize untuk total QRIS/Tunai
-const memoizedTotal = memoize((arr, method) => arr.filter(t => t.payment_method === method || (method === 'qris' && t.payment_method === 'non-tunai')).reduce((a, b) => a + (b.amount || 0), 0), (arr, method) => `${arr.length}-${method}`);
-
-$: totalQrisAll = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail], 'qris');
-$: totalTunaiAll = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail], 'tunai');
-$: totalQrisPemasukan = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail], 'qris');
-$: totalTunaiPemasukan = memoizedTotal([...pemasukanUsahaDetail, ...pemasukanLainDetail], 'tunai');
-$: totalQrisPengeluaran = memoizedTotal([...bebanUsahaDetail, ...bebanLainDetail], 'qris');
-$: totalTunaiPengeluaran = memoizedTotal([...bebanUsahaDetail, ...bebanLainDetail], 'tunai');
+$: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
 
 // Memoize untuk summary box
 const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail) => {
   const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
   const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalPendapatanUsaha = pemasukanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalBebanUsaha = bebanUsahaDetail.reduce((sum, t) => sum + (t.amount || 0), 0);
-  const labaKotor = totalPendapatanUsaha - totalBebanUsaha;
-  const pajak = Math.round(totalPendapatanUsaha * 0.005);
+  
+  // Laba (Rugi) Kotor = Pendapatan - Pengeluaran
+  const labaKotor = totalPemasukan - totalPengeluaran;
+  
+  // Pajak Penghasilan = 0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0
+  const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
+  
+  // Laba (Rugi) Bersih = Laba Kotor - Pajak
   const labaBersih = labaKotor - pajak;
+  
   return {
     pendapatan: totalPemasukan,
     pengeluaran: totalPengeluaran,
@@ -424,7 +235,7 @@ $: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsa
 
 // Tambahkan watcher universal untuk fetch data setiap kali startDate atau endDate berubah
 $: if (startDate && endDate) {
-  fetchLaporan(startDate, endDate);
+  loadLaporanData();
 }
 
 // Tambahkan watcher khusus untuk filter bulanan
@@ -473,61 +284,109 @@ $: if (!showFilter && filterType === 'tahunan' && startDate) {
 function handlePinInput(num) {
   if (pinInput.length < 4) {
     pinInput += num.toString();
+    
     if (pinInput.length === 4) {
-      setTimeout(() => handlePinSubmit(), 200);
+      if (pinInput === pin) {
+        showPinModal = false;
+        pinInput = '';
+        pinError = '';
+      } else {
+        pinError = 'PIN salah!';
+        pinInput = '';
+        if (errorTimeout) clearTimeout(errorTimeout);
+        errorTimeout = setTimeout(() => {
+          pinError = '';
+        }, 2000);
+      }
     }
   }
 }
 
-// Helper functions untuk kalkulasi total
-function calculateTotalQris(transactions) {
-  return transactions.filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
+
+// Helper function untuk format currency yang aman
+function formatCurrency(amount) {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '--';
+  }
+  return amount.toLocaleString('id-ID');
 }
 
-function calculateTotalTunai(transactions) {
-  return transactions.filter(t => t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
+
+
+// Reactive statements untuk total QRIS/Tunai per sub-group
+$: totalQrisPendapatanUsaha = pemasukanUsahaDetail
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalTunaiPendapatanUsaha = pemasukanUsahaDetail
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalQrisPemasukanLain = pemasukanLainDetail
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalTunaiPemasukanLain = pemasukanLainDetail
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalQrisBebanUsaha = bebanUsahaDetail
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalTunaiBebanUsaha = bebanUsahaDetail
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalQrisBebanLain = bebanLainDetail
+  .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+$: totalTunaiBebanLain = bebanLainDetail
+  .filter(t => t.payment_method === 'tunai')
+  .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+function getDeskripsiLaporan(item) {
+  return item?.description?.trim() || item?.catatan?.trim() || '-';
 }
 
-// Computed values untuk total
-function getTotalQrisAll() {
-  const allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
-  return calculateTotalQris(allTransactions);
+function getLocalDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-function getTotalTunaiAll() {
-  const allTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail];
-  return calculateTotalTunai(allTransactions);
+function formatDate(dateString, isEndDate = false) {
+  if (!dateString) {
+    return isEndDate ? 'Pilih tanggal akhir' : 'Pilih tanggal awal';
+  }
+  const date = new Date(dateString);
+  return date.toLocaleDateString('id-ID', { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
 }
 
-function getTotalQrisPemasukan() {
-  const pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
-  return calculateTotalQris(pemasukanTransactions);
+// Fungsi untuk membuka date picker
+function openDatePicker() {
+  showDatePicker = true;
 }
 
-function getTotalTunaiPemasukan() {
-  const pemasukanTransactions = [...pemasukanUsahaDetail, ...pemasukanLainDetail];
-  return calculateTotalTunai(pemasukanTransactions);
+function openEndDatePicker() {
+  showEndDatePicker = true;
 }
 
-function getTotalQrisPengeluaran() {
-  const pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
-  return calculateTotalQris(pengeluaranTransactions);
+// Fungsi untuk menerapkan filter
+async function applyFilter() {
+  showFilter = false;
+  await loadLaporanData();
 }
 
-function getTotalTunaiPengeluaran() {
-  const pengeluaranTransactions = [...bebanUsahaDetail, ...bebanLainDetail];
-  return calculateTotalTunai(pengeluaranTransactions);
-}
 
-// Memoize untuk total QRIS/Tunai per sub-group
-$: totalQrisPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'qris');
-$: totalTunaiPendapatanUsaha = memoizedTotal(pemasukanUsahaDetail, 'tunai');
-$: totalQrisPemasukanLain = memoizedTotal(pemasukanLainDetail, 'qris');
-$: totalTunaiPemasukanLain = memoizedTotal(pemasukanLainDetail, 'tunai');
-$: totalQrisBebanUsaha = memoizedTotal(bebanUsahaDetail, 'qris');
-$: totalTunaiBebanUsaha = memoizedTotal(bebanUsahaDetail, 'tunai');
-$: totalQrisBebanLain = memoizedTotal(bebanLainDetail, 'qris');
-$: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
 </script>
 
 {#if showPinModal}
@@ -593,11 +452,6 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
 
 <div 
   class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"
-  ontouchstart={handleTouchStart}
-  ontouchmove={handleTouchMove}
-  ontouchend={handleTouchEnd}
-  onclick={handleGlobalClick}
-  onkeydown={(e) => e.key === 'Escape' && handleGlobalClick()}
   role="main"
   aria-label="Halaman laporan keuangan"
 >
@@ -642,7 +496,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
               </div>
             {/if}
             <div class="text-sm font-medium text-green-900/80">Pemasukan</div>
-            <div class="text-xl font-bold text-green-900">Rp {summary.pendapatan !== null ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
+            <div class="text-xl font-bold text-green-900">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
           </div>
           <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start">
             {#if ArrowUpCircle}
@@ -653,7 +507,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
               </div>
             {/if}
             <div class="text-sm font-medium text-red-900/80">Pengeluaran</div>
-            <div class="text-xl font-bold text-red-900">Rp {summary.pengeluaran !== null ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
+            <div class="text-xl font-bold text-red-900">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
           </div>
           <div class="col-span-2 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start">
             {#if Wallet}
@@ -664,13 +518,13 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
               </div>
             {/if}
             <div class="text-sm font-medium text-cyan-900/80">Laba (Rugi)</div>
-            <div class="text-xl font-bold text-cyan-900">Rp {summary.saldo !== null ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
+            <div class="text-xl font-bold text-cyan-900">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
           </div>
         </div>
         <!-- Insight Total QRIS & Tunai Keseluruhan -->
         <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold">
-          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisAll().toLocaleString('id-ID')}</span></span>
-          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiAll().toLocaleString('id-ID')}</span></span>
+          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
+          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
         </div>
       </div>
 
@@ -684,8 +538,8 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
           </button>
           {#if showPemasukan}
             <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
-              <span>QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisPemasukan().toLocaleString('id-ID')}</span></span>
-              <span>Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiPemasukan().toLocaleString('id-ID')}</span></span>
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPemasukan.toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPemasukan.toLocaleString('id-ID')}</span></span>
             </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Pendapatan Usaha -->
@@ -702,7 +556,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each pemasukanUsahaQris as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -714,7 +568,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each pemasukanUsahaTunai as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -735,7 +589,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each pemasukanLainQris as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -747,7 +601,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each pemasukanLainTunai as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -765,8 +619,8 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
           </button>
           {#if showPengeluaran}
             <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
-              <span>QRIS: <span class="text-pink-500 font-bold">Rp {getTotalQrisPengeluaran().toLocaleString('id-ID')}</span></span>
-              <span>Tunai: <span class="text-pink-500 font-bold">Rp {getTotalTunaiPengeluaran().toLocaleString('id-ID')}</span></span>
+              <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPengeluaran.toLocaleString('id-ID')}</span></span>
+              <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPengeluaran.toLocaleString('id-ID')}</span></span>
             </div>
             <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
               <!-- Sub: Beban Usaha -->
@@ -783,7 +637,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each bebanUsahaQris as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -795,7 +649,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each bebanUsahaTunai as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -816,7 +670,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each bebanLainQris as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -828,7 +682,7 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
                     {/if}
                     {#each bebanLainTunai as item}
                       <li class="flex justify-between text-sm text-gray-600">
-                        <span>{item.description || '-'}</span>
+                        <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
@@ -841,17 +695,17 @@ $: totalTunaiBebanLain = memoizedTotal(bebanLainDetail, 'tunai');
         <!-- Laba (Rugi) Kotor -->
         <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
           <span>Laba (Rugi) Kotor</span>
-          <span>Rp {summary.labaKotor !== null ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
+          <span>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
         </div>
-        <!-- Pajak Pendapatan UMKM -->
+        <!-- Pajak Penghasilan -->
         <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm">
-          <span>Pajak Pendapatan UMKM (0,5%)</span>
-          <span>Rp {summary.pajak !== null ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
+          <span>Pajak Penghasilan (0,5%)</span>
+          <span>Rp {summary?.pajak !== null && summary?.pajak !== undefined ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
         </div>
         <!-- Laba (Rugi) Bersih -->
         <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm">
           <span>Laba (Rugi) Bersih</span>
-          <span>Rp {summary.labaBersih !== null ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
+          <span>Rp {summary?.labaBersih !== null && summary?.labaBersih !== undefined ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
         </div>
       </div>
 
