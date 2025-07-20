@@ -573,15 +573,15 @@ main {
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <div class="px-2 pb-4 pt-4 md:pt-8 lg:pt-10">
-      <div class="max-w-md mx-auto w-full pb-2 px-2">
-        <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50">
+      <div class="max-w-md mx-auto w-full pb-2 px-2 md:max-w-lg md:mx-auto md:pb-4 md:px-0">
+        <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50 md:max-w-lg md:mx-auto">
           <!-- Indicator Slide -->
           <div
             class="absolute top-0 left-0 h-full w-1/2 bg-white rounded-full shadow border border-pink-200 transition-transform duration-200 ease-out z-0"
             style="transform: translateX({mode === 'pengeluaran' ? '100%' : '0'});"
           ></div>
           <button
-            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pemasukan' ? 'text-pink-500' : 'text-gray-400'}"
+            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pemasukan' ? 'text-pink-500' : 'text-gray-400'} md:text-lg"
             type="button"
             aria-current={mode === 'pemasukan' ? 'page' : undefined}
             onclick={handleSetPemasukan}
@@ -589,7 +589,7 @@ main {
             Catat Pemasukan
           </button>
           <button
-            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pengeluaran' ? 'text-pink-500' : 'text-gray-400'}"
+            class="flex-1 h-14 md:h-16 min-h-0 rounded-full text-sm font-semibold focus:outline-none transition-all duration-200 z-10 {mode === 'pengeluaran' ? 'text-pink-500' : 'text-gray-400'} md:text-lg"
             type="button"
             aria-current={mode === 'pengeluaran' ? 'page' : undefined}
             onclick={handleSetPengeluaran}
@@ -597,14 +597,14 @@ main {
             Catat Pengeluaran
           </button>
         </div>
-        <form class="flex flex-col gap-4 px-1 md:bg-white md:rounded-2xl md:shadow md:p-5 md:border md:border-pink-100 {jenis === 'lainnya' ? 'pb-18' : 'pb-14'}" onsubmit={handleSubmit} autocomplete="off" id="catat-form">
-          <div class="flex flex-col sm:flex-row gap-4 sm:gap-4">
+        <form class="flex flex-col gap-4 px-1 md:bg-white md:rounded-2xl md:shadow md:p-8 md:border md:border-pink-100 {jenis === 'lainnya' ? 'pb-18' : 'pb-14'} md:gap-6" onsubmit={handleSubmit} autocomplete="off" id="catat-form">
+          <div class="flex flex-col sm:flex-row gap-4 sm:gap-4 md:gap-6">
             <div class="flex-1">
-              <label class="block text-sm font-medium text-pink-500 mb-1" for="tanggal-input">Tanggal</label>
+              <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="tanggal-input">Tanggal</label>
               <input
                 id="tanggal-input"
                 type="date"
-                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
+                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 md:text-lg md:py-3"
                 bind:value={date}
                 min="2020-01-01"
                 max="2100-12-31"
@@ -612,86 +612,84 @@ main {
               />
             </div>
             <div class="flex-1">
-              <label class="block text-sm font-medium text-pink-500 mb-1" for="waktu-input">Waktu</label>
+              <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="waktu-input">Waktu</label>
               <input
                 id="waktu-input"
                 type="time"
-                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
+                class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 md:text-lg md:py-3"
                 bind:value={time}
                 required
               />
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1" for="nominal-input">Nominal</label>
+            <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="nominal-input">Nominal</label>
             <input
               id="nominal-input"
               type="text"
               inputmode="numeric"
-              class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1"
+              class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 md:text-lg md:py-3"
               value={nominal}
               oninput={handleNominalInput}
               required
               placeholder="Masukkan nominal"
               autocomplete="off"
             />
-            <div class="flex flex-col items-center mt-2 mb-1">
-              <div class="grid grid-cols-3 md:grid-cols-5 gap-2 w-full">
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(5000)}>Rp 5.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(10000)}>Rp 10.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(20000)}>Rp 20.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(50000)}>Rp 50.000</button>
-                <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200" onclick={handleSetTemplateNominal(100000)}>Rp 100.000</button>
-              </div>
+            <div class="grid grid-cols-3 gap-2 w-full mt-2 mb-1 md:flex md:flex-wrap md:gap-3 md:justify-center md:grid-cols-none md:w-auto">
+              <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 md:w-auto md:py-3 md:px-6 md:text-lg md:whitespace-nowrap" onclick={handleSetTemplateNominal(5000)}>Rp 5.000</button>
+              <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 md:w-auto md:py-3 md:px-6 md:text-lg md:whitespace-nowrap" onclick={handleSetTemplateNominal(10000)}>Rp 10.000</button>
+              <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 md:w-auto md:py-3 md:px-6 md:text-lg md:whitespace-nowrap" onclick={handleSetTemplateNominal(20000)}>Rp 20.000</button>
+              <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 md:w-auto md:py-3 md:px-6 md:text-lg md:whitespace-nowrap" onclick={handleSetTemplateNominal(50000)}>Rp 50.000</button>
+              <button type="button" class="w-full py-2 rounded-lg bg-pink-100 text-pink-500 font-semibold text-base shadow-sm active:bg-pink-200 md:w-auto md:py-3 md:px-6 md:text-lg md:whitespace-nowrap" onclick={handleSetTemplateNominal(100000)}>Rp 100.000</button>
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1" for="jenis-dropdown">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <button type="button" id="jenis-dropdown" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 flex items-center cursor-pointer" onclick={() => showDropdown = true} onkeydown={(e) => e.key === 'Enter' && (showDropdown = true)} style="user-select:none;">
+            <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="jenis-dropdown">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <button type="button" id="jenis-dropdown" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 flex items-center cursor-pointer md:text-lg md:py-3" onclick={() => showDropdown = true} onkeydown={(e) => e.key === 'Enter' && (showDropdown = true)} style="user-select:none;">
               <span class="truncate">{getJenisLabel(jenis)}</span>
             </button>
             <DropdownSheet open={showDropdown} value={jenis} options={mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran} on:close={() => showDropdown = false} on:select={e => { jenis = e.detail; showDropdown = false; }} />
           </div>
           {#if jenis === 'lainnya'}
             <div>
-                          <label class="block text-sm font-medium text-pink-500 mb-1" for="nama-jenis-input">Nama Jenis</label>
-             <input id="nama-jenis-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
+              <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="nama-jenis-input">Nama Jenis</label>
+              <input id="nama-jenis-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 md:text-lg md:py-3" bind:value={namaJenis} required placeholder="Masukkan nama jenis" />
             </div>
           {/if}
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-1" for="nama-input">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
-            <input id="nama-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1" bind:value={nama} required />
+            <label class="block text-sm font-medium text-pink-500 mb-1 md:text-base" for="nama-input">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label>
+            <input id="nama-input" type="text" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 text-base bg-white text-gray-800 outline-none transition-colors duration-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 mb-1 md:text-lg md:py-3" bind:value={nama} required />
           </div>
           
           <!-- Toggle Laci Kasir -->
           <div>
-            <label class="block text-sm font-medium text-pink-500 mb-2" for="laci-kasir-toggle">Laci Kasir</label>
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center {paymentMethod === 'tunai' ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <label class="block text-sm font-medium text-pink-500 mb-2 md:text-base" for="laci-kasir-toggle">Laci Kasir</label>
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 md:p-4">
+              <div class="flex items-center gap-3 md:gap-4">
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center {paymentMethod === 'tunai' ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}">
+                  <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
                 <div>
-                  <div class="font-medium text-sm text-gray-800">Uang {mode === 'pemasukan' ? 'Masuk' : 'Keluar'} Laci</div>
-                  <div class="text-xs text-gray-500">{paymentMethod === 'tunai' ? 'Ya, dari laci kasir' : 'Tidak, bukan dari laci kasir'}</div>
+                  <div class="font-medium text-sm md:text-base text-gray-800">Uang {mode === 'pemasukan' ? 'Masuk' : 'Keluar'} Laci</div>
+                  <div class="text-xs md:text-sm text-gray-500">{paymentMethod === 'tunai' ? 'Ya, dari laci kasir' : 'Tidak, bukan dari laci kasir'}</div>
                 </div>
               </div>
               <button
                 id="laci-kasir-toggle"
                 type="button"
-                class="relative w-12 h-6 rounded-full transition-colors duration-300 {paymentMethod === 'tunai' ? 'bg-green-500' : 'bg-gray-300'}"
+                class="relative w-12 h-6 md:w-14 md:h-7 rounded-full transition-colors duration-300 {paymentMethod === 'tunai' ? 'bg-green-500' : 'bg-gray-300'}"
                 onclick={() => paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai'}
                 onkeydown={(e) => e.key === 'Enter' && (paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai')}
                 aria-label="Toggle laci kasir"
               >
-                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 {paymentMethod === 'tunai' ? 'translate-x-6' : 'translate-x-0'}"></div>
+                <div class="absolute top-0.5 left-0.5 w-5 h-5 md:w-6 md:h-6 bg-white rounded-full shadow-sm transition-transform duration-300 {paymentMethod === 'tunai' ? 'translate-x-6 md:translate-x-7' : 'translate-x-0'}"></div>
               </button>
             </div>
           </div>
           {#if error}
-            <div class="text-pink-600 text-sm text-center mt-1">{error}</div>
+            <div class="text-pink-600 text-sm md:text-base text-center mt-1">{error}</div>
           {/if}
         </form>
       </div>
@@ -699,7 +697,7 @@ main {
   </main>
   <!-- Button Simpan -->
   <div class="fixed left-0 right-0 bottom-[56px] z-30 pt-2 pb-3 px-4">
-    <div class="max-w-md mx-auto">
+    <div class="max-w-md mx-auto md:max-w-lg md:mx-auto">
       <button type="submit" form="catat-form"
         class="transition-all duration-300 bg-pink-500 text-white font-bold text-lg border-none rounded-xl py-4 mt-1 shadow-lg shadow-pink-500/10 hover:bg-pink-600 active:bg-pink-700 w-full"
       >
