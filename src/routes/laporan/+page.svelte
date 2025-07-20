@@ -459,115 +459,117 @@ async function applyFilter() {
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <!-- Konten utama halaman Laporan di sini -->
-    <div class="max-w-md mx-auto w-full pt-4 md:pt-8 lg:pt-10 pb-8 px-2">
-      <div class="flex w-full items-center gap-2 px-2 mb-3">
+    <div class="max-w-md mx-auto w-full pt-4 md:pt-8 lg:pt-10 pb-8 px-2 md:max-w-3xl md:px-8">
+      <div class="flex w-full items-center gap-2 px-2 mb-3 md:gap-4 md:px-0 md:mb-6">
         <!-- Button Filter -->
         <div class="flex-none">
-          <button class="w-12 h-12 p-0 rounded-xl bg-pink-500 text-white font-bold shadow-sm hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center justify-center" onclick={() => showFilter = true} aria-label="Filter laporan">
+          <button class="w-12 h-12 md:w-14 md:h-14 p-0 rounded-xl bg-pink-500 text-white font-bold shadow-sm hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center justify-center md:text-xl" onclick={() => showFilter = true} aria-label="Filter laporan">
             {#if FilterIcon}
-              <svelte:component this={FilterIcon} class="w-5 h-5" />
+              <svelte:component this={FilterIcon} class="w-5 h-5 md:w-7 md:h-7" />
             {:else}
-              <div class="w-5 h-5 flex items-center justify-center">
+              <div class="w-5 h-5 md:w-7 md:h-7 flex items-center justify-center">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
           </button>
         </div>
         <!-- Button Filter Tanggal -->
-        <button class="flex-1 h-12 min-w-[140px] rounded-xl {startDate ? 'bg-white border-pink-100 text-pink-500' : 'bg-pink-50 border-pink-200 text-pink-400'} border px-4 shadow-sm font-semibold flex items-center justify-center gap-2 hover:bg-pink-50 active:bg-pink-100 transition-colors" onclick={openDatePicker}>
-          <svg class="w-5 h-5 {startDate ? 'text-pink-300' : 'text-pink-200'} flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <button class="flex-1 h-12 md:h-14 min-w-[140px] rounded-xl {startDate ? 'bg-white border-pink-100 text-pink-500' : 'bg-pink-50 border-pink-200 text-pink-400'} border px-4 md:px-6 shadow-sm font-semibold flex items-center justify-center gap-2 hover:bg-pink-50 active:bg-pink-100 transition-colors md:text-lg" onclick={openDatePicker}>
+          <svg class="w-5 h-5 md:w-7 md:h-7 {startDate ? 'text-pink-300' : 'text-pink-200'} flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span class="truncate">{formatDate(startDate)}</span>
         </button>
-        <button class="flex-1 h-12 min-w-[140px] rounded-xl {endDate ? 'bg-white border-pink-100 text-pink-500' : 'bg-pink-50 border-pink-100 text-pink-200'} border px-4 shadow-sm font-semibold flex items-center justify-center gap-2 hover:bg-pink-50 active:bg-pink-100 transition-colors" onclick={openEndDatePicker}>
-          <svg class="w-5 h-5 {endDate ? 'text-pink-300' : 'text-pink-200'} flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <button class="flex-1 h-12 md:h-14 min-w-[140px] rounded-xl {endDate ? 'bg-white border-pink-100 text-pink-500' : 'bg-pink-50 border-pink-100 text-pink-200'} border px-4 md:px-6 shadow-sm font-semibold flex items-center justify-center gap-2 hover:bg-pink-50 active:bg-pink-100 transition-colors md:text-lg" onclick={openEndDatePicker}>
+          <svg class="w-5 h-5 md:w-7 md:h-7 {endDate ? 'text-pink-300' : 'text-pink-200'} flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span class="truncate select-none">{endDate ? formatDate(endDate, true) : '-'}</span>
         </button>
       </div>
 
       <!-- Ringkasan Keuangan ala Beranda -->
-      <div class="px-2 py-3">
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            {#if ArrowDownCircle}
-              <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500" />
-            {:else}
-              <div class="w-6 h-6 mb-2 flex items-center justify-center">
-                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-              </div>
-            {/if}
-            <div class="text-sm font-medium text-green-900/80">Pemasukan</div>
-            <div class="text-xl font-bold text-green-900">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
+      <div class="px-2 py-3 md:px-0 md:py-6 md:rounded-2xl md:shadow md:mb-8">
+        <div class="md:px-6">
+          <div class="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-6">
+            <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+              {#if ArrowDownCircle}
+                <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500 md:w-10 md:h-10 md:mb-3" />
+              {:else}
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+                </div>
+              {/if}
+              <div class="text-sm font-medium text-green-900/80 md:text-base md:text-center">Pemasukan</div>
+              <div class="text-xl font-bold text-green-900 md:text-2xl md:text-center">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
+            </div>
+            <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+              {#if ArrowUpCircle}
+                <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500 md:w-10 md:h-10 md:mb-3" />
+              {:else}
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+                </div>
+              {/if}
+              <div class="text-sm font-medium text-red-900/80 md:text-base md:text-center">Pengeluaran</div>
+              <div class="text-xl font-bold text-red-900 md:text-2xl md:text-center">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
+            </div>
+            <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+              {#if Wallet}
+                <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900 md:w-10 md:h-10 md:mb-3" />
+              {:else}
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                  <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
+                </div>
+              {/if}
+              <div class="text-sm font-medium text-cyan-900/80 md:text-base md:text-center">Laba (Rugi)</div>
+              <div class="text-xl font-bold text-cyan-900 md:text-2xl md:text-center">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
+            </div>
           </div>
-          <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            {#if ArrowUpCircle}
-              <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500" />
-            {:else}
-              <div class="w-6 h-6 mb-2 flex items-center justify-center">
-                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-              </div>
-            {/if}
-            <div class="text-sm font-medium text-red-900/80">Pengeluaran</div>
-            <div class="text-xl font-bold text-red-900">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
+          <!-- Insight Total QRIS & Tunai Keseluruhan -->
+          <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold md:gap-6 md:text-base md:px-0 md:mt-6">
+            <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
+            <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
           </div>
-          <div class="col-span-2 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start">
-            {#if Wallet}
-              <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900" />
-            {:else}
-              <div class="w-6 h-6 mb-2 flex items-center justify-center">
-                <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
-              </div>
-            {/if}
-            <div class="text-sm font-medium text-cyan-900/80">Laba (Rugi)</div>
-            <div class="text-xl font-bold text-cyan-900">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
-          </div>
-        </div>
-        <!-- Insight Total QRIS & Tunai Keseluruhan -->
-        <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold">
-          <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
-          <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
         </div>
       </div>
 
       <!-- Section Laporan Detail -->
-      <div class="px-2 mt-4 flex flex-col gap-2">
+      <div class="px-2 mt-4 flex flex-col gap-2 md:px-0 md:mt-8 md:gap-8">
         <!-- Accordion: Pemasukan -->
-        <div class="rounded-xl bg-white shadow-sm overflow-hidden">
-          <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px]" onclick={() => showPemasukan = !showPemasukan}>
+        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4">
+          <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px] md:rounded-2xl md:px-6 md:py-4 md:text-lg md:mb-2" onclick={() => showPemasukan = !showPemasukan}>
             <span>Pemasukan</span>
-            <svg class="w-5 h-5 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukan ? 0 : 180}deg);transform-origin:center"/></svg>
+            <svg class="w-5 h-5 ml-2 md:w-6 md:h-6" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukan ? 0 : 180}deg);transform-origin:center"/></svg>
           </button>
           {#if showPemasukan}
-            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold">
+            <div class="flex gap-4 px-4 pb-2 pt-1 text-xs text-gray-500 font-semibold md:gap-6 md:px-6 md:text-base md:pb-4 md:pt-2">
               <span>QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisPemasukan.toLocaleString('id-ID')}</span></span>
               <span>Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiPemasukan.toLocaleString('id-ID')}</span></span>
             </div>
-            <div class="bg-white flex flex-col gap-0.5 py-2" transition:slide|local>
+            <div class="bg-white flex flex-col gap-0.5 py-2 md:gap-2 md:py-4" transition:slide|local>
               <!-- Sub: Pendapatan Usaha -->
-              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5" onclick={() => showPendapatanUsaha = !showPendapatanUsaha}>
+              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 md:px-6 md:py-2 md:text-base md:mb-1" onclick={() => showPendapatanUsaha = !showPendapatanUsaha}>
                 <span>Pendapatan Usaha</span>
-                <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPendapatanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
+                <svg class="w-4 h-4 ml-2 md:w-5 md:h-5" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPendapatanUsaha ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showPendapatanUsaha}
-                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
-                  <ul class="flex flex-col gap-0.5">
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1 md:px-6 md:pb-2 md:pt-1 md:gap-2" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1 md:text-sm md:mb-2 md:mt-2">QRIS</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if pemasukanUsahaQris.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each pemasukanUsahaQris as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
                   </ul>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
-                  <ul class="flex flex-col gap-0.5">
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2 md:text-sm md:mb-2 md:mt-3">Tunai</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if pemasukanUsahaTunai.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each pemasukanUsahaTunai as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
@@ -576,31 +578,31 @@ async function applyFilter() {
                 </div>
               {/if}
               <!-- Sub: Pemasukan Lainnya -->
-              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2" onclick={() => showPemasukanLain = !showPemasukanLain}>
+              <button class="w-full flex justify-between items-center px-4 py-1 text-sm font-semibold text-gray-700 mb-0.5 mt-2 md:px-6 md:py-2 md:text-base md:mb-1 md:mt-3" onclick={() => showPemasukanLain = !showPemasukanLain}>
                 <span>Pemasukan Lainnya</span>
-                <svg class="w-4 h-4 ml-2" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukanLain ? 0 : 180}deg);transform-origin:center"/></svg>
+                <svg class="w-4 h-4 ml-2 md:w-5 md:h-5" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukanLain ? 0 : 180}deg);transform-origin:center"/></svg>
               </button>
               {#if showPemasukanLain}
-                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1" transition:slide|local>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1">QRIS</div>
-                  <ul class="flex flex-col gap-0.5">
+                <div class="px-4 pb-1 pt-0.5 flex flex-col gap-1 md:px-6 md:pb-2 md:pt-1 md:gap-2" transition:slide|local>
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-1 md:text-sm md:mb-2 md:mt-2">QRIS</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if pemasukanLainQris.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each pemasukanLainQris as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
                     {/each}
                   </ul>
-                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2">Tunai</div>
-                  <ul class="flex flex-col gap-0.5">
+                  <div class="font-semibold text-xs text-pink-500 mb-1 mt-2 md:text-sm md:mb-2 md:mt-3">Tunai</div>
+                  <ul class="flex flex-col gap-0.5 md:gap-1">
                     {#if pemasukanLainTunai.length === 0}
-                      <li class="text-gray-400 italic text-sm py-2">Tidak ada data</li>
+                      <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
                     {#each pemasukanLainTunai as item}
-                      <li class="flex justify-between text-sm text-gray-600">
+                      <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span>{getDeskripsiLaporan(item)}</span>
                         <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
                       </li>
