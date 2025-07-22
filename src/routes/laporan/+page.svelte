@@ -9,6 +9,7 @@ import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { memoize } from '$lib/utils/performance';
 import { dataService, realtimeManager } from '$lib/services/dataService';
+import { selectedBranch } from '$lib/stores/selectedBranch';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
@@ -19,9 +20,49 @@ let pin = '';
 // Ganti dengan subscribe ke store
 let currentUserRole = '';
 let userProfileData = null;
+let unsubscribeBranch: (() => void) | null = null;
 
 userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
+
+// Tambahkan deklarasi function loadLaporanData
+async function loadLaporanData() {
+  try {
+    // Gunakan startDate saja untuk daily report, atau range untuk multi-day
+    const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
+    const reportData = await dataService.getReportData(dateRange, 'daily');
+    // Apply report data with null checks
+    summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    pemasukanUsaha = reportData?.pemasukanUsaha || [];
+    pemasukanLain = reportData?.pemasukanLain || [];
+    bebanUsaha = reportData?.bebanUsaha || [];
+    bebanLain = reportData?.bebanLain || [];
+    // Filter ulang transaksi agar hanya yang tanggal WITA-nya berada di antara startDate dan endDate (inklusif)
+    laporan = (reportData?.transactions || []).filter(item => {
+      const rawTime = item.created_at || item.waktu;
+      if (!rawTime) return false;
+      const witaDate = new Date(rawTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+      return witaDate >= startDate && witaDate <= endDate;
+    });
+  } catch (error) {
+    console.error('Error loading laporan data:', error);
+    // Set default values on error
+    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    pemasukanUsaha = [];
+    pemasukanLain = [];
+    bebanUsaha = [];
+    bebanLain = [];
+    laporan = [];
+  }
+}
+
+// Tambahkan deklarasi function setupRealtimeSubscriptions
+function setupRealtimeSubscriptions() {
+  // Subscribe to buku_kas changes for real-time report updates
+  realtimeManager.subscribe('buku_kas', async (payload) => {
+    await loadLaporanData();
+  });
+}
 
 onMount(async () => {
   const icons = await Promise.all([
@@ -67,51 +108,16 @@ onMount(async () => {
   filterDate = now.toISOString().slice(0, 10);
   filterMonth = (now.getMonth() + 1).toString().padStart(2, '0');
   filterYear = now.getFullYear().toString();
+
+  // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
+  unsubscribeBranch = selectedBranch.subscribe(() => {
+    loadLaporanData();
+  });
 });
 
-// Load laporan data dengan smart caching
-async function loadLaporanData() {
-  try {
-    // Gunakan startDate saja untuk daily report, atau range untuk multi-day
-    const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
-    const reportData = await dataService.getReportData(dateRange, 'daily');
-    // Apply report data with null checks
-    summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0 };
-    pemasukanUsaha = reportData?.pemasukanUsaha || [];
-    pemasukanLain = reportData?.pemasukanLain || [];
-    bebanUsaha = reportData?.bebanUsaha || [];
-    bebanLain = reportData?.bebanLain || [];
-    // Filter ulang transaksi agar hanya yang tanggal WITA-nya berada di antara startDate dan endDate (inklusif)
-    laporan = (reportData?.transactions || []).filter(item => {
-      const rawTime = item.created_at || item.waktu;
-      if (!rawTime) return false;
-      const witaDate = new Date(rawTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
-      return witaDate >= startDate && witaDate <= endDate;
-    });
-  } catch (error) {
-    console.error('Error loading laporan data:', error);
-    // Set default values on error
-    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0 };
-    pemasukanUsaha = [];
-    pemasukanLain = [];
-    bebanUsaha = [];
-    bebanLain = [];
-    laporan = [];
-  }
-}
-
-// Setup real-time subscriptions
-function setupRealtimeSubscriptions() {
-  // Subscribe to buku_kas changes for real-time report updates
-  realtimeManager.subscribe('buku_kas', async (payload) => {
-    console.log('Laporan update received:', payload);
-    await loadLaporanData();
-  });
-}
-
-// Cleanup real-time subscriptions on destroy
 onDestroy(() => {
   realtimeManager.unsubscribeAll();
+  if (unsubscribeBranch) unsubscribeBranch();
 });
 
 async function fetchPin() {
@@ -314,6 +320,17 @@ function formatCurrency(amount) {
   return amount.toLocaleString('id-ID');
 }
 
+// Fungsi untuk group dan sum item berdasarkan nama (description/catatan)
+function groupAndSumByName(items) {
+  const map = new Map();
+  for (const item of items) {
+    const name = getDeskripsiLaporan(item);
+    const prev = map.get(name) || 0;
+    map.set(name, prev + (item.amount || 0));
+  }
+  // Kembalikan array of { name, total }
+  return Array.from(map.entries()).map(([name, total]) => ({ name, total }));
+}
 
 
 // Reactive statements untuk total QRIS/Tunai per sub-group
@@ -388,6 +405,17 @@ async function applyFilter() {
   await loadLaporanData();
 }
 
+// State untuk item yang sedang diperpanjang (expanded)
+let expandedItems = new Set();
+function toggleExpand(name) {
+  if (expandedItems.has(name)) {
+    expandedItems.delete(name);
+  } else {
+    expandedItems.add(name);
+  }
+  // trigger reactivity
+  expandedItems = new Set(expandedItems);
+}
 
 </script>
 
@@ -558,10 +586,10 @@ async function applyFilter() {
                     {#if pemasukanUsahaQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each pemasukanUsahaQris as item}
+                    {#each groupAndSumByName(pemasukanUsahaQris) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -570,10 +598,10 @@ async function applyFilter() {
                     {#if pemasukanUsahaTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each pemasukanUsahaTunai as item}
+                    {#each groupAndSumByName(pemasukanUsahaTunai) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -591,10 +619,10 @@ async function applyFilter() {
                     {#if pemasukanLainQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each pemasukanLainQris as item}
+                    {#each groupAndSumByName(pemasukanLainQris) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -603,10 +631,10 @@ async function applyFilter() {
                     {#if pemasukanLainTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each pemasukanLainTunai as item}
+                    {#each groupAndSumByName(pemasukanLainTunai) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -639,10 +667,10 @@ async function applyFilter() {
                     {#if bebanUsahaQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each bebanUsahaQris as item}
+                    {#each groupAndSumByName(bebanUsahaQris) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -651,10 +679,10 @@ async function applyFilter() {
                     {#if bebanUsahaTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each bebanUsahaTunai as item}
+                    {#each groupAndSumByName(bebanUsahaTunai) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -672,10 +700,10 @@ async function applyFilter() {
                     {#if bebanLainQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each bebanLainQris as item}
+                    {#each groupAndSumByName(bebanLainQris) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
@@ -684,10 +712,10 @@ async function applyFilter() {
                     {#if bebanLainTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each bebanLainTunai as item}
+                    {#each groupAndSumByName(bebanLainTunai) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span>{getDeskripsiLaporan(item)}</span>
-                        <span class="font-bold text-gray-700">Rp {item.amount !== null ? item.amount.toLocaleString('id-ID') : '--'}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
                   </ul>
