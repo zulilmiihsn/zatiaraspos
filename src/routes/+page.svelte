@@ -731,7 +731,7 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
 {/if}
 
 <!-- Top Bar Status Toko -->
-<div class="relative w-full min-h-[64px] overflow-hidden md:mx-0 md:mt-4 mb-2">
+<div class="relative w-full min-h-[64px] overflow-hidden md:mx-0">
   {#key tokoAktifLocal}
     <div bind:this={topbarRef} class="absolute left-0 top-0 w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-pink-400 to-pink-500 text-white gap-4 transition-transform duration-500 ease-in-out" style="height:64px"
       in:fly={{ x: -64, duration: 350 }} out:fly={{ x: 64, duration: 350 }}>
