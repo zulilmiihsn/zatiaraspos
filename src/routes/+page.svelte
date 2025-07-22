@@ -570,10 +570,12 @@ onMount(() => {
 
 // Fungsi untuk mendapatkan tanggal hari ini WITA (tanpa jam)
 function getTodayWITA() {
+  // Ambil waktu sekarang di Asia/Makassar (WITA)
   const now = new Date();
-  now.setHours(now.getHours() + 8, 0, 0, 0); // ke WITA, jam 00:00
-  // Kembalikan tanggal WITA (YYYY-MM-DDT00:00:00.000Z)
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
+  const witaDate = new Date(witaString);
+  witaDate.setHours(0, 0, 0, 0); // Set ke jam 00:00:00
+  return witaDate;
 }
 
 // Inisialisasi range 7 hari terakhir berdasarkan hari WITA
@@ -582,6 +584,22 @@ const sevenDaysAgoWITA = new Date(todayWITA);
 sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
 const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
+let selectedBarIndex = null;
+let showBarInsight = false;
+let barHoldTimeout = null;
+
+function handleBarPointerDown(i) {
+  barHoldTimeout = setTimeout(() => {
+    selectedBarIndex = i;
+    showBarInsight = true;
+  }, 120); // Sedikit delay agar tidak accidental tap
+}
+
+function handleBarPointerUp() {
+  clearTimeout(barHoldTimeout);
+  showBarInsight = false;
+  selectedBarIndex = null;
+}
 </script>
 
 {#if showPinModal}
@@ -918,9 +936,23 @@ const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z'
                   </div>
               {:else}
                   {#each weeklyIncome as income, i}
-                    <div class="flex flex-col items-center flex-1">
-                      <div class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700" style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"></div>
+                    <div class="flex flex-col items-center flex-1 relative">
+                      <div
+                        class="bg-green-400 rounded-t w-6 md:w-8 lg:w-10 transition-all duration-700 cursor-pointer"
+                        style="height: {barsVisible && income > 0 && weeklyMax > 0 ? Math.max(Math.min((income / weeklyMax) * 96, 96), 4) : 0}px"
+                        onpointerdown={() => handleBarPointerDown(i)}
+                        onpointerup={handleBarPointerUp}
+                        onpointerleave={handleBarPointerUp}
+                        ontouchstart={() => handleBarPointerDown(i)}
+                        ontouchend={handleBarPointerUp}
+                        ontouchcancel={handleBarPointerUp}
+                      ></div>
                       <div class="text-xs mt-1 md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
+                      {#if showBarInsight && selectedBarIndex === i}
+                        <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-white border border-pink-200 rounded-xl shadow-lg px-4 py-2 text-center text-sm font-bold text-pink-600 animate-fade-in pointer-events-none">
+                          <span class="text-gray-700 font-normal">Rp {income.toLocaleString('id-ID')}</span>
+                        </div>
+                      {/if}
                     </div>
                   {/each}
               {/if}
