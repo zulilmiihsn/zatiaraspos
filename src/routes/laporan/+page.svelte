@@ -586,7 +586,7 @@ function toggleExpand(name) {
                     {#if pemasukanUsahaQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(pemasukanUsahaQris) as grouped }
+                    {#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -598,7 +598,7 @@ function toggleExpand(name) {
                     {#if pemasukanUsahaTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(pemasukanUsahaTunai) as grouped }
+                    {#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -619,7 +619,7 @@ function toggleExpand(name) {
                     {#if pemasukanLainQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(pemasukanLainQris) as grouped }
+                    {#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -631,7 +631,7 @@ function toggleExpand(name) {
                     {#if pemasukanLainTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(pemasukanLainTunai) as grouped }
+                    {#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -667,7 +667,7 @@ function toggleExpand(name) {
                     {#if bebanUsahaQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(bebanUsahaQris) as grouped }
+                    {#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -679,7 +679,7 @@ function toggleExpand(name) {
                     {#if bebanUsahaTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(bebanUsahaTunai) as grouped }
+                    {#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -700,7 +700,7 @@ function toggleExpand(name) {
                     {#if bebanLainQris.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(bebanLainQris) as grouped }
+                    {#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
@@ -712,7 +712,7 @@ function toggleExpand(name) {
                     {#if bebanLainTunai.length === 0}
                       <li class="text-gray-400 italic text-sm py-2 md:text-base md:py-3">Tidak ada data</li>
                     {/if}
-                    {#each groupAndSumByName(bebanLainTunai) as grouped }
+                    {#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
                         <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
