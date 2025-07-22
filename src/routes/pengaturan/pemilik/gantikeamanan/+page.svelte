@@ -22,9 +22,10 @@ let userPassError = '';
 let oldPin = '';
 let newPin = '';
 let confirmPin = '';
-let lockedPages: string[] = ['laporan', 'beranda'];
+let lockedPages: string[] = [];
 let pinError = '';
 let pin = '';
+let pengaturanKeamananId = '';
 let activeSecurityTab = 'pemilik'; // 'pemilik' atau 'kasir'
 let showNotifModal = false;
 let notifModalMsg = '';
@@ -32,13 +33,20 @@ let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
 
 
-onMount(() => {
+onMount(async () => {
   userRole.subscribe(role => {
     if (role !== 'pemilik') {
       goto('/unauthorized');
     }
     currentUserRole = role || '';
   });
+  // Fetch PIN dan lockedPages dari Supabase
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('id, pin, locked_pages').single();
+  if (!error && data) {
+    pin = data.pin || '';
+    lockedPages = data.locked_pages || [];
+    pengaturanKeamananId = data.id;
+  }
 });
 
 async function handleChangeUserPass(e) {
@@ -56,29 +64,36 @@ async function handleChangeUserPass(e) {
     userPassError = 'Username baru tidak boleh sama dengan username lama.';
     return;
   }
-  // Ambil userId dari session
-  const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
-  const userId = session?.user?.id;
-  if (!userId) {
-    userPassError = 'Session tidak valid.';
-    return;
+  try {
+    const branch = storeGet(selectedBranch);
+    const res = await fetch('/api/ganti-keamanan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usernameLama: oldUsername,
+        usernameBaru: newUsername,
+        passwordLama: oldPassword,
+        passwordBaru: newPassword,
+        branch
+      })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      userPassError = data.message || 'Gagal update username/password.';
+      return;
+    }
+    userPassError = '';
+    notifModalMsg = 'Perubahan username/password berhasil disimpan.';
+    notifModalType = 'success';
+    showNotifModal = true;
+    oldUsername = '';
+    newUsername = '';
+    oldPassword = '';
+    newPassword = '';
+    confirmPassword = '';
+  } catch (err) {
+    userPassError = 'Terjadi error pada server.';
   }
-  // Update username di profiles (pakai username)
-  const { error: usernameError } = await getSupabaseClient(storeGet(selectedBranch)).from('profil').update({ username: newUsername }).eq('id', userId);
-  if (usernameError) {
-    userPassError = 'Gagal update nama user.';
-    return;
-  }
-  // Update password via Supabase Auth
-  const { error: passError } = await getSupabaseClient(storeGet(selectedBranch)).auth.updateUser({ password: newPassword });
-  if (passError) {
-    userPassError = 'Gagal update password.';
-    return;
-  }
-  userPassError = '';
-  notifModalMsg = 'Perubahan username/password berhasil disimpan.';
-  notifModalType = 'success';
-  showNotifModal = true;
 }
 
 async function savePinSettings(event) {
@@ -95,20 +110,21 @@ async function savePinSettings(event) {
     pinError = 'PIN harus 4-6 digit angka.';
     return;
   }
-  if (oldPin !== '1234') { // Simulasi PIN lama
+  if (oldPin !== pin) {
     pinError = 'PIN lama salah.';
     return;
   }
   try {
-    // Simulasi update PIN
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    notifModalMsg = 'Perubahan PIN & pengaturan kunci berhasil disimpan.';
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').update({ pin: newPin }).eq('id', pengaturanKeamananId);
+    if (error) throw error;
+    notifModalMsg = 'Perubahan PIN berhasil disimpan.';
     notifModalType = 'success';
     showNotifModal = true;
     oldPin = '';
     newPin = '';
     confirmPin = '';
     pinError = '';
+    pin = newPin;
   } catch (error) {
     pinError = 'Gagal menyimpan perubahan: ' + error.message;
   }
@@ -121,6 +137,21 @@ function closeNotifModal() {
 function handleBackToPengaturan() { goto('/pengaturan/pemilik'); }
 function handleSetTabPemilik() { activeSecurityTab = 'pemilik'; }
 function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
+
+// Simpan pengaturan lockedPages ke Supabase
+async function saveLockedPages() {
+  try {
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').update({ locked_pages: lockedPages }).eq('id', pengaturanKeamananId);
+    if (error) throw error;
+    notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
+    notifModalType = 'success';
+    showNotifModal = true;
+  } catch (error) {
+    notifModalMsg = 'Gagal menyimpan pengaturan: ' + error.message;
+    notifModalType = 'error';
+    showNotifModal = true;
+  }
+}
 </script>
 
 <div class="min-h-screen bg-gray-50 flex flex-col" transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
@@ -247,7 +278,7 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
           <span class="text-gray-700 font-medium">Laporan</span>
         </label>
       </div>
-      <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="button">Simpan Pengaturan</button>
+      <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="button" onclick={saveLockedPages}>Simpan Pengaturan</button>
     </div>
     {#if showNotifModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
