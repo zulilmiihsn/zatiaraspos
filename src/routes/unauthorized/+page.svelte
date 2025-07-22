@@ -19,10 +19,6 @@
   }
 </script>
 
-<svelte:head>
-  <title>Akses Ditolak - Zatiaras Juice POS</title>
-</svelte:head>
-
 <div class="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4 page-content">
   <div class="w-full max-w-md text-center">
     <!-- Icon -->

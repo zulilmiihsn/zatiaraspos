@@ -312,10 +312,6 @@
   }
 </script>
 
-<svelte:head>
-  <title>ZatiarasPOS</title>
-</svelte:head>
-
 <div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Button Kembali -->
   <div class="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-lg border-b border-gray-100 mt-0 mx-0 mb-2 px-4 py-3 flex items-center shadow-md" style="min-height:56px">

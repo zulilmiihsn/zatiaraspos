@@ -76,6 +76,7 @@ let Plus, Edit, Trash, Coffee, Utensils, Tag;
 let isLoadingMenus = true;
 let isLoadingKategori = true;
 let isLoadingEkstra = true;
+let unsubscribeBranch: (() => void) | null = null;
 
 const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
   kategoriList.map(kat => ({
@@ -169,12 +170,20 @@ onMount(async () => {
       goto('/unauthorized');
     }
   })();
+
+  // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
+  unsubscribeBranch = selectedBranch.subscribe(() => {
+    fetchMenus();
+    fetchKategori();
+    fetchEkstra();
+  });
 });
 
 onDestroy(() => {
   if (typeof window !== 'undefined') {
     document.body.classList.remove('hide-nav');
   }
+  if (unsubscribeBranch) unsubscribeBranch();
 });
 
 function openMenuForm(menu = null) {
@@ -649,6 +658,11 @@ async function afterUpdateCachePOS() {
     kategoriData: kategoriList,
     tambahanData: ekstraList
   });
+}
+
+// Tambahkan auto-dismiss 2 detik untuk notif
+$: if (showNotifModal) {
+  const timeout = setTimeout(() => { showNotifModal = false; }, 2000);
 }
 </script>
 
@@ -1182,7 +1196,6 @@ async function afterUpdateCachePOS() {
 {#if showNotifModal}
   <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out" style="transform: translateX(-50%);">
     {notifModalMsg}
-    <button class="ml-4 underline" onclick={() => showNotifModal = false}>Tutup</button>
   </div>
 {/if}
 

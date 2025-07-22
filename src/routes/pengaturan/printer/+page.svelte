@@ -85,10 +85,6 @@ onMount(async () => {
 });
 </script>
 
-<svelte:head>
-  <title>Pengaturan Draft Struk | ZatiarasPOS</title>
-</svelte:head>
-
 <!-- Top Bar Custom -->
 <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200 flex items-center px-4 py-4">
   <button onclick={() => goto('/pengaturan')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">

@@ -14,6 +14,7 @@
 	import { slide, fade, fly } from 'svelte/transition';
 	import { auth } from '$lib/auth/auth';
 	import { userRole } from '$lib/stores/userRole';
+	import { dataService } from '$lib/services/dataService';
 
 	export const data = {};
 	
@@ -90,6 +91,18 @@
 	}
 
 	$: hideNav = $page.url.pathname === '/pengaturan/pemilik/riwayat';
+
+	// Subscribe ke selectedBranch: clear cache & fetch ulang data saat cabang berubah, tanpa reload
+	if (typeof window !== 'undefined') {
+		let lastBranch = sessionStorage.getItem('selectedBranch');
+		selectedBranch.subscribe(async val => {
+			if (val && val !== lastBranch) {
+				await dataService.clearAllCaches();
+				// Komponen/halaman lain harus subscribe ke selectedBranch dan fetch ulang data
+			}
+			lastBranch = val;
+		});
+	}
 </script>
 
 <!-- Loading indicator -->

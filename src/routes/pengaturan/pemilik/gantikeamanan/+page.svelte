@@ -123,10 +123,6 @@ function handleSetTabPemilik() { activeSecurityTab = 'pemilik'; }
 function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
 </script>
 
-<svelte:head>
-  <title>Ganti Keamanan | ZatiarasPOS</title>
-</svelte:head>
-
 <div class="min-h-screen bg-gray-50 flex flex-col" transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
   <!-- Top Bar -->
   <div class="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 py-4">

@@ -50,6 +50,8 @@ let tambahanData = [];
 
 let isLoadingProducts = true;
 
+let unsubscribeBranch: (() => void) | null = null;
+
 onMount(async () => {
   // Load data dengan smart caching
   await loadPOSData();
@@ -72,6 +74,16 @@ onMount(async () => {
 
     window.addEventListener('online', throttledSync);
   }
+
+  // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
+  unsubscribeBranch = selectedBranch.subscribe(() => {
+    loadPOSData();
+  });
+});
+
+onDestroy(() => {
+  if (unsubscribeBranch) unsubscribeBranch();
+  realtimeManager.unsubscribeAll();
 });
 
 // Load POS data dengan smart caching
@@ -111,11 +123,6 @@ function setupRealtimeSubscriptions() {
     tambahanData = await dataService.getAddOns();
   });
 }
-
-// Cleanup real-time subscriptions on destroy
-onDestroy(() => {
-  realtimeManager.unsubscribeAll();
-});
 
 // Touch handling dengan throttling
 let touchStartX = 0;

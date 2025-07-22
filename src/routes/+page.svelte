@@ -51,6 +51,8 @@ let isLoadingBestSellers = true;
 let errorBestSellers = '';
 let isLoadingDashboard = true;
 
+let unsubscribeBranch: (() => void) | null = null;
+
 onMount(async () => {
   const icons = await Promise.all([
     import('lucide-svelte/icons/wallet'),
@@ -98,6 +100,37 @@ onMount(async () => {
       showPinModal = true;
     }
   }
+
+  // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
+  unsubscribeBranch = selectedBranch.subscribe(async () => {
+    // Reset semua metriks
+    omzet = 0;
+    jumlahTransaksi = 0;
+    profit = 0;
+    itemTerjual = 0;
+    totalItem = 0;
+    avgTransaksi = 0;
+    jamRamai = '';
+    weeklyIncome = [];
+    weeklyMax = 1;
+    bestSellers = [];
+    isLoadingDashboard = true;
+    isLoadingBestSellers = true;
+    // Invalidate cache dashboard metriks (semua cabang)
+    await dataService.forceRefresh('dashboard_stats_samarinda');
+    await dataService.forceRefresh('dashboard_stats_berau');
+    await dataService.forceRefresh('best_sellers_samarinda');
+    await dataService.forceRefresh('best_sellers_berau');
+    await dataService.forceRefresh('weekly_income_samarinda');
+    await dataService.forceRefresh('weekly_income_berau');
+    // Fetch ulang data
+    await loadDashboardData();
+  });
+});
+
+onDestroy(() => {
+  if (unsubscribeBranch) unsubscribeBranch();
+  realtimeManager.unsubscribeAll();
 });
 
 // Load dashboard data dengan smart caching
@@ -112,7 +145,7 @@ async function loadDashboardData() {
     // Load best sellers dengan cache
     isLoadingBestSellers = true;
     bestSellers = await dataService.getBestSellers();
-    isLoadingBestSellers = false;
+      isLoadingBestSellers = false;
     
     // Load weekly income dengan cache
     const weeklyData = await dataService.getWeeklyIncome();
@@ -174,11 +207,6 @@ function applyDashboardData(data) {
   weeklyMax = data.weeklyMax || 1;
   bestSellers = data.bestSellers || [];
 }
-
-// Cleanup real-time subscriptions on destroy
-onDestroy(() => {
-  realtimeManager.unsubscribeAll();
-});
 
 // Manual refresh function (for testing)
 async function refreshDashboardData() {

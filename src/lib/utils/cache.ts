@@ -101,24 +101,22 @@ class IndexedDBCache {
         ttl
       });
     } catch (error) {
-      console.warn('Failed to set IndexedDB cache:', error);
+      console.error('IndexedDB set error:', error);
     }
   }
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      const entry: CacheEntry<T> = await getCache(key);
+      const entry = await getCache(key);
       if (!entry) return null;
-
       // Check if expired
       if (Date.now() - entry.timestamp > entry.ttl) {
-        await this.delete(key);
+        await delCache(key);
         return null;
       }
-
       return entry.data;
     } catch (error) {
-      console.warn('Failed to get IndexedDB cache:', error);
+      console.error('IndexedDB get error:', error);
       return null;
     }
   }
@@ -127,13 +125,19 @@ class IndexedDBCache {
     try {
       await delCache(key);
     } catch (error) {
-      console.warn('Failed to delete IndexedDB cache:', error);
+      console.error('IndexedDB delete error:', error);
     }
   }
 
   async clear(): Promise<void> {
-    // Note: This is a simplified clear - in production you'd want to iterate through keys
-    console.warn('IndexedDB clear not implemented - use delete for specific keys');
+    // Hapus seluruh data cache IndexedDB
+    try {
+      // idb-keyval menyediakan clear() untuk menghapus semua key
+      const { clear } = await import('idb-keyval');
+      await clear();
+    } catch (error) {
+      console.error('IndexedDB clear error:', error);
+    }
   }
 }
 

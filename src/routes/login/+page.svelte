@@ -107,10 +107,6 @@
   });
 </script>
 
-<svelte:head>
-  <title>Login - ZatiarasPOS</title>
-</svelte:head>
-
 <div class="min-h-screen bg-gradient-to-br from-pink-200 via-pink-100 to-pink-300 flex items-center justify-center p-4 page-content">
   <div class="w-full max-w-sm">
     <!-- Logo dan Header -->

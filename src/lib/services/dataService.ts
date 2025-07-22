@@ -12,6 +12,10 @@ export class DataService {
 
   constructor() {
     this.supabase = getSupabaseClient(storeGet(selectedBranch));
+    // Subscribe ke selectedBranch agar supabase client ikut berubah
+    selectedBranch.subscribe((branch) => {
+      this.supabase = getSupabaseClient(branch);
+    });
   }
 
   // Getter untuk supabase client
@@ -28,6 +32,7 @@ export class DataService {
 
   // Dashboard data fetching dengan cache
   async getDashboardStats() {
+    const branch = storeGet(selectedBranch);
     return CacheUtils.getDashboardStats(async () => {
       const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
       const yyyy = todayWita.getFullYear();
@@ -124,9 +129,10 @@ export class DataService {
     });
   }
 
-  // Best sellers dengan cache
+  // Best sellers dengan cache per cabang
   async getBestSellers() {
-    return smartCache.get(CACHE_KEYS.BEST_SELLERS, async () => {
+    const branch = storeGet(selectedBranch);
+    return smartCache.get(`${CACHE_KEYS.BEST_SELLERS}_${branch}`, async () => {
       const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
       const yyyy = todayWita.getFullYear();
       const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
@@ -199,9 +205,10 @@ export class DataService {
     });
   }
 
-  // Weekly income dengan cache
+  // Weekly income dengan cache per cabang
   async getWeeklyIncome() {
-    return smartCache.get(CACHE_KEYS.WEEKLY_INCOME, async () => {
+    const branch = storeGet(selectedBranch);
+    return smartCache.get(`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`, async () => {
       const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
       const weeklyIncome = [];
       let weeklyMax = 1;

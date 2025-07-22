@@ -17,10 +17,6 @@ onMount(async () => {
 });
 </script>
 
-<svelte:head>
-  <title>Admin Panel - ZatiarasPOS</title>
-</svelte:head>
-
 <div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Header -->
   <div class="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
