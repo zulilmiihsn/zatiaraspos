@@ -110,10 +110,12 @@
 	<div class="loading-indicator active"></div>
 {/if}
 
-{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik'}
+{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik' || $page.url.pathname === '/pengaturan/pemilik/manajemenmenu'}
 	<!-- Public pages and settings page without navigation -->
-	<div class="page-transition">
-		<slot />
+	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+		<div class="flex-1 min-h-0 overflow-y-auto">
+			<slot />
+		</div>
 	</div>
 {:else if $page.url.pathname === '/pos/bayar'}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
