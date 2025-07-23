@@ -86,14 +86,21 @@ export class DataService {
       const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
       const startUTC = start.toISOString();
       const endUTC = end.toISOString();
+      // Ambil transaksi kasir untuk item terjual
+      const { data: kasir, error: errorKasir } = await this.supabase
+        .from('transaksi_kasir')
+        .select('qty, transaction_id')
+        .gte('created_at', startUTC)
+        .lte('created_at', endUTC);
+      // Ambil transaksi summary untuk jumlah transaksi & omzet
       const { data: kas, error } = await this.supabase
         .from('buku_kas')
         .select('*')
         .gte('waktu', startUTC)
         .lte('waktu', endUTC)
         .eq('sumber', 'pos');
-      if (error) {
-        console.error('Error fetching dashboard stats:', error);
+      if (error || errorKasir) {
+        console.error('Error fetching dashboard stats:', error, errorKasir);
         return {
           itemTerjual: 0,
           jumlahTransaksi: 0,
@@ -107,7 +114,7 @@ export class DataService {
           bestSellers: []
         };
       }
-      const itemTerjual = kas.reduce((sum: number, t: any) => sum + (t.qty || 1), 0);
+      const itemTerjual = kasir?.reduce((sum: number, t: any) => sum + (t.qty || 1), 0) || 0;
       const transactionIds = new Set((kas || []).map((t: any) => t.transaction_id).filter(Boolean));
       const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
       const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
@@ -117,8 +124,8 @@ export class DataService {
         omzet,
         profit: omzet * 0.3, // Dummy profit calculation
         totalItem: itemTerjual,
-        avgTransaksi, // Sudah diperbaiki: jumlah transaksi per hari (7 hari terakhir)
-        jamRamai: '15.00-16.00', // Dummy data
+        avgTransaksi,
+        jamRamai: '15.00-16.00',
         weeklyIncome: [],
         weeklyMax: 1,
         bestSellers: []
@@ -373,35 +380,65 @@ export class DataService {
         }
       }
 
-      const { data: transactions, error } = await this.supabase
+      // Ambil transaksi POS per item
+      const { data: posItems, error: errorPos } = await this.supabase
+        .from('transaksi_kasir')
+        .select('*, buku_kas(payment_method, waktu, jenis, tipe, description, sumber), produk(name)')
+        .gte('created_at', startUtc)
+        .lt('created_at', endUtcFinal);
+      // Ambil transaksi manual/catat
+      const { data: manualItems, error: errorManual } = await this.supabase
         .from('buku_kas')
         .select('*')
         .gte('waktu', startUtc)
-        .lt('waktu', endUtcFinal);
-
-      if (error) {
-        console.error('Error fetching report data:', error);
+        .lt('waktu', endUtcFinal)
+        .neq('sumber', 'pos');
+      if (errorPos || errorManual) {
+        console.error('Error fetching report data:', errorPos, errorManual);
         return { data: [], etag: etagValue };
       }
-
-      // Process transactions
-      const pemasukan = transactions.filter((t: any) => t.tipe === 'in');
-      const pengeluaran = transactions.filter((t: any) => t.tipe === 'out');
-
+      // Filter hanya POS yang benar-benar dari POS
+      const posLaporan = (posItems || []).filter((t: any) => t.buku_kas?.sumber === 'pos');
+      // Gabungkan hasil
+      const laporan = [
+        ...posLaporan.map(item => ({
+          ...item,
+          sumber: 'pos',
+          payment_method: item.buku_kas?.payment_method,
+          waktu: item.buku_kas?.waktu,
+          jenis: item.buku_kas?.jenis,
+          tipe: item.buku_kas?.tipe,
+          // description diisi nama produk (jika ada), fallback ke buku_kas.description
+          description: item.produk?.name || item.buku_kas?.description || '-',
+          // nominal transaksi per item = amount * qty
+          nominal: (item.amount || 0) * (item.qty || 1),
+        })),
+        ...(manualItems || []).map(item => ({
+          ...item,
+          sumber: item.sumber || 'catat',
+          payment_method: item.payment_method,
+          waktu: item.waktu,
+          jenis: item.jenis,
+          tipe: item.tipe,
+          description: item.description,
+          nominal: item.amount || 0,
+        }))
+      ];
+      // Pemasukan/pengeluaran per jenis
+      const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
+      const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
       const reportData = {
         summary: {
-          pendapatan: pemasukan.reduce((sum: number, t: any) => sum + (t.amount || 0), 0),
-          pengeluaran: pengeluaran.reduce((sum: number, t: any) => sum + (t.amount || 0), 0),
-          saldo: pemasukan.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) - 
-                 pengeluaran.reduce((sum: number, t: any) => sum + (t.amount || 0), 0)
+          pendapatan: pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0),
+          pengeluaran: pengeluaran.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0),
+          saldo: pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0) - pengeluaran.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0)
         },
         pemasukanUsaha: pemasukan.filter((t: any) => t.jenis === 'pendapatan_usaha'),
         pemasukanLain: pemasukan.filter((t: any) => t.jenis === 'lainnya'),
         bebanUsaha: pengeluaran.filter((t: any) => t.jenis === 'beban_usaha'),
         bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
-        transactions
+        transactions: laporan
       };
-
       return { data: reportData, etag: etagValue };
     });
   }

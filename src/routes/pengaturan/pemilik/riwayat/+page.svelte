@@ -7,6 +7,7 @@ import { goto } from '$app/navigation';
 import { fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
 import { userRole } from '$lib/stores/userRole';
 
@@ -138,6 +139,10 @@ async function deleteTransaksi() {
   }
 }
 
+function refreshManual() {
+  if (!loading) fetchTransaksiHariIni();
+}
+
 onMount(() => {
   userRole.subscribe(role => {
     if (role !== 'pemilik') {
@@ -152,13 +157,13 @@ onMount(async () => {
   }
   await fetchTransaksiHariIni();
   Trash = (await import('lucide-svelte/icons/trash')).default;
-  pollingInterval = setInterval(fetchTransaksiHariIni, 5000); // polling setiap 5 detik
+  // pollingInterval = setInterval(fetchTransaksiHariIni, 5000); // HAPUS polling otomatis
 });
 onDestroy(() => {
   if (typeof window !== 'undefined') {
     document.body.classList.remove('hide-nav');
   }
-  clearInterval(pollingInterval);
+  // clearInterval(pollingInterval); // HAPUS polling otomatis
 });
 </script>
 
@@ -168,7 +173,10 @@ onDestroy(() => {
     <button onclick={() => goto('/pengaturan/pemilik')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
       <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
     </button>
-    <h1 class="text-xl font-bold text-gray-800">Riwayat Transaksi Hari Ini</h1>
+    <h1 class="text-xl font-bold text-gray-800 flex-1">Riwayat Transaksi Hari Ini</h1>
+    <button onclick={refreshManual} class="p-2 rounded-xl bg-pink-50 hover:bg-pink-100 transition-colors ml-2" aria-label="Refresh">
+      <svelte:component this={RefreshCw} class="w-5 h-5 text-pink-500 {loading ? 'animate-spin' : ''}" />
+    </button>
   </div>
   <!-- Search Bar dan Filter Payment Method digabung -->
   <div class="px-4 pt-3 pb-3 bg-white sticky top-[64px] z-30 space-y-3">
@@ -253,5 +261,11 @@ onDestroy(() => {
 :global(body.hide-nav) .topbar,
 :global(body.hide-nav) .bottom-nav {
   display: none !important;
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  100% { transform: rotate(360deg); }
 }
 </style> 

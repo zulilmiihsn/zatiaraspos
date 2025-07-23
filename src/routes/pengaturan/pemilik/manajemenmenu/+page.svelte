@@ -12,6 +12,12 @@ import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import { memoize } from '$lib/utils/performance';
 import { userRole } from '$lib/stores/userRole';
+import Plus from 'lucide-svelte/icons/plus';
+import Edit from 'lucide-svelte/icons/edit';
+import Trash from 'lucide-svelte/icons/trash';
+import Coffee from 'lucide-svelte/icons/coffee';
+import Utensils from 'lucide-svelte/icons/utensils';
+import Tag from 'lucide-svelte/icons/tag';
 
 // Data Menu
 let menus: any[] = [];
@@ -72,7 +78,6 @@ let notifModalType = 'warning';
 let isCropping = false;
 let fileInputEl;
 let activeTab = 'menu';
-let Plus, Edit, Trash, Coffee, Utensils, Tag;
 let isLoadingMenus = true;
 let isLoadingKategori = true;
 let isLoadingEkstra = true;
@@ -143,7 +148,7 @@ async function fetchEkstra() {
 }
 
 onMount(async () => {
-  // 1. Fetch data terbaru dari server terlebih dahulu
+  let first = true;
   await fetchMenus();
   await fetchKategori();
   await fetchEkstra();
@@ -158,12 +163,6 @@ onMount(async () => {
   if (typeof window !== 'undefined') {
     document.body.classList.add('hide-nav');
   }
-  Plus = (await import('lucide-svelte/icons/plus')).default;
-  Edit = (await import('lucide-svelte/icons/edit')).default;
-  Trash = (await import('lucide-svelte/icons/trash')).default;
-  Coffee = (await import('lucide-svelte/icons/coffee')).default;
-  Utensils = (await import('lucide-svelte/icons/utensils')).default;
-  Tag = (await import('lucide-svelte/icons/tag')).default;
 
   userRole.subscribe(role => {
     if (role !== 'pemilik') {
@@ -173,6 +172,10 @@ onMount(async () => {
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
   unsubscribeBranch = selectedBranch.subscribe(() => {
+    if (first) {
+      first = false;
+      return; // skip trigger pertama
+    }
     fetchMenus();
     fetchKategori();
     fetchEkstra();
@@ -707,7 +710,7 @@ $: if (showNotifModal) {
 <!-- Konten tab dengan transisi geser -->
 <div class="relative min-h-screen">
   {#if activeTab === 'menu'}
-    <div transition:slide|local class="flex flex-col h-[calc(100vh-200px)]">
+    <div transition:slide|local class="flex flex-col flex-1 min-h-0">
       <!-- Fixed Header Section -->
       <div class="flex-shrink-0 bg-white">
         <!-- Search Bar -->
@@ -722,20 +725,25 @@ $: if (showNotifModal) {
           <h2 class="text-lg font-bold text-gray-800">Daftar Menu</h2>
         </div>
         <!-- Bar Filter Kategori (button group, horizontal scroll, seperti POS) -->
-        <div class="max-w-4xl mx-auto px-4 pb-4 overflow-x-auto">
-          <div class="flex gap-2 w-max min-w-full items-center">
-            <!-- Toggle Grid/List -->
-            <button class="p-2 w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 flex items-center justify-center transition-colors border-pink-500 bg-pink-50" onclick={() => isGridView = !isGridView} aria-label={isGridView ? 'Tampilkan List' : 'Tampilkan Grid'}>
+        <div class="max-w-4xl mx-auto px-4 pb-4 flex items-center gap-2">
+  <button class="p-2 w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 flex items-center justify-center transition-colors border-pink-500 bg-pink-50 flex-shrink-0" onclick={() => isGridView = !isGridView} aria-label={isGridView ? 'Tampilkan List' : 'Tampilkan Grid'}>
               {#if isGridView}
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" transition:fade={{ duration: 120 }}><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
               {:else}
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" transition:fade={{ duration: 120 }}><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
               {/if}
             </button>
-            <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {selectedKategori === 'Semua' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => selectedKategori = 'Semua'}>Semua</button>
+  <div class="flex gap-2 w-max items-center overflow-x-auto scrollbar-hide">
+    {#if isLoadingKategori}
+      {#each Array(5) as _, i}
+        <div class="h-10 rounded-lg bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse whitespace-nowrap max-w-none" style="min-width:6rem;"></div>
+      {/each}
+    {:else}
+      <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none whitespace-nowrap max-w-none {selectedKategori === 'Semua' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => selectedKategori = 'Semua'}>Semua</button>
             {#each kategoriList as kat}
-              <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none {selectedKategori == kat.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => selectedKategori = kat.id}>{kat.name}</button>
+        <button class="px-4 py-2 rounded-lg border text-sm font-semibold transition-all focus:outline-none whitespace-nowrap max-w-none {selectedKategori == kat.id ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-500 border-pink-200'}" onclick={() => selectedKategori = kat.id}>{kat.name}</button>
             {/each}
+    {/if}
           </div>
         </div>
       </div>
@@ -813,7 +821,7 @@ $: if (showNotifModal) {
       </div>
     </div>
   {:else if activeTab === 'kategori'}
-    <div transition:slide|local class="flex flex-col h-[calc(100vh-200px)]">
+    <div transition:slide|local class="flex flex-col flex-1 min-h-0">
       <!-- Fixed Header Section -->
       <div class="flex-shrink-0 bg-white px-4">
         <!-- Search Bar -->
@@ -863,7 +871,7 @@ $: if (showNotifModal) {
       </div>
     </div>
   {:else if activeTab === 'ekstra'}
-    <div transition:slide|local class="flex flex-col h-[calc(100vh-200px)]">
+    <div transition:slide|local class="flex flex-col flex-1 min-h-0">
       <!-- Fixed Header Section -->
       <div class="flex-shrink-0 bg-white px-4">
         <!-- Search Bar -->
