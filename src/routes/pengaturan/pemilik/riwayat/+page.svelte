@@ -63,6 +63,7 @@ async function fetchTransaksiHariIni() {
         tipe: t.tipe || t.type, // Handle kemungkinan perbedaan nama kolom
         sumber: t.sumber || 'catat',
         payment_method: t.payment_method || 'tunai',
+        customer_name: t.customer_name || '',
       })));
     }
     
@@ -152,7 +153,7 @@ function refreshManual() {
 }
 
 function openDetail(trx) {
-  selectedTransaksi = trx;
+  selectedTransaksi = { ...trx };
   showDetailModal = true;
 }
 
