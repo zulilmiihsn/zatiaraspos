@@ -10,6 +10,7 @@ import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
 import { userRole } from '$lib/stores/userRole';
+import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
 
 let transaksiHariIni = [];
 let loading = true;
@@ -21,6 +22,13 @@ let searchKeyword = '';
 let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 let Trash;
 let pollingInterval;
+let showDetailModal = false;
+let selectedTransaksi = null;
+let showDropdownPayment = false;
+const paymentOptions = [
+  { value: 'tunai', label: 'Tunai' },
+  { value: 'qris', label: 'QRIS/Non-Tunai' }
+];
 
 function todayRange() {
   // Hari ini dalam zona waktu WITA
@@ -143,6 +151,33 @@ function refreshManual() {
   if (!loading) fetchTransaksiHariIni();
 }
 
+function openDetail(trx) {
+  selectedTransaksi = trx;
+  showDetailModal = true;
+}
+
+async function updatePaymentMethod(newMethod) {
+  if (!selectedTransaksi) return;
+  loading = true;
+  try {
+    await getSupabaseClient(storeGet(selectedBranch))
+      .from('buku_kas')
+      .update({ payment_method: newMethod })
+      .eq('id', selectedTransaksi.id);
+    notifMsg = 'Jenis pembayaran berhasil diubah.';
+    showNotif = true;
+    setTimeout(() => { showNotif = false; }, 2000);
+    showDetailModal = false;
+    await fetchTransaksiHariIni();
+  } catch (e) {
+    notifMsg = 'Gagal mengubah jenis pembayaran.';
+    showNotif = true;
+    setTimeout(() => { showNotif = false; }, 2000);
+  } finally {
+    loading = false;
+  }
+}
+
 onMount(() => {
   userRole.subscribe(role => {
     if (role !== 'pemilik') {
@@ -199,9 +234,9 @@ onDestroy(() => {
     {:else}
       <div class="flex flex-col gap-2">
         {#each transaksiHariIni as trx}
-          <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex items-center justify-between gap-3">
+          <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex items-start justify-between gap-3 cursor-pointer hover:bg-pink-50 transition-colors" onclick={() => openDetail(trx)}>
             <div>
-              <div class="font-semibold text-gray-800 text-sm">{trx.nama}</div>
+              <div class="font-semibold text-gray-800 text-sm truncate max-w-[10rem] md:max-w-[16rem] lg:max-w-[18rem] overflow-hidden" title={trx.nama}>{trx.nama}</div>
               <div class="text-xs text-gray-500 mb-1 flex gap-2 items-center">
                 <span>
                   {trx.sumber === 'pos' ? 'POS | ' : ''}
@@ -216,7 +251,7 @@ onDestroy(() => {
             </div>
             <div class="flex flex-col items-end gap-2">
               <div class="font-bold text-pink-500 text-base">Rp {trx.nominal?.toLocaleString('id-ID')}</div>
-              <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={() => confirmDeleteTransaksi(trx)} title="Hapus transaksi">
+              <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteTransaksi(trx); }} title="Hapus transaksi">
                 <svelte:component this={Trash} class="w-5 h-5" />
               </button>
             </div>
@@ -245,6 +280,42 @@ onDestroy(() => {
   {#if showNotif}
     <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out" style="transform: translateX(-50%);">
       {notifMsg}
+    </div>
+  {/if}
+
+  {#if showDetailModal && selectedTransaksi}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 md:px-0">
+      <div class="bg-white rounded-2xl shadow-2xl border border-pink-100 max-w-md w-full p-6 md:p-8 relative animate-slideUpModal flex flex-col gap-3">
+        <button class="absolute top-3 right-3 p-2 rounded-full bg-gray-100 hover:bg-gray-200 shadow-sm" onclick={() => showDetailModal = false} aria-label="Tutup">
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        <h2 class="text-xl font-bold text-pink-600 mb-2 text-center">Detail Transaksi</h2>
+        <div class="mb-1 flex flex-col gap-1">
+          <span class="font-semibold text-gray-500">Deskripsi</span>
+          <div class="text-gray-800 break-words whitespace-pre-line text-base font-medium bg-pink-50 rounded-lg px-3 py-2">{selectedTransaksi.nama}</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="font-semibold text-gray-500">Customer</span>
+          <div class="text-gray-700 text-base">{selectedTransaksi.customer_name || '-'}</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="font-semibold text-gray-500">Waktu</span>
+          <div class="text-gray-700 text-base">{new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="font-semibold text-gray-500">Nominal</span>
+          <div class="text-pink-500 font-bold text-lg">Rp {selectedTransaksi.nominal?.toLocaleString('id-ID')}</div>
+        </div>
+        <div class="flex flex-col gap-1 mb-2">
+          <span class="font-semibold text-gray-500">Jenis Pembayaran</span>
+          <button type="button" class="w-full border-[1.5px] border-pink-200 rounded-lg px-3 py-2.5 bg-white text-pink-500 font-medium flex items-center justify-between shadow-sm hover:bg-pink-50 transition-colors" onclick={() => showDropdownPayment = true} style="user-select:none;">
+            <span class="truncate">{paymentOptions.find(opt => opt.value === selectedTransaksi.payment_method)?.label || 'Pilih'}</span>
+            <svg class="w-4 h-4 text-pink-400 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          <DropdownSheet open={showDropdownPayment} value={selectedTransaksi.payment_method} options={paymentOptions} on:close={() => showDropdownPayment = false} on:select={e => { showDropdownPayment = false; updatePaymentMethod(e.detail); }} />
+        </div>
+        <button class="mt-2 w-full py-3 rounded-xl bg-pink-500 text-white font-bold hover:bg-pink-600 transition-colors shadow-lg shadow-pink-200/30 text-base" onclick={() => showDetailModal = false}>Tutup</button>
+      </div>
     </div>
   {/if}
 </div>
