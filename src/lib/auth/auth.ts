@@ -3,22 +3,6 @@ import { browser } from '$app/environment';
 import { setUserRole, clearUserRole } from '$lib/stores/userRole';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 
-// Dummy credentials - dalam produksi ini harus dari database
-const DUMMY_CREDENTIALS = {
-  admin: {
-    username: 'admin',
-    password: 'admin123',
-    role: 'admin',
-    name: 'Administrator'
-  },
-  kasir: {
-    username: 'kasir',
-    password: 'kasir123',
-    role: 'kasir',
-    name: 'Kasir'
-  }
-};
-
 // Session store
 export const session = writable({
   isAuthenticated: false,
@@ -111,7 +95,7 @@ function generateDummyToken(user: any): string {
   return `${header}.${payload}.${signature}`;
 }
 
-export async function loginWithUsername(username: string, password: string, branch: 'samarinda' | 'berau') {
+export async function loginWithUsername(username: string, password: string, branch: 'samarinda' | 'berau' | 'dev') {
   // Kirim ke endpoint API custom untuk verifikasi login
   const res = await fetch('/api/verify-login', {
     method: 'POST',

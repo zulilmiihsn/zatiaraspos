@@ -15,63 +15,68 @@
 	import { auth } from '$lib/auth/auth';
 	import { userRole } from '$lib/stores/userRole';
 	import { dataService } from '$lib/services/dataService';
+	import { getPendingTransactions } from '$lib/utils/offline';
+	let hasPrefetched = false;
+	let isOffline = !navigator.onLine;
+	let pendingCount = 0;
+	let showToast = false;
 
-	export const data = {};
-	
-	// Loading state for page transitions
-	let isLoading = false;
-	
-	// Watch for navigation changes
-	$: if ($navigating) {
-		isLoading = true;
-	} else {
-		// Small delay to show loading indicator
-		setTimeout(() => {
-			isLoading = false;
-		}, 100);
+	async function updatePending() {
+		pendingCount = (await getPendingTransactions()).length;
 	}
-	
-	// Check authentication on mount
-	onMount(async () => {
-		const currentPath = $page.url.pathname;
-		const publicPaths = ['/login', '/unauthorized'];
-		
-		// Skip auth check for public paths
-		if (publicPaths.includes(currentPath)) {
-			return;
-		}
-		
-		// Cek session lokal manual
-		if (!auth.isAuthenticated()) {
-			goto('/login');
-			return;
-		}
-		
-		// Cek role jika akses /admin
-		const user = auth.getCurrentUser() as any;
-		if (currentPath.startsWith('/admin')) {
-			if (!user || user.role !== 'admin') {
-				goto('/unauthorized');
-				return;
-			}
-		}
 
-		// Proteksi akses halaman pemilik
-		if (currentPath.startsWith('/pengaturan/pemilik')) {
-			let role = user?.role;
-			// Jika role belum ada di user, ambil dari store
-			if (!role) {
-				userRole.subscribe(val => { role = val; })();
-			}
-			if (role !== 'pemilik') {
-				goto('/unauthorized');
-				return;
-			}
+	async function prefetchAllData() {
+		if (hasPrefetched || !navigator.onLine) return;
+		hasPrefetched = true;
+		try {
+			const today = new Date();
+			const dateStrings = [];
+			for (let i = 0; i < 30; i++) {
+				const d = new Date(today);
+				d.setDate(today.getDate() - i);
+				dateStrings.push(d.toISOString().slice(0, 10));
+	}
+			await Promise.all([
+				// Beranda, POS, POS/bayar, Catat
+				dataService.getProducts(),
+				dataService.getCategories(),
+				dataService.getAddOns(),
+				dataService.getBestSellers(),
+				dataService.getWeeklyIncome(),
+				// Laporan: prefetch laporan harian/mingguan/bulanan untuk 30 hari ke belakang
+				...dateStrings.map(date => dataService.getReportData(date, 'daily')),
+				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'weekly')),
+				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'monthly')),
+				// Pengaturan, printer, pemilik, dsb.
+				dataService.supabaseClient?.from?.('pengaturan_struk')?.select?.('*'),
+				dataService.supabaseClient?.from?.('pengaturan_keamanan')?.select?.('*'),
+				dataService.supabaseClient?.from?.('printer')?.select?.('*'),
+				// Manajemen menu, riwayat, dsb.
+				dataService.supabaseClient?.from?.('produk')?.select?.('*'),
+				dataService.supabaseClient?.from?.('kategori')?.select?.('*'),
+				dataService.supabaseClient?.from?.('tambahan')?.select?.('*'),
+				dataService.supabaseClient?.from?.('transaksi_kasir')?.select?.('*'),
+				dataService.supabaseClient?.from?.('buku_kas')?.select?.('*'),
+				// User profile (login)
+				dataService.supabaseClient?.from?.('profil')?.select?.('*'),
+			]);
+		} catch (e) {
+			// Ignore prefetch error
 		}
+	}
 
-		if (typeof window !== 'undefined' && currentPath === '/pengaturan/pemilik/gantikeamanan') {
-			document.body.classList.add('hide-nav');
-		}
+	onMount(() => {
+		isOffline = !navigator.onLine;
+		updatePending();
+		prefetchAllData();
+		window.addEventListener('offline', () => { isOffline = true; });
+		window.addEventListener('online', () => { isOffline = false; updatePending(); prefetchAllData(); });
+		window.addEventListener('storage', updatePending);
+		window.addEventListener('pending-synced', () => {
+			showToast = true;
+			updatePending();
+			setTimeout(() => showToast = false, 3000);
+		});
 	});
 
 	onDestroy(() => {
@@ -105,16 +110,26 @@
 	}
 </script>
 
-<!-- Loading indicator -->
-{#if isLoading}
-	<div class="loading-indicator active"></div>
+{#if pendingCount > 0}
+	<div class="fixed bottom-0 left-0 w-full bg-pink-500 text-white text-center py-2 z-50 font-semibold shadow animate-pulse animate-fade-in">
+		{pendingCount} transaksi menunggu untuk dikirim ke server
+	</div>
 {/if}
+
+{#if showToast}
+	<div class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-fade-in">
+		Transaksi offline berhasil dikirim ke server!
+	</div>
+{/if}
+
+<!-- Loading indicator -->
+
 
 {#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik' || $page.url.pathname === '/pengaturan/pemilik/manajemenmenu'}
 	<!-- Public pages and settings page without navigation -->
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
 		<div class="flex-1 min-h-0 overflow-y-auto">
-			<slot />
+		<slot />
 		</div>
 	</div>
 {:else if $page.url.pathname === '/pos/bayar'}
@@ -188,3 +203,13 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
 	<title>ZatiarasPOS</title>
 </svelte:head>
+
+<style>
+@keyframes fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+.animate-fade-in {
+	animation: fade-in 0.4s ease;
+}
+</style>

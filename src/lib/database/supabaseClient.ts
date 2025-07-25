@@ -8,9 +8,13 @@ const supabaseClients: Record<string, SupabaseClient> = {
   berau: createClient(
     import.meta.env.VITE_SUPABASE_URL_BERAU,
     import.meta.env.VITE_SUPABASE_ANON_KEY_BERAU
+  ),
+  dev: createClient(
+    import.meta.env.VITE_SUPABASE_URL_DEV,
+    import.meta.env.VITE_SUPABASE_ANON_KEY_DEV
   )
 };
 
-export function getSupabaseClient(branch: 'samarinda' | 'berau'): SupabaseClient {
+export function getSupabaseClient(branch: 'samarinda' | 'berau' | 'dev'): SupabaseClient {
   return supabaseClients[branch];
 } 

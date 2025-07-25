@@ -126,11 +126,17 @@ onMount(async () => {
     // Fetch ulang data
     await loadDashboardData();
   });
+  if (browser) {
+    window.refreshDashboardData = loadDashboardData;
+  }
 });
 
 onDestroy(() => {
   if (unsubscribeBranch) unsubscribeBranch();
   realtimeManager.unsubscribeAll();
+  if (browser) {
+    delete window.refreshDashboardData;
+  }
 });
 
 // Load dashboard data dengan smart caching
@@ -153,7 +159,6 @@ async function loadDashboardData() {
     weeklyMax = weeklyData.weeklyMax;
     
   } catch (error) {
-    console.error('Error loading dashboard data:', error);
     errorBestSellers = 'Gagal memuat data dashboard';
   } finally {
     isLoadingDashboard = false;
@@ -165,7 +170,6 @@ async function loadDashboardData() {
 function setupRealtimeSubscriptions() {
   // Subscribe to buku_kas changes for real-time dashboard updates
   realtimeManager.subscribe('buku_kas', async (payload) => {
-    console.log('Real-time update received:', payload);
     
     // Refresh dashboard data in background
     const dashboardStats = await dataService.getDashboardStats();
@@ -182,7 +186,6 @@ function setupRealtimeSubscriptions() {
   
   // Subscribe to transaksi_kasir changes
   realtimeManager.subscribe('transaksi_kasir', async (payload) => {
-    console.log('Transaction update received:', payload);
     
     // Refresh best sellers in background
     bestSellers = await dataService.getBestSellers();
@@ -826,7 +829,7 @@ function handleBarPointerUp() {
               </div>
             {/if}
             <div class="text-sm md:text-base font-medium text-cyan-900/80 md:text-center">Modal Awal</div>
-            <div class="text-xl md:text-3xl font-bold text-cyan-900 md:text-center">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
+            <div class="text-xl md:text-3xl font-bold text-cyan-900 md:text-center">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}</div>
           </div>
         </div>
         <!-- Box pendapatan & modal awal satu baris penuh di mobile, hilang di md+ -->
@@ -851,7 +854,7 @@ function handleBarPointerUp() {
               </div>
             {/if}
             <div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
-            <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : '--'}</div>
+            <div class="text-xl font-bold text-cyan-900">{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}</div>
           </div>
         </div>
         <!-- Menu Terlaris -->
@@ -911,7 +914,7 @@ function handleBarPointerUp() {
                 {#if jamRamai}
                   {jamRamai}
                 {:else}
-                  --
+                  '00.00'
                 {/if}
               </div>
               <div class="text-xs text-gray-500 mt-1 md:text-sm">Jam paling ramai</div>

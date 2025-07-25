@@ -99,7 +99,7 @@ async function loadPOSData() {
     tambahanData = await dataService.getAddOns();
     
   } catch (error) {
-    console.error('Error loading POS data:', error);
+    // console.error('Error loading POS data:', error);
   }
 }
 
@@ -107,19 +107,19 @@ async function loadPOSData() {
 function setupRealtimeSubscriptions() {
   // Subscribe to product changes
   realtimeManager.subscribe('produk', async (payload) => {
-    console.log('Product update received:', payload);
+    // console.log('Product update received:', payload);
     produkData = await dataService.getProducts();
   });
   
   // Subscribe to category changes
   realtimeManager.subscribe('kategori', async (payload) => {
-    console.log('Category update received:', payload);
+    // console.log('Category update received:', payload);
     kategoriData = await dataService.getCategories();
   });
   
   // Subscribe to add-on changes
   realtimeManager.subscribe('tambahan', async (payload) => {
-    console.log('Add-on update received:', payload);
+    // console.log('Add-on update received:', payload);
     tambahanData = await dataService.getAddOns();
   });
 }

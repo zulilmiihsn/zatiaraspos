@@ -4,6 +4,110 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
 import { browser } from '$app/environment';
+import { get as getCache, set as setCache } from 'idb-keyval';
+import { addPendingTransaction, getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
+import { get as idbGet, set as idbSet } from 'idb-keyval';
+
+// Helper untuk dapatkan tanggal hari ini WITA (YYYY-MM-DD)
+function getTodayWitaStr() {
+  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  const yyyy = todayWita.getFullYear();
+  const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
+  const dd = String(todayWita.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Fungsi cache harian untuk rata-rata transaksi/hari
+async function getAvgTransaksiHarian(supabase: any): Promise<number> {
+  const todayStr = getTodayWitaStr();
+  const cacheKey = `avg_transaksi_${todayStr}`;
+  const cached = await getCache(cacheKey);
+  if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
+    return cached.value;
+  }
+  // Hitung ulang
+  const hariLabels = [];
+  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(todayWita);
+    d.setDate(todayWita.getDate() - i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    hariLabels.push(`${yyyy}-${mm}-${dd}`);
+  }
+  const { startUtc: start7Utc } = getWitaDateRangeUtc(hariLabels[0]);
+  const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
+  const { data: kas7, error: error7 } = await supabase
+    .from('buku_kas')
+    .select('transaction_id, waktu')
+    .gte('waktu', start7Utc)
+    .lte('waktu', end7LastUtc)
+    .eq('sumber', 'pos');
+  let avgTransaksi = 0;
+  if (!error7 && kas7) {
+    const transaksiPerHari: { [key: string]: Set<any> } = {};
+    for (const tanggal of hariLabels) {
+      transaksiPerHari[tanggal] = new Set<any>();
+    }
+    for (const t of kas7) {
+      const waktu = new Date(t.waktu);
+      const yyyy = waktu.getFullYear();
+      const mm = String(waktu.getMonth() + 1).padStart(2, '0');
+      const dd = String(waktu.getDate()).padStart(2, '0');
+      const tanggal = `${yyyy}-${mm}-${dd}`;
+      if (transaksiPerHari[tanggal] && t.transaction_id) {
+        transaksiPerHari[tanggal].add(t.transaction_id);
+      }
+    }
+    const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<any>[]).reduce((sum, set) => sum + set.size, 0);
+    avgTransaksi = Math.round(totalTransaksi7Hari / 7);
+  }
+  await setCache(cacheKey, { value: avgTransaksi, timestamp: Date.now() });
+  return avgTransaksi;
+}
+
+// Fungsi cache harian untuk jam paling ramai
+async function getJamRamaiHarian(supabase: any): Promise<string> {
+  const todayStr = getTodayWitaStr();
+  const cacheKey = `jam_ramai_${todayStr}`;
+  const cached = await getCache(cacheKey);
+  if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
+    return cached.value;
+  }
+  // Hitung ulang
+  const { startUtc, endUtc } = getWitaDateRangeUtc(todayStr);
+  const { data: kas, error } = await supabase
+    .from('buku_kas')
+    .select('waktu')
+    .gte('waktu', startUtc)
+    .lte('waktu', endUtc)
+    .eq('sumber', 'pos');
+  const jamCount: { [key: string]: number } = {};
+  if (!error && kas) {
+    for (const t of kas) {
+      const waktu = new Date(t.waktu);
+      const waktuWITA = new Date(waktu.toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+      const jam = waktuWITA.getHours();
+      jamCount[jam] = (jamCount[jam] || 0) + 1;
+    }
+  }
+  let peakHour = '';
+  let maxCount = 0;
+  for (const [jam, count] of Object.entries(jamCount)) {
+    if (count > maxCount) {
+      maxCount = count;
+      peakHour = jam;
+    }
+  }
+  let jamRamai = '';
+  if (peakHour !== '') {
+    const jamInt = parseInt(peakHour, 10);
+    jamRamai = `${jamInt.toString().padStart(2, '0')}.00–${(jamInt+1).toString().padStart(2, '0')}.00`;
+  }
+  await setCache(cacheKey, { value: jamRamai, timestamp: Date.now() });
+  return jamRamai;
+}
 
 // Data service untuk fetching dengan smart caching
 export class DataService {
@@ -33,52 +137,12 @@ export class DataService {
   // Dashboard data fetching dengan cache
   async getDashboardStats() {
     const branch = storeGet(selectedBranch);
-    return CacheUtils.getDashboardStats(async () => {
+    // Ambil data real-time untuk metrik lain
       const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
       const yyyy = todayWita.getFullYear();
       const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
       const dd = String(todayWita.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
-
-      // --- Perhitungan 7 hari terakhir untuk avgTransaksi ---
-      const hariLabels = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(todayWita);
-        d.setDate(todayWita.getDate() - i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        hariLabels.push(`${yyyy}-${mm}-${dd}`);
-      }
-      const { startUtc: start7Utc } = getWitaDateRangeUtc(hariLabels[0]);
-      const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
-      // Ambil semua transaksi 7 hari terakhir
-      const { data: kas7, error: error7 } = await this.supabase
-        .from('buku_kas')
-        .select('transaction_id, waktu')
-        .gte('waktu', start7Utc)
-        .lte('waktu', end7LastUtc)
-        .eq('sumber', 'pos');
-      let avgTransaksi = 0;
-      if (!error7 && kas7) {
-        // Group by hari, hitung unique transaction_id per hari
-        const transaksiPerHari = {};
-        for (const tanggal of hariLabels) {
-          transaksiPerHari[tanggal] = new Set();
-        }
-        for (const t of kas7) {
-          const waktu = new Date(t.waktu);
-          const yyyy = waktu.getFullYear();
-          const mm = String(waktu.getMonth() + 1).padStart(2, '0');
-          const dd = String(waktu.getDate()).padStart(2, '0');
-          const tanggal = `${yyyy}-${mm}-${dd}`;
-          if (transaksiPerHari[tanggal] && t.transaction_id) {
-            transaksiPerHari[tanggal].add(t.transaction_id);
-          }
-        }
-        const totalTransaksi7Hari = Object.values(transaksiPerHari).reduce((sum, set) => sum + set.size, 0);
-        avgTransaksi = Math.round(totalTransaksi7Hari / 7);
-      }
 
       // Data hari ini untuk item terjual, jumlah transaksi, omzet, dst
       const now = new Date();
@@ -118,6 +182,11 @@ export class DataService {
       const transactionIds = new Set((kas || []).map((t: any) => t.transaction_id).filter(Boolean));
       const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
       const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+
+    // Ambil avgTransaksi dan jamRamai dari cache harian
+    const avgTransaksi = await getAvgTransaksiHarian(this.supabase);
+    const jamRamai = await getJamRamaiHarian(this.supabase);
+
       return {
         itemTerjual,
         jumlahTransaksi,
@@ -125,15 +194,11 @@ export class DataService {
         profit: omzet * 0.3, // Dummy profit calculation
         totalItem: itemTerjual,
         avgTransaksi,
-        jamRamai: '15.00-16.00',
+      jamRamai,
         weeklyIncome: [],
         weeklyMax: 1,
         bestSellers: []
       };
-    }, {
-      ttl: 86400000, // 24 jam
-      backgroundRefresh: false
-    });
   }
 
   // Best sellers dengan cache per cabang
@@ -169,9 +234,9 @@ export class DataService {
         .gte('created_at', start7Utc)
         .lte('created_at', end7LastUtc);
 
-      let bestSellersResult = [];
+      let bestSellersResult: any[] = [];
       if (!error && items) {
-        const grouped = {};
+        const grouped: { [key: string]: any } = {};
         for (const item of items) {
           if (!item.produk_id) continue;
           if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
@@ -251,59 +316,59 @@ export class DataService {
 
   // Products dengan cache
   async getProducts() {
-    return CacheUtils.getProducts(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const cached = await idbGet('products');
+      if (cached) return cached;
+      return [];
+    }
       const { data, error } = await this.supabase
         .from('produk')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching products:', error);
         return [];
       }
-
+    await idbSet('products', data || []);
       return data || [];
-    });
   }
 
   // Categories dengan cache
   async getCategories() {
-    return smartCache.get(CACHE_KEYS.CATEGORIES, async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const cached = await idbGet('categories');
+      if (cached) return cached;
+      return [];
+    }
       const { data, error } = await this.supabase
         .from('kategori')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching categories:', error);
         return [];
       }
-
+    await idbSet('categories', data || []);
       return data || [];
-    }, {
-      ttl: 600000, // 10 minutes
-      backgroundRefresh: true
-    });
   }
 
   // Add-ons dengan cache
   async getAddOns() {
-    return smartCache.get(CACHE_KEYS.ADDONS, async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const cached = await idbGet('addons');
+      if (cached) return cached;
+      return [];
+    }
       const { data, error } = await this.supabase
         .from('tambahan')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching add-ons:', error);
         return [];
       }
-
+    await idbSet('addons', data || []);
       return data || [];
-    }, {
-      ttl: 600000, // 10 minutes
-      backgroundRefresh: true
-    });
   }
 
   // Report data dengan ETag support
@@ -544,4 +609,51 @@ if (browser) {
   window.addEventListener('beforeunload', () => {
     realtimeManager.unsubscribeAll();
   });
+} 
+
+export async function syncPendingTransactions() {
+  const pendings = await getPendingTransactions();
+  if (!pendings.length) return;
+  for (const trx of pendings) {
+    try {
+      let bukuKasId = null;
+      if (trx.bukuKas) {
+        // Insert ke buku_kas
+        await DataService.getInstance().supabase
+          .from('buku_kas')
+          .insert(trx.bukuKas);
+        // Ambil id row yang baru berdasarkan transaction_id
+        const { data: lastBukuKas } = await DataService.getInstance().supabase
+          .from('buku_kas')
+          .select('id')
+          .eq('transaction_id', trx.bukuKas.transaction_id)
+          .order('waktu', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        bukuKasId = lastBukuKas?.id || null;
+      } else {
+        await DataService.getInstance().supabase
+          .from('buku_kas')
+          .insert(trx);
+      }
+      if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
+        // Update semua transaksiKasir dengan buku_kas_id
+        const transaksiKasirWithId = trx.transaksiKasir.map(item => ({ ...item, buku_kas_id: bukuKasId }));
+        await DataService.getInstance().supabase
+          .from('transaksi_kasir')
+          .insert(transaksiKasirWithId);
+      }
+    } catch (e) {
+      // Jika gagal, stop sync (biar tidak hilang)
+      return;
+    }
+  }
+  await clearPendingTransactions();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('pending-synced'));
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', syncPendingTransactions);
 } 

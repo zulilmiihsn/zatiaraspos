@@ -134,7 +134,6 @@ export class SecurityMiddleware {
       userAgent: browser ? navigator.userAgent : 'server'
     };
     // Hapus log ke console
-    // console.log('SECURITY LOG:', logEntry);
   }
 
   // Check for suspicious activity

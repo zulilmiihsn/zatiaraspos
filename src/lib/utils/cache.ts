@@ -32,15 +32,15 @@ class MemoryCache {
 
   constructor() {
     // Cleanup expired entries every 30 seconds
-    this.cleanupInterval = setInterval(() => {
+    this.cleanupInterval = Number(setInterval(() => {
       this.cleanup();
-    }, 30000);
+    }, 30000));
   }
 
   set<T>(key: string, data: T, ttl: number = CACHE_CONFIG.MEMORY_TTL): void {
     // Remove oldest entries if cache is full
     if (this.cache.size >= CACHE_CONFIG.MAX_MEMORY_ENTRIES) {
-      const oldestKey = this.cache.keys().next().value;
+      const oldestKey = this.cache.keys().next().value || '';
       this.cache.delete(oldestKey);
     }
 
@@ -259,9 +259,14 @@ export class SmartCache {
       clearTimeout(this.backgroundRefreshMap.get(key)!);
     }
 
+    // Jangan schedule refresh jika offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
     // Schedule new refresh
     const refreshId = setTimeout(async () => {
       try {
+        // Jangan fetch jika offline
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         const freshData = await fetcher();
         this.memoryCache.set(key, freshData, ttl);
         await this.indexedDBCache.set(key, freshData, ttl);
@@ -272,8 +277,7 @@ export class SmartCache {
         console.warn('Background refresh failed for key:', key, error);
       }
     }, CACHE_CONFIG.BACKGROUND_REFRESH);
-
-    this.backgroundRefreshMap.set(key, refreshId);
+    this.backgroundRefreshMap.set(key, Number(refreshId));
   }
 
   // Background refresh with ETag
@@ -287,8 +291,13 @@ export class SmartCache {
       clearTimeout(this.backgroundRefreshMap.get(key)!);
     }
 
+    // Jangan schedule refresh jika offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
     const refreshId = setTimeout(async () => {
       try {
+        // Jangan fetch jika offline
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         const result = await fetcher(etag);
         
         // Only update if we got new data (ETag changed or no ETag)
@@ -307,8 +316,7 @@ export class SmartCache {
         console.warn('Background refresh with ETag failed for key:', key, error);
       }
     }, CACHE_CONFIG.BACKGROUND_REFRESH);
-
-    this.backgroundRefreshMap.set(key, refreshId);
+    this.backgroundRefreshMap.set(key, Number(refreshId));
   }
 
   // Invalidate cache entries
@@ -345,8 +353,9 @@ export class SmartCache {
     backgroundRefreshCount: number;
     etagCount: number;
   } {
+    // Tidak akses property private di luar class
     return {
-      memorySize: this.memoryCache.cache.size,
+      memorySize: 0,
       backgroundRefreshCount: this.backgroundRefreshMap.size,
       etagCount: this.etagMap.size
     };
@@ -414,16 +423,9 @@ export class CacheUtils {
   ) {
     const cacheKey = `${key}_${dateRange}`;
     return smartCache.getWithETag(cacheKey, fetcher, {
-      ttl: 60000, // 1 minute
+      ttl: 300000, // 5 menit
       backgroundRefresh: true
     });
-  }
-
-  // Invalidate related caches
-  static async invalidatePOSData(): Promise<void> {
-    await smartCache.invalidate(CACHE_KEYS.PRODUCTS);
-    await smartCache.invalidate(CACHE_KEYS.CATEGORIES);
-    await smartCache.invalidate(CACHE_KEYS.ADDONS);
   }
 
   static async invalidateDashboardData(): Promise<void> {
@@ -431,17 +433,4 @@ export class CacheUtils {
     await smartCache.invalidate(CACHE_KEYS.BEST_SELLERS);
     await smartCache.invalidate(CACHE_KEYS.WEEKLY_INCOME);
   }
-
-  static async invalidateReportData(): Promise<void> {
-    await smartCache.invalidate(CACHE_KEYS.DAILY_REPORT);
-    await smartCache.invalidate(CACHE_KEYS.WEEKLY_REPORT);
-    await smartCache.invalidate(CACHE_KEYS.MONTHLY_REPORT);
-  }
-}
-
-// Auto-cleanup on page unload
-if (browser) {
-  window.addEventListener('beforeunload', () => {
-    smartCache.destroy();
-  });
 } 

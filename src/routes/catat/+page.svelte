@@ -14,6 +14,7 @@ import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import { addPendingTransaction } from '$lib/utils/offline';
 
 // Touch handling variables
 let touchStartX = 0;
@@ -188,9 +189,23 @@ async function saveTransaksi(form: any) {
       showNotifModal = true;
       return;
     }
+    // Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
+    import('$lib/services/dataService').then(async ({ dataService }) => {
+      await dataService.invalidateCacheOnChange('buku_kas');
+      await dataService.invalidateCacheOnChange('transaksi_kasir');
+      if (typeof window !== 'undefined' && window.refreshDashboardData) {
+        await window.refreshDashboardData();
+      }
+    });
     if (typeof window !== 'undefined' && window.fetchDashboardStats) {
       window.fetchDashboardStats();
     }
+  } else {
+    // Offline mode: simpan transaksi ke pending
+    addPendingTransaction(trx);
+    notifModalMsg = 'Transaksi disimpan offline dan akan otomatis sync saat online.';
+    notifModalType = 'success';
+    showNotifModal = true;
   }
 }
 

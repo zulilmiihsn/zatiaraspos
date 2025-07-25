@@ -46,14 +46,12 @@ export function measurePerformance(name: string, fn: () => void) {
   const start = performance.now();
   fn();
   const end = performance.now();
-  console.log(`${name} took ${end - start}ms`);
 }
 
 export async function measureAsyncPerformance(name: string, fn: () => Promise<void>) {
   const start = performance.now();
   await fn();
   const end = performance.now();
-  console.log(`${name} took ${end - start}ms`);
 }
 
 // Cart calculations dengan memoization
@@ -136,17 +134,5 @@ export function analyzeBundleSize() {
       return sum + (resource.transferSize || 0);
     }, 0);
     
-    console.log(`Total bundle size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
-    
-    // Log largest resources
-    const sortedResources = resources
-      .filter(r => r.transferSize > 0)
-      .sort((a, b) => (b.transferSize || 0) - (a.transferSize || 0))
-      .slice(0, 5);
-    
-    console.log('Largest resources:', sortedResources.map(r => ({
-      name: r.name,
-      size: `${((r.transferSize || 0) / 1024).toFixed(2)}KB`
-    })));
   }
 } 

@@ -15,6 +15,7 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import * as pako from 'pako';
 import { Base64 } from 'js-base64';
 import { memoize } from '$lib/utils/performance';
+import { addPendingTransaction } from '$lib/utils/offline';
 
 let cart = [];
 let customerName = '';
@@ -281,6 +282,19 @@ async function catatTransaksiKeLaporan() {
     qty: totalQty,
     transaction_id: transactionId
   };
+  // Detail transaksi untuk transaksi_kasir
+  const transaksiKasirInserts = cart.map(item => {
+    const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
+    const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
+    return {
+      // buku_kas_id: diisi saat online, biarkan null saat offline
+      produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
+      qty: item.qty,
+      amount: unitPrice * item.qty,
+      price: unitPrice,
+      transaction_id: transactionId
+    };
+  });
   if (!payment) {
     notifModalMsg = 'Metode pembayaran tidak valid!';
     notifModalType = 'error';
@@ -297,7 +311,7 @@ async function catatTransaksiKeLaporan() {
     }
     const { data: lastBukuKas, error: lastBukuKasError } = await getSupabaseClient(storeGet(selectedBranch))
       .from('buku_kas')
-      .select('id')
+      .select('id, transaction_id, sumber, waktu')
       .eq('customer_name', customerName || null)
       .eq('transaction_id', transactionId)
       .order('waktu', { ascending: false })
@@ -308,24 +322,32 @@ async function catatTransaksiKeLaporan() {
         const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
         const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
         return {
-          buku_kas_id: lastBukuKas.id,
-          produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
-          qty: item.qty,
+        buku_kas_id: lastBukuKas.id,
+        produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
+        qty: item.qty,
           amount: unitPrice * item.qty,
           price: unitPrice,
-          transaction_id: transactionId
+        transaction_id: transactionId
         };
       });
       if (transaksiKasirInserts.length) {
         const { error: errorKasir } = await getSupabaseClient(storeGet(selectedBranch)).from('transaksi_kasir').insert(transaksiKasirInserts);
-        if (errorKasir) {
-        }
       }
-    } else {
     }
+    // Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
+    import('$lib/services/dataService').then(async ({ dataService }) => {
+      await dataService.invalidateCacheOnChange('buku_kas');
+      await dataService.invalidateCacheOnChange('transaksi_kasir');
+      if (typeof window !== 'undefined' && window.refreshDashboardData) {
+        await window.refreshDashboardData();
+      }
+    });
   } else {
-    // Offline mode: simpan satu row summary saja
-    // for (const trx of inserts) { ... } // Hapus loop, implementasi saveTransaksiOffline jika perlu
+    // Offline mode: simpan summary dan detail ke pending
+    addPendingTransaction({ bukuKas: insert, transaksiKasir: transaksiKasirInserts });
+    notifModalMsg = 'Transaksi disimpan offline dan akan otomatis sync saat online.';
+    notifModalType = 'success';
+    showNotifModal = true;
   }
   // Hapus proses insert ke transaksi dan item_transaksi, karena sudah tidak digunakan
 }
