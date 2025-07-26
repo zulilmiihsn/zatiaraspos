@@ -439,8 +439,14 @@ let categories = [];
 $: categories = kategoriData;
 
 let skeletonCount = 9;
-if (typeof window !== 'undefined' && window.innerWidth < 768) {
+if (typeof window !== 'undefined') {
+  if (window.innerWidth < 768) {
   skeletonCount = 6;
+  } else if (window.innerWidth >= 1024) {
+    skeletonCount = 12;
+  } else {
+    skeletonCount = 9;
+  }
 }
 
 let showErrorNotification = false;
@@ -615,7 +621,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
         {/if}
       </div>
     {:else}
-      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0 md:grid-cols-3 md:gap-6 md:px-8 md:pb-8" transition:slide={{ duration: 250 }}>
+      <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0 md:grid-cols-3 md:gap-6 md:px-8 md:pb-8 lg:grid-cols-6" transition:slide={{ duration: 250 }}>
         {#if isLoadingProducts}
           {#each Array(skeletonCount) as _, i}
             <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100 md:p-6 md:max-h-[320px] md:min-h-[180px]" />

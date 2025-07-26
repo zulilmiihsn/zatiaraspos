@@ -888,11 +888,11 @@ $: if (showNotifModal) {
                     </button>
                   </div>
                   <div class="flex flex-col h-full w-full items-center justify-center">
-                    <div class="w-full flex-1 flex items-center justify-center" style="padding-top: 0; margin-top: -8px;">
+                    <div class="w-full flex-1 flex items-center justify-center mb-2">
                       {#if menu.gambar}
-                        <img src={menu.gambar} alt={menu.name} class="w-full aspect-square object-cover rounded-lg border border-gray-100 md:w-16 md:h-16" onerror={() => handleImgError(menu.id)} />
+                        <img src={menu.gambar} alt={menu.name} class="w-full h-full object-cover rounded-lg border border-gray-100" onerror={() => handleImgError(menu.id)} />
                       {:else}
-                        <div class="w-full aspect-square rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center text-4xl md:w-16 md:h-16">
+                        <div class="w-full h-full rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center text-4xl">
                           🍹
                         </div>
                       {/if}

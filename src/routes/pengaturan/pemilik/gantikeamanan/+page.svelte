@@ -162,9 +162,11 @@ async function saveLockedPages() {
     </button>
     <h1 class="text-xl font-bold text-gray-800">Ganti Keamanan</h1>
   </div>
-  <div class="max-w-md w-full mx-auto px-4 py-3 flex-1">
+  <div class="max-w-md w-full mx-auto px-4 py-3 flex-1 lg:max-w-6xl lg:px-8">
+    <!-- Grid layout for desktop -->
+    <div class="lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0 space-y-8">
     <!-- Card: Ganti Username/Password untuk Pemilik & Kasir -->
-    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6 mb-8 lg:mb-0 lg:flex lg:flex-col">
       <div class="flex gap-2 mb-4">
         <button
           class="flex-1 py-2 rounded-lg font-bold text-base transition-all focus:outline-none {activeSecurityTab === 'pemilik' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}"
@@ -188,7 +190,8 @@ async function saveLockedPages() {
         <p class="text-gray-500 text-sm mb-4">
           Ubah username dan password akun pemilik untuk keamanan akses penuh aplikasi.
         </p>
-      <form class="flex flex-col gap-4" onsubmit={handleChangeUserPass} autocomplete="off">
+        <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" onsubmit={handleChangeUserPass} autocomplete="off">
+            <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
             <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
@@ -212,10 +215,11 @@ async function saveLockedPages() {
         {#if userPassError}
             <div class="text-pink-600 text-xs text-center mt-1">{userPassError}</div>
           {/if}
-          <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="submit">Simpan Perubahan</button>
+            </div>
+            <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2 lg:mt-auto" type="submit">Simpan Perubahan</button>
         </form>
       {:else}
-        <div class="text-center py-8">
+          <div class="text-center py-8 lg:flex-1 lg:flex lg:flex-col lg:justify-center">
           <Shield class="w-16 h-16 text-blue-300 mx-auto mb-4" />
           <h3 class="font-bold text-lg text-blue-600 mb-2">Fitur Kasir</h3>
           <p class="text-gray-500 text-sm">Fitur ganti username & password kasir akan segera hadir.</p>
@@ -223,14 +227,15 @@ async function saveLockedPages() {
       {/if}
     </div>
     <!-- Card: Ganti PIN -->
-    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6 mb-8 lg:mb-0 lg:flex lg:flex-col">
       <h3 class="font-bold text-lg text-pink-600 mb-4 flex items-center gap-2">
         <Shield class="w-5 h-5" /> Ganti PIN Keamanan
       </h3>
       <p class="text-gray-500 text-sm mb-4">
         Ubah PIN keamanan untuk mengunci akses ke halaman penting. PIN harus 4-6 digit angka.
       </p>
-      <form class="flex flex-col gap-4" onsubmit={savePinSettings} autocomplete="off">
+        <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" onsubmit={savePinSettings} autocomplete="off">
+          <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
           <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
@@ -246,15 +251,17 @@ async function saveLockedPages() {
         {#if pinError}
           <div class="text-pink-600 text-xs text-center mt-1">{pinError}</div>
         {/if}
-        <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="submit">Simpan PIN</button>
+          </div>
+          <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2 lg:mt-auto" type="submit">Simpan PIN</button>
       </form>
     </div>
     <!-- Card: Pengaturan Halaman Terkunci -->
-    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6 mb-8 lg:mb-0 lg:flex lg:flex-col">
       <h3 class="font-bold text-lg text-pink-600 mb-4 flex items-center gap-2">
         <Shield class="w-5 h-5" /> Pengaturan Halaman Terkunci
       </h3>
       <p class="text-gray-500 text-sm mb-6">Pilih halaman yang ingin dikunci dengan PIN. Halaman yang dikunci akan meminta PIN saat diakses.</p>
+        <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
       <div class="flex flex-col gap-3 mb-4">
         <label class="flex items-center gap-3 cursor-pointer select-none">
           <span class="relative inline-block w-5 h-5">
@@ -278,7 +285,9 @@ async function saveLockedPages() {
           <span class="text-gray-700 font-medium">Laporan</span>
         </label>
       </div>
-      <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2" type="button" onclick={saveLockedPages}>Simpan Pengaturan</button>
+        </div>
+        <button class="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-colors duration-200 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 mt-2 lg:mt-auto" type="button" onclick={saveLockedPages}>Simpan Pengaturan</button>
+      </div>
     </div>
     {#if showNotifModal}
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">

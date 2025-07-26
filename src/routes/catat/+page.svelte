@@ -592,7 +592,7 @@ main {
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <div class="px-2 pb-4 pt-4 md:pt-8 lg:pt-10">
-      <div class="max-w-md mx-auto w-full pb-2 px-2 md:max-w-lg md:mx-auto md:pb-4 md:px-0">
+      <div class="max-w-md mx-auto w-full pb-2 px-2 md:max-w-lg md:mx-auto md:pb-4 md:px-0 lg:max-w-2xl lg:mx-auto">
         <div class="relative flex rounded-full overflow-hidden mb-5 shadow-sm border border-pink-100 bg-gray-50 md:max-w-lg md:mx-auto">
           <!-- Indicator Slide -->
           <div

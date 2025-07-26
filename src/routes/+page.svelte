@@ -690,7 +690,7 @@ function handleBarPointerUp() {
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" aria-label="Modal buka tutup toko" onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)}>
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup modal-padding-custom" style="padding-left:3rem;padding-right:3rem;padding-top:3rem;padding-bottom:3rem;" onclick={event => event.stopPropagation()} role="document">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup p-8 md:p-12 lg:max-w-lg lg:p-10 xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-16" onclick={event => event.stopPropagation()} role="document">
       {#if isBukaToko}
         <div class="flex flex-col items-center mb-4">
           <div class="text-4xl mb-2">🍹</div>
@@ -794,44 +794,44 @@ function handleBarPointerUp() {
       <div class="flex flex-col space-y-3 md:space-y-10">
       <!-- Metrik Utama -->
         <div class="grid grid-cols-2 gap-3 md:grid-cols-2 md:grid-rows-2 md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-lg md:border md:border-gray-100">
-          <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-sky-200">
+          <div class="bg-gradient-to-br from-sky-200 to-sky-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-sky-200 lg:flex-col lg:items-center lg:justify-center">
             {#if ShoppingBag}
-              <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-sky-500" />
+              <svelte:component this={ShoppingBag} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-sky-500 lg:mx-auto lg:mb-2" />
             {:else}
-              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center lg:mx-auto lg:mb-2">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
             <div class="text-xs md:text-base font-medium text-gray-500 mb-1 md:mb-0 md:text-center">Item Terjual</div>
             <div class="text-xl md:text-3xl font-bold text-sky-600 md:text-center">{itemTerjual ?? '--'}</div>
           </div>
-          <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-purple-200">
+          <div class="bg-gradient-to-br from-purple-200 to-purple-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-purple-200 lg:flex-col lg:items-center lg:justify-center">
             {#if TrendingUp}
-              <svelte:component this={TrendingUp} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-purple-500" />
+              <svelte:component this={TrendingUp} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-purple-500 lg:mx-auto lg:mb-2" />
             {:else}
-              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center lg:mx-auto lg:mb-2">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
             <div class="text-xs md:text-base font-medium text-gray-500 mb-1 md:mb-0 md:text-center">Jumlah Transaksi</div>
             <div class="text-xl md:text-3xl font-bold text-purple-600 md:text-center">{jumlahTransaksi ?? '--'}</div>
           </div>
-          <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-green-200 hidden md:block">
+          <div class="bg-gradient-to-br from-green-200 to-green-400 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-green-200 hidden md:block lg:flex-col lg:items-center lg:justify-center">
             {#if Wallet}
-              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-green-900" />
+              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-green-900 lg:mx-auto lg:mb-2" />
             {:else}
-              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center lg:mx-auto lg:mb-2">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
             <div class="text-sm md:text-base font-medium text-green-900/80 md:text-center">Pendapatan</div>
             <div class="text-xl md:text-3xl font-bold text-green-900 md:text-center">{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}</div>
           </div>
-          <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-cyan-200 hidden md:block">
+          <div class="bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-md p-4 md:p-6 flex flex-col items-start md:items-center md:justify-center md:gap-2 md:shadow-none md:bg-transparent md:border md:border-cyan-200 hidden md:block lg:flex-col lg:items-center lg:justify-center">
             {#if Wallet}
-              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-cyan-900" />
+              <svelte:component this={Wallet} class="w-6 h-6 md:w-10 md:h-10 mb-2 text-cyan-900 lg:mx-auto lg:mb-2" />
             {:else}
-              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center">
+              <div class="w-6 h-6 md:w-10 md:h-10 mb-2 flex items-center justify-center lg:mx-auto lg:mb-2">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
@@ -985,30 +985,6 @@ function handleBarPointerUp() {
 @keyframes modalSlideUp {
   from { transform: translateY(64px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
-}
-.modal-padding-custom {
-  max-width: 95vw !important;
-  box-sizing: border-box !important;
-  padding-left: 3rem !important;
-  padding-right: 3rem !important;
-  padding-top: 3rem !important;
-  padding-bottom: 3rem !important;
-}
-@media (min-width: 768px) {
-  .modal-padding-custom {
-    padding-left: 4rem !important;
-    padding-right: 4rem !important;
-    padding-top: 4rem !important;
-    padding-bottom: 4rem !important;
-  }
-}
-@media (min-width: 1024px) {
-  .modal-padding-custom {
-    padding-left: 6rem !important;
-    padding-right: 6rem !important;
-    padding-top: 6rem !important;
-    padding-bottom: 6rem !important;
-  }
 }
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 0 0 #ec489980; }

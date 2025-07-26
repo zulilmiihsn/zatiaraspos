@@ -592,7 +592,7 @@ function toYMD(date: string | Date): string {
     style="scrollbar-width:none;-ms-overflow-style:none;"
   >
     <!-- Konten utama halaman Laporan di sini -->
-    <div class="max-w-md mx-auto w-full pt-4 md:pt-8 lg:pt-10 pb-8 px-2 md:max-w-3xl md:px-8">
+    <div class="max-w-md mx-auto w-full pt-4 md:pt-8 lg:pt-10 pb-8 px-2 md:max-w-3xl md:px-8 lg:max-w-none lg:px-6">
       <div class="flex w-full items-center gap-2 px-2 mb-3 md:gap-4 md:px-0 md:mb-6">
         <!-- Button Filter -->
         <div class="flex-none">
@@ -621,42 +621,42 @@ function toYMD(date: string | Date): string {
       <div class="px-2 py-3 md:px-0 md:py-6 md:rounded-2xl md:shadow md:mb-8">
         <div class="md:px-6">
           <div class="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-6">
-            <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+            <div class="bg-gradient-to-br from-green-100 to-green-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-4 md:rounded-2xl md:gap-1 md:items-center md:justify-center lg:p-3">
             {#if ArrowDownCircle}
-                <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500 md:w-10 md:h-10 md:mb-3" />
+                <svelte:component this={ArrowDownCircle} class="w-6 h-6 mb-2 text-green-500 md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1" />
             {:else}
-                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-              <div class="text-sm font-medium text-green-900/80 md:text-base md:text-center">Pemasukan</div>
-              <div class="text-xl font-bold text-green-900 md:text-2xl md:text-center">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
+              <div class="text-sm font-medium text-green-900/80 md:text-base md:text-center lg:text-sm">Pemasukan</div>
+              <div class="text-xl font-bold text-green-900 md:text-2xl md:text-center lg:text-lg">Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined ? summary.pendapatan.toLocaleString('id-ID') : '--'}</div>
           </div>
-            <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+            <div class="bg-gradient-to-br from-red-100 to-red-300 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-4 md:rounded-2xl md:gap-1 md:items-center md:justify-center lg:p-3">
             {#if ArrowUpCircle}
-                <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500 md:w-10 md:h-10 md:mb-3" />
+                <svelte:component this={ArrowUpCircle} class="w-6 h-6 mb-2 text-red-500 md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1" />
             {:else}
-                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-              <div class="text-sm font-medium text-red-900/80 md:text-base md:text-center">Pengeluaran</div>
-              <div class="text-xl font-bold text-red-900 md:text-2xl md:text-center">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
+              <div class="text-sm font-medium text-red-900/80 md:text-base md:text-center lg:text-sm">Pengeluaran</div>
+              <div class="text-xl font-bold text-red-900 md:text-2xl md:text-center lg:text-lg">Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined ? summary.pengeluaran.toLocaleString('id-ID') : '--'}</div>
           </div>
-            <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-6 md:rounded-2xl md:gap-2 md:items-center md:justify-center">
+            <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-cyan-100 to-pink-200 rounded-xl shadow-sm p-3 flex flex-col items-start md:p-4 md:rounded-2xl md:gap-1 md:items-center md:justify-center lg:p-3">
             {#if Wallet}
-                <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900 md:w-10 md:h-10 md:mb-3" />
+                <svelte:component this={Wallet} class="w-6 h-6 mb-2 text-cyan-900 md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1" />
             {:else}
-                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-10 md:h-10 md:mb-3">
+                <div class="w-6 h-6 mb-2 flex items-center justify-center md:w-8 md:h-8 md:mb-2 lg:w-6 lg:h-6 lg:mb-1">
                 <span class="block w-4 h-4 border-2 border-pink-200 border-t-pink-500 rounded-full animate-spin"></span>
               </div>
             {/if}
-              <div class="text-sm font-medium text-cyan-900/80 md:text-base md:text-center">Laba (Rugi)</div>
-              <div class="text-xl font-bold text-cyan-900 md:text-2xl md:text-center">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
+              <div class="text-sm font-medium text-cyan-900/80 md:text-base md:text-center lg:text-sm">Laba (Rugi)</div>
+              <div class="text-xl font-bold text-cyan-900 md:text-2xl md:text-center lg:text-lg">Rp {summary?.saldo !== null && summary?.saldo !== undefined ? summary.saldo.toLocaleString('id-ID') : '--'}</div>
           </div>
         </div>
         <!-- Insight Total QRIS & Tunai Keseluruhan -->
-          <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold md:gap-6 md:text-base md:px-0 md:mt-6">
+          <div class="flex flex-wrap gap-4 mt-3 px-1 text-xs text-gray-500 font-semibold md:gap-6 md:text-base md:px-0 md:mt-6 lg:text-sm lg:mt-4">
             <span>Total QRIS: <span class="text-pink-500 font-bold">Rp {totalQrisAll.toLocaleString('id-ID')}</span></span>
             <span>Total Tunai: <span class="text-pink-500 font-bold">Rp {totalTunaiAll.toLocaleString('id-ID')}</span></span>
           </div>
@@ -664,9 +664,9 @@ function toYMD(date: string | Date): string {
       </div>
 
       <!-- Section Laporan Detail -->
-      <div class="px-2 mt-4 flex flex-col gap-2 md:px-0 md:mt-8 md:gap-8">
+      <div class="px-2 mt-4 flex flex-col gap-2 md:px-0 md:mt-8 md:gap-8 lg:flex-row lg:gap-6">
         <!-- Accordion: Pemasukan -->
-        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4">
+        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4 lg:flex-1 lg:mb-0">
           <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px] md:rounded-2xl md:px-6 md:py-4 md:text-lg md:mb-2" onclick={() => showPemasukan = !showPemasukan}>
             <span>Pemasukan</span>
             <svg class="w-5 h-5 ml-2 md:w-6 md:h-6" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPemasukan ? 0 : 180}deg);transform-origin:center"/></svg>
@@ -747,7 +747,7 @@ function toYMD(date: string | Date): string {
           {/if}
         </div>
         <!-- Accordion: Pengeluaran -->
-        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4">
+        <div class="rounded-xl bg-white shadow-sm overflow-hidden md:rounded-2xl md:shadow md:p-4 md:mb-4 lg:flex-1 lg:mb-0">
           <button class="w-full flex justify-between items-center rounded-xl px-4 py-2 bg-white text-base font-bold text-gray-700 mb-1 min-h-[44px] md:rounded-2xl md:px-6 md:py-4 md:text-lg md:mb-2" onclick={() => showPengeluaran = !showPengeluaran}>
             <span>Pengeluaran</span>
             <svg class="w-5 h-5 ml-2 md:w-6 md:h-6" viewBox="0 0 20 20"><polygon points="5,8 10,13 15,8" fill="currentColor" style="transform:rotate({showPengeluaran ? 0 : 180}deg);transform-origin:center"/></svg>
@@ -827,20 +827,23 @@ function toYMD(date: string | Date): string {
             </div>
           {/if}
         </div>
-        <!-- Laba (Rugi) Kotor -->
-        <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
-          <span>Laba (Rugi) Kotor</span>
-          <span>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
-        </div>
-        <!-- Pajak Penghasilan -->
-        <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
-          <span>Pajak Penghasilan (0,5%)</span>
-          <span>Rp {summary?.pajak !== null && summary?.pajak !== undefined ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
-        </div>
-        <!-- Laba (Rugi) Bersih -->
-        <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4">
-          <span>Laba (Rugi) Bersih</span>
-          <span>Rp {summary?.labaBersih !== null && summary?.labaBersih !== undefined ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
+        <!-- Section Laba/Rugi - Desktop Layout -->
+        <div class="lg:flex-1 lg:flex lg:flex-col lg:gap-4">
+          <!-- Laba (Rugi) Kotor -->
+          <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4 lg:flex-col lg:justify-center lg:min-h-[120px] lg:mb-0 lg:h-full">
+            <span>Laba (Rugi) Kotor</span>
+            <span>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined ? summary.labaKotor.toLocaleString('id-ID') : '--'}</span>
+          </div>
+          <!-- Pajak Penghasilan -->
+          <div class="border border-pink-100 rounded-xl mb-1 px-4 py-3 bg-white flex justify-between items-center font-bold text-gray-700 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4 lg:flex-col lg:justify-center lg:min-h-[120px] lg:mb-0 lg:h-full">
+            <span>Pajak Penghasilan (0,5%)</span>
+            <span>Rp {summary?.pajak !== null && summary?.pajak !== undefined ? summary.pajak.toLocaleString('id-ID') : '--'}</span>
+          </div>
+          <!-- Laba (Rugi) Bersih -->
+          <div class="border border-pink-100 rounded-xl px-4 py-3 bg-white flex justify-between items-center font-bold text-pink-600 text-base shadow-sm md:bg-gradient-to-br md:from-gray-50 md:to-pink-100 md:rounded-2xl md:shadow-sm md:p-6 md:mb-0 md:text-center md:text-2xl md:justify-center md:gap-4 lg:flex-col lg:justify-center lg:min-h-[120px] lg:mb-0 lg:h-full">
+            <span>Laba (Rugi) Bersih</span>
+            <span>Rp {summary?.labaBersih !== null && summary?.labaBersih !== undefined ? summary.labaBersih.toLocaleString('id-ID') : '--'}</span>
+          </div>
         </div>
       </div>
 

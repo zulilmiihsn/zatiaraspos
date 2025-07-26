@@ -325,9 +325,11 @@
       {/if}
     </button>
   </div>
+  <!-- Grid Menu Pengaturan -->
+  <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0 md:justify-start md:px-0">
   <!-- Box Informasi Role -->
   {#if isLoading || !isProfileLoaded}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2 animate-pulse">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col items-center gap-2 mb-2 animate-pulse w-full max-w-4xl md:mx-auto">
       <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl mb-2"></div>
       <div class="h-6 w-24 bg-gray-200 rounded mb-1"></div>
       <div class="h-4 w-32 bg-gray-100 rounded mb-2"></div>
@@ -338,7 +340,7 @@
       <div class="h-2 w-full"></div>
     </div>
   {:else}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mx-4 flex flex-col items-center gap-2 mb-2">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col items-center gap-2 mb-2 w-full max-w-4xl md:mx-auto">
       <div class="w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg mb-2">
         {#if roleIcon}
           <svelte:component this={roleIcon} class="w-8 h-8 text-white" />
@@ -366,8 +368,6 @@
     </div>
   {/if}
 
-  <!-- Grid Menu Pengaturan -->
-  <div class="flex-1 flex flex-col justify-center items-center px-4 mt-0 md:justify-start">
     <div class="grid grid-cols-2 gap-4 w-full max-w-md mt-2 md:grid-cols-3 md:gap-8 md:max-w-4xl md:mx-auto md:py-8 md:mt-4">
       {#if isLoading || !isProfileLoaded}
         {#each Array(4) as _, i}
@@ -424,11 +424,10 @@
           <div class="text-xs text-gray-500 text-center md:text-base md:mt-1 md:mb-0">Atur tampilan dan informasi draft struk</div>
         </button>
       {/if}
-    </div>
   </div>
 
   <!-- Logout Section -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mx-4 mb-6 mt-4 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 mt-4 overflow-hidden w-full max-w-4xl md:mx-auto">
     <div class="px-6 py-4 bg-red-50 border-b border-red-200">
       <div class="flex items-center gap-3">
         {#if LogOut}
@@ -458,6 +457,7 @@
         {/if}
         Keluar dari Sistem
       </button>
+      </div>
     </div>
   </div>
 
