@@ -27,7 +27,7 @@ const defaultData = {
 async function loadPengaturan() {
   // Coba load dari Supabase, fallback ke localStorage
   try {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').select('*').limit(1).maybeSingle();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('*').limit(1).maybeSingle();
     if (data) {
       namaToko = data.nama_toko || defaultData.namaToko;
       alamat = data.alamat || defaultData.alamat;
@@ -67,7 +67,7 @@ async function simpanPengaturan(event: Event) {
     ucapan
   };
   try {
-    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_struk').upsert([data]);
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').upsert([data]);
     if (error) throw error;
     showFloatingNotif('Pengaturan berhasil disimpan!', 'success');
   } catch (e) {
@@ -158,8 +158,8 @@ onMount(async () => {
 </div> 
 
 {#if showToast}
-  <div class="fixed top-6 left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold"
-    style="transform: translateX(-50%); background: {toastType === 'success' ? '#22c55e' : '#ef4444'}; min-width:200px; text-align:center;">
+  <div class="fixed top-6 left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold text-center"
+    style="transform: translateX(-50%); background: {toastType === 'success' ? '#22c55e' : '#ef4444'}; min-width:200px;">
     {toastMsg}
   </div>
 {/if} 

@@ -8,7 +8,7 @@ import { validateNumber, validateText, validateDate, validateTime, sanitizeInput
 import { SecurityMiddleware } from '$lib/utils/security';
 import { auth } from '$lib/auth/auth';
 import { goto } from '$app/navigation';
-import { formatWitaDateTime, getWitaDateRangeUtc } from '$lib/utils/index';
+import { formatWitaDateTime, getWitaDateRangeUtc, witaToUtcISO } from '$lib/utils/index';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
@@ -122,7 +122,7 @@ onMount(async () => {
   }
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('catat')) {
       showPinModal = true;
@@ -138,7 +138,7 @@ onMount(async () => {
 
 
 async function fetchPin() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('pin').single();
+  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -171,6 +171,9 @@ async function saveTransaksi(form: any) {
     showNotifModal = true;
     // Tidak ada return di sini, agar insert tetap lanjut untuk pemilik
   }
+  
+  const utcTime = witaToUtcISO(form.transaction_date, form.transaction_time || '00:00');
+  
   const trx = {
     tipe: mode === 'pemasukan' ? 'in' : 'out',
     sumber: 'catat',
@@ -178,7 +181,8 @@ async function saveTransaksi(form: any) {
     amount: form.amount,
     description: form.description,
     id_sesi_toko,
-    waktu: new Date(`${form.transaction_date}T${form.transaction_time || '00:00'}:00`).toISOString(),
+    // Perbaiki: Konversi waktu WITA ke UTC dengan benar
+    waktu: utcTime,
     jenis: form.jenis
   };
   if (navigator.onLine) {

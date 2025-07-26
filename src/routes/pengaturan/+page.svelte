@@ -63,7 +63,7 @@
   }
 
   async function fetchPengaturan() {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('locked_pages, pin').single();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages, pin').single();
     pengaturanData = !error ? data : null;
   }
 
@@ -523,7 +523,7 @@
 
   {#if showNotification}
     <div 
-      class="fixed top-20 left-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
+      class="fixed top-20 left-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center"
       style="transform: translateX(-50%);"
       in:fly={{ y: -32, duration: 300, easing: cubicOut }}
       out:fade={{ duration: 200 }}

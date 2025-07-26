@@ -41,7 +41,7 @@ onMount(async () => {
     currentUserRole = role || '';
   });
   // Fetch PIN dan lockedPages dari Supabase
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').select('id, pin, locked_pages').single();
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('id, pin, locked_pages').single();
   if (!error && data) {
     pin = data.pin || '';
     lockedPages = data.locked_pages || [];
@@ -115,7 +115,7 @@ async function savePinSettings(event) {
     return;
   }
   try {
-    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').update({ pin: newPin }).eq('id', pengaturanKeamananId);
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').update({ pin: newPin }).eq('id', pengaturanKeamananId);
     if (error) throw error;
     notifModalMsg = 'Perubahan PIN berhasil disimpan.';
     notifModalType = 'success';
@@ -141,7 +141,7 @@ function handleSetTabKasir() { activeSecurityTab = 'kasir'; }
 // Simpan pengaturan lockedPages ke Supabase
 async function saveLockedPages() {
   try {
-    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan_keamanan').update({ locked_pages: lockedPages }).eq('id', pengaturanKeamananId);
+    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').update({ locked_pages: lockedPages }).eq('id', pengaturanKeamananId);
     if (error) throw error;
     notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
     notifModalType = 'success';

@@ -28,9 +28,10 @@ export function throttle<T extends (...args: any[]) => any>(
 export function memoize<T extends (...args: any[]) => any>(
   func: T,
   resolver?: (...args: Parameters<T>) => string
-): T {
+): T & { clearCache: () => void } {
   const cache = new Map();
-  return ((...args: Parameters<T>) => {
+  
+  const memoizedFunc = ((...args: Parameters<T>) => {
     const key = resolver ? resolver(...args) : JSON.stringify(args);
     if (cache.has(key)) {
       return cache.get(key);
@@ -38,7 +39,13 @@ export function memoize<T extends (...args: any[]) => any>(
     const result = func(...args);
     cache.set(key, result);
     return result;
-  }) as T;
+  }) as T & { clearCache: () => void };
+  
+  memoizedFunc.clearCache = () => {
+    cache.clear();
+  };
+  
+  return memoizedFunc;
 }
 
 // Performance measurement

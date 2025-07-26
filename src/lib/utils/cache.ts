@@ -433,4 +433,18 @@ export class CacheUtils {
     await smartCache.invalidate(CACHE_KEYS.BEST_SELLERS);
     await smartCache.invalidate(CACHE_KEYS.WEEKLY_INCOME);
   }
+
+  static async invalidatePOSData(): Promise<void> {
+    await smartCache.invalidate(CACHE_KEYS.PRODUCTS);
+    await smartCache.invalidate(CACHE_KEYS.CATEGORIES);
+    await smartCache.invalidate(CACHE_KEYS.ADDONS);
+  }
+
+  static async invalidateReportData(): Promise<void> {
+    // Invalidate specific report keys instead of using regex
+    await smartCache.invalidate('daily_report');
+    await smartCache.invalidate('weekly_report');
+    await smartCache.invalidate('monthly_report');
+    await smartCache.invalidate('yearly_report');
+  }
 } 

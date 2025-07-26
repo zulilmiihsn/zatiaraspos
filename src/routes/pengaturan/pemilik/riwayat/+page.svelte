@@ -279,7 +279,7 @@ onDestroy(() => {
   {/if}
 
   {#if showNotif}
-    <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out" style="transform: translateX(-50%);">
+    <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center" style="transform: translateX(-50%);">
       {notifMsg}
     </div>
   {/if}

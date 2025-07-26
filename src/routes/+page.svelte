@@ -52,6 +52,7 @@ let errorBestSellers = '';
 let isLoadingDashboard = true;
 
 let unsubscribeBranch: (() => void) | null = null;
+let isInitialLoad = true; // Add flag to prevent double fetching
 
 onMount(async () => {
   const icons = await Promise.all([
@@ -94,7 +95,7 @@ onMount(async () => {
   
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
@@ -102,7 +103,13 @@ onMount(async () => {
   }
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-  unsubscribeBranch = selectedBranch.subscribe(async () => {
+  unsubscribeBranch = selectedBranch.subscribe(async (newBranch) => {
+    // Skip jika ini adalah initial load
+    if (isInitialLoad) {
+      isInitialLoad = false;
+      return;
+    }
+    
     // Reset semua metriks
     omzet = 0;
     jumlahTransaksi = 0;
@@ -217,7 +224,7 @@ async function refreshDashboardData() {
 }
 
 async function fetchPin() {
-  const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('pin').single();
+  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -914,7 +921,7 @@ function handleBarPointerUp() {
                 {#if jamRamai}
                   {jamRamai}
                 {:else}
-                  '00.00'
+                  00.00
                 {/if}
               </div>
               <div class="text-xs text-gray-500 mt-1 md:text-sm">Jam paling ramai</div>

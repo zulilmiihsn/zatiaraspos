@@ -113,11 +113,17 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
 export class DataService {
   private static instance: DataService;
   private supabase: any;
+  private isInitialLoad = true; // Add flag to prevent double fetching
 
   constructor() {
     this.supabase = getSupabaseClient(storeGet(selectedBranch));
     // Subscribe ke selectedBranch agar supabase client ikut berubah
     selectedBranch.subscribe((branch) => {
+      // Skip jika ini adalah initial load
+      if (this.isInitialLoad) {
+        this.isInitialLoad = false;
+        return;
+      }
       this.supabase = getSupabaseClient(branch);
     });
   }
@@ -445,12 +451,35 @@ export class DataService {
         }
       }
 
-      // Ambil transaksi POS per item
-      const { data: posItems, error: errorPos } = await this.supabase
+      // Ambil transaksi POS dari buku_kas dulu
+      const { data: posBukuKas, error: errorPosBukuKas } = await this.supabase
+        .from('buku_kas')
+        .select('*')
+        .gte('waktu', startUtc)
+        .lt('waktu', endUtcFinal)
+        .eq('sumber', 'pos');
+        
+      // Ambil detail transaksi kasir untuk POS yang sudah difilter
+      let posItems = [];
+      if (posBukuKas && posBukuKas.length > 0) {
+        const bukuKasIds = posBukuKas.map(bk => bk.id);
+        const { data: transaksiKasir, error: errorTransaksiKasir } = await this.supabase
         .from('transaksi_kasir')
-        .select('*, buku_kas(payment_method, waktu, jenis, tipe, description, sumber), produk(name)')
-        .gte('created_at', startUtc)
-        .lt('created_at', endUtcFinal);
+          .select('*, produk(name)')
+          .in('buku_kas_id', bukuKasIds);
+        
+        if (!errorTransaksiKasir && transaksiKasir) {
+          // Gabungkan data buku_kas dengan transaksi_kasir
+          posItems = transaksiKasir.map(tk => {
+            const bukuKas = posBukuKas.find(bk => bk.id === tk.buku_kas_id);
+            return {
+              ...tk,
+              buku_kas: bukuKas
+            };
+          });
+        }
+      }
+      
       // Ambil transaksi manual/catat
       const { data: manualItems, error: errorManual } = await this.supabase
         .from('buku_kas')
@@ -458,25 +487,25 @@ export class DataService {
         .gte('waktu', startUtc)
         .lt('waktu', endUtcFinal)
         .neq('sumber', 'pos');
-      if (errorPos || errorManual) {
-        console.error('Error fetching report data:', errorPos, errorManual);
+        
+      if (errorPosBukuKas || errorManual) {
+        console.error('Error fetching report data:', errorPosBukuKas, errorManual);
         return { data: [], etag: etagValue };
       }
-      // Filter hanya POS yang benar-benar dari POS
-      const posLaporan = (posItems || []).filter((t: any) => t.buku_kas?.sumber === 'pos');
+      
       // Gabungkan hasil
       const laporan = [
-        ...posLaporan.map(item => ({
+        ...posItems.map(item => ({
           ...item,
           sumber: 'pos',
           payment_method: item.buku_kas?.payment_method,
           waktu: item.buku_kas?.waktu,
           jenis: item.buku_kas?.jenis,
           tipe: item.buku_kas?.tipe,
-          // description diisi nama produk (jika ada), fallback ke buku_kas.description
-          description: item.produk?.name || item.buku_kas?.description || '-',
-          // nominal transaksi per item = amount * qty
-          nominal: (item.amount || 0) * (item.qty || 1),
+          // Untuk item POS, gunakan nama produk atau custom_name
+          description: item.produk?.name || item.custom_name || 'Item Custom',
+          // nominal transaksi per item = amount (sudah total, tidak perlu dikali qty lagi)
+          nominal: item.amount || 0,
         })),
         ...(manualItems || []).map(item => ({
           ...item,
@@ -489,14 +518,32 @@ export class DataService {
           nominal: item.amount || 0,
         }))
       ];
+      
       // Pemasukan/pengeluaran per jenis
       const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
       const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+      
+      // Hitung total pemasukan dan pengeluaran
+      const totalPemasukan = pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0);
+      const totalPengeluaran = pengeluaran.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0);
+      
+      // Hitung Laba (Rugi) Kotor
+      const labaKotor = totalPemasukan - totalPengeluaran;
+      
+      // Hitung Pajak Penghasilan (0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0)
+      const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
+      
+      // Hitung Laba (Rugi) Bersih
+      const labaBersih = labaKotor - pajak;
+      
       const reportData = {
         summary: {
-          pendapatan: pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0),
-          pengeluaran: pengeluaran.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0),
-          saldo: pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0) - pengeluaran.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0)
+          pendapatan: totalPemasukan,
+          pengeluaran: totalPengeluaran,
+          saldo: totalPemasukan - totalPengeluaran,
+          labaKotor,
+          pajak,
+          labaBersih
         },
         pemasukanUsaha: pemasukan.filter((t: any) => t.jenis === 'pendapatan_usaha'),
         pemasukanLain: pemasukan.filter((t: any) => t.jenis === 'lainnya'),
@@ -540,7 +587,7 @@ export class DataService {
         await smartCache.invalidate(CACHE_KEYS.USER_PROFILE);
         await smartCache.invalidate(CACHE_KEYS.USER_ROLE);
         break;
-      case 'pengaturan_keamanan':
+      case 'pengaturan':
         await smartCache.invalidate(CACHE_KEYS.SECURITY_SETTINGS);
         break;
     }

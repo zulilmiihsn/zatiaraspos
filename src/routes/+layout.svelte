@@ -48,8 +48,7 @@
 				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'weekly')),
 				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'monthly')),
 				// Pengaturan, printer, pemilik, dsb.
-				dataService.supabaseClient?.from?.('pengaturan_struk')?.select?.('*'),
-				dataService.supabaseClient?.from?.('pengaturan_keamanan')?.select?.('*'),
+				dataService.supabaseClient?.from?.('pengaturan')?.select?.('*'),
 				dataService.supabaseClient?.from?.('printer')?.select?.('*'),
 				// Manajemen menu, riwayat, dsb.
 				dataService.supabaseClient?.from?.('produk')?.select?.('*'),
@@ -100,7 +99,13 @@
 	// Subscribe ke selectedBranch: clear cache & fetch ulang data saat cabang berubah, tanpa reload
 	if (typeof window !== 'undefined') {
 		let lastBranch = sessionStorage.getItem('selectedBranch');
+		let isInitialLoad = true; // Add flag to prevent double fetching
 		selectedBranch.subscribe(async val => {
+			// Skip jika ini adalah initial load
+			if (isInitialLoad) {
+				isInitialLoad = false;
+				return;
+			}
 			if (val && val !== lastBranch) {
 				await dataService.clearAllCaches();
 				// Komponen/halaman lain harus subscribe ke selectedBranch dan fetch ulang data
@@ -117,7 +122,7 @@
 {/if}
 
 {#if showToast}
-	<div class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-fade-in">
+	<div class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-fade-in text-center">
 		Transaksi offline berhasil dikirim ke server!
 	</div>
 {/if}

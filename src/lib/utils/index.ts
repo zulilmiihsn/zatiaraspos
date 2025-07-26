@@ -46,10 +46,10 @@ export function getWitaDateRangeUtc(dateStr: string) {
     throw new Error('Day out of valid range');
   }
   try {
-    // Start: 00:00:00 WITA (UTC-8)
-    const startUtc = new Date(Date.UTC(year, month - 1, day, -8, 0, 0));
-    // End: 00:00:00 WITA hari berikutnya (UTC-8)
-    const endUtc = new Date(Date.UTC(year, month - 1, day + 1, -8, 0, 0));
+    // Start: 00:00:00 WITA (UTC+8) = 16:00:00 UTC hari sebelumnya
+    const startUtc = new Date(Date.UTC(year, month - 1, day - 1, 16, 0, 0));
+    // End: 00:00:00 WITA hari berikutnya (UTC+8) = 16:00:00 UTC hari ini
+    const endUtc = new Date(Date.UTC(year, month - 1, day, 16, 0, 0));
     return {
       startUtc: startUtc.toISOString(),
       endUtc: endUtc.toISOString()
@@ -64,6 +64,15 @@ export function getWitaDateRangeUtc(dateStr: string) {
 export function formatWitaDateTime(dateStr: string | Date, opts?: Intl.DateTimeFormatOptions) {
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
   return date.toLocaleString('id-ID', { timeZone: 'Asia/Makassar', ...(opts || {}) });
+}
+
+// Konversi waktu WITA (YYYY-MM-DDTHH:mm:ss) ke UTC ISO string
+export function witaToUtcISO(dateStr: string, timeStr: string = '00:00:00'): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, minute, second] = timeStr.split(':').map(Number);
+  // WITA = UTC+8, jadi UTC = WITA-8
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute, second || 0));
+  return utcDate.toISOString();
 }
 
 // Tambahkan deklarasi global untuk window.scrollToSmooth

@@ -21,6 +21,7 @@ let pin = '';
 let currentUserRole = '';
 let userProfileData = null;
 let unsubscribeBranch: (() => void) | null = null;
+let isInitialLoad = true; // Add flag to prevent double fetching
 
 userRole.subscribe(val => currentUserRole = val || '');
 userProfile.subscribe(val => userProfileData = val);
@@ -28,26 +29,31 @@ userProfile.subscribe(val => userProfileData = val);
 // Tambahkan deklarasi function loadLaporanData
 async function loadLaporanData() {
   try {
+    // Pastikan startDate dan endDate sudah ada
+    if (!startDate || !endDate) {
+      startDate = startDate || getLocalDateStringWITA();
+      endDate = endDate || startDate;
+    }
+    
+    // Force clear cache untuk memastikan data terbaru
+    await dataService.clearAllCaches();
+    
     // Gunakan startDate saja untuk daily report, atau range untuk multi-day
     const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
     const reportData = await dataService.getReportData(dateRange, 'daily');
-    // Apply report data with null checks
-    summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    
+    // Apply report data with null checks - HAPUS FILTERING KEDUA
+    summary = reportData?.summary || { pendapatan: 0, pengeluaran: 0, saldo: 0, labaKotor: 0, pajak: 0, labaBersih: 0 };
     pemasukanUsaha = reportData?.pemasukanUsaha || [];
     pemasukanLain = reportData?.pemasukanLain || [];
     bebanUsaha = reportData?.bebanUsaha || [];
     bebanLain = reportData?.bebanLain || [];
-    // Filter ulang transaksi agar hanya yang tanggal WITA-nya berada di antara startDate dan endDate (inklusif)
-    laporan = (reportData?.transactions || []).filter(item => {
-      const rawTime = item.created_at || item.waktu;
-      if (!rawTime) return false;
-      const witaDate = new Date(rawTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
-      return witaDate >= startDate && witaDate <= endDate;
-    });
+    // Gunakan data langsung dari dataService tanpa filtering tambahan
+    laporan = reportData?.transactions || [];
   } catch (error) {
-    console.error('Error loading laporan data:', error);
+    console.error('❌ Error loading laporan data:', error);
     // Set default values on error
-    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0 };
+    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0, labaKotor: 0, pajak: 0, labaBersih: 0 };
     pemasukanUsaha = [];
     pemasukanLain = [];
     bebanUsaha = [];
@@ -58,10 +64,40 @@ async function loadLaporanData() {
 
 // Tambahkan deklarasi function setupRealtimeSubscriptions
 function setupRealtimeSubscriptions() {
-  // Subscribe to buku_kas changes for real-time report updates
+  // Unsubscribe existing subscriptions first
+  realtimeManager.unsubscribeAll();
+  
+  // Subscribe to buku_kas changes
   realtimeManager.subscribe('buku_kas', async (payload) => {
+    // Reload data when buku_kas changes
     await loadLaporanData();
   });
+  
+  // Subscribe to transaksi_kasir changes
+  realtimeManager.subscribe('transaksi_kasir', async (payload) => {
+    // Reload data when transaksi_kasir changes
+    await loadLaporanData();
+  });
+}
+
+// Tambahkan function untuk fetch data saat masuk halaman
+async function initializePageData() {
+  // Set default date range jika belum ada
+  if (!startDate) {
+    startDate = getLocalDateStringWITA();
+  }
+  if (!endDate) {
+    endDate = startDate;
+  }
+  
+  // Clear cache untuk memastikan data terbaru
+  await dataService.clearAllCaches();
+  
+  // Load initial data
+  await loadLaporanData();
+  
+  // Setup realtime subscriptions
+  setupRealtimeSubscriptions();
 }
 
 onMount(async () => {
@@ -77,8 +113,7 @@ onMount(async () => {
   FilterIcon = icons[3].default;
   
   await fetchPin();
-  await loadLaporanData();
-  setupRealtimeSubscriptions();
+  await initializePageData();
 
   // Jika role belum ada di store, coba validasi dengan Supabase
   if (!currentUserRole) {
@@ -96,7 +131,7 @@ onMount(async () => {
   }
   
   if (currentUserRole === 'kasir') {
-    const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('locked_pages').single();
+    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('laporan')) {
       showPinModal = true;
@@ -111,17 +146,57 @@ onMount(async () => {
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
   unsubscribeBranch = selectedBranch.subscribe(() => {
+    // Skip jika ini adalah initial load
+    if (isInitialLoad) {
+      isInitialLoad = false;
+      return;
+    }
     loadLaporanData();
   });
+  
+  // Tambahkan event listener untuk visibility change (saat kembali ke tab)
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      loadLaporanData();
+    }
+  };
+  
+  // Tambahkan event listener untuk focus (saat kembali ke tab)
+  const handleFocus = () => {
+    loadLaporanData();
+  };
+  
+  // Tambahkan event listener untuk navigation (saat user navigasi ke halaman ini)
+  const handleNavigation = () => {
+    loadLaporanData();
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleFocus);
+  window.addEventListener('popstate', handleNavigation);
+  
+  // Cleanup function untuk event listener
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
+    window.removeEventListener('popstate', handleNavigation);
+  };
 });
 
 onDestroy(() => {
+  // Unsubscribe dari realtime
   realtimeManager.unsubscribeAll();
+  
+  // Unsubscribe dari branch changes
   if (unsubscribeBranch) unsubscribeBranch();
+  
+  // Clear any pending timeouts
+  if (errorTimeout) clearTimeout(errorTimeout);
+  if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
 });
 
 async function fetchPin() {
-  const { data } = await dataService.supabaseClient.from('pengaturan_keamanan').select('pin').single();
+  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').single();
   pin = data?.pin || '1234';
 }
 
@@ -195,32 +270,33 @@ $: bebanLainTunai = bebanLainDetail.filter(t => t.payment_method === 'tunai');
 // Reactive statements untuk total QRIS/Tunai
 $: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 // Memoize untuk summary box
 const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail) => {
-  const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.amount || 0), 0);
+  // Gunakan nominal seperti dataService, fallback ke amount jika nominal tidak ada
+  const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
   
   // Laba (Rugi) Kotor = Pendapatan - Pengeluaran
   const labaKotor = totalPemasukan - totalPengeluaran;
@@ -241,11 +317,24 @@ const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, beba
   };
 }, (a, b, c, d) => `${a.length}-${b.length}-${c.length}-${d.length}`);
 
-$: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail);
+// HAPUS reactive statement yang konflik - gunakan summary dari dataService langsung
+// $: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail);
 
-// Tambahkan watcher universal untuk fetch data setiap kali startDate atau endDate berubah
-$: if (startDate && endDate) {
+// HAPUS watcher universal yang menyebabkan double fetching
+// $: if (startDate && endDate) {
+//   loadLaporanData();
+// }
+
+// Tambahkan watcher untuk reload data saat filter berubah (hanya jika tidak sedang di modal filter)
+let filterChangeTimeout: number;
+$: if (!showFilter && startDate && endDate && filterType) {
+  // Clear existing timeout
+  if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
+  
+  // Debounce untuk menghindari multiple calls
+  filterChangeTimeout = setTimeout(() => {
   loadLaporanData();
+  }, 100);
 }
 
 // Tambahkan watcher khusus untuk filter bulanan
@@ -324,9 +413,11 @@ function formatCurrency(amount) {
 function groupAndSumByName(items) {
   const map = new Map();
   for (const item of items) {
+    // Gunakan nama produk yang sebenarnya tanpa flag
     const name = getDeskripsiLaporan(item);
+    
     const prev = map.get(name) || 0;
-    map.set(name, prev + (item.amount || 0));
+    map.set(name, prev + (item.nominal || item.amount || 0));
   }
   // Kembalikan array of { name, total }
   return Array.from(map.entries()).map(([name, total]) => ({ name, total }));
@@ -336,35 +427,35 @@ function groupAndSumByName(items) {
 // Reactive statements untuk total QRIS/Tunai per sub-group
 $: totalQrisPendapatanUsaha = pemasukanUsahaDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPendapatanUsaha = pemasukanUsahaDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPemasukanLain = pemasukanLainDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPemasukanLain = pemasukanLainDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisBebanUsaha = bebanUsahaDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiBebanUsaha = bebanUsahaDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisBebanLain = bebanLainDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiBebanLain = bebanLainDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.amount || 0), 0);
+  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
 
 function getDeskripsiLaporan(item) {
   return item?.description?.trim() || item?.catatan?.trim() || '-';
@@ -401,8 +492,14 @@ function openEndDatePicker() {
 
 // Fungsi untuk menerapkan filter
 async function applyFilter() {
+  // Update filter state
   showFilter = false;
+  
+  // Load data dengan filter baru
   await loadLaporanData();
+  
+  // Setup realtime subscriptions setelah filter berubah
+  setupRealtimeSubscriptions();
 }
 
 // State untuk item yang sedang diperpanjang (expanded)
@@ -415,6 +512,12 @@ function toggleExpand(name) {
   }
   // trigger reactivity
   expandedItems = new Set(expandedItems);
+}
+
+// Tambahkan helper untuk normalisasi tanggal ke YYYY-MM-DD
+function toYMD(date: string | Date): string {
+  if (typeof date === 'string') return date.slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
 </script>

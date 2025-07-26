@@ -99,7 +99,7 @@ async function cekSesiTokoAktif() {
 async function fetchPengaturanStruk() {
   try {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
-      .from('pengaturan_struk')
+      .from('pengaturan')
       .select('*')
       .maybeSingle();
     if (data) {
@@ -288,11 +288,14 @@ async function catatTransaksiKeLaporan() {
     const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
     return {
       // buku_kas_id: diisi saat online, biarkan null saat offline
-      produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
+      // Untuk custom item, set produk_id ke null dan simpan nama di custom_name
+      produk_id: item.product.id.toString().startsWith('custom-') ? null : item.product.id,
       qty: item.qty,
       amount: unitPrice * item.qty,
       price: unitPrice,
-      transaction_id: transactionId
+      transaction_id: transactionId,
+      // Tambahkan nama custom item jika ini adalah custom item
+      custom_name: item.product.id.toString().startsWith('custom-') ? item.product.name : null
     };
   });
   if (!payment) {
@@ -323,11 +326,14 @@ async function catatTransaksiKeLaporan() {
         const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
         return {
         buku_kas_id: lastBukuKas.id,
-        produk_id: item.product.id && !item.product.id.toString().startsWith('custom-') ? item.product.id : null,
+        // Untuk custom item, set produk_id ke null dan simpan nama di custom_name
+        produk_id: item.product.id.toString().startsWith('custom-') ? null : item.product.id,
         qty: item.qty,
           amount: unitPrice * item.qty,
           price: unitPrice,
-        transaction_id: transactionId
+        transaction_id: transactionId,
+        // Tambahkan nama custom item jika ini adalah custom item
+        custom_name: item.product.id.toString().startsWith('custom-') ? item.product.name : null
         };
       });
       if (transaksiKasirInserts.length) {

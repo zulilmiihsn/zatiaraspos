@@ -51,6 +51,7 @@ let tambahanData = [];
 let isLoadingProducts = true;
 
 let unsubscribeBranch: (() => void) | null = null;
+let isInitialLoad = true; // Add flag to prevent double fetching
 
 onMount(async () => {
   // Load data dengan smart caching
@@ -77,6 +78,11 @@ onMount(async () => {
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
   unsubscribeBranch = selectedBranch.subscribe(() => {
+    // Skip jika ini adalah initial load
+    if (isInitialLoad) {
+      isInitialLoad = false;
+      return;
+    }
     loadPOSData();
   });
 });

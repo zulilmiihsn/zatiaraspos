@@ -18,6 +18,7 @@ import Trash from 'lucide-svelte/icons/trash';
 import Coffee from 'lucide-svelte/icons/coffee';
 import Utensils from 'lucide-svelte/icons/utensils';
 import Tag from 'lucide-svelte/icons/tag';
+import { dataService } from '$lib/services/dataService';
 
 // Data Menu
 let menus: any[] = [];
@@ -88,7 +89,12 @@ const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
     ...kat,
     count: menus.filter(m => m.kategori_id === kat.id).length
   })),
-  (menus, kategoriList) => `${menus.length}-${kategoriList.length}`
+  (menus, kategoriList) => {
+    // Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
+    const menuKategoriMap = menus.map(m => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+    const kategoriIds = kategoriList.map(k => k.id).join(',');
+    return `${menuKategoriMap}-${kategoriIds}`;
+  }
 );
 
 $: kategoriWithCount = memoizedKategoriWithCount(menus, kategoriList);
@@ -101,7 +107,12 @@ const memoizedFilteredMenus = memoize((menus, kategoriList, selectedKategori, se
     const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
     return (selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match;
   });
-}, (menus, kategoriList, selectedKategori, searchKeyword) => `${menus.length}-${kategoriList.length}-${selectedKategori}-${searchKeyword}`);
+}, (menus, kategoriList, selectedKategori, searchKeyword) => {
+  // Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
+  const menuKategoriMap = menus.map(m => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+  const kategoriIds = kategoriList.map(k => k.id).join(',');
+  return `${menuKategoriMap}-${kategoriIds}-${selectedKategori}-${searchKeyword}`;
+});
 
 $: filteredMenus = memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword);
 
@@ -111,6 +122,9 @@ async function fetchMenus() {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('produk').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     menus = data || [];
+    
+    // Force reactivity update
+    menus = [...menus];
   } catch (error) {
     notifModalMsg = 'Gagal mengambil data menu: ' + error.message;
     notifModalType = 'error';
@@ -262,6 +276,10 @@ async function saveMenu() {
   }
   showMenuForm = false;
   
+  // Clear all caches first
+  await dataService.clearAllCaches();
+  await dataService.invalidateCacheOnChange('produk');
+  
   // Force refresh data dan clear memoization
   await fetchMenus();
   
@@ -269,6 +287,7 @@ async function saveMenu() {
   menus = [...menus];
   
   await afterUpdateCachePOS();
+  clearMemoizationCache();
 }
 
 function confirmDeleteMenu(id: number) {
@@ -305,6 +324,10 @@ async function doDeleteMenu() {
     showDeleteModal = false;
     menuIdToDelete = null;
     
+    // Clear all caches first
+    await dataService.clearAllCaches();
+    await dataService.invalidateCacheOnChange('produk');
+    
     // Force refresh data dan clear memoization
     await fetchMenus();
     
@@ -312,6 +335,7 @@ async function doDeleteMenu() {
     menus = [...menus];
     
     await afterUpdateCachePOS();
+    clearMemoizationCache();
   }
 }
 
@@ -339,6 +363,10 @@ function openKategoriForm(kat) {
   kategoriDetailName = kat.name;
   selectedMenuIds = menus.filter(m => m.kategori_id === kat.id).map(m => m.id);
   unselectedMenuIds = menus.filter(m => !m.kategori_id).map(m => m.id).filter(id => !selectedMenuIds.includes(id));
+  
+  // Force reactivity update untuk memastikan data terbaru
+  selectedMenuIds = [...selectedMenuIds];
+  unselectedMenuIds = [...unselectedMenuIds];
 }
 
 function closeKategoriDetailModal() {
@@ -373,6 +401,11 @@ async function saveKategoriDetail() {
   showKategoriDetailModal = false;
   kategoriDetail = null;
   
+  // Clear all caches first
+  await dataService.clearAllCaches();
+  await dataService.invalidateCacheOnChange('produk');
+  await dataService.invalidateCacheOnChange('kategori');
+  
   // Force refresh data dan clear memoization
   await fetchKategori();
   await fetchMenus();
@@ -381,7 +414,8 @@ async function saveKategoriDetail() {
   menus = [...menus];
   kategoriList = [...kategoriList];
   
-  await afterUpdateCachePOS();
+  // Force refresh data setelah perubahan kategori
+  await forceRefreshAfterCategoryChange();
 }
 
 function confirmDeleteKategori(id: number) {
@@ -426,6 +460,11 @@ async function doDeleteKategori() {
       showDeleteKategoriModal = false;
       kategoriIdToDelete = null;
       
+      // Clear all caches first
+      await dataService.clearAllCaches();
+      await dataService.invalidateCacheOnChange('produk');
+      await dataService.invalidateCacheOnChange('kategori');
+      
       // Force refresh data dan clear memoization
       await fetchKategori();
       await fetchMenus();
@@ -435,6 +474,10 @@ async function doDeleteKategori() {
       kategoriList = [...kategoriList];
       
       await afterUpdateCachePOS();
+      clearMemoizationCache();
+      
+      // Force refresh data setelah perubahan kategori
+      await forceRefreshAfterCategoryChange();
       
     } catch (error) {
       notifModalMsg = 'Gagal menghapus kategori: ' + error.message;
@@ -528,6 +571,7 @@ async function doDeleteEkstra() {
     ekstraList = [...ekstraList];
     
     await afterUpdateCachePOS();
+    clearMemoizationCache();
   }
 }
 
@@ -614,12 +658,37 @@ function toggleMenuInKategoriRealtime(menuId) {
     unselectedMenuIds = unselectedMenuIds.filter(id => id !== menuId);
     selectedMenuIds = [...selectedMenuIds, menuId];
   }
+  
+  // Force reactivity update
+  selectedMenuIds = [...selectedMenuIds];
+  unselectedMenuIds = [...unselectedMenuIds];
 }
 
 async function updateMenusKategori(kategoriId, menuIds, oldKategoriId) {
-  // Update menu kategori
+  try {
+    // Update menu kategori untuk menu yang dipilih
   for (const menuId of menuIds) {
-    await getSupabaseClient(storeGet(selectedBranch)).from('produk').update({ kategori_id: kategoriId }).eq('id', menuId);
+      await getSupabaseClient(storeGet(selectedBranch))
+        .from('produk')
+        .update({ kategori_id: kategoriId })
+        .eq('id', menuId);
+    }
+    
+    // Jika ada kategori lama, update menu yang tidak dipilih untuk kembali ke kategori lama
+    if (oldKategoriId) {
+      const menusInOldKategori = menus.filter(m => m.kategori_id === oldKategoriId);
+      const menusToRemoveFromOldKategori = menusInOldKategori.filter(m => !menuIds.includes(m.id));
+      
+      for (const menu of menusToRemoveFromOldKategori) {
+        await getSupabaseClient(storeGet(selectedBranch))
+          .from('produk')
+          .update({ kategori_id: null })
+          .eq('id', menu.id);
+      }
+    }
+  } catch (error) {
+    console.error('Error updating menu categories:', error);
+    throw error;
   }
 }
 
@@ -656,11 +725,50 @@ function toggleEkstra(ekstraId) {
 }
 
 async function afterUpdateCachePOS() {
+  // Update local cache
   await setCache('pos-data', {
     produkData: menus,
     kategoriData: kategoriList,
     tambahanData: ekstraList
   });
+  
+  // Clear dataService cache untuk memastikan data terbaru
+  try {
+    await dataService.clearAllCaches();
+    await dataService.invalidateCacheOnChange('produk');
+    await dataService.invalidateCacheOnChange('kategori');
+    await dataService.invalidateCacheOnChange('tambahan');
+  } catch (error) {
+    console.warn('Failed to clear dataService cache:', error);
+  }
+}
+
+// Function untuk clear memoization cache
+function clearMemoizationCache() {
+  memoizedKategoriWithCount.clearCache();
+  memoizedFilteredMenus.clearCache();
+}
+
+// Function untuk force refresh data setelah perubahan kategori
+async function forceRefreshAfterCategoryChange() {
+  // Clear all caches first
+  await dataService.clearAllCaches();
+  await dataService.invalidateCacheOnChange('produk');
+  await dataService.invalidateCacheOnChange('kategori');
+  
+  // Force refresh data
+  await fetchKategori();
+  await fetchMenus();
+  
+  // Force reactivity update
+  menus = [...menus];
+  kategoriList = [...kategoriList];
+  
+  // Clear memoization cache
+  clearMemoizationCache();
+  
+  // Update POS cache
+  await afterUpdateCachePOS();
 }
 
 // Tambahkan auto-dismiss 2 detik untuk notif
@@ -1202,7 +1310,7 @@ $: if (showNotifModal) {
 
 <!-- Notifikasi floating (toast) -->
 {#if showNotifModal}
-  <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out" style="transform: translateX(-50%);">
+  <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center" style="transform: translateX(-50%);">
     {notifModalMsg}
   </div>
 {/if}
