@@ -101,7 +101,8 @@ async function fetchPengaturanStruk() {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
       .from('pengaturan')
       .select('*')
-      .maybeSingle();
+      .eq('id', 1)
+      .single();
     if (data) {
       pengaturanStruk = data;
     } else if (error) {

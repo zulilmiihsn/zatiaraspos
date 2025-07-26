@@ -27,7 +27,7 @@ const defaultData = {
 async function loadPengaturan() {
   // Coba load dari Supabase, fallback ke localStorage
   try {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('*').limit(1).maybeSingle();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('*').eq('id', 1).single();
     if (data) {
       namaToko = data.nama_toko || defaultData.namaToko;
       alamat = data.alamat || defaultData.alamat;
@@ -60,6 +60,7 @@ async function simpanPengaturan(event: Event) {
   event.preventDefault();
   isSaving = true;
   const data = {
+    id: 1, // Always use id=1 for single row
     nama_toko: namaToko,
     alamat,
     telepon,

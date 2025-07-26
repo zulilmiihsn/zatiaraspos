@@ -49,7 +49,6 @@
 				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'monthly')),
 				// Pengaturan, printer, pemilik, dsb.
 				dataService.supabaseClient?.from?.('pengaturan')?.select?.('*'),
-				dataService.supabaseClient?.from?.('printer')?.select?.('*'),
 				// Manajemen menu, riwayat, dsb.
 				dataService.supabaseClient?.from?.('produk')?.select?.('*'),
 				dataService.supabaseClient?.from?.('kategori')?.select?.('*'),

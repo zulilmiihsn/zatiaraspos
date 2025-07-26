@@ -394,7 +394,7 @@ export const CACHE_KEYS = {
   
   // Settings
   SECURITY_SETTINGS: 'security_settings',
-  PRINTER_SETTINGS: 'printer_settings'
+  PENGATURAN: 'pengaturan'
 } as const;
 
 // Cache utilities for specific data types

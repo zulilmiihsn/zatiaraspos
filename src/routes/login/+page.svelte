@@ -98,7 +98,7 @@
 
   onMount(async () => {
     if (userRole === 'kasir') {
-      const { data } = await supabase.from('pengaturan').select('locked_pages').single();
+      const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
       const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
       if (lockedPages.includes('beranda')) {
         // showPinModal = true; // Hapus semua logic showPinModal

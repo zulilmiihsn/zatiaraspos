@@ -63,7 +63,7 @@
   }
 
   async function fetchPengaturan() {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages, pin').single();
+    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages, pin').eq('id', 1).single();
     pengaturanData = !error ? data : null;
   }
 

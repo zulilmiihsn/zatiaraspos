@@ -122,7 +122,7 @@ onMount(async () => {
   }
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages').single();
+    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages').eq('id', 1).single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('catat')) {
       showPinModal = true;
@@ -138,7 +138,7 @@ onMount(async () => {
 
 
 async function fetchPin() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('pin').single();
+  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('pin').eq('id', 1).single();
   pin = data?.pin || '1234';
 }
 

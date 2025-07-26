@@ -95,7 +95,7 @@ onMount(async () => {
   
   await fetchPin();
   if (currentUserRole === 'kasir') {
-    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').single();
+    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').eq('id', 1).single();
     const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
     if (lockedPages.includes('beranda')) {
       showPinModal = true;
@@ -224,7 +224,7 @@ async function refreshDashboardData() {
 }
 
 async function fetchPin() {
-  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').single();
+  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').eq('id', 1).single();
   pin = data?.pin || '1234';
 }
 

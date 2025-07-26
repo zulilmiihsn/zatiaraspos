@@ -41,7 +41,7 @@ onMount(async () => {
     currentUserRole = role || '';
   });
   // Fetch PIN dan lockedPages dari Supabase
-  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('id, pin, locked_pages').single();
+  const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('id, pin, locked_pages').eq('id', 1).single();
   if (!error && data) {
     pin = data.pin || '';
     lockedPages = data.locked_pages || [];
