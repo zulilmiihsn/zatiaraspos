@@ -13,6 +13,8 @@
   import Crown from 'lucide-svelte/icons/crown';
   import CreditCard from 'lucide-svelte/icons/credit-card';
   import User from 'lucide-svelte/icons/user';
+  import PinModal from '$lib/components/shared/PinModal.svelte';
+  import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
   
   // Type definitions
   interface PengaturanData {
@@ -38,8 +40,6 @@
 
   let showPinModal = false;
   let pin = '';
-  let pinInput = '';
-  let pinError = '';
   let errorTimeout: number;
   let isClosing = false;
   let showPwaInstalledToast = false;
@@ -50,6 +50,17 @@
   let showNotification = false;
   let notificationMessage = '';
   let notificationTimeout: any = null;
+
+  // Toast notification state
+  let showToast = false;
+  let toastMessage = '';
+  let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
+
+  function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
+    toastMessage = message;
+    toastType = type;
+    showToast = true;
+  }
 
   let LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, Download, Printer;
 

@@ -4,7 +4,8 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { goto } from '$app/navigation';
-let ArrowLeft;
+import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 let namaToko = '';
 let alamat = '';
 let telepon = '';
@@ -81,7 +82,6 @@ async function simpanPengaturan(event: Event) {
 
 
 onMount(async () => {
-  ArrowLeft = (await import('lucide-svelte/icons/arrow-left')).default;
   loadPengaturan();
 });
 </script>
@@ -159,8 +159,11 @@ onMount(async () => {
 </div> 
 
 {#if showToast}
-  <div class="fixed top-6 left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold text-center"
-    style="transform: translateX(-50%); background: {toastType === 'success' ? '#22c55e' : '#ef4444'}; min-width:200px;">
-    {toastMsg}
-  </div>
+  <ToastNotification
+    show={showToast}
+    message={toastMsg}
+    type={toastType}
+    duration={2000}
+    position="top"
+  />
 {/if} 

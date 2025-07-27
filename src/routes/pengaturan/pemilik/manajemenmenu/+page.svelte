@@ -19,6 +19,7 @@ import Coffee from 'lucide-svelte/icons/coffee';
 import Utensils from 'lucide-svelte/icons/utensils';
 import Tag from 'lucide-svelte/icons/tag';
 import { dataService } from '$lib/services/dataService';
+import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 // Data Menu
 let menus: any[] = [];
@@ -83,6 +84,17 @@ let isLoadingMenus = true;
 let isLoadingKategori = true;
 let isLoadingEkstra = true;
 let unsubscribeBranch: (() => void) | null = null;
+
+// Toast notification state
+let showToast = false;
+let toastMessage = '';
+let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
+
+function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
+  toastMessage = message;
+  toastType = type;
+  showToast = true;
+}
 
 const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
   kategoriList.map(kat => ({
@@ -1310,10 +1322,23 @@ $: if (showNotifModal) {
 
 <!-- Notifikasi floating (toast) -->
 {#if showNotifModal}
-  <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center" style="transform: translateX(-50%);">
-    {notifModalMsg}
-  </div>
+  <ToastNotification
+    show={showNotifModal}
+    message={notifModalMsg}
+    type={notifModalType === 'error' ? 'error' : 'success'}
+    duration={2000}
+    position="top"
+  />
 {/if}
+
+<!-- Toast Notification -->
+<ToastNotification
+  show={showToast}
+  message={toastMessage}
+  type={toastType}
+  duration={2000}
+  position="top"
+/>
 
 <!-- Komponen upload/crop gambar menu -->
 {#if showCropperDialog}

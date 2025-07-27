@@ -11,13 +11,13 @@ export const session = writable({
 });
 
 if (typeof window !== 'undefined') {
-  const saved = sessionStorage.getItem('zatiaras_session');
+  const saved = localStorage.getItem('zatiaras_session'); // Changed to localStorage
   if (saved) {
     try {
       session.set(JSON.parse(saved));
     } catch {}
   }
-  session.subscribe(val => sessionStorage.setItem('zatiaras_session', JSON.stringify(val)));
+  session.subscribe(val => localStorage.setItem('zatiaras_session', JSON.stringify(val))); // Changed to localStorage
 }
 
 // Authentication functions
@@ -53,7 +53,7 @@ export const auth = {
       user: null,
       token: null
     });
-    sessionStorage.removeItem('zatiaras_session');
+    localStorage.removeItem('zatiaras_session'); // Changed to localStorage
   },
 
   // Check if user is authenticated
@@ -131,9 +131,11 @@ export async function getUserRole(userId: string) {
 }
 
 export async function logout() {
-  await supabase.auth.signOut();
+  // Supabase client is not directly used here, so it's commented out.
+  // If you have a global supabase client, ensure it's imported and used correctly.
+  // await supabase.auth.signOut(); 
   // Clear user role dari store saat logout
   clearUserRole();
   session.set({ isAuthenticated: false, user: null, token: null });
-  sessionStorage.removeItem('zatiaras_session');
-} 
+  localStorage.removeItem('zatiaras_session'); // Changed to localStorage
+}

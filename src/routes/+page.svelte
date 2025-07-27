@@ -10,6 +10,8 @@ import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { dataService, realtimeManager } from '$lib/services/dataService';
+import PinModal from '$lib/components/shared/PinModal.svelte';
+import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 let dashboardData = null;
 
@@ -298,11 +300,19 @@ function getLast7DaysLabelsWITA() {
 
 // PIN Modal State
 let showPinModal = false;
-let pinInput = '';
-let pinError = '';
 let pin = '';
-let errorTimeout: number;
 let isClosing = false;
+
+// Toast notification state
+let showToast = false;
+let toastMessage = '';
+let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
+
+function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
+  toastMessage = message;
+  toastType = type;
+  showToast = true;
+}
 
 let showTokoModal = false;
 let isBukaToko = true; // true: buka toko, false: tutup toko
@@ -508,34 +518,6 @@ function handleGlobalClick(e) {
   }
 }
 
-function handlePinSubmit() {
-  if (pinInput === pin) {
-    isClosing = true;
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-    }
-    setTimeout(() => {
-      showPinModal = false;
-      pinError = '';
-      pinInput = '';
-      isClosing = false;
-      if (pendingAction) {
-        pendingAction();
-        pendingAction = null;
-      }
-    }, 300);
-  } else {
-    pinError = 'PIN salah. Silakan coba lagi.';
-    pinInput = '';
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-    }
-    errorTimeout = setTimeout(() => {
-      pinError = '';
-    }, 2000);
-  }
-}
-
 // New function to format modalAwalInput to Rupiah format
 function formatModalAwalInput(e) {
   let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
@@ -613,79 +595,35 @@ function handleBarPointerUp() {
 </script>
 
 {#if showPinModal}
-  <div 
-    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out modal-pin"
-    class:translate-y-full={isClosing}
-    style="top: 58px; bottom: 58px; background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);"
-  >
-    {#if pinError}
-      <div 
-        class="fixed top-40 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
-        style="transform: translateX(-50%);"
-        in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-        out:fade={{ duration: 200 }}
-      >
-        {pinError}
-      </div>
-    {/if}
-    <div class="w-full h-full flex flex-col items-center justify-center p-4">
-      <div class="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 max-w-sm w-full">
-        <div class="text-center mb-6">
-          <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 class="text-xl font-bold text-white mb-2">Akses Beranda</h2>
-          <p class="text-pink-100 text-sm">Masukkan PIN untuk melihat beranda</p>
-        </div>
-        
-        <!-- PIN Display -->
-        <div class="flex justify-center gap-2 mb-6">
-          {#each Array(4) as _, i}
-            <div class="w-4 h-4 rounded-full {pinInput.length > i ? 'bg-white' : 'bg-white/30 border border-white/50'}"></div>
-          {/each}
-        </div>
-        
-        <!-- Numpad -->
-        <div class="grid grid-cols-3 gap-3 mb-4 justify-items-center">
-          {#each [1, 2, 3, 4, 5, 6, 7, 8, 9] as num}
-            <button
-              type="button"
-              class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-              onclick={() => {
-                if (pinInput.length < 4) {
-                  pinInput += num.toString();
-                  if (pinInput.length === 4) {
-                    setTimeout(() => handlePinSubmit(), 200);
-                  }
-                }
-              }}
-            >
-              {num}
-            </button>
-          {/each}
-          <div class="w-16 h-16"></div>
-          <button
-            type="button"
-            class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-            onclick={() => {
-              if (pinInput.length < 4) {
-                pinInput += '0';
-                if (pinInput.length === 4) {
-                  setTimeout(() => handlePinSubmit(), 200);
-                }
-              }
-            }}
-          >
-            0
-          </button>
-          <div class="w-16 h-16"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <PinModal
+    show={showPinModal}
+    {pin}
+    title="Akses Beranda"
+    subtitle="Masukkan PIN untuk melihat beranda"
+    on:success={() => {
+      showPinModal = false;
+      if (pendingAction) {
+        pendingAction();
+        pendingAction = null;
+      }
+    }}
+    on:error={(event) => {
+      showToastNotification(event.detail.message, 'error');
+    }}
+    on:close={() => {
+      showPinModal = false;
+    }}
+  />
 {/if}
+
+<!-- Toast Notification -->
+<ToastNotification
+  show={showToast}
+  message={toastMessage}
+  type={toastType}
+  duration={2000}
+  position="top"
+/>
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
