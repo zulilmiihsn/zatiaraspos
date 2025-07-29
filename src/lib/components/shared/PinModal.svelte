@@ -53,7 +53,7 @@
 
 {#if show}
   <div 
-    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out modal-pin"
+    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out"
     style="top: 58px; bottom: 58px; background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);"
   >
     <div class="w-full h-full flex flex-col items-center justify-center p-4">
@@ -102,12 +102,5 @@
 {/if}
 
 <style>
-  .modal-pin {
-    animation: slideUp 0.3s ease-out;
-  }
-  
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-</style> 
+  /* Animasi slideUp telah dihapus */
+</style>
