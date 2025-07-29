@@ -15,7 +15,6 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { addPendingTransaction } from '$lib/utils/offline';
-import PinModal from '$lib/components/shared/PinModal.svelte';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 // Touch handling variables
@@ -47,11 +46,7 @@ let error = '';
 
 let showDropdown = false;
 
-// PIN Modal State
-let showPinModal = false;
-let pin = '';
-let errorTimeout: number;
-let isClosing = false;
+// Removed PIN Modal State (showPinModal, pin, errorTimeout, isClosing)
 
 // Toast notification state
 let showToast = false;
@@ -130,14 +125,7 @@ onMount(async () => {
       }
     }
   }
-  await fetchPin();
-  if (currentUserRole === 'kasir') {
-    const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages').eq('id', 1).single();
-    const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-    if (lockedPages.includes('catat')) {
-      showPinModal = true;
-    }
-  }
+  // Removed fetchPin() and locked_pages check
   // Ganti inisialisasi date agar pakai waktu lokal user
   date = getLocalDateString();
   time = new Date().toTimeString().slice(0, 5);
@@ -147,10 +135,7 @@ onMount(async () => {
 
 
 
-async function fetchPin() {
-  const { data } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('pin').eq('id', 1).single();
-  pin = data?.pin || '1234';
-}
+// Removed fetchPin()
 
 
 
@@ -458,21 +443,21 @@ main {
 
 </style>
 
-{#if showPinModal}
+{#if false} <!-- Removed showPinModal condition -->
   <PinModal
-    show={showPinModal}
-    {pin}
+    show={false}
+    pin={''}
     title="Akses Catat Transaksi"
     subtitle="Masukkan PIN untuk mencatat transaksi"
     on:success={() => {
-      showPinModal = false;
+      // showPinModal = false;
       // PIN berhasil, tidak perlu action khusus
     }}
     on:error={(event) => {
       showToastNotification(event.detail.message, 'error');
     }}
     on:close={() => {
-      showPinModal = false;
+      // showPinModal = false;
     }}
   />
 {/if}
@@ -677,4 +662,4 @@ main {
       </button>
     </div>
   </div>
-</div> 
+</div>

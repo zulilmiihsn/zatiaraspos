@@ -10,7 +10,6 @@ import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { memoize } from '$lib/utils/performance';
 import { dataService, realtimeManager } from '$lib/services/dataService';
 import { selectedBranch } from '$lib/stores/selectedBranch';
-import PinModal from '$lib/components/shared/PinModal.svelte';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 // Lazy load icons
@@ -113,7 +112,7 @@ onMount(async () => {
   ArrowUpCircle = icons[2].default;
   FilterIcon = icons[3].default;
   
-  await fetchPin();
+  // Removed fetchPin() and locked_pages check
   await initializePageData();
 
   // Jika role belum ada di store, coba validasi dengan Supabase
@@ -128,14 +127,6 @@ onMount(async () => {
       if (profile) {
         setUserRole(profile.role, profile);
       }
-    }
-  }
-  
-  if (currentUserRole === 'kasir') {
-    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').eq('id', 1).single();
-    const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-    if (lockedPages.includes('laporan')) {
-      showPinModal = true;
     }
   }
   
@@ -192,14 +183,11 @@ onDestroy(() => {
   if (unsubscribeBranch) unsubscribeBranch();
   
   // Clear any pending timeouts
-  if (errorTimeout) clearTimeout(errorTimeout);
+  // Removed errorTimeout
   if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
 });
 
-async function fetchPin() {
-  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').eq('id', 1).single();
-  pin = data?.pin || '1234';
-}
+// Removed fetchPin()
 
 // Touch handling variables
 let touchStartX = 0;
@@ -236,11 +224,7 @@ let showPengeluaran = true;
 let showBebanUsaha = true;
 let showBebanLain = true;
 
-// PIN Modal State
-let showPinModal = false;
-let pin = '';
-let errorTimeout: number;
-let isClosing = false;
+// Removed PIN Modal State (showPinModal, pin, errorTimeout, isClosing)
 
 // Inisialisasi summary dan list dengan default kosong
 let summary = { pendapatan: null, pengeluaran: null, saldo: null };
@@ -510,21 +494,21 @@ function showToastNotification(message: string, type: 'success' | 'error' | 'war
 
 </script>
 
-{#if showPinModal}
+{#if false} <!-- Removed showPinModal condition -->
   <PinModal
-    show={showPinModal}
-    {pin}
+    show={false}
+    pin={''}
     title="Akses Laporan"
     subtitle="Masukkan PIN untuk melihat laporan"
     on:success={() => {
-      showPinModal = false;
+      // showPinModal = false;
       // PIN berhasil, tidak perlu action khusus
     }}
     on:error={(event) => {
       showToastNotification(event.detail.message, 'error');
     }}
     on:close={() => {
-      showPinModal = false;
+      // showPinModal = false;
     }}
   />
 {/if}
@@ -1042,4 +1026,4 @@ function showToastNotification(message: string, type: 'success' | 'error' | 'war
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
-</style> 
+</style>

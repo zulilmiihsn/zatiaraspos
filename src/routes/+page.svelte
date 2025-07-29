@@ -10,7 +10,6 @@ import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { dataService, realtimeManager } from '$lib/services/dataService';
-import PinModal from '$lib/components/shared/PinModal.svelte';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 let dashboardData = null;
@@ -95,15 +94,8 @@ onMount(async () => {
     }
   }
   
-  await fetchPin();
-  if (currentUserRole === 'kasir') {
-    const { data } = await dataService.supabaseClient.from('pengaturan').select('locked_pages').eq('id', 1).single();
-    const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-    if (lockedPages.includes('beranda')) {
-      showPinModal = true;
-    }
-  }
-
+  // Removed fetchPin() and locked_pages check
+  
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
   unsubscribeBranch = selectedBranch.subscribe(async (newBranch) => {
     // Skip jika ini adalah initial load
@@ -225,10 +217,7 @@ async function refreshDashboardData() {
   await loadDashboardData();
 }
 
-async function fetchPin() {
-  const { data } = await dataService.supabaseClient.from('pengaturan').select('pin').eq('id', 1).single();
-  pin = data?.pin || '1234';
-}
+// Removed fetchPin()
 
 // Data dummy, nanti diisi dari Supabase
 let modalAwal = null;
@@ -298,10 +287,7 @@ function getLast7DaysLabelsWITA() {
   return labels;
 }
 
-// PIN Modal State
-let showPinModal = false;
-let pin = '';
-let isClosing = false;
+// Removed PIN Modal State (showPinModal, pin, isClosing)
 
 // Toast notification state
 let showToast = false;
@@ -368,7 +354,7 @@ function handleOpenTokoModal() {
         if (!isBukaToko) hitungRingkasanTutup();
       });
     };
-    showPinModal = true;
+    // Removed showPinModal = true; as it's handled by layout
     return;
   }
   // Untuk non-kasir, langsung buka modal
@@ -468,7 +454,7 @@ function handleTouchMove(e) {
   const deltaX = Math.abs(touchEndX - touchStartX);
   const deltaY = Math.abs(touchEndY - touchStartY);
   const viewportWidth = window.innerWidth;
-    const swipeThreshold = viewportWidth * 0.25;
+    const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
   if (deltaX > swipeThreshold && deltaX > deltaY) {
     isSwiping = true;
     clickBlocked = true;
@@ -533,11 +519,6 @@ function getModalAwalInputRaw() {
 }
 
 // New function to set the raw number to formatted input
-function setModalAwalInputRaw(value) {
-  modalAwalInput = value.toLocaleString('id-ID'); // Format as Rupiah
-}
-
-// New function to get the formatted value for binding
 function getModalAwalInputFormatted() {
   return modalAwalInput;
 }
@@ -594,14 +575,14 @@ function handleBarPointerUp() {
 }
 </script>
 
-{#if showPinModal}
+{#if false} <!-- Removed showPinModal condition -->
   <PinModal
-    show={showPinModal}
-    {pin}
+    show={false}
+    pin={''}
     title="Akses Beranda"
     subtitle="Masukkan PIN untuk melihat beranda"
     on:success={() => {
-      showPinModal = false;
+      // showPinModal = false;
       if (pendingAction) {
         pendingAction();
         pendingAction = null;
@@ -611,7 +592,7 @@ function handleBarPointerUp() {
       showToastNotification(event.detail.message, 'error');
     }}
     on:close={() => {
-      showPinModal = false;
+      // showPinModal = false;
     }}
   />
 {/if}
@@ -828,14 +809,14 @@ function handleBarPointerUp() {
                   {#if i === 0}
                     <span class="absolute -left-3 -top-4 text-2xl md:static md:mr-4 md:text-3xl">👑</span>
                   {:else if i === 1}
-                    <span class="absolute -left-3 -top-3 text-2xl md:static md:mr-4 md:text-3xl">🥈</span>
+                    <span class="absolute -left-3 -top-4 text-2xl md:static md:mr-4 md:text-3xl">🥈</span>
                   {:else if i === 2}
-                    <span class="absolute -left-3 -top-3 text-2xl md:static md:mr-4 md:text-3xl">🥉</span>
+                    <span class="absolute -left-3 -top-4 text-2xl md:static md:mr-4 md:text-3xl">🥉</span>
                   {/if}
                   {#if m.image && !imageError[i]}
-                    <img class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => imageError[i] = true} />
+                    <img class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 object-cover" src={m.image} alt={m.name} onerror={() => handleImgError(i)} />
                   {:else}
-                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 flex items-center justify-center text-xl md:text-2xl text-pink-400">🍹</div>
+                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-pink-50 flex items-center justify-center text-4xl md:text-5xl text-pink-400">🍹</div>
                   {/if}
                   <div class="flex-1 min-w-0">
                     <div class="font-semibold text-gray-900 truncate text-base md:text-xl lg:text-2xl md:mb-1">{m.name}</div>

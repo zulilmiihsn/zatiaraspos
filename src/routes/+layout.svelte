@@ -16,6 +16,9 @@
 	import { userRole } from '$lib/stores/userRole';
 	import { dataService } from '$lib/services/dataService';
 	import { getPendingTransactions } from '$lib/utils/offline';
+	import PinModal from '$lib/components/shared/PinModal.svelte';
+	import { securitySettings } from '$lib/stores/securitySettings';
+
 	let hasPrefetched = false;
 	let isOffline = !navigator.onLine;
 	let pendingCount = 0;
@@ -112,6 +115,62 @@
 			lastBranch = val;
 		});
 	}
+
+	// --- Logika PinModal Global ---
+	let showPinModal = false;
+	let currentPin = '1234'; // Default fallback PIN
+	let pinUnlockedForCurrentPage = false; // Flag untuk menandai PIN sudah dibuka untuk halaman saat ini
+
+	// Daftar halaman yang mungkin terkunci
+	const lockedPagePaths = [
+		'/', // Beranda
+		'/catat',
+		'/laporan',
+		'/pengaturan'
+	];
+
+	$: {
+		const currentUserRole = $userRole;
+		const currentSecuritySettings = $securitySettings;
+		const currentPath = $page.url.pathname;
+
+		// Reset pinUnlockedForCurrentPage jika navigasi ke halaman baru
+		if ($navigating) {
+			pinUnlockedForCurrentPage = false;
+		}
+
+		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
+		const isCurrentPageLocked = lockedPagePaths.some(lockedPath => 
+			currentPath === lockedPath || (currentPath.startsWith(lockedPath + '/') && lockedPath !== '/')
+		);
+		
+		// Tentukan apakah modal PIN harus ditampilkan
+		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
+			showPinModal = true;
+			currentPin = currentSecuritySettings?.pin || '1234'; // Gunakan PIN dari settings atau fallback
+		} else {
+			showPinModal = false;
+		}
+	}
+
+	function handlePinSuccess() {
+		pinUnlockedForCurrentPage = true;
+		showPinModal = false;
+	}
+
+	function handlePinError(event: CustomEvent) {
+		// Tampilkan toast error jika diperlukan
+		// showToastNotification(event.detail.message, 'error');
+	}
+
+	function handlePinClose() {
+		// Jika user menutup modal tanpa memasukkan PIN yang benar, arahkan ke login
+		if (!pinUnlockedForCurrentPage) {
+			auth.logout();
+			goto('/login');
+		}
+	}
+	// --- Akhir Logika PinModal Global ---
 </script>
 
 {#if pendingCount > 0}
@@ -129,24 +188,16 @@
 <!-- Loading indicator -->
 
 
-{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik' || $page.url.pathname === '/pengaturan/pemilik/manajemenmenu'}
+{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik' || $page.url.pathname === '/pos/bayar' || $page.url.pathname === '/pengaturan/pemilik/gantikeamanan' || $page.url.pathname === '/pengaturan/pemilik/manajemenmenu'}
 	<!-- Public pages and settings page without navigation -->
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
 		<div class="flex-1 min-h-0 overflow-y-auto">
 		<slot />
 		</div>
 	</div>
-{:else if $page.url.pathname === '/pos/bayar'}
-	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;"
-		>
-			<slot />
-		</div>
-	</div>
 {:else}
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		{#if $page.url.pathname !== '/laporan' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
+		{#if $page.url.pathname !== '/laporan'}
 			{#if !hideNav}
 				<div class="sticky top-0 z-30 bg-white shadow-md">
 					<Topbar>
@@ -195,13 +246,24 @@
 	</div>
 {/if}
 
-{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
+{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
 	<div class="sticky bottom-0 z-30 bg-white">
 		<BottomNav />
 	</div>
 {/if}
 
-
+<!-- Global PinModal -->
+{#if showPinModal}
+	<PinModal
+		show={showPinModal}
+		pin={currentPin}
+		title="Akses Terkunci"
+		subtitle="Masukkan PIN untuk mengakses halaman ini"
+		on:success={handlePinSuccess}
+		on:error={handlePinError}
+		on:close={handlePinClose}
+	/>
+{/if}
 
 <svelte:head>
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />

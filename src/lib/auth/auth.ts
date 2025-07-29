@@ -2,6 +2,7 @@ import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { setUserRole, clearUserRole } from '$lib/stores/userRole';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings';
 
 // Session store
 export const session = writable({
@@ -54,6 +55,7 @@ export const auth = {
       token: null
     });
     localStorage.removeItem('zatiaras_session'); // Changed to localStorage
+    clearSecuritySettings(); // Clear security settings on logout
   },
 
   // Check if user is authenticated
@@ -108,6 +110,24 @@ export async function loginWithUsername(username: string, password: string, bran
   // Set user role dan profile ke store (hanya sekali saat login)
   setUserRole(result.user.role, result.user);
 
+  // Jika peran adalah 'kasir', ambil pengaturan keamanan
+  if (result.user.role === 'kasir') {
+    try {
+      const { data, error } = await getSupabaseClient(branch).from('pengaturan').select('pin, locked_pages').eq('id', 1).single();
+      if (!error && data) {
+        setSecuritySettings({ pin: data.pin, lockedPages: data.locked_pages });
+      } else {
+        // Fallback atau set default jika tidak ada pengaturan
+        setSecuritySettings({ pin: '1234', lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat'] });
+      }
+    } catch (e) {
+      console.error('Error fetching security settings:', e);
+      setSecuritySettings({ pin: '1234', lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat'] }); // Fallback
+    }
+  } else {
+    clearSecuritySettings(); // Clear settings for non-kasir roles
+  }
+
   // Tidak perlu reset/fetch cache apapun
 
   // Simpan session hanya ke store
@@ -138,4 +158,5 @@ export async function logout() {
   clearUserRole();
   session.set({ isAuthenticated: false, user: null, token: null });
   localStorage.removeItem('zatiaras_session'); // Changed to localStorage
+  clearSecuritySettings(); // Clear security settings on logout
 }

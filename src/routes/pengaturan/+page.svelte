@@ -13,7 +13,6 @@
   import Crown from 'lucide-svelte/icons/crown';
   import CreditCard from 'lucide-svelte/icons/credit-card';
   import User from 'lucide-svelte/icons/user';
-  import PinModal from '$lib/components/shared/PinModal.svelte';
   import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
   
   // Type definitions
@@ -38,10 +37,7 @@
   let canInstallPWA = false;
   let currentPage = 'security';
 
-  let showPinModal = false;
-  let pin = '';
-  let errorTimeout: number;
-  let isClosing = false;
+  // Removed showPinModal, pin, errorTimeout, isClosing
   let showPwaInstalledToast = false;
   let pwaStatus = '';
   let showPwaManualToast = false;
@@ -141,16 +137,8 @@
         });
       }
 
-      // Load pengaturan data
-      if (currentUserRole === 'kasir') {
-        await fetchPengaturan();
-        const lockedPages = pengaturanData?.locked_pages || ['laporan', 'beranda'];
-        pin = pengaturanData?.pin || '1234';
-        if (lockedPages.includes('pengaturan')) {
-          showPinModal = true;
-        }
-      }
-
+      // Removed locked_pages check for kasir role
+      
       // Set loading selesai
       isLoading = false;
 
@@ -587,4 +575,4 @@
 .shimmer-highlight:hover::after {
   background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0) 100%);
 }
-</style> 
+</style>
