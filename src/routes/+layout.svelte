@@ -133,9 +133,10 @@
 
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
 		// Gunakan lockedPages dari securitySettings
-		const isCurrentPageLocked = currentSecuritySettings?.lockedPages && currentSecuritySettings.lockedPages.some(lockedPath => 
-			currentPath === lockedPath || (currentPath.startsWith(lockedPath + '/') && lockedPath !== '/')
-		);
+		const isCurrentPageLocked = currentSecuritySettings?.lockedPages && currentSecuritySettings.lockedPages.some(lockedPageName => {
+			const fullLockedPath = `/${lockedPageName}`; // Tambahkan awalan '/'
+			return currentPath === fullLockedPath || (currentPath.startsWith(fullLockedPath + '/') && fullLockedPath !== '/');
+		});
 		
 		// Tentukan apakah modal PIN harus ditampilkan
 		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
