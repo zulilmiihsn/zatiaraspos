@@ -121,14 +121,6 @@
 	let currentPin = '1234'; // Default fallback PIN
 	let pinUnlockedForCurrentPage = false; // Flag untuk menandai PIN sudah dibuka untuk halaman saat ini
 
-	// Daftar halaman yang mungkin terkunci
-	const lockedPagePaths = [
-		'/', // Beranda
-		'/catat',
-		'/laporan',
-		'/pengaturan'
-	];
-
 	$: {
 		const currentUserRole = $userRole;
 		const currentSecuritySettings = $securitySettings;
@@ -140,7 +132,8 @@
 		}
 
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
-		const isCurrentPageLocked = lockedPagePaths.some(lockedPath => 
+		// Gunakan lockedPages dari securitySettings
+		const isCurrentPageLocked = currentSecuritySettings?.lockedPages && currentSecuritySettings.lockedPages.some(lockedPath => 
 			currentPath === lockedPath || (currentPath.startsWith(lockedPath + '/') && lockedPath !== '/')
 		);
 		
