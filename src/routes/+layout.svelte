@@ -80,40 +80,16 @@
 		});
 	});
 
-	onDestroy(() => {
-		if (typeof window !== 'undefined' && $page.url.pathname === '/pengaturan/pemilik/gantikeamanan') {
-			document.body.classList.remove('hide-nav');
+	// --- Logika Tampilan Navigasi --- 
+	let showNav = true;
+	$: {
+		const path = $page.url.pathname;
+		const noNavRoutes = ['/login', '/unauthorized', '/pos/bayar'];
+		if (noNavRoutes.includes(path) || path.startsWith('/pengaturan')) {
+			showNav = false;
+		} else {
+			showNav = true;
 		}
-	});
-
-	let isPosPage = false;
-	let posGridViewValue = true;
-	let tokoAktif = false; // TODO: Nanti dihubungkan ke state global/store dari page beranda
-
-	$: isPosPage = $page.url.pathname === '/pos';
-
-	$: if (isPosPage) {
-		const unsubscribe = posGridView.subscribe(v => posGridViewValue = v);
-	}
-
-	$: hideNav = $page.url.pathname === '/pengaturan/pemilik/riwayat';
-
-	// Subscribe ke selectedBranch: clear cache & fetch ulang data saat cabang berubah, tanpa reload
-	if (typeof window !== 'undefined') {
-		let lastBranch = sessionStorage.getItem('selectedBranch');
-		let isInitialLoad = true; // Add flag to prevent double fetching
-		selectedBranch.subscribe(async val => {
-			// Skip jika ini adalah initial load
-			if (isInitialLoad) {
-				isInitialLoad = false;
-				return;
-			}
-			if (val && val !== lastBranch) {
-				await dataService.clearAllCaches();
-				// Komponen/halaman lain harus subscribe ke selectedBranch dan fetch ulang data
-			}
-			lastBranch = val;
-		});
 	}
 
 	// --- Logika PinModal Global ---
@@ -132,7 +108,6 @@
 		}
 
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
-		// Gunakan lockedPages dari securitySettings
 		const isCurrentPageLocked = currentSecuritySettings?.lockedPages && currentSecuritySettings.lockedPages.some(lockedPageName => {
 			const fullLockedPath = `/${lockedPageName}`; // Tambahkan awalan '/'
 			return currentPath === fullLockedPath || (currentPath.startsWith(fullLockedPath + '/') && fullLockedPath !== '/');
@@ -154,7 +129,6 @@
 
 	function handlePinError(event: CustomEvent) {
 		// Tampilkan toast error jika diperlukan
-		// showToastNotification(event.detail.message, 'error');
 	}
 
 	function handlePinClose() {
@@ -164,7 +138,7 @@
 			goto('/login');
 		}
 	}
-	// --- Akhir Logika PinModal Global ---
+	// --- Akhir Logika ---
 </script>
 
 {#if pendingCount > 0}
@@ -179,70 +153,50 @@
 	</div>
 {/if}
 
-<!-- Loading indicator -->
-
-
-{#if $page.url.pathname === '/login' || $page.url.pathname === '/unauthorized' || $page.url.pathname === '/pengaturan/printer' || $page.url.pathname === '/pengaturan/pemilik' || $page.url.pathname === '/pos/bayar' || $page.url.pathname === '/pengaturan/pemilik/gantikeamanan' || $page.url.pathname === '/pengaturan/pemilik/manajemenmenu'}
-	<!-- Public pages and settings page without navigation -->
+{#if showNav}
+	<!-- Layout standar dengan navigasi -->
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="flex-1 min-h-0 overflow-y-auto">
-		<slot />
-		</div>
-	</div>
-{:else}
-	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		{#if $page.url.pathname !== '/laporan'}
-			{#if !hideNav}
-				<div class="sticky top-0 z-30 bg-white shadow-md">
-					<Topbar>
-						<svelte:fragment slot="actions">
-							{#if $page.url.pathname === '/'}
-								<!-- Button Buka/Tutup Toko dihapus sesuai permintaan user -->
+		<div class="sticky top-0 z-30 bg-white shadow-md">
+			<Topbar>
+				<svelte:fragment slot="actions">
+					{#if $page.url.pathname === '/pos'}
+						<button
+							class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
+							on:click={() => posGridView.update(v => !v)}
+							aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
+							type="button"
+						>
+							{#if $posGridView}
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+							{:else}
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
 							{/if}
-							{#if $page.url.pathname === '/pos'}
-								<button
-									class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
-									onclick={() => posGridView.update(v => !v)}
-									aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
-									type="button"
-								>
-									{#if $posGridView}
-										<!-- Icon Grid -->
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
-									{:else}
-										<!-- Icon List -->
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-									{/if}
-								</button>
-							{/if}
-						</svelte:fragment>
-					</Topbar>
-				</div>
-			{/if}
-		{/if}
-		{#if $page.url.pathname === '/laporan'}
-			<div class="sticky top-0 z-30 bg-white shadow-md">
-				<Topbar>
-					<svelte:fragment slot="download">
+						</button>
+					{/if}
+				</svelte:fragment>
+				<svelte:fragment slot="download">
+					{#if $page.url.pathname === '/laporan'}
 						<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
 							<Download size={22} />
 						</button>
-					</svelte:fragment>
-					<svelte:fragment slot="actions"></svelte:fragment>
-				</Topbar>
-			</div>
-		{/if}
+					{/if}
+				</svelte:fragment>
+			</Topbar>
+		</div>
 		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;"
-		>
+			style="scrollbar-width:none;-ms-overflow-style:none;">
 			<slot />
 		</div>
+		<div class="sticky bottom-0 z-30 bg-white">
+			<BottomNav />
+		</div>
 	</div>
-{/if}
-
-{#if !hideNav && $page.url.pathname !== '/login' && $page.url.pathname !== '/unauthorized' && $page.url.pathname !== '/pengaturan/printer' && $page.url.pathname !== '/pengaturan/pemilik' && $page.url.pathname !== '/pos/bayar' && $page.url.pathname !== '/pengaturan/pemilik/gantikeamanan' && $page.url.pathname !== '/pengaturan/pemilik/manajemenmenu'}
-	<div class="sticky bottom-0 z-30 bg-white">
-		<BottomNav />
+{:else}
+    <!-- Layout tanpa navigasi -->
+	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+		<div class="flex-1 min-h-0 overflow-y-auto">
+			<slot />
+		</div>
 	</div>
 {/if}
 

@@ -11,13 +11,13 @@ import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
 import { userRole } from '$lib/stores/userRole';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
+import { createToastManager, handleError } from '$lib/utils/index';
+import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
 let transaksiHariIni = [];
 let loading = true;
 let showDeleteModal = false;
 let transaksiToDelete = null;
-let notifMsg = '';
-let showNotif = false;
 let searchKeyword = '';
 let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 let Trash;
@@ -29,6 +29,9 @@ const paymentOptions = [
   { value: 'tunai', label: 'Tunai' },
   { value: 'qris', label: 'QRIS/Non-Tunai' }
 ];
+
+// Toast management
+const toastManager = createToastManager();
 
 function todayRange() {
   // Hari ini dalam zona waktu WITA
@@ -88,8 +91,8 @@ async function fetchTransaksiHariIni() {
       });
     }
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    transaksiHariIni = [];
+    handleError(error, 'fetchTransaksiHariIni', true);
+    toastManager.showToastNotification('Gagal memuat data transaksi', 'error');
   } finally {
     loading = false;
   }
@@ -129,19 +132,14 @@ async function deleteTransaksi() {
     }
     
     showDeleteModal = false;
-    notifMsg = 'Transaksi berhasil dihapus.';
-    showNotif = true;
+    toastManager.showToastNotification('Transaksi berhasil dihapus.', 'success');
     // Auto hide notification after 3 seconds
     setTimeout(() => {
-      showNotif = false;
+      toastManager.hideToast();
     }, 3000);
   } catch (error) {
-    console.error('Error deleting transaction:', error);
-    notifMsg = 'Gagal menghapus transaksi. Silakan coba lagi.';
-    showNotif = true;
-    setTimeout(() => {
-      showNotif = false;
-    }, 3000);
+    handleError(error, 'deleteTransaksi', true);
+    toastManager.showToastNotification('Gagal menghapus transaksi', 'error');
   } finally {
     await fetchTransaksiHariIni();
     loading = false;
@@ -165,15 +163,13 @@ async function updatePaymentMethod(newMethod) {
       .from('buku_kas')
       .update({ payment_method: newMethod })
       .eq('id', selectedTransaksi.id);
-    notifMsg = 'Jenis pembayaran berhasil diubah.';
-    showNotif = true;
-    setTimeout(() => { showNotif = false; }, 2000);
+    toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
+    setTimeout(() => { toastManager.hideToast(); }, 2000);
     showDetailModal = false;
     await fetchTransaksiHariIni();
   } catch (e) {
-    notifMsg = 'Gagal mengubah jenis pembayaran.';
-    showNotif = true;
-    setTimeout(() => { showNotif = false; }, 2000);
+    handleError(e, 'updatePaymentMethod', true);
+    toastManager.showToastNotification('Gagal mengubah jenis pembayaran', 'error');
   } finally {
     loading = false;
   }
@@ -235,28 +231,28 @@ onDestroy(() => {
     {:else}
       <div class="flex flex-col gap-2">
         {#each transaksiHariIni as trx}
-          <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex items-start justify-between gap-3 cursor-pointer hover:bg-pink-50 transition-colors" onclick={() => openDetail(trx)}>
-            <div>
-              <div class="font-semibold text-gray-800 text-sm truncate max-w-[10rem] md:max-w-[16rem] lg:max-w-[18rem] overflow-hidden" title={trx.nama}>{trx.nama}</div>
-              <div class="text-xs text-gray-500 mb-1 flex gap-2 items-center">
-                <span>
-                  {trx.sumber === 'pos' ? 'POS | ' : ''}
-                  {trx.tipe === 'in' ? 'Pemasukan' : 'Pengeluaran'}
-                  {trx.sumber === 'pos' ? ' | ' : ''}
-                </span>
-                <span class="uppercase font-semibold text-pink-500">
-                  {trx.payment_method === 'qris' || trx.payment_method === 'non-tunai' ? 'QRIS' : 'Tunai'}
-                </span>
-              </div>
-              <div class="text-xs text-gray-400">{new Date(trx.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-            <div class="flex flex-col items-end gap-2">
-              <div class="font-bold text-pink-500 text-base">Rp {trx.nominal?.toLocaleString('id-ID')}</div>
-              <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteTransaksi(trx); }} title="Hapus transaksi">
-                <svelte:component this={Trash} class="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+                  <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex items-start justify-between gap-3 cursor-pointer hover:bg-pink-50 transition-colors" onclick={() => openDetail(trx)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(trx); } }} role="button" tabindex="0">
+                    <div>
+                      <div class="font-semibold text-gray-800 text-sm truncate max-w-[10rem] md:max-w-[16rem] lg:max-w-[18rem] overflow-hidden" title={trx.nama}>{trx.nama}</div>
+                      <div class="text-xs text-gray-500 mb-1 flex gap-2 items-center">
+                        <span>
+                          {trx.sumber === 'pos' ? 'POS | ' : ''}
+                          {trx.tipe === 'in' ? 'Pemasukan' : 'Pengeluaran'}
+                          {trx.sumber === 'pos' ? ' | ' : ''}
+                        </span>
+                        <span class="uppercase font-semibold text-pink-500">
+                          {trx.payment_method === 'qris' || trx.payment_method === 'non-tunai' ? 'QRIS' : 'Tunai'}
+                        </span>
+                      </div>
+                      <div class="text-xs text-gray-400">{new Date(trx.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                      <div class="font-bold text-pink-500 text-base">Rp {trx.nominal?.toLocaleString('id-ID')}</div>
+                      <button class="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-md" onclick={(e) => { e.stopPropagation(); confirmDeleteTransaksi(trx); }} title="Hapus transaksi">
+                        <svelte:component this={Trash} class="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
         {/each}
       </div>
     {/if}
@@ -275,12 +271,6 @@ onDestroy(() => {
           <button class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors" onclick={deleteTransaksi}>Hapus</button>
         </div>
       </div>
-    </div>
-  {/if}
-
-  {#if showNotif}
-    <div class="fixed top-20 left-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center" style="transform: translateX(-50%);">
-      {notifMsg}
     </div>
   {/if}
 
@@ -319,8 +309,18 @@ onDestroy(() => {
       </div>
     </div>
   {/if}
-</div>
 
+  {#if toastManager.showToast}
+    <ToastNotification
+      show={toastManager.showToast}
+      message={toastManager.toastMessage}
+      type={toastManager.toastType}
+      duration={3000}
+      position="top"
+    />
+  {/if}
+</div>
+ 
 <style>
 .animate-slideUpModal {
   animation: slideUpModal 0.32s cubic-bezier(.4,0,.2,1);
@@ -330,14 +330,7 @@ onDestroy(() => {
   to { transform: translateY(0); opacity: 1; }
 }
 
-:global(body.hide-nav) .topbar,
-:global(body.hide-nav) .bottom-nav {
-  display: none !important;
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
 @keyframes spin {
   100% { transform: rotate(360deg); }
 }
-</style> 
+</style>

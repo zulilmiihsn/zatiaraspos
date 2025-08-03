@@ -20,6 +20,7 @@ import Utensils from 'lucide-svelte/icons/utensils';
 import Tag from 'lucide-svelte/icons/tag';
 import { dataService } from '$lib/services/dataService';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+import { createToastManager, handleError } from '$lib/utils/index';
 
 // Data Menu
 let menus: any[] = [];
@@ -85,15 +86,16 @@ let isLoadingKategori = true;
 let isLoadingEkstra = true;
 let unsubscribeBranch: (() => void) | null = null;
 
+// Toast management
+const toastManager = createToastManager();
+
 // Toast notification state
 let showToast = false;
 let toastMessage = '';
 let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
 
 function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
-  toastMessage = message;
-  toastType = type;
-  showToast = true;
+  toastManager.showToastNotification(message, type);
 }
 
 const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
@@ -190,11 +192,9 @@ onMount(async () => {
     document.body.classList.add('hide-nav');
   }
 
-  userRole.subscribe(role => {
-    if (role !== 'pemilik') {
-      goto('/unauthorized');
-    }
-  })();
+  if (storeGet(userRole) !== 'pemilik') {
+    goto('/unauthorized');
+  }
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
   unsubscribeBranch = selectedBranch.subscribe(() => {
@@ -699,7 +699,7 @@ async function updateMenusKategori(kategoriId, menuIds, oldKategoriId) {
       }
     }
   } catch (error) {
-    console.error('Error updating menu categories:', error);
+    handleError(error, 'updateMenuCategories', false);
     throw error;
   }
 }
@@ -751,7 +751,7 @@ async function afterUpdateCachePOS() {
     await dataService.invalidateCacheOnChange('kategori');
     await dataService.invalidateCacheOnChange('tambahan');
   } catch (error) {
-    console.warn('Failed to clear dataService cache:', error);
+    handleError(error, 'clearDataServiceCache', false);
   }
 }
 
@@ -788,6 +788,16 @@ $: if (showNotifModal) {
   const timeout = setTimeout(() => { showNotifModal = false; }, 2000);
 }
 </script>
+
+{#if toastManager.showToast}
+  <ToastNotification
+    show={toastManager.showToast}
+    message={toastManager.toastMessage}
+    type={toastManager.toastType}
+    duration={3000}
+    position="top"
+  />
+{/if}
 
 <!-- Seluruh markup manajemen menu, kategori, ekstra, dan modal dari file src/routes/pengaturan/pemilik/+page.svelte -->
 <!-- Tambahkan seluruh markup (HTML/Svelte) untuk list/tabel menu, kategori, ekstra, form/modal tambah/edit/hapus, modal/modal sheet, komponen upload/crop gambar, dan semua tampilan serta interaksi CRUD menu, kategori, ekstra dari file /pemilik ke sini. Pastikan semua event handler, binding, dan logic tetap berjalan. Jangan sertakan bagian keamanan, riwayat, atau navigasi utama. -->

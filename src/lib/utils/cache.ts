@@ -28,13 +28,11 @@ interface CacheEntry<T> {
 // Memory cache (fastest access)
 class MemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private cleanupInterval: number;
+  private cleanupTimeout: number | null = null;
 
   constructor() {
-    // Cleanup expired entries every 30 seconds
-    this.cleanupInterval = Number(setInterval(() => {
-      this.cleanup();
-    }, 30000));
+    // Schedule cleanup only when needed
+    this.scheduleCleanup();
   }
 
   set<T>(key: string, data: T, ttl: number = CACHE_CONFIG.MEMORY_TTL): void {
@@ -49,6 +47,11 @@ class MemoryCache {
       timestamp: Date.now(),
       ttl
     });
+
+    // Schedule cleanup if not already scheduled
+    if (!this.cleanupTimeout) {
+      this.scheduleCleanup();
+    }
   }
 
   get<T>(key: string): T | null {
@@ -85,8 +88,27 @@ class MemoryCache {
     }
   }
 
+  private scheduleCleanup(): void {
+    if (this.cleanupTimeout) {
+      clearTimeout(this.cleanupTimeout);
+    }
+    
+    this.cleanupTimeout = Number(setTimeout(() => {
+      this.cleanup();
+      this.cleanupTimeout = null;
+      
+      // Schedule next cleanup only if cache has entries
+      if (this.cache.size > 0) {
+        this.scheduleCleanup();
+      }
+    }, 30000));
+  }
+
   destroy(): void {
-    clearInterval(this.cleanupInterval);
+    if (this.cleanupTimeout) {
+      clearTimeout(this.cleanupTimeout);
+      this.cleanupTimeout = null;
+    }
     this.clear();
   }
 }

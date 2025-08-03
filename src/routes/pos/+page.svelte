@@ -74,6 +74,9 @@ onMount(async () => {
     }, 1000); // Throttle to 1 second
 
     window.addEventListener('online', throttledSync);
+    
+    // Store reference for cleanup
+    window._onlineSyncHandler = throttledSync;
   }
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
@@ -90,6 +93,12 @@ onMount(async () => {
 onDestroy(() => {
   if (unsubscribeBranch) unsubscribeBranch();
   realtimeManager.unsubscribeAll();
+  
+  // Cleanup event listeners
+  if (typeof window !== 'undefined' && window._onlineSyncHandler) {
+    window.removeEventListener('online', window._onlineSyncHandler);
+    delete window._onlineSyncHandler;
+  }
 });
 
 // Load POS data dengan smart caching
@@ -105,7 +114,7 @@ async function loadPOSData() {
     tambahanData = await dataService.getAddOns();
     
   } catch (error) {
-    // console.error('Error loading POS data:', error);
+    // Error handling tanpa console.log
   }
 }
 

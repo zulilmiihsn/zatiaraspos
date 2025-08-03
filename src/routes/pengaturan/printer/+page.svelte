@@ -6,16 +6,13 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import { goto } from '$app/navigation';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+import { createToastManager } from '$lib/utils/index';
 let namaToko = '';
 let alamat = '';
 let telepon = '';
 let instagram = '';
 let ucapan = '';
 let isSaving = false;
-let showToast = false;
-let toastMsg = '';
-let toastType = 'success'; // 'success' | 'error'
-let toastTimeout: any = null;
 
 const defaultData = {
   namaToko: 'Zatiaras Juice',
@@ -49,14 +46,6 @@ function resetToDefault() {
   ucapan = defaultData.ucapan;
 }
 
-function showFloatingNotif(msg: string, type: 'success' | 'error' = 'success') {
-  toastMsg = msg;
-  toastType = type;
-  showToast = true;
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => { showToast = false; }, 2500);
-}
-
 async function simpanPengaturan(event: Event) {
   event.preventDefault();
   isSaving = true;
@@ -71,14 +60,16 @@ async function simpanPengaturan(event: Event) {
   try {
     const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').upsert([data]);
     if (error) throw error;
-    showFloatingNotif('Pengaturan berhasil disimpan!', 'success');
+    toastManager.showToastNotification('Pengaturan berhasil disimpan!', 'success');
   } catch (e) {
-    showFloatingNotif('Gagal menyimpan ke Supabase.', 'error');
+    toastManager.showToastNotification('Gagal menyimpan ke Supabase.', 'error');
   } finally {
     isSaving = false;
   }
 }
 
+// Toast management
+const toastManager = createToastManager();
 
 
 onMount(async () => {
@@ -158,11 +149,11 @@ onMount(async () => {
   </div>
 </div> 
 
-{#if showToast}
+{#if toastManager.showToast}
   <ToastNotification
-    show={showToast}
-    message={toastMsg}
-    type={toastType}
+    show={toastManager.showToast}
+    message={toastManager.toastMessage}
+    type={toastManager.toastType}
     duration={2000}
     position="top"
   />

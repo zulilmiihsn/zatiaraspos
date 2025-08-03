@@ -11,6 +11,7 @@ import { memoize } from '$lib/utils/performance';
 import { dataService, realtimeManager } from '$lib/services/dataService';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+import { createToastManager, handleError } from '$lib/utils/index';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
@@ -51,14 +52,8 @@ async function loadLaporanData() {
     // Gunakan data langsung dari dataService tanpa filtering tambahan
     laporan = reportData?.transactions || [];
   } catch (error) {
-    console.error('❌ Error loading laporan data:', error);
-    // Set default values on error
-    summary = { pendapatan: 0, pengeluaran: 0, saldo: 0, labaKotor: 0, pajak: 0, labaBersih: 0 };
-    pemasukanUsaha = [];
-    pemasukanLain = [];
-    bebanUsaha = [];
-    bebanLain = [];
-    laporan = [];
+    handleError(error, 'loadLaporanData', true);
+    toastManager.showToastNotification('Gagal memuat data laporan', 'error');
   }
 }
 
@@ -492,6 +487,9 @@ function showToastNotification(message: string, type: 'success' | 'error' | 'war
   showToast = true;
 }
 
+// Toast management
+const toastManager = createToastManager();
+
 </script>
 
 {#if false} <!-- Removed showPinModal condition -->
@@ -514,13 +512,15 @@ function showToastNotification(message: string, type: 'success' | 'error' | 'war
 {/if}
 
 <!-- Toast Notification -->
-<ToastNotification
-  show={showToast}
-  message={toastMessage}
-  type={toastType}
-  duration={2000}
-  position="top"
-/>
+{#if toastManager.showToast}
+  <ToastNotification
+    show={toastManager.showToast}
+    message={toastManager.toastMessage}
+    type={toastManager.toastType}
+    duration={3000}
+    position="top"
+  />
+{/if}
 
 <div 
   class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"

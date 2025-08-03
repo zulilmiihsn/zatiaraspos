@@ -14,6 +14,7 @@
   import CreditCard from 'lucide-svelte/icons/credit-card';
   import User from 'lucide-svelte/icons/user';
   import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+  import { createToastManager, handleError } from '$lib/utils/index';
   
   // Type definitions
   interface PengaturanData {
@@ -153,9 +154,8 @@
       Download = (await import('lucide-svelte/icons/download')).default;
       Printer = (await import('lucide-svelte/icons/printer')).default;
     } catch (error) {
-      console.error('Error loading pengaturan page:', error);
-      // Jika terjadi error, tetap tampilkan halaman dengan data yang tersedia
-      isLoading = false;
+      handleError(error, 'loadPengaturanPage', true);
+      toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
     }
   });
 
