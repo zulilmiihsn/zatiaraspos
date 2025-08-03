@@ -3,10 +3,10 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: number; // Changed from NodeJS.Timeout to number
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    timeout = window.setTimeout(() => func(...args), wait);
   };
 }
 
@@ -15,11 +15,12 @@ export function throttle<T extends (...args: any[]) => any>(
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
+  let timeoutId: number; // Added for consistency
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      timeoutId = window.setTimeout(() => inThrottle = false, limit); // Use window.setTimeout
     }
   };
 }
@@ -53,21 +54,42 @@ export function measurePerformance(name: string, fn: () => void) {
   const start = performance.now();
   fn();
   const end = performance.now();
+  // console.log(`${name} took ${end - start} ms`); // Uncomment for debugging
 }
 
 export async function measureAsyncPerformance(name: string, fn: () => Promise<void>) {
   const start = performance.now();
   await fn();
   const end = performance.now();
+  // console.log(`${name} took ${end - start} ms`); // Uncomment for debugging
+}
+
+interface Product {
+  price?: number;
+  harga?: number;
+  name?: string;
+  gambar?: string;
+}
+
+interface AddOn {
+  price?: number;
+  harga?: number;
+}
+
+interface CartItem {
+  product?: Product;
+  qty?: number;
+  addOns?: AddOn[];
+  kategori?: string; // Untuk fuzzy search
 }
 
 // Cart calculations dengan memoization
-export const calculateCartTotal = memoize((cart: any[]) => {
+export const calculateCartTotal = memoize((cart: CartItem[]) => {
   let items = 0;
   let total = 0;
   for (const item of cart) {
     const itemTotal = (item.product?.price ?? item.product?.harga ?? 0) * (item.qty ?? 1);
-    const addOnsTotal = (item.addOns || []).reduce((sum: number, addon: any) => sum + (addon.price ?? addon.harga ?? 0), 0) * (item.qty ?? 1);
+    const addOnsTotal = (item.addOns || []).reduce((sum: number, addon: AddOn) => sum + (addon.price ?? addon.harga ?? 0), 0) * (item.qty ?? 1);
     total += itemTotal + addOnsTotal;
     items += item.qty ?? 1;
   }
@@ -75,13 +97,13 @@ export const calculateCartTotal = memoize((cart: any[]) => {
 });
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch(query: string, items: any[], key: string = 'name'): any[] {
+export function fuzzySearch(query: string, items: CartItem[], key: string = 'name'): CartItem[] {
   if (!query.trim()) return items;
   const searchTerm = query.toLowerCase();
   // Cari di name dan kategori (jika ada)
   return items
     .map(item => {
-      const name = String(item[key] ?? '').toLowerCase();
+      const name = String(item[key as keyof CartItem] ?? '').toLowerCase(); // Type assertion for key
       const kategori = String(item.kategori ?? '').toLowerCase();
       let score = 0;
       if (name.startsWith(searchTerm)) score = 3;
@@ -104,7 +126,7 @@ export function createImageObserver(callback: (entry: IntersectionObserverEntry)
   });
 }
 
-// Cache management
+// Cache management (in-memory cache, data will be lost on page refresh/close)
 export class CacheManager {
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   
@@ -140,6 +162,6 @@ export function analyzeBundleSize() {
     const totalSize = resources.reduce((sum, resource) => {
       return sum + (resource.transferSize || 0);
     }, 0);
-    
+    // console.log(`Total bundle size: ${totalSize / (1024 * 1024)} MB`); // Uncomment for debugging
   }
-} 
+}

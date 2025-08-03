@@ -6,18 +6,19 @@
   import { SecurityMiddleware } from '$lib/utils/security';
   import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
   import { selectedBranch } from '$lib/stores/selectedBranch';
-  import { get } from 'svelte/store';
+  import { userRole, setUserRole } from '$lib/stores/userRole';
+  import { dataService } from '$lib/services/dataService';
+  import type { UserProfile } from '$lib/stores/userRole';
 
-  let userRole = '';
-  let username = '';
-  let password = '';
-  let isLoading = false;
-  let errorMessage = '';
-  let successMessage = '';
+  let username: string = '';
+  let password: string = '';
+  let isLoading: boolean = false;
+  let errorMessage: string = '';
+  let successMessage: string = '';
 
   // Form validation
-  let usernameError = '';
-  let passwordError = '';
+  let usernameError: string = '';
+  let passwordError: string = '';
 
   let branch: 'samarinda' | 'berau' | 'dev' = 'samarinda';
   $: selectedBranch.set(branch);
@@ -32,31 +33,36 @@
     });
     usernameError = usernameValidation.errors.join(', ');
     if (!usernameValidation.isValid) isValid = false;
+
     const passwordValidation = validatePasswordDemo(password);
     passwordError = passwordValidation.errors.join(', ');
     if (!passwordValidation.isValid) isValid = false;
+
     return isValid;
   }
 
-  let showLottieSuccess = false;
-  let lottieTimeout: any = null;
-  let showLottieError = false;
-  let lottieErrorTimeout: any = null;
-  // let isLottiePlaying = false; // Hapus semua logic isLottiePlaying
+  let showLottieSuccess: boolean = false;
+  let lottieTimeout: number | undefined = undefined;
+  let showLottieError: boolean = false;
+  let lottieErrorTimeout: number | undefined = undefined;
 
   async function handleSubmit() {
     errorMessage = '';
     successMessage = '';
+
     if (!validateForm()) return;
+
     if (!SecurityMiddleware.checkFormRateLimit('login')) {
       errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
       showLottieError = true;
       clearTimeout(lottieErrorTimeout);
-      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
+      lottieErrorTimeout = window.setTimeout(() => showLottieError = false, 1200);
       return;
     }
+
     const sanitizedUsername = sanitizeInput(username);
     const sanitizedPassword = sanitizeInput(password);
+
     if (SecurityMiddleware.detectSuspiciousActivity('login', sanitizedUsername + sanitizedPassword)) {
       errorMessage = 'Aktivitas mencurigakan terdeteksi. Silakan coba lagi.';
       SecurityMiddleware.logSecurityEvent('login_attempt_blocked', {
@@ -65,18 +71,17 @@
       });
       showLottieError = true;
       clearTimeout(lottieErrorTimeout);
-      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
+      lottieErrorTimeout = window.setTimeout(() => showLottieError = false, 1200);
       return;
     }
+
     isLoading = true;
     try {
       await loginWithUsername(sanitizedUsername, sanitizedPassword, branch);
       showLottieSuccess = true;
-      // isLottiePlaying = true; // Hapus semua logic isLottiePlaying
       await new Promise(resolve => setTimeout(resolve, 1200));
-      // isLottiePlaying = false; // Hapus semua logic isLottiePlaying
       goto('/');
-    } catch (e) {
+    } catch (e: any) {
       errorMessage = e.message;
       SecurityMiddleware.logSecurityEvent('login_failed', {
         username: sanitizedUsername,
@@ -84,7 +89,7 @@
       });
       showLottieError = true;
       clearTimeout(lottieErrorTimeout);
-      lottieErrorTimeout = setTimeout(() => showLottieError = false, 1200);
+      lottieErrorTimeout = window.setTimeout(() => showLottieError = false, 1200);
     } finally {
       isLoading = false;
     }
@@ -97,13 +102,10 @@
   }
 
   onMount(async () => {
-    if (userRole === 'kasir') {
-      const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
-      const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-      if (lockedPages.includes('beranda')) {
-        // showPinModal = true; // Hapus semua logic showPinModal
-      }
-    }
+    // If userRole is not set in store, try to validate with Supabase
+    // This block is now simplified as userRole store handles initial load from localStorage
+    // and +layout.svelte handles global role validation.
+    // No need for explicit Supabase fetch here unless specific re-validation is required.
   });
 </script>
 
@@ -268,4 +270,4 @@
 .animate-fadeInUp {
   animation: fadeInUp 0.5s cubic-bezier(.4,0,.2,1);
 }
-</style> 
+</style>

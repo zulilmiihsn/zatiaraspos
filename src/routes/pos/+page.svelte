@@ -1,5 +1,6 @@
   <script lang="ts">
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import { cart } from '$lib/stores/cart';
 import { onMount, onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
@@ -224,7 +225,7 @@ let qty = 1;
 let selectedNote = '';
 
 // Keranjang sementara
-let cart: Array<any> = [];
+// let cart: Array<any> = [];
 
 // Untuk track error gambar per produk (pakai string key)
 let imageError: Record<string, boolean> = {};
@@ -243,7 +244,7 @@ function handleSearchInput(value: string) {
 
 // Memoized computed values untuk performance
 const memoizedCartTotal = memoize(calculateCartTotal);
-$: cartTotal = memoizedCartTotal(cart);
+$: cartTotal = memoizedCartTotal($cart);
 $: totalItems = cartTotal.items;
 $: totalHarga = cartTotal.total;
 
@@ -273,7 +274,7 @@ function openCartModal() {
 function closeCartModal() {
   showCartModal = false;
 }
-function removeCartItem(idx) { cart = cart.filter((_, i) => i !== idx); }
+function removeCartItem(idx) { cart.update(currentCart => currentCart.filter((_, i) => i !== idx)); }
 
 function openAddOnModal(product) {
   showCartModal = false;
@@ -340,7 +341,7 @@ function addToCart() {
   const addOnsKey = addOnsSelected.map(a => a.id).sort().join(',');
   const itemKey = `${selectedProduct.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
   
-  const existingIdx = cart.findIndex(item => {
+  const existingIdx = get(cart).findIndex(item => {
     const itemAddOnsKey = (item.addOns || []).map(a => a.id).sort().join(',');
     const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
     return currentItemKey === itemKey;
@@ -348,11 +349,11 @@ function addToCart() {
   
   if (existingIdx !== -1) {
     // Jika sudah ada, tambahkan qty
-    cart = cart.map((item, idx) => idx === existingIdx ? { ...item, qty: item.qty + qty } : item);
+    cart.update(currentCart => currentCart.map((item, idx) => idx === existingIdx ? { ...item, qty: item.qty + qty } : item));
   } else {
     // Jika belum ada, tambahkan item baru
-    cart = [
-      ...cart,
+    cart.update(currentCart => [
+      ...currentCart,
       {
         product: selectedProduct,
         addOns: addOnsSelected,
@@ -361,7 +362,7 @@ function addToCart() {
         qty,
         note: selectedNote.trim(),
       },
-    ];
+    ]);
   }
   
   // Log successful add to cart
@@ -414,7 +415,7 @@ function handleCartPreviewTouchEnd() {
   if (!cartPreviewDragging) return;
   cartPreviewDragging = false;
   if (Math.abs(cartPreviewX) > cartPreviewWidth * 0.6) {
-    cart = [];
+    cart.set([]);
     cartPreviewX = -cartPreviewWidth;
     showSnackbar = true;
     snackbarMsg = 'Keranjang dikosongkan';
@@ -493,8 +494,8 @@ function handleCustomPriceInput(e) {
 function addCustomItemToCart(e?: Event) {
   if (e) e.preventDefault();
   if (!customItemName.trim() || !customItemPriceRaw || isNaN(Number(customItemPriceRaw)) || Number(customItemPriceRaw) <= 0) return;
-  cart = [
-    ...cart,
+  cart.update(currentCart => [
+    ...currentCart,
     {
       product: { id: `custom-${Date.now()}`, name: customItemName.trim(), harga: Number(customItemPriceRaw), price: Number(customItemPriceRaw), tipe: 'custom' },
       addOns: [],
@@ -503,7 +504,7 @@ function addCustomItemToCart(e?: Event) {
       qty: qty, // Gunakan qty dari modal
       note: customItemNote.trim(),
     },
-  ];
+  ]);
   showCustomItemModal = false;
   customItemName = '';
   customItemPriceRaw = '';
@@ -694,7 +695,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
       </div>
     </div>
 
-    {#if cart.length > 0}
+    {#if $cart.length > 0}
       <div
         bind:this={cartPreviewRef}
         class="fixed left-0 right-0 bottom-16 flex items-center justify-between bg-white border-t-2 border-gray-100 shadow-md px-6 py-3 z-20 rounded-t-lg min-h-[56px] text-base font-medium text-gray-900"

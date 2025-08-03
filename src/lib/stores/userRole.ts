@@ -2,15 +2,21 @@ import { writable, get } from 'svelte/store';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { selectedBranch } from './selectedBranch';
 
+interface UserProfile {
+  role: string;
+  username: string;
+  // Tambahkan properti lain dari profil pengguna jika ada
+  [key: string]: any; // Untuk properti tambahan yang tidak diketahui
+}
+
 // Store untuk user role dan profile
 export const userRole = writable<string | null>(null);
-export const userProfile = writable<any>(null);
+export const userProfile = writable<UserProfile | null>(null);
 
 // Coba inisialisasi store dari localStorage saat aplikasi dimuat
 // Ini membuat peran tetap ada setelah refresh halaman
 if (typeof window !== 'undefined') {
-  // FIX: Menggunakan localStorage untuk persistensi sesi yang lebih baik.
-  const saved = localStorage.getItem('zatiaras_session'); 
+  const saved = localStorage.getItem('zatiaras_session');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -25,7 +31,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Fungsi untuk set user role dan profile (dipanggil saat login)
-export function setUserRole(role: string, profile: any) {
+export function setUserRole(role: string, profile: UserProfile) {
   userRole.set(role);
   userProfile.set(profile);
 }
@@ -62,7 +68,7 @@ export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 
       .from('profil')
       .select('role, username')
       .eq('id', session.user.id)
-      .single();
+      .single() as { data: UserProfile | null; error: any };
       
     if (profileError) {
       // PGRST116 berarti profil tidak ditemukan, ini adalah status tidak valid.
@@ -125,7 +131,7 @@ export async function getCurrentRole(): Promise<string | null> {
 /**
  * Mendapatkan profil pengguna saat ini dengan fallback yang tangguh.
  */
-export async function getCurrentProfile(): Promise<any | null> {
+export async function getCurrentProfile(): Promise<UserProfile | null> {
   const currentProfile = get(userProfile);
 
   if (currentProfile) {

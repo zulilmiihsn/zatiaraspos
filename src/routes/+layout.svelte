@@ -3,21 +3,18 @@
 	import Topbar from '$lib/components/shared/Topbar.svelte';
 	import BottomNav from '$lib/components/shared/BottomNav.svelte';
 	import { page } from '$app/stores';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
-	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView';
-	import { slide, fade, fly } from 'svelte/transition';
 	import { auth } from '$lib/auth/auth';
 	import { userRole } from '$lib/stores/userRole';
 	import { dataService } from '$lib/services/dataService';
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import PinModal from '$lib/components/shared/PinModal.svelte';
 	import { securitySettings } from '$lib/stores/securitySettings';
+	import Download from 'lucide-svelte/icons/download';
 
 	let hasPrefetched = false;
 	let isOffline = !navigator.onLine;
@@ -38,31 +35,28 @@
 				const d = new Date(today);
 				d.setDate(today.getDate() - i);
 				dateStrings.push(d.toISOString().slice(0, 10));
-	}
+			}
+			
+			// Execute all data fetching promises
 			await Promise.all([
-				// Beranda, POS, POS/bayar, Catat
 				dataService.getProducts(),
 				dataService.getCategories(),
 				dataService.getAddOns(),
 				dataService.getBestSellers(),
 				dataService.getWeeklyIncome(),
-				// Laporan: prefetch laporan harian/mingguan/bulanan untuk 30 hari ke belakang
 				...dateStrings.map(date => dataService.getReportData(date, 'daily')),
 				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'weekly')),
 				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'monthly')),
-				// Pengaturan, printer, pemilik, dsb.
-				dataService.supabaseClient?.from?.('pengaturan')?.select?.('*'),
-				// Manajemen menu, riwayat, dsb.
-				dataService.supabaseClient?.from?.('produk')?.select?.('*'),
-				dataService.supabaseClient?.from?.('kategori')?.select?.('*'),
-				dataService.supabaseClient?.from?.('tambahan')?.select?.('*'),
-				dataService.supabaseClient?.from?.('transaksi_kasir')?.select?.('*'),
-				dataService.supabaseClient?.from?.('buku_kas')?.select?.('*'),
-				// User profile (login)
-				dataService.supabaseClient?.from?.('profil')?.select?.('*'),
+				dataService.supabaseClient.from('pengaturan').select('*'),
+				dataService.supabaseClient.from('produk').select('*'),
+				dataService.supabaseClient.from('kategori').select('*'),
+				dataService.supabaseClient.from('tambahan').select('*'),
+				dataService.supabaseClient.from('transaksi_kasir').select('*'),
+				dataService.supabaseClient.from('buku_kas').select('*'),
+				dataService.supabaseClient.from('profil').select('*'),
 			]);
 		} catch (e) {
-			// Ignore prefetch error
+			console.error("Error during prefetchAllData:", e); // Log error instead of ignoring
 		}
 	}
 
@@ -183,8 +177,7 @@
 				</svelte:fragment>
 			</Topbar>
 		</div>
-		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;">
+		<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
 			<slot />
 		</div>
 		<div class="sticky bottom-0 z-30 bg-white">
@@ -194,7 +187,7 @@
 {:else}
     <!-- Layout tanpa navigasi -->
 	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="flex-1 min-h-0 overflow-y-auto">
+		<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
 			<slot />
 		</div>
 	</div>
@@ -225,5 +218,12 @@
 }
 .animate-fade-in {
 	animation: fade-in 0.4s ease;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 </style>

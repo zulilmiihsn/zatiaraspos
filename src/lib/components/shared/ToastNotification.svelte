@@ -2,23 +2,37 @@
   import { createEventDispatcher } from 'svelte';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
-  export let show = false;
-  export let message = '';
+  export let show: boolean = false;
+  export let message: string = '';
   export let type: 'success' | 'error' | 'warning' | 'info' = 'success';
-  export let duration = 2000; // Default 2 seconds
+  export let duration: number = 2000; // Default 2 seconds
   export let position: 'top' | 'bottom' = 'top';
-  export let autoDismiss = true; // Always true
 
-  let timeoutId: number;
+  let timeoutId: number | undefined; // Menggunakan number | undefined untuk setTimeout
+
+  // Refactor color logic using reactive declarations
+  $: bgColorClass = {
+    'success': 'bg-green-500',
+    'error': 'bg-red-500',
+    'warning': 'bg-yellow-500',
+    'info': 'bg-blue-500',
+  }[type] || 'bg-green-500'; // Default to green
+
+  $: borderColorClass = {
+    'success': 'border-green-400',
+    'error': 'border-red-400',
+    'warning': 'border-yellow-400',
+    'info': 'border-blue-400',
+  }[type] || 'border-green-400'; // Default to green
 
   // Auto dismiss functionality
-  $: if (show && autoDismiss && duration > 0) {
+  $: if (show && duration > 0) {
     if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
+    timeoutId = window.setTimeout(() => {
       show = false;
       dispatch('dismiss');
     }, duration);
@@ -28,44 +42,12 @@
   onDestroy(() => {
     if (timeoutId) clearTimeout(timeoutId);
   });
-
-  // Get background color based on type
-  function getBgColor() {
-    switch (type) {
-      case 'success':
-        return 'bg-green-500';
-      case 'error':
-        return 'bg-red-500';
-      case 'warning':
-        return 'bg-yellow-500';
-      case 'info':
-        return 'bg-blue-500';
-      default:
-        return 'bg-green-500';
-    }
-  }
-
-  // Get border color based on type
-  function getBorderColor() {
-    switch (type) {
-      case 'success':
-        return 'border-green-400';
-      case 'error':
-        return 'border-red-400';
-      case 'warning':
-        return 'border-yellow-400';
-      case 'info':
-        return 'border-blue-400';
-      default:
-        return 'border-green-400';
-    }
-  }
 </script>
 
 {#if show}
   <div 
-    class="fixed left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold text-center min-w-[200px] max-w-[90vw] flex items-center justify-center gap-2 {getBgColor()} border {getBorderColor()}"
-    style="transform: translateX(-50%); {position === 'top' ? 'top: 20px;' : 'bottom: 20px;'}"
+    class="fixed left-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-white font-semibold text-center min-w-[200px] max-w-[90vw] flex items-center justify-center gap-2 {bgColorClass} border {borderColorClass} toast-position-{position}"
+    style="transform: translateX(-50%);"
     in:fly={{ y: position === 'top' ? -32 : 32, duration: 300, easing: cubicOut }}
     out:fade={{ duration: 200 }}
   >
@@ -90,4 +72,13 @@
     </span>
     <span class="flex-1">{message}</span>
   </div>
-{/if} 
+{/if}
+
+<style>
+  .toast-position-top {
+    top: 20px;
+  }
+  .toast-position-bottom {
+    bottom: 20px;
+  }
+</style>

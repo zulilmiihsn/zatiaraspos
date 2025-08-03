@@ -1,19 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { fly, fade } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
   import { onDestroy } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
-  export let show = false;
-  export let pin = '1234';
-  export let title = 'Masukkan PIN';
-  export let subtitle = 'Masukkan PIN untuk melanjutkan';
+  export let show: boolean = false;
+  export let pin: string = '1234';
+  export let title: string = 'Masukkan PIN';
+  export let subtitle: string = 'Masukkan PIN untuk melanjutkan';
 
-  let pinInput = '';
-  let pinError = '';
-  let errorTimeout: number;
+  let pinInput: string = '';
+  let pinError: string = '';
+  let errorTimeout: number | undefined; // Menggunakan number | undefined untuk setTimeout
 
   function handlePinInput(num: number) {
     if (pinInput.length < 4) {
@@ -29,7 +27,7 @@
           pinError = 'PIN salah!';
           pinInput = '';
           if (errorTimeout) clearTimeout(errorTimeout);
-          errorTimeout = setTimeout(() => {
+          errorTimeout = window.setTimeout(() => {
             pinError = '';
           }, 2000);
           dispatch('error', { message: 'PIN salah!' });
@@ -53,8 +51,7 @@
 
 {#if show}
   <div 
-    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out"
-    style="top: 58px; bottom: 58px; background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);"
+    class="fixed inset-0 z-40 flex items-center justify-center transition-transform duration-300 ease-out modal-background"
   >
     <div class="w-full h-full flex flex-col items-center justify-center p-4">
       <div class="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 max-w-sm w-full">
@@ -81,7 +78,7 @@
             <button
               type="button"
               class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-              onclick={() => handlePinInput(num)}
+              on:click={() => handlePinInput(num)}
             >
               {num}
             </button>
@@ -90,7 +87,7 @@
           <button
             type="button"
             class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white text-2xl font-bold hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all duration-200 shadow-lg"
-            onclick={() => handlePinInput(0)}
+            on:click={() => handlePinInput(0)}
           >
             0
           </button>
@@ -102,5 +99,9 @@
 {/if}
 
 <style>
-  /* Animasi slideUp telah dihapus */
+  .modal-background {
+    top: 58px;
+    bottom: 58px;
+    background: linear-gradient(to bottom right, #f472b6, #ec4899, #a855f7);
+  }
 </style>

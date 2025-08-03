@@ -16,8 +16,8 @@ import * as pako from 'pako';
 import { Base64 } from 'js-base64';
 import { memoize } from '$lib/utils/performance';
 import { addPendingTransaction } from '$lib/utils/offline';
+import { cart } from '$lib/stores/cart';
 
-let cart = [];
 let customerName = '';
 let paymentMethod = '';
 const paymentOptions = [
@@ -119,20 +119,20 @@ async function fetchPengaturanStruk() {
 onMount(() => {
   cekSesiTokoAktif();
   fetchPengaturanStruk();
-  const saved = localStorage.getItem('pos_cart');
+  const saved = localStorage.getItem('pos_$cart');
   if (saved) {
     try {
-      cart = JSON.parse(saved);
+      $cart = JSON.parse(saved);
     } catch {}
   }
   transactionId = uuidv4(); // UUID untuk database
   transactionCode = generateTransactionCode(); // Untuk tampilan/struk
 });
 
-const calculateCartSummary = memoize((cart) => {
+const calculateCartSummary = memoize(($cart) => {
   let totalQty = 0;
   let totalHarga = 0;
-  for (const item of cart) {
+  for (const item of $cart) {
     totalQty += item.qty;
     totalHarga += item.qty * (item.product.price ?? item.product.harga ?? 0);
     if (item.addOns) {
@@ -142,7 +142,7 @@ const calculateCartSummary = memoize((cart) => {
   return { totalQty, totalHarga };
 });
 
-$: ({ totalQty, totalHarga } = calculateCartSummary(cart));
+$: ({ totalQty, totalHarga } = calculateCartSummary($cart));
 $: kembalian = (parseInt(cashReceived) || 0) - totalHarga;
 $: formattedCashReceived = cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '';
 
@@ -215,7 +215,7 @@ function finishCash() {
     totalAmount: totalHarga,
     cashReceived: parseInt(sanitizedCashReceived),
     change: kembalian,
-    itemsCount: cart.length
+    itemsCount: $cart.length
   });
   
   // Proses pembayaran tunai selesai
@@ -243,7 +243,7 @@ function getLocalOffsetString() {
 
 async function catatTransaksiKeLaporan() {
   await cekSesiTokoAktif();
-  if (!cart || cart.length === 0 || totalHarga <= 0) {
+  if (!$cart || $cart.length === 0 || totalHarga <= 0) {
     notifModalMsg = 'Transaksi tidak valid: keranjang kosong atau total harga 0.';
     notifModalType = 'error';
     showNotifModal = true;
@@ -267,9 +267,9 @@ async function catatTransaksiKeLaporan() {
   // Generate transaction_id sekali per transaksi
   const transactionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : uuidv4();
   // Satu row summary untuk buku_kas
-  const totalAmount = cart.reduce((sum, item) => sum + item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)), 0);
-  const description = 'Penjualan ' + cart.map(item => item.product.name).join(', ');
-  const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+  const totalAmount = $cart.reduce((sum, item) => sum + item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)), 0);
+  const description = 'Penjualan ' + $cart.map(item => item.product.name).join(', ');
+  const totalQty = $cart.reduce((sum, item) => sum + item.qty, 0);
   const insert = {
     tipe: 'in',
     sumber: 'pos',
@@ -284,7 +284,7 @@ async function catatTransaksiKeLaporan() {
     transaction_id: transactionId
   };
   // Detail transaksi untuk transaksi_kasir
-  const transaksiKasirInserts = cart.map(item => {
+  const transaksiKasirInserts = $cart.map(item => {
     const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
     const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
     return {
@@ -322,7 +322,7 @@ async function catatTransaksiKeLaporan() {
       .limit(1)
       .maybeSingle();
     if (lastBukuKas && lastBukuKas.id) {
-      const transaksiKasirInserts = cart.map(item => {
+      const transaksiKasirInserts = $cart.map(item => {
         const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
         const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
         return {
@@ -356,6 +356,7 @@ async function catatTransaksiKeLaporan() {
     notifModalType = 'success';
     showNotifModal = true;
   }
+  cart.set([]); // Clear the cart after successful transaction
   // Hapus proses insert ke transaksi dan item_transaksi, karena sudah tidak digunakan
 }
 
@@ -389,7 +390,7 @@ function printStrukViaEscPosService() {
   html += `</div>`;
   // Daftar pesanan
   html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
-  cart.forEach((item, idx) => {
+  $cart.forEach((item, idx) => {
     html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
     if (item.addOns && item.addOns.length > 0) {
       item.addOns.forEach(a => {
@@ -402,7 +403,7 @@ function printStrukViaEscPosService() {
       item.note && item.note.trim() ? item.note : null
     ].filter(Boolean).join(', ');
     if (detail) html += `<tr style='line-height:1.5;'><td colspan='2' style='font-size:18px;padding-left:8px;color:#000;'>${detail}</td></tr>`;
-    if (idx < cart.length-1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
+    if (idx < $cart.length-1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
   });
   html += `</tbody></table>`;
   html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
@@ -452,7 +453,7 @@ function handleCloseNoSessionModal() { showNoSessionModal = false; }
     <div class="bg-pink-50 rounded-xl p-4 mb-4">
       <div class="font-semibold text-pink-500 mb-2">Pesanan</div>
       <ul class="divide-y divide-pink-100">
-        {#each cart as item}
+        {#each $cart as item}
           <li class="py-2 flex flex-col gap-0.5">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2 min-w-0">

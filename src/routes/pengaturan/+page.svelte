@@ -3,107 +3,50 @@
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth/auth';
   import { SecurityMiddleware } from '$lib/utils/security';
-  import { getSupabaseClient } from '$lib/database/supabaseClient';
-  import { userRole, setUserRole } from '$lib/stores/userRole';
+  import { userRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { get as storeGet } from 'svelte/store';
-  import { selectedBranch } from '$lib/stores/selectedBranch';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-  import Crown from 'lucide-svelte/icons/crown';
-  import CreditCard from 'lucide-svelte/icons/credit-card';
-  import User from 'lucide-svelte/icons/user';
-  import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
   import { createToastManager, handleError } from '$lib/utils/index';
+  import type { UserProfile } from '$lib/stores/userRole';
   
-  // Type definitions
-  interface PengaturanData {
-    locked_pages?: string[];
-    pin?: string;
-  }
-  
-  let pengaturanData = null;
+  // Lazy load icons
+  let LogOut: any, Shield: any, Palette: any, Database: any, HelpCircle: any, Settings: any, Bell: any, Download: any, Printer: any, ArrowLeft: any, Crown: any, CreditCard: any, User: any;
 
-  // State untuk loading
-  let isLoading = true;
-  let isProfileLoaded = false;
-  let isPengaturanLoaded = false;
+  // State for loading
+  let isLoading: boolean = true;
+  let isProfileLoaded: boolean = false;
 
-  let currentUserRole = '';
-
-  // Subscribe ke store
+  let currentUserRole: string = '';
   userRole.subscribe(val => currentUserRole = val || '');
-  let showLogoutModal = false;
-  let deferredPrompt: any = null;
-  let canInstallPWA = false;
-  let currentPage = 'security';
 
-  // Removed showPinModal, pin, errorTimeout, isClosing
-  let showPwaInstalledToast = false;
-  let pwaStatus = '';
-  let showPwaManualToast = false;
-  let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
+  let showLogoutModal: boolean = false;
+  let deferredPrompt: BeforeInstallPromptEvent | null = null;
+  let canInstallPWA: boolean = false;
+  let pwaStatus: string = '';
+  let showPwaInstalledToast: boolean = false;
+  let showPwaManualToast: boolean = false;
 
-  let showNotification = false;
-  let notificationMessage = '';
-  let notificationTimeout: any = null;
-
-  // Toast notification state
-  let showToast = false;
-  let toastMessage = '';
-  let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
-
-  function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
-    toastMessage = message;
-    toastType = type;
-    showToast = true;
-  }
-
-  let LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, Download, Printer;
-
-  function showNotif(message: string) {
-    notificationMessage = message;
-    showNotification = true;
-    clearTimeout(notificationTimeout);
-    notificationTimeout = setTimeout(() => {
-      showNotification = false;
-    }, 3000);
-  }
-
-  async function fetchPengaturan() {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('locked_pages, pin').eq('id', 1).single();
-    pengaturanData = !error ? data : null;
-  }
+  // Toast Manager
+  const toastManager = createToastManager();
 
   onMount(async () => {
     try {
-      // Hapus query profile dari Supabase, gunakan store
-      // const { data: { session } } = await supabase.auth.getSession();
-      // const userId = session?.user?.id;
-      // 
-      // if (userId) {
-      //   const { data: profile, error } = await supabase
-      //     .from('profil')
-      //     .select('role, username')
-      //     .eq('id', userId)
-      //     .single();
-      //   userRole = profile?.role || '';
-      //   userName = profile?.username || '';
-      // }
-      
-      // Jika role belum ada di store, coba validasi dengan Supabase
-      if (!currentUserRole) {
-        const { data: { session } } = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
-        if (session?.user) {
-          const { data: profile } = await getSupabaseClient(storeGet(selectedBranch)).from('profil')
-            .select('role, username')
-            .eq('id', session.user.id)
-            .single();
-          if (profile) {
-            setUserRole(profile.role, profile);
-          }
-        }
-      }
+      // Load icons
+      [LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, Download, Printer, ArrowLeft, Crown, CreditCard, User] = await Promise.all([
+        import('lucide-svelte/icons/log-out').then(m => m.default),
+        import('lucide-svelte/icons/shield').then(m => m.default),
+        import('lucide-svelte/icons/palette').then(m => m.default),
+        import('lucide-svelte/icons/database').then(m => m.default),
+        import('lucide-svelte/icons/help-circle').then(m => m.default),
+        import('lucide-svelte/icons/settings').then(m => m.default),
+        import('lucide-svelte/icons/bell').then(m => m.default),
+        import('lucide-svelte/icons/download').then(m => m.default),
+        import('lucide-svelte/icons/printer').then(m => m.default),
+        import('lucide-svelte/icons/arrow-left').then(m => m.default),
+        import('lucide-svelte/icons/crown').then(m => m.default),
+        import('lucide-svelte/icons/credit-card').then(m => m.default),
+        import('lucide-svelte/icons/user').then(m => m.default),
+      ]);
       
       isProfileLoaded = true;
 
@@ -116,9 +59,9 @@
           pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen"';
           canInstallPWA = false;
         } else if ('serviceWorker' in navigator) {
-          window.addEventListener('beforeinstallprompt', (e) => {
+          window.addEventListener('beforeinstallprompt', (e: Event) => {
             e.preventDefault();
-            deferredPrompt = e;
+            deferredPrompt = e as BeforeInstallPromptEvent;
             canInstallPWA = true;
             pwaStatus = '';
           });
@@ -134,25 +77,13 @@
           showPwaInstalledToast = true;
           canInstallPWA = false;
           pwaStatus = 'PWA sudah terpasang';
-          setTimeout(() => showPwaInstalledToast = false, 4000);
+          window.setTimeout(() => showPwaInstalledToast = false, 4000);
         });
       }
-
-      // Removed locked_pages check for kasir role
       
       // Set loading selesai
       isLoading = false;
 
-      // Load icons
-      LogOut = (await import('lucide-svelte/icons/log-out')).default;
-      Shield = (await import('lucide-svelte/icons/shield')).default;
-      Palette = (await import('lucide-svelte/icons/palette')).default;
-      Database = (await import('lucide-svelte/icons/database')).default;
-      HelpCircle = (await import('lucide-svelte/icons/help-circle')).default;
-      Settings = (await import('lucide-svelte/icons/settings')).default;
-      Bell = (await import('lucide-svelte/icons/bell')).default;
-      Download = (await import('lucide-svelte/icons/download')).default;
-      Printer = (await import('lucide-svelte/icons/printer')).default;
     } catch (error) {
       handleError(error, 'loadPengaturanPage', true);
       toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
@@ -227,11 +158,11 @@
       deferredPrompt.userChoice.then((choiceResult: any) => {
         if (choiceResult.outcome === 'accepted') {
           showPwaInstalledToast = true;
-          setTimeout(() => showPwaInstalledToast = false, 4000);
+          window.setTimeout(() => showPwaInstalledToast = false, 4000);
         } else {
           showPwaManualToast = true;
           pwaStatus = 'Pemasangan aplikasi dibatalkan.';
-          setTimeout(() => showPwaManualToast = false, 4000);
+          window.setTimeout(() => showPwaManualToast = false, 4000);
         }
         deferredPrompt = null;
         canInstallPWA = false;
@@ -247,7 +178,7 @@
         pwaStatus = 'Silakan install melalui menu browser (ikon titik tiga > Install App).';
       }
       showPwaManualToast = true;
-      setTimeout(() => showPwaManualToast = false, 4000);
+      window.setTimeout(() => showPwaManualToast = false, 4000);
     }
   }
 
@@ -256,36 +187,36 @@
       title: 'Akun & Keamanan',
       icon: Shield,
       items: [
-        { label: 'Profil Pengguna', icon: User, action: () => showNotif('Fitur profil belum tersedia') },
-        { label: 'Ubah Password', icon: Shield, action: () => showNotif('Fitur ubah password belum tersedia') },
-        { label: 'Riwayat Login', icon: Bell, action: () => showNotif('Fitur riwayat login belum tersedia') }
+        { label: 'Profil Pengguna', icon: User, action: () => toastManager.showToastNotification('Fitur profil belum tersedia', 'info') },
+        { label: 'Ubah Password', icon: Shield, action: () => toastManager.showToastNotification('Fitur ubah password belum tersedia', 'info') },
+        { label: 'Riwayat Login', icon: Bell, action: () => toastManager.showToastNotification('Fitur riwayat login belum tersedia', 'info') }
       ]
     },
     {
       title: 'Tampilan & Tema',
       icon: Palette,
       items: [
-        { label: 'Tema Aplikasi', icon: Palette, action: () => showNotif('Fitur tema belum tersedia') },
-        { label: 'Ukuran Font', icon: Settings, action: () => showNotif('Fitur ukuran font belum tersedia') },
-        { label: 'Animasi', icon: Settings, action: () => showNotif('Fitur animasi belum tersedia') }
+        { label: 'Tema Aplikasi', icon: Palette, action: () => toastManager.showToastNotification('Fitur tema belum tersedia', 'info') },
+        { label: 'Ukuran Font', icon: Settings, action: () => toastManager.showToastNotification('Fitur ukuran font belum tersedia', 'info') },
+        { label: 'Animasi', icon: Settings, action: () => toastManager.showToastNotification('Fitur animasi belum tersedia', 'info') }
       ]
     },
     {
       title: 'Data & Backup',
       icon: Database,
       items: [
-        { label: 'Export Data', icon: Database, action: () => showNotif('Fitur export data belum tersedia') },
-        { label: 'Import Data', icon: Database, action: () => showNotif('Fitur import data belum tersedia') },
-        { label: 'Backup Otomatis', icon: Settings, action: () => showNotif('Fitur backup belum tersedia') }
+        { label: 'Export Data', icon: Database, action: () => toastManager.showToastNotification('Fitur export data belum tersedia', 'info') },
+        { label: 'Import Data', icon: Database, action: () => toastManager.showToastNotification('Fitur import data belum tersedia', 'info') },
+        { label: 'Backup Otomatis', icon: Settings, action: () => toastManager.showToastNotification('Fitur backup belum tersedia', 'info') }
       ]
     },
     {
       title: 'Bantuan & Dukungan',
       icon: HelpCircle,
       items: [
-        { label: 'Panduan Penggunaan', icon: HelpCircle, action: () => showNotif('Panduan belum tersedia') },
-        { label: 'Hubungi Support', icon: Bell, action: () => showNotif('Support belum tersedia') },
-        { label: 'Tentang Aplikasi', icon: Settings, action: () => showNotif('Versi 1.0.0 - Zatiaras Juice POS') }
+        { label: 'Panduan Penggunaan', icon: HelpCircle, action: () => toastManager.showToastNotification('Panduan belum tersedia', 'info') },
+        { label: 'Hubungi Support', icon: Bell, action: () => toastManager.showToastNotification('Support belum tersedia', 'info') },
+        { label: 'Tentang Aplikasi', icon: Settings, action: () => toastManager.showToastNotification('Versi 1.0.0 - Zatiaras Juice POS', 'info') }
       ]
     }
   ];
@@ -297,24 +228,12 @@
   
   // Get role icon once and store it
   $: roleIcon = getRoleIcon();
-
-  // Tambahkan fungsi upload gambar menu ke bucket 'gambar-menu' Supabase Storage
-  async function uploadMenuImage(file: File, menuId: string) {
-    const ext = file.name.split('.').pop();
-    const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
-    // Upload ke bucket 'gambar-menu'
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).storage.from('gambar-menu').upload(filePath, file, { upsert: true });
-    if (error) throw error;
-    // Dapatkan public URL
-    const { data: publicUrlData } = getSupabaseClient(storeGet(selectedBranch)).storage.from('gambar-menu').getPublicUrl(filePath);
-    return publicUrlData.publicUrl;
-  }
 </script>
 
 <div class="min-h-screen bg-gray-50 flex flex-col page-content">
   <!-- Button Kembali -->
   <div class="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-lg border-b border-gray-100 mt-0 mx-0 mb-2 px-4 py-3 flex items-center shadow-md" style="min-height:56px">
-    <button onclick={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+    <button on:click={() => goto('/')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
       {#if ArrowLeft}
         <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
       {:else}
@@ -380,10 +299,10 @@
         <!-- Box Pemilik (selalu tampil, disable jika bukan admin/pemilik) -->
         <button
           class="relative bg-gradient-to-br from-purple-500 to-pink-400 rounded-xl shadow-lg border-2 border-purple-400 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 text-white focus:outline-none transition-opacity duration-200 overflow-hidden {currentUserRole === 'admin' || currentUserRole === 'pemilik' ? 'shimmer-highlight hover:scale-105' : ''} md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full"
-          onclick={() => (currentUserRole === 'admin' || currentUserRole === 'pemilik') && goto('/pengaturan/pemilik')}
+          on:click={() => (currentUserRole === 'admin' || currentUserRole === 'pemilik') && goto('/pengaturan/pemilik')}
           disabled={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
-          class:opacity-60={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
-          class:pointer-events-none={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
+          class:opacity-60={currentUserRole !== 'admin' && currentUserRole === 'kasir'}
+          class:pointer-events-none={currentUserRole !== 'admin' && currentUserRole === 'pemilik'}
         >
           {#if Crown}
             <svelte:component this={Crown} class="w-8 h-8 mb-2" />
@@ -397,7 +316,7 @@
           <div class="text-xs text-white/80 text-center md:text-base md:mt-1 md:mb-0">Akses penuh ke seluruh sistem</div>
         </button>
         <!-- Box Install PWA -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" onclick={handleInstallPWA}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" on:click={handleInstallPWA}>
           {#if Download}
             <svelte:component this={Download} class="w-8 h-8 mb-2 text-pink-500" />
           {:else}
@@ -410,7 +329,7 @@
           <div class="text-xs text-gray-500 text-center md:text-base md:mt-1 md:mb-0">Pasang ke Home Screen</div>
         </button>
         <!-- Box Printer (Draft Struk) -->
-        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" onclick={() => goto('/pengaturan/printer')}>
+        <button class="bg-white rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center aspect-square min-h-[110px] p-4 focus:outline-none md:h-56 md:p-8 md:rounded-3xl md:shadow-xl md:gap-1 md:justify-center md:items-center md:transition-transform md:hover:scale-105 md:duration-200 md:flex md:w-full md:h-full" on:click={() => goto('/pengaturan/printer')}>
           {#if Printer}
             <svelte:component this={Printer} class="w-8 h-8 mb-2 text-blue-500" />
           {:else}
@@ -444,7 +363,7 @@
         Anda akan keluar dari sistem dan harus login kembali untuk mengakses aplikasi.
       </p>
       <button
-        onclick={handleLogout}
+        on:click={handleLogout}
         class="w-full bg-red-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center gap-2"
       >
         {#if LogOut}
@@ -481,13 +400,13 @@
         </div>
         <div class="flex gap-3">
           <button
-            onclick={cancelLogout}
+            on:click={cancelLogout}
             class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
           >
             Batal
           </button>
           <button
-            onclick={confirmLogout}
+            on:click={confirmLogout}
             class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
           >
             Keluar
@@ -514,20 +433,9 @@
           {/if}
           <h3 class="font-bold text-lg text-pink-600 mb-2">Cara Install Aplikasi</h3>
           <p class="text-gray-600 text-center text-sm mb-4">{pwaStatus}</p>
-          <button class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold mt-2" onclick={() => showPwaManualToast = false}>Tutup</button>
+          <button class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold mt-2" on:click={() => showPwaManualToast = false}>Tutup</button>
         </div>
       </div>
-    </div>
-  {/if}
-
-  {#if showNotification}
-    <div 
-      class="fixed top-20 left-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out text-center"
-      style="transform: translateX(-50%);"
-      in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-      out:fade={{ duration: 200 }}
-    >
-      {notificationMessage}
     </div>
   {/if}
 </div>
@@ -551,8 +459,8 @@
   animation: fadeIn 0.4s cubic-bezier(.4,0,.2,1);
 }
 @keyframes slideUpModal {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .animate-slideUpModal {
   animation: slideUpModal 0.32s cubic-bezier(.4,0,.2,1);

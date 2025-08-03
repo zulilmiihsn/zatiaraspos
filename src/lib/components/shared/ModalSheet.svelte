@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
-  export let open = false;
-  export let title = '';
+  import { createEventDispatcher } from 'svelte';
+  export let open: boolean = false;
+  export let title: string = '';
   const dispatch = createEventDispatcher();
 
   function close() {
@@ -14,7 +14,6 @@
   let sheet: HTMLDivElement;
   let dragging = false;
   let allowDrag = false;
-  let scrollable: HTMLDivElement;
 
   function onTouchStart(e: TouchEvent) {
     // Cek apakah gesture dimulai dari dragbar/header SAJA
@@ -51,94 +50,110 @@
 </script>
 
 <style>
-.modal-backdrop {
-  position: fixed;
-  left: 0; right: 0; top: 0; bottom: 0;
-  background: rgba(0,0,0,0.18);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  transition: background 0.2s;
-}
-.modal-sheet {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
-  min-height: 120px;
-  animation: slideUp 0.22s cubic-bezier(.4,1.4,.6,1) 1;
-  will-change: transform;
-  max-height: 92vh;
-  display: flex;
-  flex-direction: column;
-  height: 92vh;
-}
-@media (min-width: 768px) {
-  .modal-sheet {
-    max-width: 700px;
-    height: 90vh;
-    max-height: 90vh;
+  .modal-backdrop {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    transition: background 0.2s;
   }
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-.sheet-header {
-  padding: 1.1rem 1.2rem 0.5rem 1.2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-  position: relative;
-}
+  .modal-sheet {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+    min-height: 120px;
+    animation: slideUp 0.22s cubic-bezier(0.4, 1.4, 0.6, 1) 1;
+    will-change: transform;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    height: 92vh;
+    /* Pindahkan inline style max-width:100vw; ke sini */
+    max-width: 100vw;
+  }
+  @media (min-width: 768px) {
+    .modal-sheet {
+      max-width: 700px;
+      height: 90vh;
+      max-height: 90vh;
+    }
+  }
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  .sheet-header {
+    padding: 1.1rem 1.2rem 0.5rem 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    position: relative;
+  }
 
-.sheet-dragbar {
-  width: 38px;
-  height: 5px;
-  background: #e0e0e0;
-  border-radius: 3px;
-  margin: 0.5rem auto 0.7rem auto;
-}
-.sheet-content {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding-bottom: 1rem;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.sheet-content::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
+  .sheet-dragbar {
+    width: 38px;
+    height: 5px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    margin: 0.5rem auto 0.7rem auto;
+  }
+  .sheet-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 1rem;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .sheet-content::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+  }
 </style>
 
 {#if open}
-  <div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-label="Modal sheet" onkeyup={(e) => e.key === 'Enter' && close()}>
+  <div
+    class="modal-backdrop"
+    on:click|self={close}
+    on:keydown={(e) => e.key === 'Escape' && close()}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+    aria-label="Modal sheet"
+  >
     <div
-      class="modal-sheet w-full max-w-[100vw] overflow-x-hidden px-0 sm:px-0 pt-2 pb-0"
-      style="max-width:100vw;"
+      class="modal-sheet w-full overflow-x-hidden px-0 sm:px-0 pt-2 pb-0"
       role="document"
       bind:this={sheet}
-      ontouchstart={onTouchStart}
-      ontouchmove={onTouchMove}
-      ontouchend={onTouchEnd}
-      onclick={(e) => e.stopPropagation()}
+      on:touchstart={onTouchStart}
+      on:touchmove={onTouchMove}
+      on:touchend={onTouchEnd}
+      on:click={(e) => e.stopPropagation()}
       tabindex="-1"
     >
       <div class="sheet-dragbar" role="presentation"></div>
       <div class="sheet-header" id="modal-title">{title}</div>
-      <div class="sheet-content flex-1 min-h-0 overflow-y-auto px-4 sm:px-6" bind:this={scrollable}>
+      <div class="sheet-content flex-1 min-h-0 overflow-y-auto px-4 sm:px-6">
         <slot />
       </div>
       <div class="sheet-footer absolute left-0 right-0 bottom-0 w-full max-w-[100vw] px-4 sm:px-6 pt-3 pb-4 bg-white shadow-[0_-2px_16px_rgba(0,0,0,0.08)] z-20">
@@ -146,4 +161,4 @@
       </div>
     </div>
   </div>
-{/if} 
+{/if}

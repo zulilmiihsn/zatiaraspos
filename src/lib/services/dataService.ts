@@ -1,3 +1,4 @@
+import { createClient, type SupabaseClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
@@ -8,8 +9,11 @@ import { get as getCache, set as setCache } from 'idb-keyval';
 import { addPendingTransaction, getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
+// Konstanta
+const MS_PER_DAY = 86400000; // Milidetik dalam sehari
+
 // Helper untuk dapatkan tanggal hari ini WITA (YYYY-MM-DD)
-function getTodayWitaStr() {
+export function getTodayWitaStr() {
   const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   const yyyy = todayWita.getFullYear();
   const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
@@ -17,25 +21,39 @@ function getTodayWitaStr() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Helper untuk mendapatkan rentang waktu UTC hari ini
+function getTodayUtcRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  return {
+    startUTC: start.toISOString(),
+    endUTC: end.toISOString()
+  };
+}
+
+// Helper untuk mendapatkan label tanggal WITA untuk beberapa hari ke belakang
+function getWitaDateLabels(days: number): string[] {
+  const labels: string[] = [];
+  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(todayWita);
+    d.setDate(todayWita.getDate() - i);
+    labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  }
+  return labels;
+}
+
 // Fungsi cache harian untuk rata-rata transaksi/hari
-async function getAvgTransaksiHarian(supabase: any): Promise<number> {
+async function getAvgTransaksiHarian(supabase: SupabaseClient): Promise<number> {
   const todayStr = getTodayWitaStr();
   const cacheKey = `avg_transaksi_${todayStr}`;
   const cached = await getCache(cacheKey);
-  if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
+  if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < MS_PER_DAY) {
     return cached.value;
   }
   // Hitung ulang
-  const hariLabels = [];
-  const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(todayWita);
-    d.setDate(todayWita.getDate() - i);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    hariLabels.push(`${yyyy}-${mm}-${dd}`);
-  }
+  const hariLabels = getWitaDateLabels(7);
   const { startUtc: start7Utc } = getWitaDateRangeUtc(hariLabels[0]);
   const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
   const { data: kas7, error: error7 } = await supabase
@@ -46,9 +64,9 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
     .eq('sumber', 'pos');
   let avgTransaksi = 0;
   if (!error7 && kas7) {
-    const transaksiPerHari: { [key: string]: Set<any> } = {};
+    const transaksiPerHari: { [key: string]: Set<string> } = {}; // Menggunakan Set<string> untuk transaction_id
     for (const tanggal of hariLabels) {
-      transaksiPerHari[tanggal] = new Set<any>();
+      transaksiPerHari[tanggal] = new Set<string>();
     }
     for (const t of kas7) {
       const waktu = new Date(t.waktu);
@@ -60,7 +78,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
         transaksiPerHari[tanggal].add(t.transaction_id);
       }
     }
-    const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<any>[]).reduce((sum, set) => sum + set.size, 0);
+    const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<string>[]).reduce((sum, set) => sum + set.size, 0);
     avgTransaksi = Math.round(totalTransaksi7Hari / 7);
   }
   await setCache(cacheKey, { value: avgTransaksi, timestamp: Date.now() });
@@ -68,11 +86,11 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 }
 
 // Fungsi cache harian untuk jam paling ramai
-async function getJamRamaiHarian(supabase: any): Promise<string> {
+async function getJamRamaiHarian(supabase: SupabaseClient): Promise<string> {
   const todayStr = getTodayWitaStr();
   const cacheKey = `jam_ramai_${todayStr}`;
   const cached = await getCache(cacheKey);
-  if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
+  if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < MS_PER_DAY) {
     return cached.value;
   }
   // Hitung ulang
@@ -109,10 +127,40 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
   return jamRamai;
 }
 
+// Fungsi generik untuk mengambil data dari Supabase dengan fallback IndexedDB
+async function fetchAndCacheData<T>(
+  supabaseClient: SupabaseClient,
+  tableName: string,
+  cacheKey: string,
+  orderByColumn: string = 'created_at',
+  ascending: boolean = false
+): Promise<T[]> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const cached = await idbGet(cacheKey);
+    if (cached) return cached;
+    return [];
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select('*')
+      .order(orderByColumn, { ascending });
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      return [];
+    }
+    await idbSet(cacheKey, data || []);
+    return data || [];
+  } catch (e) {
+    console.error(`Unexpected error fetching ${tableName}:`, e);
+    return [];
+  }
+}
+
 // Data service untuk fetching dengan smart caching
 export class DataService {
   private static instance: DataService;
-  private supabase: any;
+  private supabase: SupabaseClient; // Menggunakan tipe SupabaseClient
   private isInitialLoad = true; // Add flag to prevent double fetching
 
   constructor() {
@@ -129,7 +177,7 @@ export class DataService {
   }
 
   // Getter untuk supabase client
-  get supabaseClient() {
+  get supabaseClient(): SupabaseClient {
     return this.supabase;
   }
 
@@ -142,130 +190,97 @@ export class DataService {
 
   // Dashboard data fetching dengan cache
   async getDashboardStats() {
-    const branch = storeGet(selectedBranch);
-    // Ambil data real-time untuk metrik lain
-      const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-      const yyyy = todayWita.getFullYear();
-      const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-      const dd = String(todayWita.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+    const { startUTC, endUTC } = getTodayUtcRange(); // Menggunakan helper
 
-      // Data hari ini untuk item terjual, jumlah transaksi, omzet, dst
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-      const startUTC = start.toISOString();
-      const endUTC = end.toISOString();
-      // Ambil transaksi kasir untuk item terjual
-      const { data: kasir, error: errorKasir } = await this.supabase
-        .from('transaksi_kasir')
-        .select('qty, transaction_id')
-        .gte('created_at', startUTC)
-        .lte('created_at', endUTC);
-      // Ambil transaksi summary untuk jumlah transaksi & omzet
-      const { data: kas, error } = await this.supabase
-        .from('buku_kas')
-        .select('*')
-        .gte('waktu', startUTC)
-        .lte('waktu', endUTC)
-        .eq('sumber', 'pos');
-      if (error || errorKasir) {
-        console.error('Error fetching dashboard stats:', error, errorKasir);
-        return {
-          itemTerjual: 0,
-          jumlahTransaksi: 0,
-          omzet: 0,
-          profit: 0,
-          totalItem: 0,
-          avgTransaksi: 0,
-          jamRamai: '',
-          weeklyIncome: [],
-          weeklyMax: 1,
-          bestSellers: []
-        };
-      }
-      const itemTerjual = kasir?.reduce((sum: number, t: any) => sum + (t.qty || 1), 0) || 0;
-      const transactionIds = new Set((kas || []).map((t: any) => t.transaction_id).filter(Boolean));
-      const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-      const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+    // Ambil transaksi kasir untuk item terjual
+    const { data: kasir, error: errorKasir } = await this.supabase
+      .from('transaksi_kasir')
+      .select('qty, transaction_id')
+      .gte('created_at', startUTC)
+      .lte('created_at', endUTC);
+    
+    // Ambil transaksi summary untuk jumlah transaksi & omzet
+    const { data: kas, error } = await this.supabase
+      .from('buku_kas')
+      .select('*')
+      .gte('waktu', startUTC)
+      .lte('waktu', endUTC)
+      .eq('sumber', 'pos');
+    
+    if (error || errorKasir) {
+      console.error('Error fetching dashboard stats:', error, errorKasir);
+      return {
+        itemTerjual: 0,
+        jumlahTransaksi: 0,
+        omzet: 0,
+        profit: 0 // Default profit
+      };
+    }
+    
+    const itemTerjual = kasir?.reduce((sum: number, t: any) => sum + (t.qty || 1), 0) || 0;
+    const transactionIds = new Set((kas || []).map((t: any) => t.transaction_id).filter(Boolean));
+    const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
+    const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
     // Ambil avgTransaksi dan jamRamai dari cache harian
     const avgTransaksi = await getAvgTransaksiHarian(this.supabase);
     const jamRamai = await getJamRamaiHarian(this.supabase);
 
-      return {
-        itemTerjual,
-        jumlahTransaksi,
-        omzet,
-        profit: omzet * 0.3, // Dummy profit calculation
-        totalItem: itemTerjual,
-        avgTransaksi,
-      jamRamai,
-        weeklyIncome: [],
-        weeklyMax: 1,
-        bestSellers: []
-      };
+    return {
+      itemTerjual,
+      jumlahTransaksi,
+      omzet,
+      profit: omzet * 0.3, // Perhitungan profit dummy
+      avgTransaksi,
+      jamRamai
+    };
   }
 
   // Best sellers dengan cache per cabang
   async getBestSellers() {
     const branch = storeGet(selectedBranch);
     return smartCache.get(`${CACHE_KEYS.BEST_SELLERS}_${branch}`, async () => {
-      const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-      const yyyy = todayWita.getFullYear();
-      const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-      const dd = String(todayWita.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const hariLabels = getWitaDateLabels(7);
+      const { startUtc: start7Utc, endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[0]);
 
-      // --- GRAFIK 7 HARI TERAKHIR (WITA) ---
-      const hariLabels = [];
-      const pendapatanPerHari = {};
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(todayWita);
-        d.setDate(todayWita.getDate() - i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const tanggal = `${yyyy}-${mm}-${dd}`;
-        hariLabels.push(tanggal);
-        pendapatanPerHari[tanggal] = 0;
+      interface TransaksiKasirItem {
+        produk_id: string | null;
+        qty: number;
+        created_at: string;
       }
-
-      const { startUtc: start7Utc, endUtc: end7Utc } = getWitaDateRangeUtc(hariLabels[0]);
-      const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
 
       const { data: items, error } = await this.supabase
         .from('transaksi_kasir')
         .select('produk_id, qty, created_at')
         .gte('created_at', start7Utc)
-        .lte('created_at', end7LastUtc);
+        .lte('created_at', end7LastUtc) as { data: TransaksiKasirItem[] | null; error: any };
 
-      let bestSellersResult: any[] = [];
+      let bestSellersResult: { name: string; image: string; total_qty: number }[] = [];
       if (!error && items) {
-        const grouped: { [key: string]: any } = {};
+        const grouped: { [key: string]: number } = {};
         for (const item of items) {
           if (!item.produk_id) continue;
-          if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
-          grouped[item.produk_id] += item.qty || 1;
+          grouped[item.produk_id] = (grouped[item.produk_id] || 0) + (item.qty || 1);
         }
 
         const topProdukIds = Object.entries(grouped)
-          .sort((a: any, b: any) => b[1] - a[1])
+          .sort(([, qtyA], [, qtyB]) => (qtyB as number) - (qtyA as number))
           .slice(0, 3)
           .map(([produk_id]) => produk_id);
 
         if (topProdukIds.length > 0) {
+          interface ProdukItem {
+            id: string;
+            name: string;
+            gambar: string;
+          }
           const { data: allProducts } = await this.supabase
             .from('produk')
-            .select('id, name, gambar');
+            .select('id, name, gambar') as { data: ProdukItem[] | null };
           
-          const validProdukIds = topProdukIds.filter((id: string) => 
-            allProducts && allProducts.some((p: any) => p.id === id)
-          );
-
-          if (validProdukIds.length > 0) {
-            bestSellersResult = validProdukIds.map((produk_id: string) => {
-              const prod = allProducts.find((p: any) => p.id === produk_id);
+          if (allProducts) {
+            bestSellersResult = topProdukIds.map((produk_id: string) => {
+              const prod = allProducts.find((p: ProdukItem) => p.id === produk_id);
               return {
                 name: prod?.name || '-',
                 image: prod?.gambar || '',
@@ -287,18 +302,12 @@ export class DataService {
   async getWeeklyIncome() {
     const branch = storeGet(selectedBranch);
     return smartCache.get(`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`, async () => {
-      const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-      const weeklyIncome = [];
+      const hariLabels = getWitaDateLabels(7);
+      const weeklyIncome: number[] = [];
       let weeklyMax = 1;
 
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(todayWita);
-        d.setDate(todayWita.getDate() - i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const tanggal = `${yyyy}-${mm}-${dd}`;
-
+        const tanggal = hariLabels[6 - i]; // Ambil tanggal dari hariLabels
         const { startUtc, endUtc } = getWitaDateRangeUtc(tanggal);
         const { data: kas } = await this.supabase
           .from('buku_kas')
@@ -322,59 +331,17 @@ export class DataService {
 
   // Products dengan cache
   async getProducts() {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const cached = await idbGet('products');
-      if (cached) return cached;
-      return [];
-    }
-      const { data, error } = await this.supabase
-        .from('produk')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching products:', error);
-        return [];
-      }
-    await idbSet('products', data || []);
-      return data || [];
+    return fetchAndCacheData<any>(this.supabase, 'produk', 'products', 'created_at', false);
   }
 
   // Categories dengan cache
   async getCategories() {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const cached = await idbGet('categories');
-      if (cached) return cached;
-      return [];
-    }
-      const { data, error } = await this.supabase
-        .from('kategori')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching categories:', error);
-        return [];
-      }
-    await idbSet('categories', data || []);
-      return data || [];
+    return fetchAndCacheData<any>(this.supabase, 'kategori', 'categories', 'created_at', false);
   }
 
   // Add-ons dengan cache
   async getAddOns() {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const cached = await idbGet('addons');
-      if (cached) return cached;
-      return [];
-    }
-      const { data, error } = await this.supabase
-        .from('tambahan')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching add-ons:', error);
-        return [];
-      }
-    await idbSet('addons', data || []);
-      return data || [];
+    return fetchAndCacheData<any>(this.supabase, 'tambahan', 'addons', 'created_at', false);
   }
 
   // Report data dengan ETag support
@@ -382,73 +349,52 @@ export class DataService {
     const cacheKey = `${type}_report_${dateRange}`;
     
     return CacheUtils.getReportData(cacheKey, dateRange, async (etag?: string) => {
-      // Generate ETag based on date range and type
-      const etagValue = `${type}_${dateRange}_${Date.now()}`;
+      // ETag tidak lagi digenerate di sini, CacheUtils.getReportData yang menanganinya
       
-      let startDate: string, endDate: string;
+      let startDateStr: string, endDateStr: string;
       
       switch (type) {
         case 'daily':
-          // Handle both single date and date range
-          if (dateRange.includes('_')) {
-            const [start, end] = dateRange.split('_');
-            startDate = start;
-            endDate = end;
-          } else {
-            startDate = dateRange;
-            endDate = dateRange;
-          }
-          
-          // Clean up any remaining underscores in the dates
-          startDate = startDate.replace(/_/g, '');
-          endDate = endDate.replace(/_/g, '');
+          startDateStr = dateRange.split('_')[0];
+          endDateStr = dateRange.includes('_') ? dateRange.split('_')[1] : dateRange;
           break;
         case 'weekly':
-          // Calculate week range
           const date = new Date(dateRange);
           const startOfWeek = new Date(date);
           startOfWeek.setDate(date.getDate() - date.getDay());
           const endOfWeek = new Date(startOfWeek);
           endOfWeek.setDate(startOfWeek.getDate() + 6);
-          startDate = startOfWeek.toISOString().split('T')[0];
-          endDate = endOfWeek.toISOString().split('T')[0];
+          startDateStr = startOfWeek.toISOString().split('T')[0];
+          endDateStr = endOfWeek.toISOString().split('T')[0];
           break;
         case 'monthly':
-          startDate = `${dateRange}-01`;
-          const lastDay = new Date(parseInt(dateRange.split('-')[0]), parseInt(dateRange.split('-')[1]), 0);
-          endDate = lastDay.toISOString().split('T')[0];
+          startDateStr = `${dateRange}-01`;
+          const lastDayOfMonth = new Date(parseInt(dateRange.split('-')[0]), parseInt(dateRange.split('-')[1]), 0);
+          endDateStr = lastDayOfMonth.toISOString().split('T')[0];
           break;
         case 'yearly':
-          startDate = `${dateRange}-01-01`;
-          endDate = `${dateRange}-12-31`;
+          startDateStr = `${dateRange}-01-01`;
+          endDateStr = `${dateRange}-12-31`;
           break;
         default:
-          startDate = dateRange;
-          endDate = dateRange;
+          startDateStr = dateRange;
+          endDateStr = dateRange;
       }
 
       let startUtc: string, endUtcFinal: string;
       
       try {
-        const { startUtc: startUtcTemp, endUtc } = getWitaDateRangeUtc(startDate);
-        const { endUtc: endUtcFinalTemp } = getWitaDateRangeUtc(endDate);
-        startUtc = startUtcTemp;
-        endUtcFinal = endUtcFinalTemp;
+        const { startUtc: tempStartUtc, endUtc: tempEndUtc } = getWitaDateRangeUtc(startDateStr);
+        const { endUtc: tempEndUtcFinal } = getWitaDateRangeUtc(endDateStr);
+        startUtc = tempStartUtc;
+        endUtcFinal = tempEndUtcFinal;
       } catch (error) {
-        console.error('Error converting date range:', error, 'startDate:', startDate, 'endDate:', endDate);
+        console.error('Error converting date range for report:', error, 'startDate:', startDateStr, 'endDate:', endDateStr);
         // Fallback to current date if date conversion fails
         const today = new Date().toISOString().split('T')[0];
-        try {
-          const { startUtc: startUtcTemp, endUtc } = getWitaDateRangeUtc(today);
-          const { endUtc: endUtcFinalTemp } = getWitaDateRangeUtc(today);
-          startUtc = startUtcTemp;
-          endUtcFinal = endUtcFinalTemp;
-        } catch (fallbackError) {
-          console.error('Fallback date conversion also failed:', fallbackError);
-          // Use hardcoded fallback
-          startUtc = new Date().toISOString();
-          endUtcFinal = new Date().toISOString();
-        }
+        const { startUtc: tempStartUtc, endUtc: tempEndUtc } = getWitaDateRangeUtc(today);
+        startUtc = tempStartUtc;
+        endUtcFinal = tempEndUtc;
       }
 
       // Ambil transaksi POS dari buku_kas dulu
@@ -460,7 +406,7 @@ export class DataService {
         .eq('sumber', 'pos');
         
       // Ambil detail transaksi kasir untuk POS yang sudah difilter
-      let posItems = [];
+      let posItems: any[] = [];
       if (posBukuKas && posBukuKas.length > 0) {
         const bukuKasIds = posBukuKas.map(bk => bk.id);
         const { data: transaksiKasir, error: errorTransaksiKasir } = await this.supabase
@@ -469,7 +415,6 @@ export class DataService {
           .in('buku_kas_id', bukuKasIds);
         
         if (!errorTransaksiKasir && transaksiKasir) {
-          // Gabungkan data buku_kas dengan transaksi_kasir
           posItems = transaksiKasir.map(tk => {
             const bukuKas = posBukuKas.find(bk => bk.id === tk.buku_kas_id);
             return {
@@ -490,7 +435,7 @@ export class DataService {
         
       if (errorPosBukuKas || errorManual) {
         console.error('Error fetching report data:', errorPosBukuKas, errorManual);
-        return { data: [], etag: etagValue };
+        return { data: [], etag: etag }; // Menggunakan etag yang diterima
       }
       
       // Gabungkan hasil
@@ -531,7 +476,7 @@ export class DataService {
       const labaKotor = totalPemasukan - totalPengeluaran;
       
       // Hitung Pajak Penghasilan (0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0)
-      const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
+      const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0; // Perhitungan dummy
       
       // Hitung Laba (Rugi) Bersih
       const labaBersih = labaKotor - pajak;
@@ -551,7 +496,7 @@ export class DataService {
         bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
         transactions: laporan
       };
-      return { data: reportData, etag: etagValue };
+      return { data: reportData, etag: etag }; // Menggunakan etag yang diterima
     });
   }
 
@@ -614,7 +559,7 @@ export const dataService = DataService.getInstance();
 
 // Real-time subscription manager
 export class RealtimeManager {
-  private subscriptions = new Map<string, any>();
+  private subscriptions = new Map<string, RealtimeChannel>(); // Menggunakan tipe RealtimeChannel
 
   subscribe(table: string, callback: (payload: any) => void) {
     // Unsubscribe if already subscribed
@@ -622,6 +567,7 @@ export class RealtimeManager {
       this.unsubscribe(table);
     }
 
+    // FIX: Memanggil dataService.subscribeToRealtimeData
     const subscription = dataService.subscribeToRealtimeData(table, async (payload) => {
       // Invalidate cache when data changes
       await dataService.invalidateCacheOnChange(table);
@@ -630,7 +576,9 @@ export class RealtimeManager {
       callback(payload);
     });
 
-    this.subscriptions.set(table, subscription);
+    if (subscription) { // Pastikan subscription tidak null
+      this.subscriptions.set(table, subscription);
+    }
   }
 
   unsubscribe(table: string) {
@@ -666,23 +614,21 @@ export async function syncPendingTransactions() {
       let bukuKasId = null;
       if (trx.bukuKas) {
         // Insert ke buku_kas
-        await DataService.getInstance().supabase
+        const { data: insertedBukuKas, error: bukuKasError } = await DataService.getInstance().supabase
           .from('buku_kas')
-          .insert(trx.bukuKas);
-        // Ambil id row yang baru berdasarkan transaction_id
-        const { data: lastBukuKas } = await DataService.getInstance().supabase
-          .from('buku_kas')
-          .select('id')
-          .eq('transaction_id', trx.bukuKas.transaction_id)
-          .order('waktu', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        bukuKasId = lastBukuKas?.id || null;
+          .insert(trx.bukuKas)
+          .select('id') // Meminta ID yang baru di-insert
+          .single();
+        
+        if (bukuKasError) throw bukuKasError;
+        bukuKasId = insertedBukuKas?.id || null;
       } else {
+        // Jika tidak ada trx.bukuKas, berarti ini transaksi manual yang langsung masuk buku_kas
         await DataService.getInstance().supabase
           .from('buku_kas')
           .insert(trx);
       }
+
       if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
         // Update semua transaksiKasir dengan buku_kas_id
         const transaksiKasirWithId = trx.transaksiKasir.map(item => ({ ...item, buku_kas_id: bukuKasId }));
@@ -691,7 +637,8 @@ export async function syncPendingTransactions() {
           .insert(transaksiKasirWithId);
       }
     } catch (e) {
-      // Jika gagal, stop sync (biar tidak hilang)
+      console.error("Error syncing pending transaction:", e);
+      // Jika gagal, stop sync (biar tidak hilang) dan biarkan di antrean
       return;
     }
   }
@@ -703,4 +650,4 @@ export async function syncPendingTransactions() {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', syncPendingTransactions);
-} 
+}

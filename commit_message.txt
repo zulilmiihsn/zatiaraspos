@@ -1,0 +1,16 @@
+feat(auth): Perkuat validasi peran & perbaiki logika layout
+
+Perubahan ini mencakup beberapa perbaikan penting:
+
+1.  **Validasi Peran yang Lebih Tangguh**:
+    - Memperbaiki masalah di mana peran pengguna bisa hilang karena gangguan jaringan sesaat.
+    - Fungsi `validateRoleWithSupabase` sekarang dapat membedakan antara kegagalan jaringan dan sesi yang benar-benar tidak valid, mencegah pengguna keluar secara tiba-tiba.
+    - Mengganti `sessionStorage` dengan `localStorage` untuk persistensi sesi yang lebih baik.
+
+2.  **Perbaikan Layout Pengaturan**:
+    - Memperbaiki logika di `+layout.svelte` untuk memastikan `Topbar` dan `BottomNav` disembunyikan secara konsisten di semua halaman di bawah `/pengaturan`.
+    - Menyederhanakan logika tampilan navigasi untuk pemeliharaan yang lebih mudah.
+
+3.  **Lain-lain**:
+    - Menambahkan `gemini.md` dan `error.md` ke `.gitignore`.
+    - Menghapus beberapa komponen `.svelte` yang tidak lagi digunakan.

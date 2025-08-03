@@ -1,63 +1,56 @@
 // place files you want to import through the `$lib` alias in this folder.
 
 // Konversi UTC ke waktu WITA (Asia/Makassar)
+// Catatan: Objek Date di JavaScript secara internal selalu UTC. Fungsi ini mengonversi
+// string/objek Date ke representasi string WITA, lalu membuat objek Date baru dari string WITA tersebut.
+// Ini berguna jika Anda ingin objek Date yang 'terlihat' seperti waktu WITA saat di-debug,
+// namun perlu diingat nilai UTC internalnya akan berbeda dari waktu lokal WITA yang sebenarnya.
 export function utcToWita(dateStr: string | Date): Date {
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-  // toLocaleString dengan timeZone Asia/Makassar
   const witaString = date.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
   return new Date(witaString);
 }
 
 // Konversi waktu lokal WITA ke UTC (Date object)
+// Catatan: Fungsi ini mengasumsikan offset WITA selalu +8 dan tidak memperhitungkan
+// Daylight Saving Time (DST) atau perubahan zona waktu historis. Untuk aplikasi
+// yang beroperasi di zona waktu tetap tanpa DST, ini mungkin berfungsi.
 export function witaToUtc(dateStr: string): Date {
-  // dateStr: 'YYYY-MM-DDTHH:mm:ss' (anggap input sudah waktu lokal WITA)
-  // Buat Date di Asia/Makassar, lalu konversi ke UTC
   const [datePart, timePart] = dateStr.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
   const [hour, minute, second] = timePart.split(':').map(Number);
-  // Buat Date di Asia/Makassar
-  const witaDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute, second));
+  const witaDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute, second || 0));
   return witaDate;
 }
 
 // Dapatkan rentang UTC dari tanggal lokal WITA (YYYY-MM-DD)
+// Catatan: Fungsi ini mengasumsikan offset WITA selalu +8 dan tidak memperhitungkan
+// Daylight Saving Time (DST) atau perubahan zona waktu historis.
 export function getWitaDateRangeUtc(dateStr: string) {
-  // dateStr: '2025-07-09'
-  // Validasi input
   if (!dateStr || typeof dateStr !== 'string') {
-    throw new Error('Invalid date string');
+    throw new Error('Invalid date string: must be a non-empty string.');
   }
   const parts = dateStr.split('-');
   if (parts.length !== 3) {
-    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+    throw new Error('Invalid date format. Expected YYYY-MM-DD.');
   }
   const [year, month, day] = parts.map(Number);
-  // Validasi nilai tanggal
   if (isNaN(year) || isNaN(month) || isNaN(day)) {
-    throw new Error('Invalid date values');
+    throw new Error('Invalid date values: year, month, or day is not a number.');
   }
-  if (year < 1900 || year > 2100) {
-    throw new Error('Year out of valid range');
+  // Basic range validation for year, month, day
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new Error('Date values out of valid range.');
   }
-  if (month < 1 || month > 12) {
-    throw new Error('Month out of valid range');
-  }
-  if (day < 1 || day > 31) {
-    throw new Error('Day out of valid range');
-  }
-  try {
-    // Start: 00:00:00 WITA (UTC+8) = 16:00:00 UTC hari sebelumnya
-    const startUtc = new Date(Date.UTC(year, month - 1, day - 1, 16, 0, 0));
-    // End: 00:00:00 WITA hari berikutnya (UTC+8) = 16:00:00 UTC hari ini
-    const endUtc = new Date(Date.UTC(year, month - 1, day, 16, 0, 0));
-    return {
-      startUtc: startUtc.toISOString(),
-      endUtc: endUtc.toISOString()
-    };
-  } catch (error) {
-    console.error('Error in getWitaDateRangeUtc:', error, 'dateStr:', dateStr);
-    throw new Error(`Failed to convert date: ${dateStr}`);
-  }
+  
+  // Start: 00:00:00 WITA (UTC+8) = 16:00:00 UTC hari sebelumnya
+  const startUtc = new Date(Date.UTC(year, month - 1, day - 1, 16, 0, 0));
+  // End: 00:00:00 WITA hari berikutnya (UTC+8) = 16:00:00 UTC hari ini
+  const endUtc = new Date(Date.UTC(year, month - 1, day, 16, 0, 0));
+  return {
+    startUtc: startUtc.toISOString(),
+    endUtc: endUtc.toISOString()
+  };
 }
 
 // Format UTC ke string waktu WITA untuk tampilan
@@ -67,6 +60,8 @@ export function formatWitaDateTime(dateStr: string | Date, opts?: Intl.DateTimeF
 }
 
 // Konversi waktu WITA (YYYY-MM-DDTHH:mm:ss) ke UTC ISO string
+// Catatan: Fungsi ini mengasumsikan offset WITA selalu +8 dan tidak memperhitungkan
+// Daylight Saving Time (DST) atau perubahan zona waktu historis.
 export function witaToUtcISO(dateStr: string, timeStr: string = '00:00:00'): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hour, minute, second] = timeStr.split(':').map(Number);
@@ -82,7 +77,7 @@ export function createToastManager() {
     show: false,
     message: '',
     type: 'success' as 'success' | 'error' | 'warning' | 'info',
-    timeout: null as number | null
+    timeout: undefined as number | undefined // Menggunakan undefined untuk konsistensi dengan setTimeout
   };
 
   function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success', duration: number = 3000) {
@@ -96,17 +91,17 @@ export function createToastManager() {
     }
     
     // Auto hide after duration
-    toastState.timeout = Number(setTimeout(() => {
+    toastState.timeout = window.setTimeout(() => {
       toastState.show = false;
-      toastState.timeout = null;
-    }, duration));
+      toastState.timeout = undefined;
+    }, duration);
   }
 
   function hideToast() {
     toastState.show = false;
     if (toastState.timeout) {
       clearTimeout(toastState.timeout);
-      toastState.timeout = null;
+      toastState.timeout = undefined;
     }
   }
 
@@ -121,7 +116,7 @@ export function createToastManager() {
 }
 
 // Centralized error handling utility
-export function handleError(error: any, context: string, showUserFeedback: boolean = false) {
+export function handleError(error: unknown, context: string, showUserFeedback: boolean = false) {
   // Log error for debugging (only in development)
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     console.error(`❌ Error in ${context}:`, error);
@@ -131,7 +126,7 @@ export function handleError(error: any, context: string, showUserFeedback: boole
   if (showUserFeedback) {
     return {
       message: 'Terjadi kesalahan. Silakan coba lagi.',
-      details: error?.message || 'Unknown error',
+      details: error instanceof Error ? error.message : 'Unknown error',
       context
     };
   }
@@ -165,4 +160,25 @@ if (typeof window !== 'undefined') {
     }
     window.requestAnimationFrame(step);
   }
+}
+
+// Helper functions for date labels
+export function getTodayWITA(): Date {
+  const now = new Date();
+  const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
+  const witaDate = new Date(witaString);
+  witaDate.setHours(0, 0, 0, 0);
+  return witaDate;
+}
+
+export function getLast7DaysLabelsWITA(): string[] {
+  const hari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const todayWITA = getTodayWITA();
+  let labels: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(todayWITA);
+    d.setDate(todayWITA.getDate() - i);
+    labels.push(hari[d.getDay()]);
+  }
+  return labels;
 }

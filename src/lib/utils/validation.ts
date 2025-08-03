@@ -16,6 +16,7 @@ export interface ValidationResult {
 }
 
 // Sanitasi input untuk mencegah XSS dan injection
+// Catatan: Ini adalah sanitasi sisi klien dan tidak menggantikan sanitasi sisi server yang kuat.
 export function sanitizeInput(input: string): string {
   if (typeof input !== 'string') return '';
   
@@ -32,12 +33,13 @@ export function sanitizeInput(input: string): string {
 export function validateNumber(value: any, rules: ValidationRule = {}): ValidationResult {
   const errors: string[] = [];
   
-  if (rules.required && (value === null || value === undefined || value === '')) {
+  if (rules.required && (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))) {
     errors.push('Field ini wajib diisi');
     return { isValid: false, errors };
   }
   
-  if (value === null || value === undefined || value === '') {
+  // Jika tidak wajib dan kosong, anggap valid
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
     return { isValid: true, errors: [] };
   }
   
@@ -68,6 +70,7 @@ export function validateText(value: any, rules: ValidationRule = {}): Validation
     return { isValid: false, errors };
   }
   
+  // Jika tidak wajib dan kosong, anggap valid
   if (!value || value.toString().trim() === '') {
     return { isValid: true, errors: [] };
   }
@@ -302,4 +305,4 @@ export function validateSKU(sku: string): ValidationResult {
       return null;
     }
   });
-} 
+}

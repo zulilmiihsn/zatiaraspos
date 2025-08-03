@@ -1,85 +1,89 @@
 <script lang="ts">
-import { onMount } from 'svelte';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
-import { get as storeGet } from 'svelte/store';
-import { selectedBranch } from '$lib/stores/selectedBranch';
-import { goto } from '$app/navigation';
-import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
-import { createToastManager } from '$lib/utils/index';
-let namaToko = '';
-let alamat = '';
-let telepon = '';
-let instagram = '';
-let ucapan = '';
-let isSaving = false;
+  import { onMount } from 'svelte';
+  import { getSupabaseClient } from '$lib/database/supabaseClient';
+  import { get as storeGet } from 'svelte/store';
+  import { selectedBranch } from '$lib/stores/selectedBranch';
+  import { goto } from '$app/navigation';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+  import { createToastManager, handleError } from '$lib/utils/index';
 
-const defaultData = {
-  namaToko: 'Zatiaras Juice',
-  alamat: 'Jl. Contoh Alamat No. 123, Kota',
-  telepon: '0812-3456-7890',
-  instagram: '@zatiarasjuice',
-  ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
-};
+  let namaToko: string = '';
+  let alamat: string = '';
+  let telepon: string = '';
+  let instagram: string = '';
+  let ucapan: string = '';
+  let isSaving: boolean = false;
 
-async function loadPengaturan() {
-  // Coba load dari Supabase, fallback ke localStorage
-  try {
-    const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('*').eq('id', 1).single();
-    if (data) {
-      namaToko = data.nama_toko || defaultData.namaToko;
-      alamat = data.alamat || defaultData.alamat;
-      telepon = data.telepon || defaultData.telepon;
-      instagram = data.instagram || defaultData.instagram;
-      ucapan = data.ucapan || defaultData.ucapan;
-    }
-  } catch {
-    // loadFromLocal();
-  }
-}
-
-function resetToDefault() {
-  namaToko = defaultData.namaToko;
-  alamat = defaultData.alamat;
-  telepon = defaultData.telepon;
-  instagram = defaultData.instagram;
-  ucapan = defaultData.ucapan;
-}
-
-async function simpanPengaturan(event: Event) {
-  event.preventDefault();
-  isSaving = true;
-  const data = {
-    id: 1, // Always use id=1 for single row
-    nama_toko: namaToko,
-    alamat,
-    telepon,
-    instagram,
-    ucapan
+  const defaultData = {
+    namaToko: 'Zatiaras Juice',
+    alamat: 'Jl. Contoh Alamat No. 123, Kota',
+    telepon: '0812-3456-7890',
+    instagram: '@zatiarasjuice',
+    ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
   };
-  try {
-    const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').upsert([data]);
-    if (error) throw error;
-    toastManager.showToastNotification('Pengaturan berhasil disimpan!', 'success');
-  } catch (e) {
-    toastManager.showToastNotification('Gagal menyimpan ke Supabase.', 'error');
-  } finally {
-    isSaving = false;
+
+  // Toast management
+  const toastManager = createToastManager();
+
+  async function loadPengaturan() {
+    try {
+      const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').select('*').eq('id', 1).single();
+      if (data) {
+        namaToko = data.nama_toko || defaultData.namaToko;
+        alamat = data.alamat || defaultData.alamat;
+        telepon = data.telepon || defaultData.telepon;
+        instagram = data.instagram || defaultData.instagram;
+        ucapan = data.ucapan || defaultData.ucapan;
+      } else if (error) {
+        handleError(error, 'loadPengaturan');
+        toastManager.showToastNotification('Gagal memuat pengaturan dari database.', 'error');
+      }
+    } catch (e) {
+      handleError(e, 'loadPengaturan');
+      toastManager.showToastNotification('Terjadi error saat memuat pengaturan.', 'error');
+    }
   }
-}
 
-// Toast management
-const toastManager = createToastManager();
+  function resetToDefault() {
+    namaToko = defaultData.namaToko;
+    alamat = defaultData.alamat;
+    telepon = defaultData.telepon;
+    instagram = defaultData.instagram;
+    ucapan = defaultData.ucapan;
+  }
 
+  async function simpanPengaturan(event: Event) {
+    event.preventDefault();
+    isSaving = true;
+    const data = {
+      id: 1, // Always use id=1 for single row
+      nama_toko: namaToko,
+      alamat,
+      telepon,
+      instagram,
+      ucapan
+    };
+    try {
+      const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('pengaturan').upsert([data]);
+      if (error) throw error;
+      toastManager.showToastNotification('Pengaturan berhasil disimpan!', 'success');
+    } catch (e: any) {
+      handleError(e, 'simpanPengaturan');
+      toastManager.showToastNotification('Gagal menyimpan ke Supabase: ' + e.message, 'error');
+    } finally {
+      isSaving = false;
+    }
+  }
 
-onMount(async () => {
-  loadPengaturan();
-});
+  onMount(async () => {
+    loadPengaturan();
+  });
 </script>
 
 <!-- Top Bar Custom -->
 <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200 flex items-center px-4 py-4">
-  <button onclick={() => goto('/pengaturan')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
+  <button on:click={() => goto('/pengaturan')} class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors mr-2">
     <svelte:component this={ArrowLeft} class="w-5 h-5 text-gray-600" />
   </button>
   <h1 class="text-xl font-bold text-gray-800">Pengaturan Draft Struk</h1>
@@ -88,29 +92,29 @@ onMount(async () => {
 <div class="min-h-screen bg-gray-50 page-content">
   <div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-6 md:p-10">
     <h1 class="text-lg font-bold text-pink-600 mb-6 text-center">Pengaturan Draft Struk</h1>
-    <form class="space-y-5" onsubmit={simpanPengaturan}>
+    <form class="space-y-5" on:submit|preventDefault={simpanPengaturan}>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Toko</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={namaToko} maxlength="50" required />
-            </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={alamat} maxlength="100" required />
-              </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor Telepon</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={telepon} maxlength="20" required />
-          </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
         <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={instagram} maxlength="30" />
-        </div>
+      </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Ucapan di Bawah Struk</label>
         <textarea class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" rows="3" bind:value={ucapan} maxlength="120"></textarea>
-            </div>
+      </div>
       <div class="flex flex-col sm:flex-row gap-3 mt-6">
-        <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" onclick={resetToDefault} disabled={isSaving}>Reset ke Default</button>
+        <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" on:click={resetToDefault} disabled={isSaving}>Reset ke Default</button>
         <button type="submit" class="bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg px-6 py-2 transition-colors disabled:opacity-50 w-full sm:w-1/2 order-2 sm:order-2" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
       </div>
     </form>
@@ -157,4 +161,4 @@ onMount(async () => {
     duration={2000}
     position="top"
   />
-{/if} 
+{/if}

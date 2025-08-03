@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy, afterUpdate } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   export let src: string = '';
   export let open: boolean = false;
-  export const aspect: number = 1;
+  export const aspect: number = 1; // Catatan: Saat ini cropping selalu 1:1 (persegi) karena csize dan cropSize
   const dispatch = createEventDispatcher();
 
   let canvasEl: HTMLCanvasElement;
@@ -15,8 +15,8 @@
   let minZoom = 1;
   let maxZoom = 4;
   let preview = '';
-  const csize = 300;
-  const cropSize = 240; // frame crop persegi di tengah
+  const csize = 300; // Ukuran canvas (lebar dan tinggi)
+  const cropSize = 240; // Ukuran frame crop persegi di tengah canvas
 
   $: if (src) {
     img.src = src;
@@ -47,6 +47,7 @@
     temp.width = cropSize;
     temp.height = cropSize;
     const ctx = temp.getContext('2d');
+    if (!ctx) return; // Tambahkan null check
     ctx.drawImage(img, sx, sy, cropSize / zoom, cropSize / zoom, 0, 0, cropSize, cropSize);
     preview = temp.toDataURL('image/jpeg', 0.92);
   }
@@ -54,6 +55,7 @@
   function draw() {
     if (!canvasEl || !img.complete) return;
     const ctx = canvasEl.getContext('2d');
+    if (!ctx) return; // Tambahkan null check
     ctx.clearRect(0, 0, csize, csize);
     // Hitung ukuran gambar setelah zoom
     const drawW = img.width * zoom;
@@ -89,14 +91,16 @@
     updatePreview();
   }
 
-  function getPointerPosition(e) {
-    if (e.touches && e.touches.length > 0) {
+  function getPointerPosition(e: MouseEvent | TouchEvent) {
+    if ('touches' in e && e.touches.length > 0) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else {
+    } else if ('clientX' in e) {
       return { x: e.clientX, y: e.clientY };
     }
+    return { x: 0, y: 0 }; // Fallback
   }
-  function onPointerDown(e) {
+
+  function onPointerDown(e: MouseEvent | TouchEvent) {
     e.preventDefault();
     dragging = true;
     const pos = getPointerPosition(e);
@@ -104,7 +108,8 @@
     startY = pos.y;
     lastOffset = { ...offset };
   }
-  function onPointerMove(e) {
+
+  function onPointerMove(e: MouseEvent | TouchEvent) {
     if (!dragging) return;
     e.preventDefault();
     const pos = getPointerPosition(e);
@@ -123,17 +128,20 @@
     offset.y = Math.max(-maxY, Math.min(offset.y, maxY));
     draw();
   }
-  function onPointerUp(e) {
+
+  function onPointerUp(e: MouseEvent | TouchEvent) {
     dragging = false;
   }
-  function onWheel(e) {
+
+  function onWheel(e: WheelEvent) {
     e.preventDefault();
     const delta = e.deltaY < 0 ? 0.05 : -0.05;
     zoom = Math.max(minZoom, Math.min(zoom + delta, maxZoom));
     draw();
   }
-  function onZoomInput(e) {
-    zoom = parseFloat(e.target.value);
+
+  function onZoomInput(e: Event) {
+    zoom = parseFloat((e.target as HTMLInputElement).value);
     draw();
   }
 
@@ -142,6 +150,7 @@
     dispatch('done', { cropped: preview });
     open = false;
   }
+
   function handleCancel() {
     dispatch('cancel');
     open = false;
@@ -150,23 +159,39 @@
   let lastCanvasEl: HTMLCanvasElement | null = null;
 
   $: {
+    // Mengelola event listener secara terpusat
     if (canvasEl && open) {
-      // Jika canvasEl berubah, detach dari yang lama
+      // Hapus listener dari elemen sebelumnya jika ada
       if (lastCanvasEl && lastCanvasEl !== canvasEl) {
         lastCanvasEl.removeEventListener('touchstart', onPointerDown);
         lastCanvasEl.removeEventListener('touchmove', onPointerMove);
         lastCanvasEl.removeEventListener('touchend', onPointerUp);
+        lastCanvasEl.removeEventListener('mousedown', onPointerDown);
+        lastCanvasEl.removeEventListener('mousemove', onPointerMove);
+        lastCanvasEl.removeEventListener('mouseup', onPointerUp);
+        lastCanvasEl.removeEventListener('mouseleave', onPointerUp); // Treat mouseleave as mouseup
         lastCanvasEl.removeEventListener('wheel', onWheel);
       }
+
+      // Tambahkan listener baru
       canvasEl.addEventListener('touchstart', onPointerDown, { passive: false });
       canvasEl.addEventListener('touchmove', onPointerMove, { passive: false });
       canvasEl.addEventListener('touchend', onPointerUp, { passive: false });
+      canvasEl.addEventListener('mousedown', onPointerDown, { passive: false });
+      canvasEl.addEventListener('mousemove', onPointerMove, { passive: false });
+      canvasEl.addEventListener('mouseup', onPointerUp, { passive: false });
+      canvasEl.addEventListener('mouseleave', onPointerUp, { passive: false }); // Treat mouseleave as mouseup
       canvasEl.addEventListener('wheel', onWheel, { passive: false });
       lastCanvasEl = canvasEl;
     } else if (lastCanvasEl) {
+      // Hapus listener saat dialog ditutup atau canvasEl menjadi null
       lastCanvasEl.removeEventListener('touchstart', onPointerDown);
       lastCanvasEl.removeEventListener('touchmove', onPointerMove);
       lastCanvasEl.removeEventListener('touchend', onPointerUp);
+      lastCanvasEl.removeEventListener('mousedown', onPointerDown);
+      lastCanvasEl.removeEventListener('mousemove', onPointerMove);
+      lastCanvasEl.removeEventListener('mouseup', onPointerUp);
+      lastCanvasEl.removeEventListener('mouseleave', onPointerUp);
       lastCanvasEl.removeEventListener('wheel', onWheel);
       lastCanvasEl = null;
       dragging = false;
@@ -174,13 +199,19 @@
   }
 
   onMount(() => {
-    draw();
+    // Panggilan draw() di sini dihapus karena sudah ada di img.onload
   });
+
   onDestroy(() => {
+    // Pastikan semua event listener dihapus saat komponen dihancurkan
     if (lastCanvasEl) {
       lastCanvasEl.removeEventListener('touchstart', onPointerDown);
       lastCanvasEl.removeEventListener('touchmove', onPointerMove);
       lastCanvasEl.removeEventListener('touchend', onPointerUp);
+      lastCanvasEl.removeEventListener('mousedown', onPointerDown);
+      lastCanvasEl.removeEventListener('mousemove', onPointerMove);
+      lastCanvasEl.removeEventListener('mouseup', onPointerUp);
+      lastCanvasEl.removeEventListener('mouseleave', onPointerUp);
       lastCanvasEl.removeEventListener('wheel', onWheel);
       lastCanvasEl = null;
     }
@@ -193,17 +224,13 @@
     <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-4 flex flex-col items-center">
       <div class="w-full aspect-square relative bg-gray-100 rounded-xl overflow-hidden mb-4" style="height:300px;">
         <canvas bind:this={canvasEl} width={csize} height={csize}
-          onmousedown={onPointerDown}
-          onmousemove={onPointerMove}
-          onmouseup={onPointerUp}
-          onmouseleave={onPointerUp}
           style="width:100%;height:100%;touch-action:none;cursor:grab;"
         ></canvas>
       </div>
-      <input type="range" min={minZoom} max={maxZoom} step="0.01" bind:value={zoom} oninput={onZoomInput} class="w-full mb-2 accent-pink-500" />
+      <input type="range" min={minZoom} max={maxZoom} step="0.01" bind:value={zoom} on:input={onZoomInput} class="w-full mb-2 accent-pink-500" />
       <div class="flex gap-2 w-full mt-2">
-        <button class="flex-1 py-2 px-4 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors text-base shadow-md" type="button" onclick={handleOk}>Gunakan</button>
-        <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base" type="button" onclick={handleCancel}>Batal</button>
+        <button class="flex-1 py-2 px-4 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors text-base shadow-md" type="button" on:click={handleOk}>Gunakan</button>
+        <button class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-base" type="button" on:click={handleCancel}>Batal</button>
       </div>
     </div>
   </div>
@@ -216,4 +243,4 @@
   input[type="range"].accent-pink-500::-webkit-slider-thumb {
     background: #ff5fa2;
   }
-</style> 
+</style>
