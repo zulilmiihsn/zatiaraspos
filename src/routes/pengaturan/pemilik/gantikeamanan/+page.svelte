@@ -215,24 +215,24 @@
         <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" on:submit|preventDefault={handleChangeUserPass} autocomplete="off">
             <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
+            <label for="oldUsername" class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
+            <input id="oldUsername" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username Baru</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Baru" bind:value={newUsername} required />
+            <label for="newUsername" class="block text-sm font-medium text-gray-700 mb-1">Username Baru</label>
+            <input id="newUsername" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Baru" bind:value={newUsername} required />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Lama" bind:value={oldPassword} required />
+            <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
+            <input id="oldPassword" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Lama" bind:value={oldPassword} required />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Baru" bind:value={newPassword} required />
+            <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+            <input id="newPassword" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Baru" bind:value={newPassword} required />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+            <input id="confirmPassword" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
           </div>
         {#if userPassError}
             <div class="text-pink-600 text-xs text-center mt-1">{userPassError}</div>
@@ -259,16 +259,16 @@
         <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" on:submit|preventDefault={savePinSettings} autocomplete="off">
           <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
+          <label for="oldPin" class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
+          <input id="oldPin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Baru</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Baru" bind:value={newPin} required />
+          <label for="newPin" class="block text-sm font-medium text-gray-700 mb-1">PIN Baru</label>
+          <input id="newPin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Baru" bind:value={newPin} required />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
+          <label for="confirmPin" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
+          <input id="confirmPin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
         </div>
         {#if pinError}
           <div class="text-pink-600 text-xs text-center mt-1">{pinError}</div>

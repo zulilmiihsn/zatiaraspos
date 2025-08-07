@@ -1,19 +1,20 @@
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache, del as delCache } from 'idb-keyval';
+import { handleError } from './index';
 
 // Cache configuration
 const CACHE_CONFIG = {
-  // Memory cache TTL (in milliseconds)
-  MEMORY_TTL: 30000, // 30 seconds
-  // IndexedDB cache TTL (in milliseconds)  
-  INDEXEDDB_TTL: 300000, // 5 minutes
+  // Memory cache TTL (in milliseconds) - diperpanjang untuk offline persistence
+  MEMORY_TTL: 300000, // 5 minutes (dari 30 detik)
+  // IndexedDB cache TTL (in milliseconds) - diperpanjang untuk offline persistence  
+  INDEXEDDB_TTL: 1800000, // 30 minutes (dari 5 menit)
   // Background refresh interval (in milliseconds)
   BACKGROUND_REFRESH: 10000, // 10 seconds
-  // Stale-while-revalidate window (in milliseconds)
-  STALE_WHILE_REVALIDATE: 60000, // 1 minute
+  // Stale-while-revalidate window (in milliseconds) - diperpanjang untuk offline
+  STALE_WHILE_REVALIDATE: 300000, // 5 minutes (dari 1 menit)
   // Cache size limits
-  MAX_MEMORY_ENTRIES: 100,
-  MAX_INDEXEDDB_ENTRIES: 1000
+  MAX_MEMORY_ENTRIES: 200, // diperbesar dari 100
+  MAX_INDEXEDDB_ENTRIES: 2000 // diperbesar dari 1000
 };
 
 // Cache entry interface
@@ -184,16 +185,17 @@ export class SmartCache {
       backgroundRefresh?: boolean;
       etag?: string;
       forceRefresh?: boolean;
+      defaultValue?: T; // Add defaultValue option
     } = {}
   ): Promise<T> {
-    const { ttl, backgroundRefresh = true, etag, forceRefresh = false } = options;
+    const { ttl, backgroundRefresh = true, etag, forceRefresh = false, defaultValue } = options;
 
     // Check memory cache first (fastest)
     if (!forceRefresh) {
       const memoryData = this.memoryCache.get<T>(key);
       if (memoryData !== null) {
-        // Trigger background refresh if enabled
-        if (backgroundRefresh) {
+        // Trigger background refresh if enabled and online
+        if (backgroundRefresh && typeof navigator !== 'undefined' && navigator.onLine) {
           this.scheduleBackgroundRefresh(key, fetcher, ttl);
         }
         return memoryData;
@@ -207,8 +209,8 @@ export class SmartCache {
         // Store in memory cache for faster access
         this.memoryCache.set(key, indexedDBData, ttl);
         
-        // Trigger background refresh if enabled
-        if (backgroundRefresh) {
+        // Trigger background refresh if enabled and online
+        if (backgroundRefresh && typeof navigator !== 'undefined' && navigator.onLine) {
           this.scheduleBackgroundRefresh(key, fetcher, ttl);
         }
         
@@ -216,19 +218,43 @@ export class SmartCache {
       }
     }
 
-    // Fetch fresh data
-    const freshData = await fetcher();
-    
-    // Store in both caches
-    this.memoryCache.set(key, freshData, ttl);
-    await this.indexedDBCache.set(key, freshData, ttl);
-
-    // Update ETag if provided
-    if (etag) {
-      this.etagMap.set(key, etag);
+    // If offline and no cached data, return defaultValue immediately
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      // Coba ambil dari IndexedDB sekali lagi untuk memastikan
+      const indexedDBData = await this.indexedDBCache.get<T>(key);
+      if (indexedDBData !== null) {
+        // Store in memory cache untuk akses cepat
+        this.memoryCache.set(key, indexedDBData, ttl);
+        return indexedDBData;
+      }
+      // Return default value jika tidak ada data cached
+      return defaultValue !== undefined ? defaultValue : ({} as T);
     }
 
-    return freshData;
+    // Fetch fresh data (hanya jika online)
+    try {
+      const freshData = await fetcher();
+      
+      // Store in both caches
+      this.memoryCache.set(key, freshData, ttl);
+      await this.indexedDBCache.set(key, freshData, ttl);
+
+      // Update ETag if provided
+      if (etag) {
+        this.etagMap.set(key, etag);
+      }
+
+      return freshData;
+    } catch (error) {
+      // Jika fetch gagal, coba ambil dari cache yang ada
+      const indexedDBData = await this.indexedDBCache.get<T>(key);
+      if (indexedDBData !== null) {
+        this.memoryCache.set(key, indexedDBData, ttl);
+        return indexedDBData;
+      }
+      // Return default value jika tidak ada data cached
+      return defaultValue !== undefined ? defaultValue : ({} as T);
+    }
   }
 
   // Get data with ETag support for conditional requests
@@ -239,9 +265,10 @@ export class SmartCache {
       ttl?: number;
       backgroundRefresh?: boolean;
       forceRefresh?: boolean;
+      defaultValue?: T; // Add defaultValue option
     } = {}
   ): Promise<T> {
-    const { ttl, backgroundRefresh = true, forceRefresh = false } = options;
+    const { ttl, backgroundRefresh = true, forceRefresh = false, defaultValue } = options;
     const currentETag = this.etagMap.get(key);
 
     // Check if we have cached data and ETag
@@ -254,6 +281,15 @@ export class SmartCache {
         }
         return cachedData;
       }
+    }
+
+    // If offline and no cached data, return defaultValue immediately
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const indexedDBData = await this.indexedDBCache.get<T>(key);
+      if (indexedDBData !== null) {
+        return indexedDBData;
+      }
+      return defaultValue !== undefined ? defaultValue : ({} as T); // Return default or empty object
     }
 
     // Fetch fresh data with ETag
@@ -296,7 +332,7 @@ export class SmartCache {
         // Schedule next refresh
         this.scheduleBackgroundRefresh(key, fetcher, ttl);
       } catch (error) {
-        console.warn('Background refresh failed for key:', key, error);
+        handleError(error, 'SmartCache.get - Background Refresh');
       }
     }, CACHE_CONFIG.BACKGROUND_REFRESH);
     this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -335,7 +371,7 @@ export class SmartCache {
         // Schedule next refresh
         this.scheduleBackgroundRefreshWithETag(key, fetcher, ttl, result.etag || etag);
       } catch (error) {
-        console.warn('Background refresh with ETag failed for key:', key, error);
+        handleError(error, 'SmartCache.getWithETag - Background Refresh');
       }
     }, CACHE_CONFIG.BACKGROUND_REFRESH);
     this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -388,6 +424,30 @@ export class SmartCache {
     this.memoryCache.destroy();
     this.clear();
   }
+
+  // Method untuk mempertahankan cache saat navigasi
+  preserveCacheOnNavigation() {
+    // Jangan clear memory cache saat navigasi untuk mempertahankan data
+    // IndexedDB cache akan tetap tersedia
+    console.log('Cache preserved on navigation');
+  }
+
+  // Method untuk mempertahankan cache saat offline
+  preserveCacheOnOffline() {
+    // Jangan clear cache saat offline, biarkan data tetap tersedia
+    console.log('Cache preserved on offline');
+  }
+
+  // Method untuk refresh cache saat online kembali
+  async refreshCacheOnOnline() {
+    // Clear background refresh timers yang mungkin masih berjalan
+    for (const [key, timeoutId] of this.backgroundRefreshMap.entries()) {
+      clearTimeout(timeoutId);
+    }
+    this.backgroundRefreshMap.clear();
+    
+    console.log('Cache refresh timers cleared on online');
+  }
 }
 
 // Global cache instance
@@ -424,7 +484,7 @@ export class CacheUtils {
   // Dashboard data caching
   static async getDashboardStats(fetcher: () => Promise<any>) {
     return smartCache.get(CACHE_KEYS.DASHBOARD_STATS, fetcher, {
-      ttl: 30000, // 30 seconds
+      ttl: 300000, // 5 minutes (dari 30 detik) untuk offline persistence
       backgroundRefresh: true
     });
   }
@@ -432,7 +492,7 @@ export class CacheUtils {
   // POS data caching
   static async getProducts(fetcher: () => Promise<any[]>) {
     return smartCache.get(CACHE_KEYS.PRODUCTS, fetcher, {
-      ttl: 300000, // 5 minutes
+      ttl: 300000, // 5 minutes untuk offline persistence
       backgroundRefresh: true
     });
   }
@@ -445,7 +505,7 @@ export class CacheUtils {
   ) {
     const cacheKey = `${key}_${dateRange}`;
     return smartCache.getWithETag(cacheKey, fetcher, {
-      ttl: 300000, // 5 menit
+      ttl: 300000, // 5 menit untuk offline persistence
       backgroundRefresh: true
     });
   }

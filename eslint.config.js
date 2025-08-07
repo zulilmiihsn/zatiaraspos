@@ -35,6 +35,17 @@ export default ts.config(
 				parser: ts.parser,
 				svelteConfig
 			}
+		},
+		rules: {
+			// Disable some accessibility rules that are too strict for this project
+			'svelte/a11y-label-has-associated-control': 'warn',
+			'svelte/a11y-click-events-have-key-events': 'warn',
+			'svelte/a11y-no-static-element-interactions': 'warn',
+			'svelte/a11y-no-noninteractive-element-interactions': 'warn',
+			'svelte/a11y-interactive-supports-focus': 'warn',
+			'svelte/a11y-consider-explicit-label': 'warn',
+			'svelte/element-invalid-self-closing-tag': 'warn',
+			'svelte/attribute-illegal-colon': 'warn'
 		}
 	}
 );

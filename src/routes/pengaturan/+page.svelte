@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/auth/auth';
+  import { logout } from '$lib/auth/auth';
   import { SecurityMiddleware } from '$lib/utils/security';
   import { userRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
@@ -99,7 +99,7 @@
       user: currentUserRole,
       from: 'settings_page'
     });
-    auth.logout();
+    logout();
     goto('/login');
   }
 

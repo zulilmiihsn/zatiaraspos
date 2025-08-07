@@ -8,6 +8,7 @@ export default defineConfig({
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			workbox: {
+				// Sederhanakan glob patterns
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif}'],
 				runtimeCaching: [
 					{
@@ -71,33 +72,13 @@ export default defineConfig({
 		})
 	],
 	build: {
-		rollupOptions: {
-			external: [
-				'bcryptjs',
-				'bcrypt',
-				'crypto',
-				'fs',
-				'path',
-				'os'
-			],
-			output: {
-				manualChunks: {
-					// Vendor chunks
-					'vendor-svelte': ['svelte', '@sveltejs/kit'],
-					'vendor-ui': ['lucide-svelte'],
-					// Route chunks
-					'route-pos': ['./src/routes/pos/+page.svelte'],
-					'route-pengaturan': ['./src/routes/pengaturan/+page.svelte'],
-					'route-laporan': ['./src/routes/laporan/+page.svelte']
-				}
-			}
-		},
+		// Sederhanakan konfigurasi build
 		chunkSizeWarningLimit: 1000,
-		sourcemap: false, // Disable sourcemap untuk production
+		sourcemap: false,
 		minify: 'terser',
 		terserOptions: {
 			compress: {
-				drop_console: true, // Remove console.log in production
+				drop_console: true,
 				drop_debugger: true
 			}
 		}
@@ -105,17 +86,8 @@ export default defineConfig({
 	optimizeDeps: {
 		include: [
 			'svelte',
-			'@sveltejs/kit',
 			'lucide-svelte',
 			'@supabase/supabase-js'
-		],
-		exclude: [
-			'bcryptjs',
-			'bcrypt',
-			'crypto',
-			'fs',
-			'path',
-			'os'
 		]
 	},
 	server: {

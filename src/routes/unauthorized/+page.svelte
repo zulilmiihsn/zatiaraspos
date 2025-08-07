@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/auth/auth';
-  import { SecurityMiddleware } from '$lib/utils/security';
+  import { logout, getCurrentUser } from '$lib/auth/auth';
+import { SecurityMiddleware } from '$lib/utils/security';
 
   // Log unauthorized access attempt
   SecurityMiddleware.logSecurityEvent('unauthorized_access', {
-    user: auth.getCurrentUser()?.username || 'anonymous',
+    user: getCurrentUser()?.username || 'anonymous',
     url: typeof window !== 'undefined' ? window.location.href : 'unknown'
   });
 
@@ -14,7 +14,7 @@
   }
 
   function goToLogin() {
-    auth.logout();
+    logout();
     goto('/login');
   }
 </script>

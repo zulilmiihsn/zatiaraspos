@@ -6,7 +6,6 @@ import { fade, fly } from 'svelte/transition';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
 import { validateNumber, validateText, validateDate, validateTime, sanitizeInput, validateIncomeExpense } from '$lib/utils/validation';
 import { SecurityMiddleware } from '$lib/utils/security';
-import { auth } from '$lib/auth/auth';
 import { goto } from '$app/navigation';
 import { formatWitaDateTime, getWitaDateRangeUtc, witaToUtcISO } from '$lib/utils/index';
 import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
@@ -73,6 +72,7 @@ let snackbarMsg = '';
 
 
 
+
 // Helper untuk tanggal lokal user (YYYY-MM-DD)
 function getLocalDateString() {
   const now = new Date();
@@ -132,6 +132,7 @@ onMount(async () => {
   jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
   await cekSesiTokoAktif();
 });
+
 
 
 
@@ -436,7 +437,7 @@ function handleSetTemplateNominal(val) { return () => setTemplateNominal(val); }
 main {
   flex: 1 1 auto;
 }
-@keyframes slideUp { 
+@keyframes slideUp {
   from { transform: translateY(100%); opacity: 0; } 
   to { transform: translateY(0); opacity: 1; } 
 }
