@@ -1,38 +1,92 @@
-# sv
+# 🍹 Zatiaras POS
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+**Zatiaras POS** adalah aplikasi Point of Sale (POS) modern yang dirancang khusus untuk bisnis retail dan restoran dengan fitur multi-branch yang powerful.
 
-## Creating a project
+## ✨ Tentang Aplikasi
 
-If you're seeing this, you've probably already done this step. Congrats!
+Zatiaras POS adalah solusi lengkap untuk mengelola operasional bisnis Anda dengan interface yang user-friendly dan fitur yang komprehensif. Aplikasi ini dibangun dengan teknologi modern untuk memberikan pengalaman terbaik bagi kasir, manajer, dan pemilik bisnis.
 
-```bash
-# create a new project in the current directory
-npx sv create
+## 🎯 Fitur Utama
 
-# create a new project in my-app
-npx sv create my-app
-```
+### 🏠 Dashboard & Analytics
+- **Metrik Real-time**: Omzet, transaksi, item terjual, profit
+- **Grafik Pendapatan**: Visualisasi 7 hari terakhir dengan animasi
+- **Menu Terlaris**: Ranking produk dengan statistik penjualan
+- **Statistik WITA**: Analisis berdasarkan waktu Indonesia Tengah
 
-## Developing
+### 💰 Point of Sale (POS)
+- Interface kasir yang intuitif dan responsif
+- Pencarian produk dengan fuzzy search
+- Manajemen cart dengan kalkulasi otomatis
+- Multiple payment methods (Tunai/Non-tunai)
+- Real-time inventory synchronization
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### 📊 Sistem Transaksi
+- **Buka/Tutup Toko**: Manajemen sesi dengan modal awal
+- Pencatatan pemasukan & pengeluaran
+- Kategorisasi transaksi (Usaha/Lainnya)
+- Offline support dengan pending transactions
 
-```bash
-npm run dev
+### 📈 Laporan & Analytics
+- Laporan harian dan multi-day
+- Filter berdasarkan tanggal WITA
+- Breakdown pemasukan & pengeluaran
+- Analisis profit & laba
+- Real-time report updates
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### ⚙️ Manajemen Sistem
+- **Keamanan**: PIN protection, role-based access
+- **Menu Management**: Pengaturan produk dan kategori
+- **Printer Settings**: Konfigurasi printer
+- **Branch Management**: Multi-cabang support
 
-## Building
+## 🏗️ Arsitektur Teknologi
 
-To create a production version of your app:
+### Frontend
+- **SvelteKit 5.0** - Framework modern dengan performa tinggi
+- **TypeScript** - Type safety dan developer experience
+- **Tailwind CSS** - Utility-first CSS framework
+- **PWA Support** - Installable dengan offline capabilities
 
-```bash
-npm run build
-```
+### Backend & Database
+- **Supabase** - PostgreSQL database dengan real-time features
+- **Custom Auth System** - Authentication yang aman dan fleksibel
+- **Multi-branch Support** - Database terpisah per cabang
 
-You can preview the production build with `npm run preview`.
+### Performance & Security
+- **Smart Caching** - Multi-layer caching system
+- **Real-time Updates** - Live synchronization
+- **Security Middleware** - XSS protection, rate limiting
+- **Input Validation** - Sanitasi dan validasi data
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## 🎨 Design & UX
+
+- **Mobile-First Design** - Optimized untuk perangkat mobile
+- **Touch Gestures** - Swipe navigation, long press insights
+- **Smooth Animations** - Transisi yang halus dan engaging
+- **Responsive Layout** - Adaptif untuk berbagai ukuran layar
+- **Accessibility** - Keyboard navigation dan screen reader support
+
+## 🚀 Keunggulan
+
+- **Multi-Branch Ready** - Support untuk multiple cabang
+- **Offline Capability** - Bisa beroperasi tanpa internet
+- **Real-time Sync** - Data selalu up-to-date
+- **Performance Optimized** - Caching dan optimization
+- **Security First** - Keamanan tingkat enterprise
+- **User Experience** - Interface yang intuitif dan mudah digunakan
+
+## 🎭 Target Pengguna
+
+- **Kasir** - Interface yang simple dan cepat
+- **Manajer** - Laporan dan analisis yang detail
+- **Pemilik** - Overview bisnis yang komprehensif
+- **Admin** - Manajemen sistem yang powerful
+
+## 🌟 Visi
+
+Zatiaras POS hadir untuk mengubah cara bisnis retail dan restoran mengelola operasional mereka. Dengan teknologi modern dan design yang user-friendly, kami berkomitmen memberikan solusi POS terbaik yang memudahkan pengguna dalam menjalankan bisnis mereka.
+
+---
+
+*Dibuat dengan ❤️ untuk kemudahan bisnis Anda*
