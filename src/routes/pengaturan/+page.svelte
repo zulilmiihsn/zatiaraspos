@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth/auth';
-  import { SecurityMiddleware } from '$lib/utils/security';
+  import { securityUtils } from '$lib/utils/security';
   import { getSupabaseClient } from '$lib/database/supabaseClient';
   import { userRole, setUserRole } from '$lib/stores/userRole';
   import { fly, fade } from 'svelte/transition';
@@ -14,7 +14,7 @@
   import CreditCard from 'lucide-svelte/icons/credit-card';
   import User from 'lucide-svelte/icons/user';
   import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
-  import { createToastManager, handleError } from '$lib/utils/index';
+  import { createToastManager, ErrorHandler } from '$lib/utils/index';
   
   // Type definitions
   interface PengaturanData {
@@ -154,7 +154,7 @@
       Download = (await import('lucide-svelte/icons/download')).default;
       Printer = (await import('lucide-svelte/icons/printer')).default;
     } catch (error) {
-      handleError(error, 'loadPengaturanPage', true);
+      ErrorHandler.logError(error, 'loadPengaturanPage');
       toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
     }
   });

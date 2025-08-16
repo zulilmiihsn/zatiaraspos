@@ -3,7 +3,7 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
 import { validateNumber, validateText, sanitizeInput } from '$lib/utils/validation';
-import { SecurityMiddleware } from '$lib/utils/security';
+import { securityUtils } from '$lib/utils/security';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { formatWitaDateTime } from '$lib/utils/index';
@@ -16,8 +16,9 @@ import * as pako from 'pako';
 import { Base64 } from 'js-base64';
 import { memoize } from '$lib/utils/performance';
 import { addPendingTransaction } from '$lib/utils/offline';
+import { ErrorHandler } from '$lib/utils/index';
 
-let cart = [];
+let cart: any[] = [];
 let customerName = '';
 let paymentMethod = '';
 const paymentOptions = [
@@ -56,7 +57,7 @@ let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
-let pengaturanStruk = null;
+let pengaturanStruk: any = null;
 
 function showErrorNotif(message: string) {
   errorNotificationMessage = message;
@@ -84,7 +85,7 @@ function generateTransactionCode() {
   return `JUS${lastNum.toString().padStart(5, '0')}`;
 }
 
-let sesiAktif = null;
+let sesiAktif: any = null;
 async function cekSesiTokoAktif() {
   const { data } = await getSupabaseClient(storeGet(selectedBranch))
     .from('sesi_toko')
@@ -136,7 +137,7 @@ const calculateCartSummary = memoize((cart) => {
     totalQty += item.qty;
     totalHarga += item.qty * (item.product.price ?? item.product.harga ?? 0);
     if (item.addOns) {
-      totalHarga += item.addOns.reduce((a, b) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0);
+      totalHarga += item.addOns.reduce((a: any, b: any) => a + ((b.price ?? b.harga ?? 0) * item.qty), 0);
     }
   }
   return { totalQty, totalHarga };
@@ -173,7 +174,7 @@ function confirmQrisChecked() {
   // Catat ke laporan
   catatTransaksiKeLaporan();
 }
-function addCashTemplate(nom) {
+function addCashTemplate(nom: any) {
   cashReceived = ((parseInt(cashReceived) || 0) + nom).toString();
 }
 function closeCashModal() {
@@ -188,7 +189,7 @@ function finishCash() {
   }
   
   // Check rate limiting
-  if (!SecurityMiddleware.checkFormRateLimit('payment_completion')) {
+  if (!securityUtils.checkFormRateLimit('payment_completion')) {
     showErrorNotif('Terlalu banyak transaksi. Silakan tunggu sebentar.');
     return;
   }
@@ -199,9 +200,9 @@ function finishCash() {
   
   // Check for suspicious activity
   const allInputs = `${sanitizedCashReceived}${sanitizedPaymentMethod}${totalHarga}`;
-  if (SecurityMiddleware.detectSuspiciousActivity('payment_completion', allInputs)) {
+  if (securityUtils.detectSuspiciousActivity('payment_completion', allInputs)) {
     showErrorNotif('Aktivitas pembayaran mencurigakan terdeteksi. Silakan coba lagi.');
-    SecurityMiddleware.logSecurityEvent('suspicious_payment_activity', {
+    securityUtils.logSecurityEvent('suspicious_payment_activity', {
       cashReceived: sanitizedCashReceived,
       paymentMethod: sanitizedPaymentMethod,
       totalHarga
@@ -210,7 +211,7 @@ function finishCash() {
   }
   
   // Log successful payment
-  SecurityMiddleware.logSecurityEvent('payment_completed', {
+  securityUtils.logSecurityEvent('payment_completed', {
     paymentMethod: sanitizedPaymentMethod,
     totalAmount: totalHarga,
     cashReceived: parseInt(sanitizedCashReceived),
@@ -224,7 +225,7 @@ function finishCash() {
   // Catat ke laporan
   catatTransaksiKeLaporan();
 }
-function handleKeypad(val) {
+function handleKeypad(val: any) {
   if (val === '⌫') {
     cashReceived = cashReceived.slice(0, -1);
   } else {
@@ -235,7 +236,7 @@ function handleKeypad(val) {
 function getLocalOffsetString() {
   const offset = -new Date().getTimezoneOffset();
   const sign = offset >= 0 ? '+' : '-';
-  const pad = n => n.toString().padStart(2, '0');
+  const pad = (n: any) => n.toString().padStart(2, '0');
   const hours = pad(Math.floor(Math.abs(offset) / 60));
   const minutes = pad(Math.abs(offset) % 60);
   return `${sign}${hours}:${minutes}`;
@@ -267,9 +268,9 @@ async function catatTransaksiKeLaporan() {
   // Generate transaction_id sekali per transaksi
   const transactionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : uuidv4();
   // Satu row summary untuk buku_kas
-  const totalAmount = cart.reduce((sum, item) => sum + item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0)), 0);
-  const description = 'Penjualan ' + cart.map(item => item.product.name).join(', ');
-  const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+  const totalAmount = cart.reduce((sum: any, item: any) => sum + item.qty * ((item.product.price ?? item.product.harga ?? 0) + (item.addOns ? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0) : 0)), 0);
+  const description = 'Penjualan ' + cart.map((item: any) => item.product.name).join(', ');
+  const totalQty = cart.reduce((sum: any, item: any) => sum + item.qty, 0);
   const insert = {
     tipe: 'in',
     sumber: 'pos',
@@ -284,8 +285,8 @@ async function catatTransaksiKeLaporan() {
     transaction_id: transactionId
   };
   // Detail transaksi untuk transaksi_kasir
-  const transaksiKasirInserts = cart.map(item => {
-    const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
+  const transaksiKasirInserts = cart.map((item: any) => {
+    const addOnTotal = (item.addOns ? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0) : 0);
     const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
     return {
       // buku_kas_id: diisi saat online, biarkan null saat offline
@@ -308,7 +309,7 @@ async function catatTransaksiKeLaporan() {
   if (navigator.onLine) {
     const { error } = await getSupabaseClient(storeGet(selectedBranch)).from('buku_kas').insert(insert);
     if (error) {
-      notifModalMsg = 'Gagal mencatat transaksi: ' + (error.message || error.error_description || 'Unknown error');
+      notifModalMsg = 'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
       notifModalType = 'error';
       showNotifModal = true;
       return;
@@ -322,8 +323,8 @@ async function catatTransaksiKeLaporan() {
       .limit(1)
       .maybeSingle();
     if (lastBukuKas && lastBukuKas.id) {
-      const transaksiKasirInserts = cart.map(item => {
-        const addOnTotal = (item.addOns ? item.addOns.reduce((a, b) => a + (b.price ?? b.harga ?? 0), 0) : 0);
+      const transaksiKasirInserts = cart.map((item: any) => {
+        const addOnTotal = (item.addOns ? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0) : 0);
         const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
         return {
         buku_kas_id: lastBukuKas.id,
@@ -345,8 +346,8 @@ async function catatTransaksiKeLaporan() {
     import('$lib/services/dataService').then(async ({ dataService }) => {
       await dataService.invalidateCacheOnChange('buku_kas');
       await dataService.invalidateCacheOnChange('transaksi_kasir');
-      if (typeof window !== 'undefined' && window.refreshDashboardData) {
-        await window.refreshDashboardData();
+      if (typeof window !== 'undefined' && (window as any).refreshDashboardData) {
+        await (window as any).refreshDashboardData();
       }
     });
   } else {
@@ -389,10 +390,10 @@ function printStrukViaEscPosService() {
   html += `</div>`;
   // Daftar pesanan
   html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
-  cart.forEach((item, idx) => {
+  cart.forEach((item: any, idx: any) => {
     html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
     if (item.addOns && item.addOns.length > 0) {
-      item.addOns.forEach(a => {
+      item.addOns.forEach((a: any) => {
         html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
       });
     }
@@ -427,9 +428,9 @@ function printStrukViaEscPosService() {
   window.location.href = intentUrl;
 }
 
-function handleAddCashTemplate(t) { addCashTemplate(t); }
-function handleKeypadButton(key) { if (key === 'C') cashReceived = ''; else handleKeypad(key); }
-function handleSetPaymentMethod(id) { paymentMethod = id; }
+function handleAddCashTemplate(t: any) { addCashTemplate(t); }
+function handleKeypadButton(key: any) { if (key === 'C') cashReceived = ''; else handleKeypad(key); }
+function handleSetPaymentMethod(id: any) { paymentMethod = id; }
 function handleBackToKasir() { showSuccessModal = false; goto('/pos'); }
 function handleCloseNoSessionModal() { showNoSessionModal = false; }
 </script>
@@ -542,7 +543,8 @@ function handleCloseNoSessionModal() { showNoSessionModal = false; }
     <div class="pb-24 md:min-h-[60vh]">
       <div class="text-gray-500 text-center mb-4 md:mb-6 md:text-lg">Masukkan jumlah uang diterima</div>
       <input type="text" inputmode="numeric" pattern="[0-9]*" class="w-full border-2 border-pink-200 rounded-lg px-2 py-3 md:py-5 text-xl md:text-2xl text-center font-bold mb-3 md:mb-5 focus:border-pink-400 outline-none" bind:value={formattedCashReceived} oninput={(e) => {
-        const raw = e.target.value.replace(/\D/g, '');
+        const target = e.target as HTMLInputElement;
+        const raw = target.value.replace(/\D/g, '');
         cashReceived = raw;
       }} placeholder="0" />
       <div class="flex flex-wrap gap-2 md:gap-4 justify-center mb-4 md:mb-6">

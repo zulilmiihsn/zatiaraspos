@@ -5,7 +5,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { get } from 'svelte/store';
 import { validateNumber, sanitizeInput } from '$lib/utils/validation';
-import { SecurityMiddleware } from '$lib/utils/security';
+import { securityUtils } from '$lib/utils/security';
 import { fly, fade } from 'svelte/transition';
 import { slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
@@ -25,8 +25,8 @@ let currentUserRole = '';
 userRole.subscribe(val => currentUserRole = val || '');
 
 import { browser } from '$app/environment';
-let sesiAktif = null;
-async function cekSesiTokoAktif() {
+let sesiAktif: any = null;
+async function cekSesiTokoAktif(): Promise<void> {
   const { data } = await dataService.supabaseClient
     .from('sesi_toko')
     .select('*')
@@ -44,9 +44,9 @@ onMount(() => {
   }
 });
 
-let produkData = [];
-let kategoriData = [];
-let tambahanData = [];
+let produkData: any[] = [];
+let kategoriData: any[] = [];
+let tambahanData: any[] = [];
 
 let isLoadingProducts = true;
 
@@ -76,7 +76,7 @@ onMount(async () => {
     window.addEventListener('online', throttledSync);
     
     // Store reference for cleanup
-    window._onlineSyncHandler = throttledSync;
+    (window as any)._onlineSyncHandler = throttledSync;
   }
 
   // Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
@@ -95,9 +95,9 @@ onDestroy(() => {
   realtimeManager.unsubscribeAll();
   
   // Cleanup event listeners
-  if (typeof window !== 'undefined' && window._onlineSyncHandler) {
-    window.removeEventListener('online', window._onlineSyncHandler);
-    delete window._onlineSyncHandler;
+  if (typeof window !== 'undefined' && (window as any)._onlineSyncHandler) {
+    window.removeEventListener('online', (window as any)._onlineSyncHandler);
+    delete (window as any)._onlineSyncHandler;
   }
 });
 
@@ -114,7 +114,7 @@ async function loadPOSData() {
     tambahanData = await dataService.getAddOns();
     
   } catch (error) {
-    // Error handling tanpa console.log
+    // Handle error silently
   }
 }
 
@@ -122,19 +122,16 @@ async function loadPOSData() {
 function setupRealtimeSubscriptions() {
   // Subscribe to product changes
   realtimeManager.subscribe('produk', async (payload) => {
-    // console.log('Product update received:', payload);
     produkData = await dataService.getProducts();
   });
   
   // Subscribe to category changes
   realtimeManager.subscribe('kategori', async (payload) => {
-    // console.log('Category update received:', payload);
     kategoriData = await dataService.getCategories();
   });
   
   // Subscribe to add-on changes
   realtimeManager.subscribe('tambahan', async (payload) => {
-    // console.log('Add-on update received:', payload);
     tambahanData = await dataService.getAddOns();
   });
 }
@@ -216,7 +213,7 @@ const iceOptions = [
 ];
 
 let showModal = false;
-let selectedProduct = null;
+let selectedProduct: any = null;
 let selectedAddOns: number[] = [];
 let selectedSugar = 'normal';
 let selectedIce = 'normal';
@@ -273,9 +270,9 @@ function openCartModal() {
 function closeCartModal() {
   showCartModal = false;
 }
-function removeCartItem(idx) { cart = cart.filter((_, i) => i !== idx); }
+function removeCartItem(idx: number): void { cart = cart.filter((_, i) => i !== idx); }
 
-function openAddOnModal(product) {
+function openAddOnModal(product: any): void {
   showCartModal = false;
   selectedProduct = product;
   selectedAddOns = [];
@@ -290,7 +287,7 @@ function closeModal() {
   showModal = false;
 }
 
-function toggleAddOn(id) {
+function toggleAddOn(id: number): void {
   if (selectedAddOns.includes(id)) {
     selectedAddOns = selectedAddOns.filter(a => a !== id);
   } else {
@@ -313,7 +310,7 @@ function addToCart() {
   }
   
   // Check rate limiting
-  if (!SecurityMiddleware.checkFormRateLimit('pos_add_to_cart')) {
+  if (!securityUtils.checkFormRateLimit('pos_add_to_cart')) {
     showErrorNotif('Terlalu banyak item ditambahkan. Silakan tunggu sebentar.');
     return;
   }
@@ -324,9 +321,9 @@ function addToCart() {
   
   // Check for suspicious activity
   const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${qty}`;
-  if (SecurityMiddleware.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
+  if (securityUtils.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
     showErrorNotif('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
-    SecurityMiddleware.logSecurityEvent('suspicious_cart_activity', {
+    securityUtils.logSecurityEvent('suspicious_cart_activity', {
       product: selectedProduct?.name,
       qty,
       sugar: sanitizedSugar,
@@ -340,8 +337,8 @@ function addToCart() {
   const addOnsKey = addOnsSelected.map(a => a.id).sort().join(',');
   const itemKey = `${selectedProduct.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
   
-  const existingIdx = cart.findIndex(item => {
-    const itemAddOnsKey = (item.addOns || []).map(a => a.id).sort().join(',');
+  const existingIdx = cart.findIndex((item: any) => {
+    const itemAddOnsKey = (item.addOns || []).map((a: any) => a.id).sort().join(',');
     const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
     return currentItemKey === itemKey;
   });
@@ -365,7 +362,7 @@ function addToCart() {
   }
   
   // Log successful add to cart
-  SecurityMiddleware.logSecurityEvent('product_added_to_cart', {
+  securityUtils.logSecurityEvent('product_added_to_cart', {
     product: selectedProduct?.name,
     qty,
     totalItems: cart.length
@@ -393,19 +390,19 @@ function decQty() {
 let cartPreviewX = 0;
 let cartPreviewStartX = 0;
 let cartPreviewDragging = false;
-let cartPreviewRef;
+let cartPreviewRef: any;
 let cartPreviewWidth = 0;
 let showSnackbar = false;
 let snackbarMsg = '';
 let prevCartLength = 0;
 
-function handleCartPreviewTouchStart(e) {
+function handleCartPreviewTouchStart(e: TouchEvent): void {
   if (e.touches.length !== 1) return;
   cartPreviewDragging = true;
   cartPreviewStartX = e.touches[0].clientX;
   cartPreviewWidth = cartPreviewRef?.offsetWidth || 1;
 }
-function handleCartPreviewTouchMove(e) {
+function handleCartPreviewTouchMove(e: TouchEvent): void {
   if (!cartPreviewDragging) return;
   const deltaX = e.touches[0].clientX - cartPreviewStartX;
   cartPreviewX = Math.min(0, deltaX); // hanya ke kiri
@@ -431,7 +428,7 @@ $: {
   prevCartLength = cart.length;
 }
 
-function handleGlobalClick(e) {
+function handleGlobalClick(e: Event): void {
   if (clickBlocked) {
     e.preventDefault();
     e.stopPropagation();
@@ -439,12 +436,12 @@ function handleGlobalClick(e) {
   }
 }
 
-function capitalizeFirst(str) {
+function capitalizeFirst(str: string): string {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-let categories = [];
+let categories: any[] = [];
 $: categories = kategoriData;
 
 let skeletonCount = 9;
@@ -477,15 +474,16 @@ let customItemPriceRaw = '';
 let customItemPriceFormatted = '';
 let customItemNote = '';
 
-function formatRupiahInput(value) {
+function formatRupiahInput(value: string): string {
   // Hanya angka
   const numberString = value.replace(/[^\d]/g, '');
   if (!numberString) return '';
   return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function handleCustomPriceInput(e) {
-  const raw = e.target.value.replace(/[^\d]/g, '');
+function handleCustomPriceInput(e: Event): void {
+  const target = e.target as HTMLInputElement;
+  const raw = target.value.replace(/[^\d]/g, '');
   customItemPriceRaw = raw;
   customItemPriceFormatted = formatRupiahInput(raw);
 }
@@ -512,9 +510,9 @@ function addCustomItemToCart(e?: Event) {
 }
 
 // Helper untuk ambil nama kategori dari kategori_id
-function getKategoriNameById(id) {
+function getKategoriNameById(id: string | number): string {
   if (!id) return '';
-  const kat = categories?.find(k => k.id === id);
+  const kat = categories?.find((k: any) => k.id === id);
   return kat?.name || '';
 }
 
@@ -523,15 +521,15 @@ $: if (typeof window !== 'undefined') {
   localStorage.setItem('pos_cart', JSON.stringify(cart));
 }
 
-function handleSelectCategoryAll() { selectedCategory = 'all'; }
-function handleSelectCategory(id) { selectedCategory = id; }
-function handleOpenAddOnModal(product) { openAddOnModal(product); }
-function handleShowCustomItemModal() { showCustomItemModal = true; }
-function handleImgErrorId(id) { handleImgError(String(id)); }
-function handleGoToBayar(e) { e.stopPropagation(); goToBayar(); }
-function handleStopPropagation(e) { e.stopPropagation(); }
-function handleRemoveCartItem(idx) { removeCartItem(idx); }
-function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAddOnModal(product); }
+function handleSelectCategoryAll(): void { selectedCategory = 'all'; }
+function handleSelectCategory(id: string | number): void { selectedCategory = id as any; }
+function handleOpenAddOnModal(product: any): void { openAddOnModal(product); }
+function handleShowCustomItemModal(): void { showCustomItemModal = true; }
+function handleImgErrorId(id: string | number): void { handleImgError(String(id)); }
+function handleGoToBayar(e: Event): void { e.stopPropagation(); goToBayar(); }
+function handleStopPropagation(e: Event): void { e.stopPropagation(); }
+function handleRemoveCartItem(idx: number): void { removeCartItem(idx); }
+function handleKeydownOpenAddOnModal(product: any, e: KeyboardEvent): void { if (e.key === 'Enter') openAddOnModal(product); }
 </script>
 
 <div 
@@ -561,7 +559,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
           placeholder="Cari produk..."
           bind:value={search}
           autocomplete="off"
-          oninput={(e) => handleSearchInput(e.target.value)}
+          oninput={(e) => handleSearchInput((e.target as HTMLInputElement).value)}
         />
       </div>
     </div>
@@ -727,7 +725,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
                 <div class="text-base font-semibold text-gray-900 mb-0.5 truncate">{item.qty}x {item.product.name}</div>
                 <div class="text-xs text-gray-500 font-medium">
                   {[
-                    item.addOns && item.addOns.length > 0 ? item.addOns.map(a => a.name).join(', ') : '',
+                    item.addOns && item.addOns.length > 0 ? item.addOns.map((a: any) => a.name).join(', ') : '',
                     item.note ? `${item.note}` : '',
                     item.product.tipe === 'minuman' && item.sugar !== 'normal' ? (sugarOptions.find(s => s.id === item.sugar)?.label ?? item.sugar) : '',
                     item.product.tipe === 'minuman' && item.ice !== 'normal' ? (iceOptions.find(i => i.id === item.ice)?.label ?? item.ice) : ''
@@ -815,7 +813,7 @@ function handleKeydownOpenAddOnModal(product, e) { if (e.key === 'Enter') openAd
             bind:value={selectedNote}
             rows="3"
             maxlength="200"
-            oninput={(e) => { selectedNote = capitalizeFirst(e.target.value); }}
+            oninput={(e) => { selectedNote = capitalizeFirst((e.target as HTMLTextAreaElement).value); }}
           ></textarea>
           <div class="text-xs text-gray-500 text-right mt-1">{selectedNote.length}/200</div>
         </div>

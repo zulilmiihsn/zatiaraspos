@@ -1,11 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { auth } from '$lib/auth/auth';
-  import { SecurityMiddleware } from '$lib/utils/security';
+  import { securityUtils } from '$lib/utils/security';
 
   // Log unauthorized access attempt
-  SecurityMiddleware.logSecurityEvent('unauthorized_access', {
-    user: auth.getCurrentUser()?.username || 'anonymous',
+  securityUtils.logSecurityEvent('unauthorized_access', {
+    user: (auth.getCurrentUser() as any)?.username || 'anonymous',
     url: typeof window !== 'undefined' ? window.location.href : 'unknown'
   });
 

@@ -142,66 +142,7 @@ export function validatePasswordDemo(password: string): ValidationResult {
   });
 }
 
-// Validasi produk
-export function validateProduct(product: any): ValidationResult {
-  const errors: string[] = [];
-  
-  // Validasi nama produk
-  const nameValidation = validateText(product.name, {
-    required: true,
-    minLength: 2,
-    maxLength: 100
-  });
-  if (!nameValidation.isValid) {
-    errors.push(`Nama produk: ${nameValidation.errors.join(', ')}`);
-  }
-  
-  // Validasi harga
-  const priceValidation = validateNumber(product.price, {
-    required: true,
-    min: 0
-  });
-  if (!priceValidation.isValid) {
-    errors.push(`Harga: ${priceValidation.errors.join(', ')}`);
-  }
-  
-  // Validasi stok
-  const stockValidation = validateNumber(product.stock, {
-    required: true,
-    min: 0
-  });
-  if (!stockValidation.isValid) {
-    errors.push(`Stok: ${stockValidation.errors.join(', ')}`);
-  }
-  
-  return { isValid: errors.length === 0, errors };
-}
 
-// Validasi transaksi
-export function validateTransaction(transaction: any): ValidationResult {
-  const errors: string[] = [];
-  
-  // Validasi items
-  if (!transaction.items || transaction.items.length === 0) {
-    errors.push('Transaksi harus memiliki minimal 1 item');
-  }
-  
-  // Validasi total
-  const totalValidation = validateNumber(transaction.total, {
-    required: true,
-    min: 0
-  });
-  if (!totalValidation.isValid) {
-    errors.push(`Total: ${totalValidation.errors.join(', ')}`);
-  }
-  
-  // Validasi metode pembayaran
-  if (!transaction.paymentMethod) {
-    errors.push('Metode pembayaran harus dipilih');
-  }
-  
-  return { isValid: errors.length === 0, errors };
-}
 
 // Validasi pemasukan/pengeluaran
 export function validateIncomeExpense(data: any): ValidationResult {

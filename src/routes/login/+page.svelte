@@ -3,10 +3,11 @@
   import { goto } from '$app/navigation';
   import { loginWithUsername } from '$lib/auth/auth';
   import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/utils/validation';
-  import { SecurityMiddleware } from '$lib/utils/security';
+  import { securityUtils } from '$lib/utils/security';
   import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
   import { selectedBranch } from '$lib/stores/selectedBranch';
   import { get } from 'svelte/store';
+  import { isAuthenticated } from '$lib/utils/authGuard';
 
   let userRole = '';
   let username = '';
@@ -42,13 +43,12 @@
   let lottieTimeout: any = null;
   let showLottieError = false;
   let lottieErrorTimeout: any = null;
-  // let isLottiePlaying = false; // Hapus semua logic isLottiePlaying
 
   async function handleSubmit() {
     errorMessage = '';
     successMessage = '';
     if (!validateForm()) return;
-    if (!SecurityMiddleware.checkFormRateLimit('login')) {
+    if (!securityUtils.checkFormRateLimit('login')) {
       errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
       showLottieError = true;
       clearTimeout(lottieErrorTimeout);
@@ -57,9 +57,9 @@
     }
     const sanitizedUsername = sanitizeInput(username);
     const sanitizedPassword = sanitizeInput(password);
-    if (SecurityMiddleware.detectSuspiciousActivity('login', sanitizedUsername + sanitizedPassword)) {
+    if (securityUtils.detectSuspiciousActivity('login', sanitizedUsername + sanitizedPassword)) {
       errorMessage = 'Aktivitas mencurigakan terdeteksi. Silakan coba lagi.';
-      SecurityMiddleware.logSecurityEvent('login_attempt_blocked', {
+      securityUtils.logSecurityEvent('login_attempt_blocked', {
         username: sanitizedUsername,
         reason: 'suspicious_activity'
       });
@@ -72,13 +72,11 @@
     try {
       await loginWithUsername(sanitizedUsername, sanitizedPassword, branch);
       showLottieSuccess = true;
-      // isLottiePlaying = true; // Hapus semua logic isLottiePlaying
       await new Promise(resolve => setTimeout(resolve, 1200));
-      // isLottiePlaying = false; // Hapus semua logic isLottiePlaying
       goto('/');
     } catch (e) {
       errorMessage = e.message;
-      SecurityMiddleware.logSecurityEvent('login_failed', {
+      securityUtils.logSecurityEvent('login_failed', {
         username: sanitizedUsername,
         reason: 'invalid_credentials'
       });
@@ -97,6 +95,12 @@
   }
 
   onMount(async () => {
+    // Jika sudah login, redirect ke dashboard
+    if (isAuthenticated()) {
+      goto('/');
+      return;
+    }
+    
     if (userRole === 'kasir') {
       const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
       const lockedPages = data?.locked_pages || ['laporan', 'beranda'];

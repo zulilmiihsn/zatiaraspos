@@ -18,6 +18,7 @@
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import PinModal from '$lib/components/shared/PinModal.svelte';
 	import { securitySettings } from '$lib/stores/securitySettings';
+	import { requireAuth } from '$lib/utils/authGuard';
 
 	let hasPrefetched = false;
 	let isOffline = !navigator.onLine;
@@ -67,12 +68,15 @@
 	}
 
 	onMount(() => {
+		// Cek auth sebelum lanjut
+		if (!requireAuth()) return;
+		
 		isOffline = !navigator.onLine;
 		updatePending();
 		prefetchAllData();
 		window.addEventListener('offline', () => { isOffline = true; });
 		window.addEventListener('online', () => { isOffline = false; updatePending(); prefetchAllData(); });
-		window.addEventListener('storage', updatePending);
+		window.addEventListener('storage', () => { updatePending(); });
 		window.addEventListener('pending-synced', () => {
 			showToast = true;
 			updatePending();

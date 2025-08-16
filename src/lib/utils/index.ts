@@ -120,24 +120,28 @@ export function createToastManager() {
   };
 }
 
-// Centralized error handling utility
-export function handleError(error: any, context: string, showUserFeedback: boolean = false) {
-  // Log error for debugging (only in development)
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    console.error(`❌ Error in ${context}:`, error);
-  }
-  
-  // Return user-friendly error message
-  if (showUserFeedback) {
-    return {
-      message: 'Terjadi kesalahan. Silakan coba lagi.',
-      details: error?.message || 'Unknown error',
-      context
-    };
-  }
-  
-  return null;
-}
+// Error handling utilities
+export { ErrorHandler, createErrorBoundary, ValidationHelper } from './errorHandling';
+
+// Naming convention utilities
+export * from './naming';
+
+// Performance optimization utilities
+export { cacheManager, cacheUtils } from './cacheManager';
+export { performanceMonitor, performanceUtils } from './performanceMonitor';
+export { routeLoader, routeUtils } from './routeLoader';
+
+// Security utilities
+export { 
+  csrfProtection, 
+  securityUtils, 
+  CSRFProtection, 
+  XSSProtection, 
+  InputValidation, 
+  RateLimiter, 
+  LoginSecurity, 
+  SessionSecurity 
+} from './security';
 
 // Tambahkan deklarasi global untuk window.scrollToSmooth
 declare global {

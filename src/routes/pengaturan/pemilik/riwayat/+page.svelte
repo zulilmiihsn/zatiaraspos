@@ -11,19 +11,19 @@ import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 import { getWitaDateRangeUtc } from '$lib/utils/index';
 import { userRole } from '$lib/stores/userRole';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
-import { createToastManager, handleError } from '$lib/utils/index';
+import { createToastManager, ErrorHandler } from '$lib/utils/index';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
 
-let transaksiHariIni = [];
+let transaksiHariIni: any[] = [];
 let loading = true;
 let showDeleteModal = false;
-let transaksiToDelete = null;
+let transaksiToDelete: any = null;
 let searchKeyword = '';
 let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
-let Trash;
-let pollingInterval;
+let Trash: any;
+let pollingInterval: any;
 let showDetailModal = false;
-let selectedTransaksi = null;
+let selectedTransaksi: any = null;
 let showDropdownPayment = false;
 const paymentOptions = [
   { value: 'tunai', label: 'Tunai' },
@@ -91,14 +91,14 @@ async function fetchTransaksiHariIni() {
       });
     }
   } catch (error) {
-    handleError(error, 'fetchTransaksiHariIni', true);
+    ErrorHandler.logError(error, 'fetchTransaksiHariIni');
     toastManager.showToastNotification('Gagal memuat data transaksi', 'error');
   } finally {
     loading = false;
   }
 }
 
-function confirmDeleteTransaksi(trx) {
+function confirmDeleteTransaksi(trx: any) {
   transaksiToDelete = trx;
   showDeleteModal = true;
 }
@@ -138,7 +138,7 @@ async function deleteTransaksi() {
       toastManager.hideToast();
     }, 3000);
   } catch (error) {
-    handleError(error, 'deleteTransaksi', true);
+    ErrorHandler.logError(error, 'deleteTransaksi');
     toastManager.showToastNotification('Gagal menghapus transaksi', 'error');
   } finally {
     await fetchTransaksiHariIni();
@@ -150,12 +150,12 @@ function refreshManual() {
   if (!loading) fetchTransaksiHariIni();
 }
 
-function openDetail(trx) {
+function openDetail(trx: any) {
   selectedTransaksi = { ...trx };
   showDetailModal = true;
 }
 
-async function updatePaymentMethod(newMethod) {
+async function updatePaymentMethod(newMethod: any) {
   if (!selectedTransaksi) return;
   loading = true;
   try {
@@ -168,7 +168,7 @@ async function updatePaymentMethod(newMethod) {
     showDetailModal = false;
     await fetchTransaksiHariIni();
   } catch (e) {
-    handleError(e, 'updatePaymentMethod', true);
+    ErrorHandler.logError(e, 'updatePaymentMethod');
     toastManager.showToastNotification('Gagal mengubah jenis pembayaran', 'error');
   } finally {
     loading = false;

@@ -20,7 +20,7 @@ import Utensils from 'lucide-svelte/icons/utensils';
 import Tag from 'lucide-svelte/icons/tag';
 import { dataService } from '$lib/services/dataService';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
-import { createToastManager, handleError } from '$lib/utils/index';
+import { createToastManager, ErrorHandler } from '$lib/utils/index';
 
 // Data Menu
 let menus: any[] = [];
@@ -33,7 +33,7 @@ let showEkstraForm = false;
 let editMenuId: any = null;
 let editKategoriId = null;
 let editEkstraId: any = null;
-let menuForm = writable({ name: '', kategori_id: '', tipe: 'minuman', price: '', ekstra_ids: [], gambar: '' });
+let menuForm = writable({ name: '', kategori_id: '', tipe: 'minuman', price: '', ekstra_ids: [] as any[], gambar: '' });
 let kategoriForm = { name: '' };
 let ekstraForm = { name: '', harga: '' };
 let selectedKategori = 'Semua';
@@ -79,7 +79,7 @@ let showNotifModal = false;
 let notifModalMsg = '';
 let notifModalType = 'warning';
 let isCropping = false;
-let fileInputEl;
+let fileInputEl: any;
 let activeTab = 'menu';
 let isLoadingMenus = true;
 let isLoadingKategori = true;
@@ -98,33 +98,33 @@ function showToastNotification(message: string, type: 'success' | 'error' | 'war
   toastManager.showToastNotification(message, type);
 }
 
-const memoizedKategoriWithCount = memoize((menus, kategoriList) =>
-  kategoriList.map(kat => ({
+const memoizedKategoriWithCount = memoize((menus: any[], kategoriList: any[]) =>
+  kategoriList.map((kat: any) => ({
     ...kat,
-    count: menus.filter(m => m.kategori_id === kat.id).length
+    count: menus.filter((m: any) => m.kategori_id === kat.id).length
   })),
-  (menus, kategoriList) => {
+  (menus: any[], kategoriList: any[]) => {
     // Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
-    const menuKategoriMap = menus.map(m => `${m.id}:${m.kategori_id || 'null'}`).join(',');
-    const kategoriIds = kategoriList.map(k => k.id).join(',');
+    const menuKategoriMap = menus.map((m: any) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+    const kategoriIds = kategoriList.map((k: any) => k.id).join(',');
     return `${menuKategoriMap}-${kategoriIds}`;
   }
 );
 
 $: kategoriWithCount = memoizedKategoriWithCount(menus, kategoriList);
 
-const memoizedFilteredMenus = memoize((menus, kategoriList, selectedKategori, searchKeyword) => {
+const memoizedFilteredMenus = memoize((menus: any[], kategoriList: any[], selectedKategori: string, searchKeyword: string) => {
   const keyword = searchKeyword.trim().toLowerCase();
-  return menus.filter(menu => {
+  return menus.filter((menu: any) => {
     if (!keyword) return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
-    const kategoriNama = kategoriList.find(k => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
+    const kategoriNama = kategoriList.find((k: any) => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
     const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
     return (selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match;
   });
-}, (menus, kategoriList, selectedKategori, searchKeyword) => {
+}, (menus: any[], kategoriList: any[], selectedKategori: string, searchKeyword: string) => {
   // Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
-  const menuKategoriMap = menus.map(m => `${m.id}:${m.kategori_id || 'null'}`).join(',');
-  const kategoriIds = kategoriList.map(k => k.id).join(',');
+  const menuKategoriMap = menus.map((m: any) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+  const kategoriIds = kategoriList.map((k: any) => k.id).join(',');
   return `${menuKategoriMap}-${kategoriIds}-${selectedKategori}-${searchKeyword}`;
 });
 
@@ -139,8 +139,8 @@ async function fetchMenus() {
     
     // Force reactivity update
     menus = [...menus];
-  } catch (error) {
-    notifModalMsg = 'Gagal mengambil data menu: ' + error.message;
+  } catch (error: any) {
+    notifModalMsg = 'Gagal mengambil data menu: ' + (error?.message || 'Unknown error');
     notifModalType = 'error';
     showNotifModal = true;
   }
@@ -153,8 +153,8 @@ async function fetchKategori() {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('kategori').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     kategoriList = data || [];
-  } catch (error) {
-    notifModalMsg = 'Gagal mengambil data kategori: ' + error.message;
+  } catch (error: any) {
+    notifModalMsg = 'Gagal mengambil data kategori: ' + (error?.message || 'Unknown error');
     notifModalType = 'error';
     showNotifModal = true;
   }
@@ -167,8 +167,8 @@ async function fetchEkstra() {
     const { data, error } = await getSupabaseClient(storeGet(selectedBranch)).from('tambahan').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     ekstraList = (data || []).map(e => ({ ...e, harga: e.price }));
-  } catch (error) {
-    notifModalMsg = 'Gagal mengambil data ekstra: ' + error.message;
+  } catch (error: any) {
+    notifModalMsg = 'Gagal mengambil data ekstra: ' + (error?.message || 'Unknown error');
     notifModalType = 'error';
     showNotifModal = true;
   }
@@ -215,7 +215,7 @@ onDestroy(() => {
   if (unsubscribeBranch) unsubscribeBranch();
 });
 
-function openMenuForm(menu = null) {
+function openMenuForm(menu: any = null): void {
   if (showMenuForm && menu && editMenuId === menu.id) {
     return;
   }
@@ -251,14 +251,14 @@ async function saveMenu() {
     return;
   }
   if (!$menuForm.kategori_id || $menuForm.kategori_id.trim() === '') {
-    $menuForm = { ...$menuForm, kategori_id: null };
+    $menuForm = { ...$menuForm, kategori_id: '' };
   }
   let imageUrl = $menuForm.gambar;
   if (imageUrl && imageUrl.startsWith('data:image/')) {
     try {
       imageUrl = await uploadMenuImageFromDataUrl(imageUrl, editMenuId || Date.now());
     } catch (err) {
-      notifModalMsg = 'Gagal upload gambar: ' + (err?.message || err?.error_description || 'Unknown error');
+      notifModalMsg = 'Gagal upload gambar: ' + ErrorHandler.extractErrorMessage(err);
       notifModalType = 'error';
       showNotifModal = true;
       return;
@@ -281,7 +281,7 @@ async function saveMenu() {
       throw result.error;
     }
   } catch (error) {
-      notifModalMsg = 'Gagal menyimpan menu: ' + error.message;
+      notifModalMsg = 'Gagal menyimpan menu: ' + ErrorHandler.extractErrorMessage(error);
       notifModalType = 'error';
       showNotifModal = true;
       return;
@@ -328,7 +328,7 @@ async function doDeleteMenu() {
       notifModalType = 'success';
       showNotifModal = true;
     } catch (error) {
-        notifModalMsg = 'Gagal menghapus menu: ' + error.message;
+        notifModalMsg = 'Gagal menghapus menu: ' + ErrorHandler.extractErrorMessage(error);
         notifModalType = 'error';
         showNotifModal = true;
         return;
@@ -361,7 +361,7 @@ function cancelDeleteMenu() {
   touchEndX = 0;
 }
 
-function openKategoriForm(kat) {
+function openKategoriForm(kat: any) {
   if (!kat) {
     kategoriDetail = null;
     showKategoriDetailModal = true;
@@ -492,7 +492,7 @@ async function doDeleteKategori() {
       await forceRefreshAfterCategoryChange();
       
     } catch (error) {
-      notifModalMsg = 'Gagal menghapus kategori: ' + error.message;
+      notifModalMsg = 'Gagal menghapus kategori: ' + ErrorHandler.extractErrorMessage(error);
       notifModalType = 'error';
       showNotifModal = true;
     }
@@ -509,7 +509,7 @@ function cancelDeleteKategori() {
   touchEndX = 0;
 }
 
-function openEkstraForm(ekstra = null) {
+function openEkstraForm(ekstra: any = null) {
   showEkstraForm = true;
   if (ekstra) {
     editEkstraId = ekstra.id;
@@ -553,14 +553,14 @@ async function saveEkstra() {
     // Force reactivity update untuk memastikan UI ter-update
     ekstraList = [...ekstraList];
   } catch (error) {
-    notifModalMsg = 'Gagal menyimpan ekstra: ' + error.message;
+    notifModalMsg = 'Gagal menyimpan ekstra: ' + ErrorHandler.extractErrorMessage(error);
     notifModalType = 'error';
     showNotifModal = true;
   }
   await afterUpdateCachePOS();
 }
 
-function confirmDeleteEkstra(id) {
+function confirmDeleteEkstra(id: any) {
   if (typeof window !== 'undefined') {
     window.removeEventListener('click', blockNextClick, true);
   }
@@ -598,16 +598,17 @@ function cancelDeleteEkstra() {
 }
 
 // Helper functions for menu form
-function handleFileChange(e) {
+function handleFileChange(e: Event) {
   if (isCropping) return;
-  const file = e.target.files[0];
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
   if (!file) return;
   selectedImage = file;
     const reader = new FileReader();
   reader.onload = (ev) => {
     cropperDialogImage = '';
     setTimeout(() => {
-      cropperDialogImage = ev.target.result as string;
+      cropperDialogImage = (ev.target as FileReader).result as string;
       showCropperDialog = true;
       isCropping = true;
     }, 10);
@@ -615,7 +616,7 @@ function handleFileChange(e) {
     reader.readAsDataURL(file);
   }
 
-function handleCropperDone(e) {
+function handleCropperDone(e: CustomEvent) {
   $menuForm = { ...$menuForm, gambar: e.detail.cropped };
   showCropperDialog = false;
   cropperDialogImage = '';
@@ -636,8 +637,9 @@ function removeImage() {
   }
 }
 
-function formatRupiahInput(e) {
-  let value = e.target.value.replace(/[^\d]/g, '');
+function formatRupiahInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  let value = target.value.replace(/[^\d]/g, '');
   if (value) {
     // Simpan nilai asli (angka) untuk database
     const numericValue = parseInt(value);
@@ -649,20 +651,20 @@ function formatRupiahInput(e) {
   }
 }
 
-function handleImgError(menuId) {
+function handleImgError(menuId: string | number) {
   imageError[menuId] = true;
   imageError = imageError; // trigger reactivity
 }
 
-function handleKategoriClick(e, kat) {
+function handleKategoriClick(e: Event, kat: any) {
   // Handle kategori click if needed
 }
 
-function handleEkstraClick(e, ekstra) {
+function handleEkstraClick(e: Event, ekstra: any) {
   // Handle ekstra click if needed
 }
 
-function toggleMenuInKategoriRealtime(menuId) {
+function toggleMenuInKategoriRealtime(menuId: any) {
   if (selectedMenuIds.includes(menuId)) {
     selectedMenuIds = selectedMenuIds.filter(id => id !== menuId);
     unselectedMenuIds = [...unselectedMenuIds, menuId];
@@ -676,7 +678,7 @@ function toggleMenuInKategoriRealtime(menuId) {
   unselectedMenuIds = [...unselectedMenuIds];
 }
 
-async function updateMenusKategori(kategoriId, menuIds, oldKategoriId) {
+async function updateMenusKategori(kategoriId: any, menuIds: any[], oldKategoriId: any) {
   try {
     // Update menu kategori untuk menu yang dipilih
   for (const menuId of menuIds) {
@@ -699,12 +701,12 @@ async function updateMenusKategori(kategoriId, menuIds, oldKategoriId) {
       }
     }
   } catch (error) {
-    handleError(error, 'updateMenuCategories', false);
+    ErrorHandler.logError(error, 'updateMenuCategories');
     throw error;
   }
 }
 
-async function uploadMenuImageFromDataUrl(dataUrl, menuId) {
+async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: any) {
   const res = await fetch(dataUrl);
   const blob = await res.blob();
   const filePath = `menu-${menuId}-${Date.now()}.jpg`;
@@ -714,21 +716,21 @@ async function uploadMenuImageFromDataUrl(dataUrl, menuId) {
   return publicUrlData.publicUrl;
 }
 
-function blockNextClick(e) {
+function blockNextClick(e: Event) {
   e.preventDefault();
   e.stopPropagation();
 }
 
 // Helper functions for modal buttons
-function setMenuType(type) {
+function setMenuType(type: any) {
   $menuForm = { ...$menuForm, tipe: type };
 }
 
-function setMenuKategori(kategoriId) {
+function setMenuKategori(kategoriId: any) {
   $menuForm = { ...$menuForm, kategori_id: kategoriId };
 }
 
-function toggleEkstra(ekstraId) {
+function toggleEkstra(ekstraId: any) {
   if ($menuForm.ekstra_ids.includes(ekstraId)) {
     $menuForm = { ...$menuForm, ekstra_ids: $menuForm.ekstra_ids.filter(id => id !== ekstraId) };
   } else {
@@ -751,7 +753,7 @@ async function afterUpdateCachePOS() {
     await dataService.invalidateCacheOnChange('kategori');
     await dataService.invalidateCacheOnChange('tambahan');
   } catch (error) {
-    handleError(error, 'clearDataServiceCache', false);
+    ErrorHandler.logError(error, 'clearDataServiceCache');
   }
 }
 
@@ -828,7 +830,7 @@ $: if (showNotifModal) {
     <svelte:component this={Plus} class="w-8 h-8" />
   </button>
 {:else if activeTab === 'kategori'}
-  <button class="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors" onclick={() => openKategoriForm()} aria-label="Tambah Kategori">
+  <button class="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors" onclick={() => openKategoriForm(null)} aria-label="Tambah Kategori">
     <svelte:component this={Plus} class="w-8 h-8" />
   </button>
 {:else if activeTab === 'ekstra'}

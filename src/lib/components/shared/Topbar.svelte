@@ -1,17 +1,33 @@
 <script lang="ts">
 import Settings from 'lucide-svelte/icons/settings';
 import { goto } from '$app/navigation';
-import { transaksiPendingCount } from '$lib/stores/transaksiPendingCount';
-import { onDestroy } from 'svelte';
-import { get } from 'svelte/store';
 import { onMount } from 'svelte';
+import { getPendingTransactions } from '$lib/utils/offline';
 
 export let showSettings: boolean = true;
 
 let pendingCount = 0;
 let showPopover = false;
-const unsubscribe = transaksiPendingCount.subscribe(val => pendingCount = val);
-onDestroy(unsubscribe);
+
+onMount(async () => {
+  // Get pending transactions count
+  const pendingTransactions = await getPendingTransactions();
+  pendingCount = pendingTransactions.length;
+  
+  // Update count when transactions change
+  const updateCount = async () => {
+    const transactions = await getPendingTransactions();
+    pendingCount = transactions.length;
+  };
+  
+  // Listen for storage changes (offline transactions)
+  window.addEventListener('storage', updateCount);
+  
+  // Cleanup
+  return () => {
+    window.removeEventListener('storage', updateCount);
+  };
+});
 
 let isOffline = !navigator.onLine;
 onMount(() => {

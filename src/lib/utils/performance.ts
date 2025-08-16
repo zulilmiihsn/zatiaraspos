@@ -49,12 +49,6 @@ export function memoize<T extends (...args: any[]) => any>(
 }
 
 // Performance measurement
-export function measurePerformance(name: string, fn: () => void) {
-  const start = performance.now();
-  fn();
-  const end = performance.now();
-}
-
 export async function measureAsyncPerformance(name: string, fn: () => Promise<void>) {
   const start = performance.now();
   await fn();
@@ -104,42 +98,6 @@ export function createImageObserver(callback: (entry: IntersectionObserverEntry)
   });
 }
 
-// Cache management
-export class CacheManager {
-  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-  
-  set(key: string, data: any, ttl: number = 60000) {
-    this.cache.set(key, { data, timestamp: Date.now(), ttl });
-  }
-  
-  get(key: string): any | null {
-    const item = this.cache.get(key);
-    if (!item) return null;
-    
-    if (Date.now() - item.timestamp > item.ttl) {
-      this.cache.delete(key);
-      return null;
-    }
-    
-    return item.data;
-  }
-  
-  clear() {
-    this.cache.clear();
-  }
-  
-  size(): number {
-    return this.cache.size;
-  }
-}
 
-// Bundle size analyzer
-export function analyzeBundleSize() {
-  if (typeof window !== 'undefined') {
-    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    const totalSize = resources.reduce((sum, resource) => {
-      return sum + (resource.transferSize || 0);
-    }, 0);
-    
-  }
-} 
+
+ 

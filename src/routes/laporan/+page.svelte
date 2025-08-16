@@ -11,7 +11,7 @@ import { memoize } from '$lib/utils/performance';
 import { dataService, realtimeManager } from '$lib/services/dataService';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
-import { createToastManager, handleError } from '$lib/utils/index';
+import { createToastManager, ErrorHandler } from '$lib/utils/index';
 
 // Lazy load icons
 let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
@@ -52,7 +52,7 @@ async function loadLaporanData() {
     // Gunakan data langsung dari dataService tanpa filtering tambahan
     laporan = reportData?.transactions || [];
   } catch (error) {
-    handleError(error, 'loadLaporanData', true);
+    ErrorHandler.logError(error, 'loadLaporanData');
     toastManager.showToastNotification('Gagal memuat data laporan', 'error');
   }
 }

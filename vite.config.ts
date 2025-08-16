@@ -84,23 +84,22 @@ export default defineConfig({
 				manualChunks: {
 					// Vendor chunks
 					'vendor-svelte': ['svelte', '@sveltejs/kit'],
-					'vendor-ui': ['lucide-svelte'],
-					// Route chunks
-					'route-pos': ['./src/routes/pos/+page.svelte'],
-					'route-pengaturan': ['./src/routes/pengaturan/+page.svelte'],
-					'route-laporan': ['./src/routes/laporan/+page.svelte']
+					'vendor-ui': ['lucide-svelte']
 				}
 			}
 		},
-		chunkSizeWarningLimit: 1000,
+		chunkSizeWarningLimit: 500, // Reduce warning limit for better optimization
 		sourcemap: false, // Disable sourcemap untuk production
 		minify: 'terser',
 		terserOptions: {
 			compress: {
 				drop_console: true, // Remove console.log in production
-				drop_debugger: true
+				drop_debugger: true,
+				pure_funcs: ['console.log', 'console.info', 'console.debug']
 			}
-		}
+		},
+		// Enable tree shaking
+		treeShaking: true
 	},
 	optimizeDeps: {
 		include: [

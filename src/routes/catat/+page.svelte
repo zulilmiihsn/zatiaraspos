@@ -5,7 +5,7 @@ import { cubicOut } from 'svelte/easing';
 import { fade, fly } from 'svelte/transition';
 import DropdownSheet from '$lib/components/shared/DropdownSheet.svelte';
 import { validateNumber, validateText, validateDate, validateTime, sanitizeInput, validateIncomeExpense } from '$lib/utils/validation';
-import { SecurityMiddleware } from '$lib/utils/security';
+import { securityUtils } from '$lib/utils/security';
 import { auth } from '$lib/auth/auth';
 import { goto } from '$app/navigation';
 import { formatWitaDateTime, getWitaDateRangeUtc, witaToUtcISO } from '$lib/utils/index';
