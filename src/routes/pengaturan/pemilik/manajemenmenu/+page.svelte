@@ -4,7 +4,7 @@ import { goto } from '$app/navigation';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { writable } from 'svelte/store';
-import CropperDialog from '$lib/components/shared/CropperDialog.svelte';
+import CropperDialog from '$lib/components/shared/cropperDialog.svelte';
 import { fly, fade, slide } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
@@ -19,7 +19,7 @@ import Coffee from 'lucide-svelte/icons/coffee';
 import Utensils from 'lucide-svelte/icons/utensils';
 import Tag from 'lucide-svelte/icons/tag';
 import { dataService } from '$lib/services/dataService';
-import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 import { createToastManager, ErrorHandler } from '$lib/utils/index';
 
 // Data Menu

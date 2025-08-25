@@ -1,5 +1,5 @@
   <script lang="ts">
-import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 import { onMount, onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';

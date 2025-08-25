@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import Topbar from '$lib/components/shared/Topbar.svelte';
-	import BottomNav from '$lib/components/shared/BottomNav.svelte';
+	import Topbar from '$lib/components/shared/topbar.svelte';
+import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -16,7 +16,7 @@
 	import { userRole } from '$lib/stores/userRole';
 	import { dataService } from '$lib/services/dataService';
 	import { getPendingTransactions } from '$lib/utils/offline';
-	import PinModal from '$lib/components/shared/PinModal.svelte';
+	import PinModal from '$lib/components/shared/pinModal.svelte';
 	import { securitySettings } from '$lib/stores/securitySettings';
 	import { requireAuth } from '$lib/utils/authGuard';
 

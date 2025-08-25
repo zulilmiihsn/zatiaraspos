@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import ModalSheet from '$lib/components/shared/ModalSheet.svelte';
+import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 import { validateNumber, validateText, sanitizeInput } from '$lib/utils/validation';
 import { securityUtils } from '$lib/utils/security';
 import { getSupabaseClient } from '$lib/database/supabaseClient';

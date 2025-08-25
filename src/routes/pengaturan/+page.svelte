@@ -13,7 +13,7 @@
   import Crown from 'lucide-svelte/icons/crown';
   import CreditCard from 'lucide-svelte/icons/credit-card';
   import User from 'lucide-svelte/icons/user';
-  import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+  import ToastNotification from '$lib/components/shared/toastNotification.svelte';
   import { createToastManager, ErrorHandler } from '$lib/utils/index';
   
   // Type definitions

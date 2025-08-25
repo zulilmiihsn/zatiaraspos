@@ -5,7 +5,7 @@ import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { goto } from '$app/navigation';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-import ToastNotification from '$lib/components/shared/ToastNotification.svelte';
+import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 import { createToastManager } from '$lib/utils/index';
 let namaToko = '';
 let alamat = '';
