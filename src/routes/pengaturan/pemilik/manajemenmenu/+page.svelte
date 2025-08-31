@@ -904,7 +904,7 @@ $: if (showNotifModal) {
           {#if isGridView}
             <div class="grid grid-cols-2 gap-3 pb-4 md:grid-cols-3 md:gap-8 md:max-w-4xl md:mx-auto" transition:fade={{ duration: 120 }}>
               {#each filteredMenus as menu}
-                <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex flex-col cursor-pointer transition-shadow relative h-[260px] md:p-6 md:rounded-2xl md:shadow-lg md:gap-2 md:h-[300px] md:text-base md:items-center md:justify-center" onclick={() => openMenuForm(menu)}>
+                <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex flex-col cursor-pointer transition-shadow relative h-[260px] md:p-6 md:rounded-2xl md:shadow-lg md:gap-2 md:h-[300px] md:text-base md:items-center md:justify-center" role="button" tabindex="0" onclick={() => openMenuForm(menu)} onkeydown={(e) => e.key === 'Enter' && openMenuForm(menu)} onkeypress={(e) => e.key === 'Enter' && openMenuForm(menu)}>
                   <!-- Tombol Delete floating di pojok kanan atas -->
                   <div class="absolute top-2 right-2 z-10">
                     <button class="p-2 rounded-full bg-red-50 hover:bg-red-100 border border-red-200" onclick={(e) => { e.stopPropagation(); confirmDeleteMenu(menu.id); }} aria-label="Hapus Menu">
@@ -933,7 +933,7 @@ $: if (showNotifModal) {
           {:else}
             <div class="flex flex-col gap-2 px-0 pb-4" transition:fade={{ duration: 120 }}>
               {#each filteredMenus as menu}
-                <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-4 shadow-sm hover:shadow-md transition-all cursor-pointer" onclick={() => openMenuForm(menu)}>
+                <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-4 shadow-sm hover:shadow-md transition-all cursor-pointer" role="button" tabindex="0" onclick={() => openMenuForm(menu)} onkeydown={(e) => e.key === 'Enter' && openMenuForm(menu)} onkeypress={(e) => e.key === 'Enter' && openMenuForm(menu)}>
                   <div class="flex-1 min-w-0">
                     <div class="font-semibold text-gray-800 text-base truncate mb-0.5">{menu.name}</div>
                     <div class="text-xs text-gray-500 truncate mb-0.5">{kategoriList.find(k => k.id === menu.kategori_id)?.name || '-'}</div>
@@ -985,7 +985,7 @@ $: if (showNotifModal) {
             {:else}
           <div class="flex flex-col gap-2">
             {#each kategoriList.filter(kat => kat.name.toLowerCase().includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
-              <div class="bg-blue-100 rounded-xl border border-blue-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-blue-200 transition-all cursor-pointer" onclick={() => openKategoriForm(kat)}>
+              <div class="bg-blue-100 rounded-xl border border-blue-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-blue-200 transition-all cursor-pointer" role="button" tabindex="0" onclick={() => openKategoriForm(kat)} onkeydown={(e) => e.key === 'Enter' && openKategoriForm(kat)} onkeypress={(e) => e.key === 'Enter' && openKategoriForm(kat)}>
                 <div class="flex flex-col">
                   <span class="font-semibold text-blue-900 text-base truncate mb-0.5">{kat.name}</span>
                   <span class="text-xs text-blue-700 truncate">{menus.filter(m => m.kategori_id === kat.id).length} menu</span>
@@ -1035,7 +1035,7 @@ $: if (showNotifModal) {
             {:else}
           <div class="flex flex-col gap-2">
             {#each ekstraList.filter(ekstra => ekstra.name.toLowerCase().includes(searchEkstra.trim().toLowerCase())) as ekstra}
-              <div class="bg-green-100 rounded-xl border border-green-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-green-200 transition-all cursor-pointer" onclick={() => openEkstraForm(ekstra)}>
+              <div class="bg-green-100 rounded-xl border border-green-200 px-4 py-3 flex items-center justify-between shadow-sm hover:bg-green-200 transition-all cursor-pointer" role="button" tabindex="0" onclick={() => openEkstraForm(ekstra)} onkeydown={(e) => e.key === 'Enter' && openEkstraForm(ekstra)} onkeypress={(e) => e.key === 'Enter' && openEkstraForm(ekstra)}>
                 <div class="flex flex-col">
                   <span class="font-semibold text-green-900 text-base truncate mb-0.5">{ekstra.name}</span>
                   <span class="text-xs text-green-700 truncate">Rp {ekstra.harga.toLocaleString('id-ID')}</span>
@@ -1057,8 +1057,20 @@ $: if (showNotifModal) {
 
 <!-- Modal untuk tambah/edit menu -->
 {#if showMenuForm}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick={(e) => e.target === e.currentTarget && closeMenuForm()}>
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[85vh] flex flex-col animate-slideUpModal" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" 
+    role="dialog" 
+    aria-modal="true" 
+    onclick={(e) => e.target === e.currentTarget && closeMenuForm()}
+    onkeydown={(e) => e.key === 'Escape' && closeMenuForm()}
+    onkeypress={(e) => e.key === 'Enter' && closeMenuForm()}
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[85vh] flex flex-col animate-slideUpModal" role="document" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex-shrink-0 bg-white border-b border-gray-100 px-6 py-4">
         <h2 class="text-xl font-bold text-gray-800 text-center">{editMenuId ? 'Edit Menu' : 'Tambah Menu Baru'}</h2>
@@ -1068,25 +1080,33 @@ $: if (showNotifModal) {
       <form id="menu-form" class="flex flex-col gap-6 p-6 overflow-y-auto flex-1" onsubmit={saveMenu} autocomplete="off">
           <!-- Preview Gambar Menu -->
           <div class="flex flex-col gap-3">
-            <label class="font-semibold text-gray-700 text-sm">Gambar Menu</label>
+            <label for="menu-image" class="font-semibold text-gray-700 text-sm">Gambar Menu</label>
             <div class="w-full">
-              <div class="relative group cursor-pointer w-full" onclick={() => fileInputEl?.click()}>
+              <button type="button" class="relative group cursor-pointer w-full" onclick={() => fileInputEl?.click()}>
                               {#if $menuForm.gambar}
                 <div class="relative w-full">
                   <img src={$menuForm.gambar} alt="Preview Menu" class="w-full aspect-square object-cover rounded-xl border-2 border-gray-200 shadow-sm" />
                   <!-- Floating Delete Button -->
-                  <button type="button" class="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all duration-200 z-10" onclick={(e) => { e.stopPropagation(); removeImage(); }}>
+                  <div 
+                    class="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all duration-200 z-10 cursor-pointer" 
+                    role="button" 
+                    tabindex="0" 
+                    aria-label="Hapus gambar" 
+                    onclick={(e) => { e.stopPropagation(); removeImage(); }}
+                    onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+                    onkeypress={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+                  >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                  </button>
+                  </div>
                   <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
                     <div class="text-center">
                       <svg class="w-8 h-8 text-white mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <span class="text-white text-sm font-medium">Klik untuk Ubah Gambar</span>
-        </div>
+                    </div>
                   </div>
                 </div>
               {:else}
@@ -1100,7 +1120,7 @@ $: if (showNotifModal) {
                     </div>
                   </div>
                 {/if}
-              </div>
+              </button>
             </div>
             <input type="file" accept="image/*" class="hidden" bind:this={fileInputEl} onchange={handleFileChange} />
           </div>
@@ -1122,7 +1142,7 @@ $: if (showNotifModal) {
 
           <!-- Tipe Menu -->
           <div class="flex flex-col gap-3">
-            <label class="font-semibold text-gray-700 text-sm">Tipe Menu</label>
+            <label for="menu-type" class="font-semibold text-gray-700 text-sm">Tipe Menu</label>
             <div class="flex gap-3">
               <button type="button" class="flex-1 py-3 px-4 rounded-xl border-2 font-medium transition-all duration-200 {$menuForm.tipe === 'minuman' ? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200' : 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}" onclick={() => setMenuType('minuman')}>
                 <div class="flex items-center justify-center gap-2">
@@ -1141,7 +1161,7 @@ $: if (showNotifModal) {
 
           <!-- Kategori -->
           <div class="flex flex-col gap-3">
-            <label class="font-semibold text-gray-700 text-sm">Kategori</label>
+            <label for="menu-kategori" class="font-semibold text-gray-700 text-sm">Kategori</label>
             <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {#each kategoriList as kat}
                 <button type="button" class="flex-shrink-0 px-4 py-2.5 rounded-xl border font-medium text-sm transition-all duration-200 {$menuForm.kategori_id === kat.id ? 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-200' : 'bg-white text-gray-700 border-gray-200 hover:border-pink-300 hover:bg-pink-50'}" onclick={() => setMenuKategori($menuForm.kategori_id === kat.id ? '' : kat.id)}>
@@ -1153,7 +1173,7 @@ $: if (showNotifModal) {
 
                   <!-- Tambahan -->
         <div class="flex flex-col gap-3">
-          <label class="font-semibold text-gray-700 text-sm">Tambahan</label>
+          <label for="menu-tambahan" class="font-semibold text-gray-700 text-sm">Tambahan</label>
           <div class="grid grid-cols-2 gap-3">
             {#each ekstraList as ekstra}
               <button type="button" class="p-3 rounded-xl border-2 text-left transition-all duration-200 {$menuForm.ekstra_ids.includes(ekstra.id) ? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-100' : 'border-gray-200 bg-white hover:border-pink-300 hover:bg-pink-50'}" onclick={() => toggleEkstra(ekstra.id)}>
@@ -1161,27 +1181,39 @@ $: if (showNotifModal) {
                 <div class="text-xs text-pink-600 font-semibold">+Rp {ekstra.harga?.toLocaleString('id-ID')}</div>
               </button>
             {/each}
-        </div>
+          </div>
         </div>
       </form>
 
-        <!-- Fixed Action Buttons -->
-        <div class="flex-shrink-0 flex gap-3 p-6 border-t border-gray-100 bg-white">
-          <button type="submit" form="menu-form" class="flex-1 bg-pink-500 text-white py-3 rounded-xl font-semibold hover:bg-pink-600 active:bg-pink-700 transition-all duration-200 shadow-lg shadow-pink-200">
-            {editMenuId ? 'Update Menu' : 'Simpan Menu'}
-          </button>
-          <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 active:bg-gray-300 transition-all duration-200" onclick={closeMenuForm}>
-            Batal
-          </button>
-        </div>
+      <!-- Fixed Action Buttons -->
+      <div class="flex-shrink-0 flex gap-3 p-6 border-t border-gray-100 bg-white">
+        <button type="submit" form="menu-form" class="flex-1 bg-pink-500 text-white py-3 rounded-xl font-semibold hover:bg-pink-600 active:bg-pink-700 transition-all duration-200 shadow-lg shadow-pink-200">
+          {editMenuId ? 'Update Menu' : 'Simpan Menu'}
+        </button>
+        <button type="button" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 active:bg-gray-300 transition-all duration-200" onclick={closeMenuForm}>
+          Batal
+        </button>
+      </div>
     </div>
   </div>
 {/if}
 
 <!-- Modal untuk tambah/edit kategori -->
 {#if showKategoriDetailModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick={(e) => e.target === e.currentTarget && closeKategoriDetailModal()}>
-    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col animate-slideUpModal" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" 
+    role="dialog" 
+    aria-modal="true" 
+    onclick={(e) => e.target === e.currentTarget && closeKategoriDetailModal()}
+    onkeydown={(e) => e.key === 'Escape' && closeKategoriDetailModal()}
+    onkeypress={(e) => e.key === 'Enter' && closeKategoriDetailModal()}
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col animate-slideUpModal" role="document" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex-shrink-0 p-6 border-b border-gray-100">
         <h2 class="text-xl font-bold text-gray-800 text-center">{kategoriDetail ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
@@ -1205,7 +1237,7 @@ $: if (showNotifModal) {
 
           <!-- Menu dalam Kategori -->
         <div class="flex flex-col gap-2">
-            <label class="font-semibold text-gray-700 text-sm mb-1">Menu dalam Kategori</label>
+            <label for="menu-dalam-kategori" class="font-semibold text-gray-700 text-sm mb-1">Menu dalam Kategori</label>
             <div class="flex flex-wrap gap-2 min-h-[48px]">
               {#if selectedMenuIds.length > 0}
                 {#each menus.filter(menu => selectedMenuIds.includes(menu.id)) as menu (menu.id)}
@@ -1219,16 +1251,16 @@ $: if (showNotifModal) {
                   >
                     {menu.name}
                   </button>
-            {/each}
+                {/each}
               {:else}
                 <span class="text-gray-400 text-sm italic">Belum ada menu dalam kategori ini</span>
               {/if}
-          </div>
+            </div>
         </div>
 
           <!-- Menu non Kategori -->
           <div class="flex flex-col gap-2">
-            <label class="font-semibold text-gray-700 text-sm mb-1">Menu non Kategori</label>
+            <label for="menu-non-kategori" class="font-semibold text-gray-700 text-sm mb-1">Menu non Kategori</label>
             <div class="flex flex-wrap gap-2 min-h-[48px]">
               {#if unselectedMenuIds.length > 0}
                 {#each menus.filter(menu => unselectedMenuIds.includes(menu.id)) as menu (menu.id)}
@@ -1247,7 +1279,7 @@ $: if (showNotifModal) {
                 <span class="text-gray-400 text-sm italic">Semua menu sudah masuk kategori</span>
               {/if}
             </div>
-        </div>
+          </div>
       </form>
       </div>
 
@@ -1266,8 +1298,20 @@ $: if (showNotifModal) {
 
 <!-- Modal untuk tambah/edit ekstra -->
 {#if showEkstraForm}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick={(e) => e.target === e.currentTarget && (showEkstraForm = false, ekstraForm = { name: '', harga: '' }, editEkstraId = null)}>
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative animate-slideUpModal" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" 
+    role="dialog" 
+    aria-modal="true" 
+    onclick={(e) => e.target === e.currentTarget && (showEkstraForm = false, ekstraForm = { name: '', harga: '' }, editEkstraId = null)}
+    onkeydown={(e) => e.key === 'Escape' && (showEkstraForm = false, ekstraForm = { name: '', harga: '' }, editEkstraId = null)}
+    onkeypress={(e) => e.key === 'Enter' && (showEkstraForm = false, ekstraForm = { name: '', harga: '' }, editEkstraId = null)}
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative animate-slideUpModal" role="document" onclick={(e) => e.stopPropagation()}>
       <h2 class="text-lg font-bold text-gray-800 mb-4 text-center">{editEkstraId ? 'Edit Tambahan' : 'Tambah Tambahan'}</h2>
       <form class="flex flex-col gap-4" onsubmit={saveEkstra} autocomplete="off">
         <div class="flex flex-col gap-2">

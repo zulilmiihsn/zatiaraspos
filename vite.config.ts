@@ -98,8 +98,7 @@ export default defineConfig({
 				pure_funcs: ['console.log', 'console.info', 'console.debug']
 			}
 		},
-		// Enable tree shaking
-		treeShaking: true
+		// Tree shaking is enabled by default in Vite
 	},
 	optimizeDeps: {
 		include: [

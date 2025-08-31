@@ -31,8 +31,9 @@ class IconLoader {
     }
 
     // Check cache first
-    if (this.cache[iconName]) {
-      return this.cache[iconName];
+    const cachedIcon = this.cache[iconName];
+    if (cachedIcon && this.loadedIcons.has(iconName) && !(cachedIcon instanceof Promise)) {
+      return cachedIcon;
     }
 
     try {

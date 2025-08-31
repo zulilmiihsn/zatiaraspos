@@ -50,6 +50,16 @@ export interface Branch {
   updated_at: string;
 }
 
+export interface OrganizationSettings {
+  theme: 'light' | 'dark' | 'auto';
+  language: 'id' | 'en';
+  timezone: string;
+  currency: string;
+  tax_rate: number;
+  allow_negative_stock: boolean;
+  require_pin_for_refund: boolean;
+}
+
 export interface Organization {
   id: string;
   name: string;

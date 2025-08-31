@@ -38,7 +38,7 @@ export const dashboardTests = {
           return {
             success: false,
             message: 'Dashboard data loading failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -61,7 +61,7 @@ export const dashboardTests = {
           return {
             success: false,
             message: 'Weekly income chart failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -87,7 +87,7 @@ export const dashboardTests = {
           return {
             success: false,
             message: 'Best sellers display failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -123,7 +123,7 @@ export const posTests = {
           return {
             success: false,
             message: 'Product loading failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -154,7 +154,7 @@ export const posTests = {
           return {
             success: false,
             message: 'Category filtering failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -181,7 +181,7 @@ export const posTests = {
           return {
             success: false,
             message: 'Add to cart failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -210,7 +210,7 @@ export const posTests = {
           return {
             success: false,
             message: 'Payment processing failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -250,7 +250,7 @@ export const reportingTests = {
           return {
             success: false,
             message: 'Daily report generation failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -282,7 +282,7 @@ export const reportingTests = {
           return {
             success: false,
             message: 'Date range filtering failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -309,7 +309,7 @@ export const reportingTests = {
           return {
             success: false,
             message: 'Export functionality failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -348,7 +348,7 @@ export const recordingTests = {
           return {
             success: false,
             message: 'Income recording failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -377,7 +377,7 @@ export const recordingTests = {
           return {
             success: false,
             message: 'Expense recording failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -405,7 +405,7 @@ export const recordingTests = {
           return {
             success: false,
             message: 'Offline recording failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -442,7 +442,7 @@ export const settingsTests = {
           return {
             success: false,
             message: 'User profile management failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -468,7 +468,7 @@ export const settingsTests = {
           return {
             success: false,
             message: 'Security settings failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -495,7 +495,7 @@ export const settingsTests = {
           return {
             success: false,
             message: 'Printer configuration failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -532,7 +532,7 @@ export const authTests = {
           return {
             success: false,
             message: 'User login failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -558,7 +558,7 @@ export const authTests = {
           return {
             success: false,
             message: 'Role-based access control failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -586,7 +586,7 @@ export const authTests = {
           return {
             success: false,
             message: 'Session management failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -622,7 +622,7 @@ export const dataManagementTests = {
           return {
             success: false,
             message: 'Data caching failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -649,7 +649,7 @@ export const dataManagementTests = {
           return {
             success: false,
             message: 'Real-time sync failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -676,7 +676,7 @@ export const dataManagementTests = {
           return {
             success: false,
             message: 'Offline support failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       }
@@ -777,11 +777,11 @@ export class FeatureTestRunner {
           name: test.name,
           success: false,
           message: 'Test execution failed',
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           executionTime
         });
         
-        console.log(`  ❌ ${test.name}: Test execution failed - ${error.message}`);
+        console.log(`  ❌ ${test.name}: Test execution failed - ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     
@@ -914,4 +914,157 @@ export async function testAuth(): Promise<TestResult[]> {
 
 export async function testDataManagement(): Promise<TestResult[]> {
   return await quickTest('Data Management');
+}
+
+// ============================================================================
+// 🚀 CLI EXECUTION
+// ============================================================================
+
+/**
+ * CLI entry point untuk feature testing
+ */
+async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0];
+  
+  console.log('🧪 ZATIARAS POS FEATURE TESTING');
+  console.log('================================\n');
+  
+  try {
+    if (!command || command === 'all') {
+      // Test semua fitur
+      console.log('🚀 Running all feature tests...\n');
+      const report = await runFullTestSuite();
+      
+      // Save report to file
+      const fs = await import('fs');
+      const path = await import('path');
+      const reportPath = path.join(process.cwd(), 'test-report.md');
+      fs.writeFileSync(reportPath, report);
+      
+      console.log(`\n📄 Test report saved to: ${reportPath}`);
+      
+    } else if (command === 'dashboard') {
+      // Test dashboard saja
+      console.log('🏠 Testing Dashboard Features...\n');
+      const results = await quickTest('Dashboard');
+      displayQuickTestResults('Dashboard', results);
+      
+    } else if (command === 'pos') {
+      // Test POS saja
+      console.log('💰 Testing POS Features...\n');
+      const results = await quickTest('POS');
+      displayQuickTestResults('POS', results);
+      
+    } else if (command === 'reporting') {
+      // Test reporting saja
+      console.log('📊 Testing Reporting Features...\n');
+      const results = await quickTest('Reporting');
+      displayQuickTestResults('Reporting', results);
+      
+    } else if (command === 'recording') {
+      // Test recording saja
+      console.log('📝 Testing Recording Features...\n');
+      const results = await quickTest('Recording');
+      displayQuickTestResults('Recording', results);
+      
+    } else if (command === 'settings') {
+      // Test settings saja
+      console.log('⚙️ Testing Settings Features...\n');
+      const results = await quickTest('Settings');
+      displayQuickTestResults('Settings', results);
+      
+    } else if (command === 'auth') {
+      // Test auth saja
+      console.log('🔐 Testing Authentication Features...\n');
+      const results = await quickTest('Authentication');
+      displayQuickTestResults('Authentication', results);
+      
+    } else if (command === 'data') {
+      // Test data management saja
+      console.log('🗄️ Testing Data Management Features...\n');
+      const results = await quickTest('Data Management');
+      displayQuickTestResults('Data Management', results);
+      
+    } else if (command === 'help') {
+      // Show help
+      showHelp();
+      
+    } else {
+      console.log(`❌ Unknown command: ${command}`);
+      showHelp();
+      process.exit(1);
+    }
+    
+  } catch (error) {
+    console.error('❌ Test execution failed:', error);
+    process.exit(1);
+  }
+}
+
+function displayQuickTestResults(featureName: string, results: TestResult[]) {
+  console.log(`📋 ${featureName} Test Results:\n`);
+  
+  let passed = 0;
+  let failed = 0;
+  
+  for (const result of results) {
+    const status = result.success ? '✅' : '❌';
+    console.log(`  ${status} ${result.name}: ${result.message}`);
+    
+    if (result.success) {
+      passed++;
+    } else {
+      failed++;
+      if (result.error) {
+        console.log(`     Error: ${result.error}`);
+      }
+    }
+  }
+  
+  console.log(`\n📊 Summary: ${passed} passed, ${failed} failed`);
+  
+  if (failed > 0) {
+    process.exit(1);
+  }
+}
+
+function showHelp() {
+  console.log(`
+📖 USAGE:
+
+  tsx src/tests/feature-tests.ts [command]
+
+📋 COMMANDS:
+
+  all        - Test semua fitur (default)
+  dashboard  - Test fitur Dashboard saja
+  pos        - Test fitur POS saja
+  reporting  - Test fitur Reporting saja
+  recording  - Test fitur Recording saja
+  settings   - Test fitur Settings saja
+  auth       - Test fitur Authentication saja
+  data       - Test fitur Data Management saja
+  help       - Tampilkan bantuan ini
+
+🎯 EXAMPLES:
+
+  tsx src/tests/feature-tests.ts          # Test semua fitur
+  tsx src/tests/feature-tests.ts pos      # Test fitur POS saja
+  tsx src/tests/feature-tests.ts auth     # Test fitur Authentication saja
+
+📄 OUTPUT:
+
+  - Console output dengan hasil test
+  - Test report disimpan ke test-report.md (untuk test all)
+  - Exit code 0 jika semua test passed, 1 jika ada yang failed
+`);
+}
+
+// Check if this is the main module
+if (process.argv[1] && process.argv[1].endsWith('feature-tests.ts')) {
+  main().catch((error) => {
+    console.error('❌ Script execution failed:', error);
+    process.exit(1);
+  });
 }

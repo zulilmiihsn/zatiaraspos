@@ -16,8 +16,8 @@ export class ErrorHandler {
     return {
       message,
       code: code || 'UNKNOWN_ERROR',
-      details,
-      timestamp: new Date().toISOString(),
+      details: details ? JSON.stringify(details) : undefined,
+      timestamp: Date.now(),
       stack: new Error().stack
     };
   }
@@ -31,11 +31,9 @@ export class ErrorHandler {
     value?: any
   ): ValidationError {
     return {
-      type: 'VALIDATION_ERROR',
       field,
       message,
-      value,
-      timestamp: new Date().toISOString()
+      value
     };
   }
 
@@ -48,11 +46,11 @@ export class ErrorHandler {
     endpoint?: string
   ): ApiError {
     return {
-      type: 'API_ERROR',
+      status: statusCode,
+      statusText: 'Error',
       message,
-      statusCode,
-      endpoint,
-      timestamp: new Date().toISOString()
+      errors: [],
+      timestamp: Date.now()
     };
   }
 

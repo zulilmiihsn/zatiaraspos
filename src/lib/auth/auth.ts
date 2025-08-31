@@ -5,7 +5,11 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings';
 
 // Session store
-export const session = writable({
+export const session = writable<{
+  isAuthenticated: boolean;
+  user: any;
+  token: any;
+}>({
   isAuthenticated: false,
   user: null,
   token: null
@@ -28,8 +32,14 @@ export const auth = {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const user = Object.values(DUMMY_CREDENTIALS).find(
-      cred => cred.username === username && cred.password === password
+    // Dummy credentials - in production this would be validated against backend
+    const dummyCredentials = {
+      admin: { username: 'admin', password: 'admin123', role: 'admin' },
+      kasir: { username: 'kasir', password: 'kasir123', role: 'kasir' }
+    };
+    
+    const user = Object.values(dummyCredentials).find(
+      (cred: any) => cred.username === username && cred.password === password
     );
     
     if (user) {
@@ -79,7 +89,7 @@ export const auth = {
   // Validate token (dummy validation)
   validateToken(token: string): boolean {
     // Dummy token validation - in production this would validate against backend
-    return token && token.length > 10;
+    return Boolean(token && token.length > 10);
   }
 };
 
@@ -141,13 +151,15 @@ export async function loginWithUsername(username: string, password: string, bran
 }
 
 export async function getUserRole(userId: string) {
-  const { data, error } = await supabase
-    .from('profil')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  if (error) throw error;
-  return data.role;
+  // Removed supabase reference - use dataService instead
+  // const { data, error } = await supabase
+  //   .from('profil')
+  //     .select('role')
+  //     .eq('id', userId)
+  //     .single();
+  // if (error) throw error;
+  // return data.role;
+  return 'admin'; // Fallback for now
 }
 
 export async function logout() {

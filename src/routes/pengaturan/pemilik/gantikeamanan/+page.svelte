@@ -49,7 +49,7 @@ onMount(async () => {
   }
 });
 
-async function handleChangeUserPass(e) {
+async function handleChangeUserPass(e: Event) {
   e.preventDefault();
   userPassError = '';
   if (!oldUsername || !newUsername || !oldPassword || !newPassword || !confirmPassword) {
@@ -96,7 +96,7 @@ async function handleChangeUserPass(e) {
   }
 }
 
-async function savePinSettings(event) {
+async function savePinSettings(event: Event) {
   event.preventDefault();
   if (!oldPin.trim() || !newPin.trim() || !confirmPin.trim()) {
     pinError = 'Semua field wajib diisi.';
@@ -125,7 +125,7 @@ async function savePinSettings(event) {
     confirmPin = '';
     pinError = '';
     pin = newPin;
-  } catch (error) {
+  } catch (error: any) {
     pinError = 'Gagal menyimpan perubahan: ' + error.message;
   }
 }
@@ -146,7 +146,7 @@ async function saveLockedPages() {
     notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
     notifModalType = 'success';
     showNotifModal = true;
-  } catch (error) {
+  } catch (error: any) {
     notifModalMsg = 'Gagal menyimpan pengaturan: ' + error.message;
     notifModalType = 'error';
     showNotifModal = true;
@@ -193,24 +193,24 @@ async function saveLockedPages() {
         <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" onsubmit={handleChangeUserPass} autocomplete="off">
             <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
+            <label for="old-username" class="block text-sm font-medium text-gray-700 mb-1">Username Lama</label>
+            <input id="old-username" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Lama" bind:value={oldUsername} required />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username Baru</label>
-            <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Baru" bind:value={newUsername} required />
+                      <div>
+              <label for="new-username" class="block text-sm font-medium text-gray-700 mb-1">Username Baru</label>
+              <input id="new-username" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Username Baru" bind:value={newUsername} required />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Lama" bind:value={oldPassword} required />
+                      <div>
+              <label for="old-password" class="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
+              <input id="old-password" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Lama" bind:value={oldPassword} required />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Baru" bind:value={newPassword} required />
+                      <div>
+              <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+              <input id="new-password" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Password Baru" bind:value={newPassword} required />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
-            <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
+                      <div>
+              <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+              <input id="confirm-password" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi Password Baru" bind:value={confirmPassword} required />
           </div>
         {#if userPassError}
             <div class="text-pink-600 text-xs text-center mt-1">{userPassError}</div>
@@ -237,16 +237,16 @@ async function saveLockedPages() {
         <form class="flex flex-col gap-4 lg:flex-1 lg:flex lg:flex-col" onsubmit={savePinSettings} autocomplete="off">
           <div class="lg:flex-1 lg:flex lg:flex-col lg:justify-start">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
+          <label for="old-pin" class="block text-sm font-medium text-gray-700 mb-1">PIN Lama</label>
+          <input id="old-pin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Lama" bind:value={oldPin} required />
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">PIN Baru</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Baru" bind:value={newPin} required />
+                  <div>
+            <label for="new-pin" class="block text-sm font-medium text-gray-700 mb-1">PIN Baru</label>
+            <input id="new-pin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="PIN Baru" bind:value={newPin} required />
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
-          <input type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
+                  <div>
+            <label for="confirm-pin" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN Baru</label>
+            <input id="confirm-pin" type="password" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100" placeholder="Konfirmasi PIN Baru" bind:value={confirmPin} required />
         </div>
         {#if pinError}
           <div class="text-pink-600 text-xs text-center mt-1">{pinError}</div>

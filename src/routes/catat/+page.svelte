@@ -192,13 +192,7 @@ async function saveTransaksi(form: any) {
     import('$lib/services/dataService').then(async ({ dataService }) => {
       await dataService.invalidateCacheOnChange('buku_kas');
       await dataService.invalidateCacheOnChange('transaksi_kasir');
-      if (typeof window !== 'undefined' && window.refreshDashboardData) {
-        await window.refreshDashboardData();
-      }
     });
-    if (typeof window !== 'undefined' && window.fetchDashboardStats) {
-      window.fetchDashboardStats();
-    }
   } else {
     // Offline mode: simpan transaksi ke pending
     addPendingTransaction(trx);
@@ -217,7 +211,7 @@ $: if (mode === 'pengeluaran' && (!jenis || (jenis !== 'beban_usaha' && jenis !=
   jenis = 'beban_usaha';
 }
 
-function handleTouchStart(e) {
+function handleTouchStart(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   touchStartX = e.touches[0].clientX;
@@ -226,7 +220,7 @@ function handleTouchStart(e) {
   clickBlocked = false;
 }
 
-function handleTouchMove(e) {
+function handleTouchMove(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   touchEndX = e.touches[0].clientX;
@@ -244,7 +238,7 @@ function handleTouchMove(e) {
   }
 }
 
-function handleTouchEnd(e) {
+function handleTouchEnd(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   if (isSwiping) {
@@ -271,9 +265,9 @@ function handleTouchEnd(e) {
   }
 }
 
-function handleGlobalClick(e) {
+function handleGlobalClick(e: Event) {
   // Don't block clicks on interactive elements even if swipe was detected
-  const target = e.target;
+  const target = e.target as HTMLElement;
   if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
       target.closest('button') || target.closest('input') || target.closest('a')) {
     return;
@@ -286,31 +280,33 @@ function handleGlobalClick(e) {
   }
 }
 
-function formatRupiah(angka) {
+function formatRupiah(angka: string | number): string {
   if (!angka) return '';
   return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function handleNominalInput(e) {
+function handleNominalInput(e: Event) {
   // Hanya izinkan angka
-  let val = e.target.value.replace(/\D/g, '');
+  const target = e.target as HTMLInputElement;
+  let val = target.value.replace(/\D/g, '');
   rawNominal = val;
   nominal = formatRupiah(val);
 }
 
-function setTemplateNominal(val) {
+function setTemplateNominal(val: number) {
   let current = parseInt(rawNominal || '0', 10);
   let next = current + val;
   rawNominal = next.toString();
   nominal = formatRupiah(next);
 }
 
-async function handleSubmit(e) {
+async function handleSubmit(e: Event) {
   e.preventDefault();
   error = '';
   
+  // Remove SecurityMiddleware references - use securityUtils instead
   // Check rate limiting
-  if (!SecurityMiddleware.checkFormRateLimit('catat_form')) {
+  if (!securityUtils.checkFormRateLimit('catat_form')) {
     error = 'Terlalu banyak submission. Silakan tunggu sebentar.';
     return;
   }
@@ -336,9 +332,9 @@ async function handleSubmit(e) {
   
   // Check for suspicious activity
   const allInputs = `${sanitizedDate}${sanitizedTime}${sanitizedNominal}${sanitizedJenis}${sanitizedNamaJenis}${sanitizedNama}${sanitizedPaymentMethod}`;
-  if (SecurityMiddleware.detectSuspiciousActivity('catat_form', allInputs)) {
+  if (securityUtils.detectSuspiciousActivity('catat_form', allInputs)) {
     error = 'Input mencurigakan terdeteksi. Silakan coba lagi.';
-    SecurityMiddleware.logSecurityEvent('suspicious_input_blocked', {
+    securityUtils.logSecurityEvent('suspicious_input_blocked', {
       form: 'catat',
       inputs: { date: sanitizedDate, time: sanitizedTime, nominal: sanitizedNominal }
     });
@@ -387,13 +383,14 @@ async function handleSubmit(e) {
   snackbarMsg = 'Transaksi berhasil dicatat!';
   showSnackbar = true;
   setTimeout(() => { showSnackbar = false; }, 1800);
+  
   // Reset form
   rawNominal = '';
   namaJenis = '';
   nama = '';
 }
 
-function getJenisLabel(val) {
+function getJenisLabel(val: string): string {
   // Optimized to avoid array search on every call
   if (mode === 'pemasukan') {
     if (val === 'pendapatan_usaha') return 'Pendapatan Usaha';
@@ -429,7 +426,7 @@ function handleSetPengeluaran() {
     nama = '';
   }
 }
-function handleSetTemplateNominal(val) { return () => setTemplateNominal(val); }
+function handleSetTemplateNominal(val: number) { return () => setTemplateNominal(val); }
 </script>
 
 <style>
@@ -442,25 +439,6 @@ main {
 }
 
 </style>
-
-{#if false} <!-- Removed showPinModal condition -->
-  <PinModal
-    show={false}
-    pin={''}
-    title="Akses Catat Transaksi"
-    subtitle="Masukkan PIN untuk mencatat transaksi"
-    on:success={() => {
-      // showPinModal = false;
-      // PIN berhasil, tidak perlu action khusus
-    }}
-    on:error={(event) => {
-      showToastNotification(event.detail.message, 'error');
-    }}
-    on:close={() => {
-      // showPinModal = false;
-    }}
-  />
-{/if}
 
 <!-- Toast Notification -->
 <ToastNotification
@@ -516,15 +494,18 @@ main {
   </div>
 {/if}
 
-<div 
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<div
   class="flex flex-col min-h-screen bg-white w-full max-w-full overflow-x-hidden"
   ontouchstart={handleTouchStart}
   ontouchmove={handleTouchMove}
   ontouchend={handleTouchEnd}
   onclick={handleGlobalClick}
-  onkeydown={(e) => e.key === 'Escape' && handleGlobalClick()}
+  onkeydown={(e) => e.key === 'Escape' && handleGlobalClick(e)}
+  onkeypress={(e) => e.key === 'Enter' && handleGlobalClick(e)}
   role="main"
   aria-label="Halaman catat pemasukan pengeluaran"
+  tabindex="-1"
 >
   <main class="flex-1 min-h-0 overflow-y-auto w-full max-w-full overflow-x-hidden page-content"
     style="scrollbar-width:none;-ms-overflow-style:none;"

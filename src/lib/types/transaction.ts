@@ -288,7 +288,7 @@ export interface TransactionExportOptions {
 export interface TransactionState {
   transactions: Transaction[];
   currentTransaction: Transaction | null;
-  cart: CartItem[];
+  cart: any[]; // CartItem dari product.ts
   filters: TransactionFilters;
   sortOptions: TransactionSortOptions;
   isLoading: boolean;
@@ -335,12 +335,4 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-export interface CartItem {
-  product: any; // Will be imported from product.ts
-  qty: number;
-  addOns: any[]; // Will be imported from product.ts
-  sugar?: string;
-  ice?: string;
-  note?: string;
-  total: number;
-}
+// CartItem sudah di-export dari product.ts

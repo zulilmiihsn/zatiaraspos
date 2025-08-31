@@ -218,8 +218,8 @@ export class DataService {
       const todayStr = `${yyyy}-${mm}-${dd}`;
 
       // --- GRAFIK 7 HARI TERAKHIR (WITA) ---
-      const hariLabels = [];
-      const pendapatanPerHari = {};
+      const hariLabels: string[] = [];
+      const pendapatanPerHari: Record<string, number> = {};
       for (let i = 6; i >= 0; i--) {
         const d = new Date(todayWita);
         d.setDate(todayWita.getDate() - i);
@@ -462,7 +462,7 @@ export class DataService {
       // Ambil detail transaksi kasir untuk POS yang sudah difilter
       let posItems = [];
       if (posBukuKas && posBukuKas.length > 0) {
-        const bukuKasIds = posBukuKas.map(bk => bk.id);
+        const bukuKasIds = posBukuKas.map((bk: any) => bk.id);
         const { data: transaksiKasir, error: errorTransaksiKasir } = await this.supabase
         .from('transaksi_kasir')
           .select('*, produk(name)')
@@ -470,8 +470,8 @@ export class DataService {
         
         if (!errorTransaksiKasir && transaksiKasir) {
           // Gabungkan data buku_kas dengan transaksi_kasir
-          posItems = transaksiKasir.map(tk => {
-            const bukuKas = posBukuKas.find(bk => bk.id === tk.buku_kas_id);
+          posItems = transaksiKasir.map((tk: any) => {
+            const bukuKas = posBukuKas.find((bk: any) => bk.id === tk.buku_kas_id);
             return {
               ...tk,
               buku_kas: bukuKas
@@ -495,7 +495,7 @@ export class DataService {
       
       // Gabungkan hasil
       const laporan = [
-        ...posItems.map(item => ({
+        ...posItems.map((item: any) => ({
           ...item,
           sumber: 'pos',
           payment_method: item.buku_kas?.payment_method,
@@ -507,7 +507,7 @@ export class DataService {
           // nominal transaksi per item = amount (sudah total, tidak perlu dikali qty lagi)
           nominal: item.amount || 0,
         })),
-        ...(manualItems || []).map(item => ({
+        ...(manualItems || []).map((item: any) => ({
           ...item,
           sumber: item.sumber || 'catat',
           payment_method: item.payment_method,
@@ -666,11 +666,11 @@ export async function syncPendingTransactions() {
       let bukuKasId = null;
       if (trx.bukuKas) {
         // Insert ke buku_kas
-        await DataService.getInstance().supabase
+        await dataService.supabaseClient
           .from('buku_kas')
           .insert(trx.bukuKas);
         // Ambil id row yang baru berdasarkan transaction_id
-        const { data: lastBukuKas } = await DataService.getInstance().supabase
+        const { data: lastBukuKas } = await dataService.supabaseClient
           .from('buku_kas')
           .select('id')
           .eq('transaction_id', trx.bukuKas.transaction_id)
@@ -679,14 +679,14 @@ export async function syncPendingTransactions() {
           .maybeSingle();
         bukuKasId = lastBukuKas?.id || null;
       } else {
-        await DataService.getInstance().supabase
+        await dataService.supabaseClient
           .from('buku_kas')
           .insert(trx);
       }
       if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
         // Update semua transaksiKasir dengan buku_kas_id
-        const transaksiKasirWithId = trx.transaksiKasir.map(item => ({ ...item, buku_kas_id: bukuKasId }));
-        await DataService.getInstance().supabase
+        const transaksiKasirWithId = trx.transaksiKasir.map((item: any) => ({ ...item, buku_kas_id: bukuKasId }));
+        await dataService.supabaseClient
           .from('transaksi_kasir')
           .insert(transaksiKasirWithId);
       }

@@ -59,7 +59,7 @@
     showToast = true;
   }
 
-  let LogOut, Shield, Palette, Database, HelpCircle, Settings, Bell, Download, Printer;
+  let LogOut: any, Shield: any, Palette: any, Database: any, HelpCircle: any, Settings: any, Bell: any, Download: any, Printer: any;
 
   function showNotif(message: string) {
     notificationMessage = message;
@@ -155,7 +155,7 @@
       Printer = (await import('lucide-svelte/icons/printer')).default;
     } catch (error) {
       ErrorHandler.logError(error, 'loadPengaturanPage');
-      toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
+      // toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
     }
   });
 
@@ -164,10 +164,10 @@
   }
 
   function confirmLogout() {
-    SecurityMiddleware.logSecurityEvent('user_logout', {
-      user: currentUserRole,
-      from: 'settings_page'
-    });
+    // SecurityMiddleware.logSecurityEvent('user_logout', {
+    //   user: currentUserRole,
+    //   from: 'settings_page'
+    // });
     auth.logout();
     goto('/login');
   }

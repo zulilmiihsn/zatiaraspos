@@ -3,7 +3,7 @@ import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
 import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 import { userRole } from '$lib/stores/userRole';
-let Utensils, Shield;
+let Utensils: any, Shield: any;
 onMount(() => {
   userRole.subscribe(role => {
     if (role !== 'pemilik') {

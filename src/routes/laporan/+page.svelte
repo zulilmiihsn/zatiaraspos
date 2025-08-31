@@ -13,14 +13,14 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 import { createToastManager, ErrorHandler } from '$lib/utils/index';
 
-// Lazy load icons
-let Wallet, ArrowDownCircle, ArrowUpCircle, FilterIcon;
+// Lazy load icons with proper typing
+let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
 // Hapus variabel userRole yang lama
 // let userRole = '';
 
 // Ganti dengan subscribe ke store
 let currentUserRole = '';
-let userProfileData = null;
+let userProfileData: any = null;
 let unsubscribeBranch: (() => void) | null = null;
 let isInitialLoad = true; // Add flag to prevent double fetching
 
@@ -95,35 +95,39 @@ async function initializePageData() {
   setupRealtimeSubscriptions();
 }
 
-onMount(async () => {
-  const icons = await Promise.all([
+onMount(() => {
+  Promise.all([
     import('lucide-svelte/icons/wallet'),
     import('lucide-svelte/icons/arrow-down-circle'),
     import('lucide-svelte/icons/arrow-up-circle'),
     import('lucide-svelte/icons/filter')
-  ]);
-  Wallet = icons[0].default;
-  ArrowDownCircle = icons[1].default;
-  ArrowUpCircle = icons[2].default;
-  FilterIcon = icons[3].default;
+  ]).then(icons => {
+    Wallet = icons[0].default;
+    ArrowDownCircle = icons[1].default;
+    ArrowUpCircle = icons[2].default;
+    FilterIcon = icons[3].default;
+  });
   
   // Removed fetchPin() and locked_pages check
-  await initializePageData();
-
-  // Jika role belum ada di store, coba validasi dengan Supabase
-  if (!currentUserRole) {
-    const { data: { session } } = await dataService.supabaseClient.auth.getSession();
-    if (session?.user) {
-      const { data: profile } = await dataService.supabaseClient
-        .from('profil')
-        .select('role, username')
-        .eq('id', session.user.id)
-        .single();
-      if (profile) {
-        setUserRole(profile.role, profile);
-      }
+  initializePageData().then(() => {
+    // Jika role belum ada di store, coba validasi dengan Supabase
+    if (!currentUserRole) {
+      dataService.supabaseClient.auth.getSession().then(({ data: { session } }: any) => {
+        if (session?.user) {
+          dataService.supabaseClient
+            .from('profil')
+            .select('role, username')
+            .eq('id', session.user.id)
+            .single()
+            .then(({ data: profile }: any) => {
+              if (profile) {
+                setUserRole(profile.role, profile);
+              }
+            });
+        }
+      });
     }
-  }
+  });
   
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -222,19 +226,19 @@ let showBebanLain = true;
 // Removed PIN Modal State (showPinModal, pin, errorTimeout, isClosing)
 
 // Inisialisasi summary dan list dengan default kosong
-let summary = { pendapatan: null, pengeluaran: null, saldo: null };
+let summary: { pendapatan: number | null; pengeluaran: number | null; saldo: number | null; labaKotor: number | null; pajak: number | null; labaBersih: number | null } = { pendapatan: null, pengeluaran: null, saldo: null, labaKotor: null, pajak: null, labaBersih: null };
 let pemasukanUsaha = [];
 let pemasukanLain = [];
 let bebanUsaha = [];
 let bebanLain = [];
 
-let laporan = [];
+let laporan: any[] = [];
 
 // Tambahan: Data transaksi kas terstruktur untuk accordion
-$: pemasukanUsahaDetail = laporan.filter(t => t.tipe === 'in' && t.jenis === 'pendapatan_usaha');
-$: pemasukanLainDetail = laporan.filter(t => t.tipe === 'in' && t.jenis === 'lainnya');
-$: bebanUsahaDetail = laporan.filter(t => t.tipe === 'out' && t.jenis === 'beban_usaha');
-$: bebanLainDetail = laporan.filter(t => t.tipe === 'out' && t.jenis === 'lainnya');
+$: pemasukanUsahaDetail = laporan.filter((t: any) => t.tipe === 'in' && t.jenis === 'pendapatan_usaha');
+$: pemasukanLainDetail = laporan.filter((t: any) => t.tipe === 'in' && t.jenis === 'lainnya');
+$: bebanUsahaDetail = laporan.filter((t: any) => t.tipe === 'out' && t.jenis === 'beban_usaha');
+$: bebanLainDetail = laporan.filter((t: any) => t.tipe === 'out' && t.jenis === 'lainnya');
 
 $: pemasukanUsahaQris = pemasukanUsahaDetail.filter(t => t.payment_method === 'non-tunai');
 $: pemasukanUsahaTunai = pemasukanUsahaDetail.filter(t => t.payment_method === 'tunai');
@@ -249,33 +253,33 @@ $: bebanLainTunai = bebanLainDetail.filter(t => t.payment_method === 'tunai');
 // Reactive statements untuk total QRIS/Tunai
 $: totalQrisAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiAll = [...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 // Memoize untuk summary box
-const memoizedSummary = memoize((pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail) => {
+const memoizedSummary = memoize((pemasukanUsahaDetail: any[], pemasukanLainDetail: any[], bebanUsahaDetail: any[], bebanLainDetail: any[]) => {
   // Gunakan nominal seperti dataService, fallback ke amount jika nominal tidak ada
-  const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
-  const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  const totalPemasukan = pemasukanUsahaDetail.concat(pemasukanLainDetail).reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+  const totalPengeluaran = bebanUsahaDetail.concat(bebanLainDetail).reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
   
   // Laba (Rugi) Kotor = Pendapatan - Pengeluaran
   const labaKotor = totalPemasukan - totalPengeluaran;
@@ -312,8 +316,8 @@ $: if (!showFilter && startDate && endDate && filterType) {
   
   // Debounce untuk menghindari multiple calls
   filterChangeTimeout = setTimeout(() => {
-  loadLaporanData();
-  }, 100);
+    loadLaporanData();
+  }, 300) as any;
 }
 
 // Tambahkan watcher khusus untuk filter bulanan
@@ -358,15 +362,15 @@ $: if (!showFilter && filterType === 'tahunan' && startDate) {
 }
 
 // Helper function untuk format currency yang aman
-function formatCurrency(amount) {
+function formatCurrency(amount: any): string {
   if (amount === null || amount === undefined || isNaN(amount)) {
-    return '--';
+    return '0';
   }
   return amount.toLocaleString('id-ID');
 }
 
 // Fungsi untuk group dan sum item berdasarkan nama (description/catatan)
-function groupAndSumByName(items) {
+function groupAndSumByName(items: any[]): any[] {
   const map = new Map();
   for (const item of items) {
     // Gunakan nama produk yang sebenarnya tanpa flag
@@ -383,41 +387,41 @@ function groupAndSumByName(items) {
 // Reactive statements untuk total QRIS/Tunai per sub-group
 $: totalQrisPendapatanUsaha = pemasukanUsahaDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPendapatanUsaha = pemasukanUsahaDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisPemasukanLain = pemasukanLainDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiPemasukanLain = pemasukanLainDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisBebanUsaha = bebanUsahaDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiBebanUsaha = bebanUsahaDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalQrisBebanLain = bebanLainDetail
   .filter(t => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
 $: totalTunaiBebanLain = bebanLainDetail
   .filter(t => t.payment_method === 'tunai')
-  .reduce((sum, t) => sum + (t.nominal || t.amount || 0), 0);
+  .reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
 
-function getDeskripsiLaporan(item) {
+function getDeskripsiLaporan(item: any): string {
   return item?.description?.trim() || item?.catatan?.trim() || '-';
 }
 
-function getLocalDateStringWITA() {
+function getLocalDateStringWITA(): string {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -425,9 +429,9 @@ function getLocalDateStringWITA() {
   return `${year}-${month}-${day}`;
 }
 
-function formatDate(dateString, isEndDate = false) {
+function formatDate(dateString: any, isEndDate = false): string {
   if (!dateString) {
-    return isEndDate ? 'Pilih tanggal akhir' : 'Pilih tanggal awal';
+    return '';
   }
   const date = new Date(new Date(dateString + 'T00:00:00').toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
   return date.toLocaleDateString('id-ID', { 
@@ -438,16 +442,16 @@ function formatDate(dateString, isEndDate = false) {
 }
 
 // Fungsi untuk membuka date picker
-function openDatePicker() {
+function openDatePicker(): void {
   showDatePicker = true;
 }
 
-function openEndDatePicker() {
+function openEndDatePicker(): void {
   showEndDatePicker = true;
 }
 
 // Fungsi untuk menerapkan filter
-async function applyFilter() {
+async function applyFilter(): Promise<void> {
   // Update filter state
   showFilter = false;
   
@@ -460,7 +464,7 @@ async function applyFilter() {
 
 // State untuk item yang sedang diperpanjang (expanded)
 let expandedItems = new Set();
-function toggleExpand(name) {
+function toggleExpand(name: any): void {
   if (expandedItems.has(name)) {
     expandedItems.delete(name);
   } else {
@@ -481,7 +485,7 @@ let showToast = false;
 let toastMessage = '';
 let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
 
-function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
+function showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success'): void {
   toastMessage = message;
   toastType = type;
   showToast = true;
@@ -492,24 +496,7 @@ const toastManager = createToastManager();
 
 </script>
 
-{#if false} <!-- Removed showPinModal condition -->
-  <PinModal
-    show={false}
-    pin={''}
-    title="Akses Laporan"
-    subtitle="Masukkan PIN untuk melihat laporan"
-    on:success={() => {
-      // showPinModal = false;
-      // PIN berhasil, tidak perlu action khusus
-    }}
-    on:error={(event) => {
-      showToastNotification(event.detail.message, 'error');
-    }}
-    on:close={() => {
-      // showPinModal = false;
-    }}
-  />
-{/if}
+<!-- PinModal removed -->
 
 <!-- Toast Notification -->
 {#if toastManager.showToast}
@@ -517,7 +504,7 @@ const toastManager = createToastManager();
     show={toastManager.showToast}
     message={toastManager.toastMessage}
     type={toastManager.toastType}
-    duration={3000}
+    duration={2000}
     position="top"
   />
 {/if}
@@ -630,7 +617,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -642,7 +629,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -663,7 +650,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -675,7 +662,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -711,7 +698,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -723,7 +710,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -744,7 +731,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}
@@ -756,7 +743,7 @@ const toastManager = createToastManager();
                     {/if}
                     {#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped }
                       <li class="flex justify-between text-sm text-gray-600 md:text-base">
-                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)}>{grouped.name}</span>
+                        <span class="{expandedItems.has(grouped.name) ? '' : 'truncate max-w-[60%]'} cursor-pointer" title={grouped.name} onclick={() => toggleExpand(grouped.name)} onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)} role="button" tabindex="0">{grouped.name}</span>
                         <span class="font-bold text-gray-700 whitespace-nowrap">Rp {grouped.total.toLocaleString('id-ID')}</span>
                       </li>
                     {/each}

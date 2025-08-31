@@ -96,11 +96,11 @@ export enum FinancialType {
 // ============================================================================
 
 export interface AppState {
-  auth: AuthState;
-  user: UserState;
-  products: ProductState;
-  transactions: TransactionState;
-  financial: FinancialState;
+  auth: any; // AuthState interface not defined yet
+  user: any; // UserState interface not defined yet
+  products: any; // ProductState interface not defined yet
+  transactions: any; // TransactionState interface not defined yet
+  financial: any; // FinancialState interface not defined yet
   ui: UIState;
 }
 

@@ -16,7 +16,7 @@ const navs = [
 
 let indicatorLeft = 0;
 let indicatorWidth = 0;
-let navRefs = [];
+let navRefs: HTMLElement[] = [];
 
 // Touch handling variables
 let touchStartX = 0;
@@ -52,7 +52,7 @@ $: {
   }
 }
 
-function handleTouchStart(e) {
+function handleTouchStart(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   touchStartX = e.touches[0].clientX;
@@ -61,7 +61,7 @@ function handleTouchStart(e) {
   clickBlocked = false;
 }
 
-function handleTouchMove(e) {
+function handleTouchMove(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   touchEndX = e.touches[0].clientX;
@@ -79,7 +79,7 @@ function handleTouchMove(e) {
   }
 }
 
-function handleTouchEnd(e) {
+function handleTouchEnd(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   if (isSwiping) {
@@ -105,7 +105,7 @@ function handleTouchEnd(e) {
   }
 }
 
-function handleNavClick(path, e) {
+function handleNavClick(path: string, e: Event) {
   if (clickBlocked) {
     e.preventDefault();
     e.stopPropagation();
@@ -141,7 +141,6 @@ function handleNavClick(path, e) {
       aria-label={nav.label}
       bind:this={navRefs[i]}
       href={nav.path}
-      sveltekit:prefetch
       onclick={(e) => handleNavClick(nav.path, e)}
     >
       <svelte:component this={nav.icon} size={18} class="block mb-0.5 w-[18px] h-[18px] stroke-[1.7] transition-colors duration-200 ease-out" />

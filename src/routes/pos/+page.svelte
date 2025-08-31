@@ -575,7 +575,7 @@ function handleKeydownOpenAddOnModal(product: any, e: KeyboardEvent): void { if 
         {/each}
       {:else if (categories ?? []).length === 0}
         <!-- Button Custom Item di samping 'Semua' jika tidak ada kategori -->
-        <button class="flex-shrink-0 min-w-[48px] w-12 px-3 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center justify-center" type="button" onclick={handleShowCustomItemModal}>
+        <button class="flex-shrink-0 min-w-[48px] w-12 px-3 py-2 rounded-lg border font-medium text-base cursor-pointer transition-colors duration-150 mb-1 bg-pink-500 text-white border-pink-500 flex items-center justify-center" type="button" aria-label="Tambah item custom" onclick={handleShowCustomItemModal}>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
         </button>
         <div class="flex items-center gap-2 h-[40px] px-4 text-sm text-gray-400">
@@ -631,7 +631,7 @@ function handleKeydownOpenAddOnModal(product: any, e: KeyboardEvent): void { if 
       <div class="grid grid-cols-2 gap-3 px-4 pb-4 min-h-0 md:grid-cols-3 md:gap-6 md:px-8 md:pb-8 lg:grid-cols-6" transition:slide={{ duration: 250 }}>
         {#if isLoadingProducts}
           {#each Array(skeletonCount) as _, i}
-            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100 md:p-6 md:max-h-[320px] md:min-h-[180px]" />
+            <div class="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 animate-pulse rounded-xl shadow-md flex flex-col items-center justify-between p-2.5 aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer transition-shadow border border-gray-100 md:p-6 md:max-h-[320px] md:min-h-[180px]"></div>
           {/each}
         {:else if filteredProducts.length === 0}
           <div class="col-span-2 md:col-span-3 flex flex-col items-center justify-center py-12 text-center min-h-[50vh] pointer-events-none">

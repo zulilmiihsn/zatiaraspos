@@ -124,7 +124,9 @@
 </style>
 
 {#if open}
-  <div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-label="Modal sheet" onkeyup={(e) => e.key === 'Enter' && close()}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-label="Modal sheet" onkeyup={(e) => e.key === 'Enter' && close()} tabindex="-1" onkeypress={(e) => e.key === 'Enter' && close()}>
     <div
       class="modal-sheet w-full max-w-[100vw] overflow-x-hidden px-0 sm:px-0 pt-2 pb-0"
       style="max-width:100vw;"

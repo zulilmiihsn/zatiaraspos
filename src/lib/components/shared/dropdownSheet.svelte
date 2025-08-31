@@ -1,20 +1,22 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  export let options = [];
+  export let options: { value: string; label: string }[] = [];
   export let value = '';
   export let open = false;
   const dispatch = createEventDispatcher();
   let selected = value;
   $: if (open) selected = value;
-  function close() { dispatch('close'); }
-  function selectOption(optionValue) { 
+    function close() { dispatch('close'); }
+  function selectOption(optionValue: string) {
     dispatch('select', optionValue); 
     close(); 
   }
 </script>
 
 {#if open}
-  <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-label="Modal pilih opsi" onkeyup={(e) => e.key === 'Enter' && close()}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div class="modal-backdrop" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="dialog" aria-label="Modal pilih opsi" onkeyup={(e) => e.key === 'Enter' && close()} tabindex="-1" onkeypress={(e) => e.key === 'Enter' && close()}>
     <div class="sheet" onclick={(e) => e.stopPropagation()} role="document">
       <div class="sheet-header">Pilih Opsi</div>
       <div class="dropdown-list">

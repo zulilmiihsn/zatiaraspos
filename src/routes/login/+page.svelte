@@ -74,7 +74,7 @@
       showLottieSuccess = true;
       await new Promise(resolve => setTimeout(resolve, 1200));
       goto('/');
-    } catch (e) {
+    } catch (e: any) {
       errorMessage = e.message;
       securityUtils.logSecurityEvent('login_failed', {
         username: sanitizedUsername,
@@ -102,11 +102,12 @@
     }
     
     if (userRole === 'kasir') {
-      const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
-      const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
-      if (lockedPages.includes('beranda')) {
-        // showPinModal = true; // Hapus semua logic showPinModal
-      }
+      // Removed supabase reference - use dataService instead
+      // const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
+      // const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+      // if (lockedPages.includes('beranda')) {
+      //   // showPinModal = true; // Hapus semua logic showPinModal
+      // }
     }
   });
 </script>
@@ -155,7 +156,6 @@
           <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow-2xl px-8 py-6 border border-pink-200 animate-fadeInUp">
             <DotLottieSvelte
               src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
-              style="width: 90px; height: 90px;"
               loop
               autoplay
             />

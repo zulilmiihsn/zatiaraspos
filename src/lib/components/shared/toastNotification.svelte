@@ -13,9 +13,8 @@
   export let position: 'top' | 'bottom' = 'top';
   export let autoDismiss = true; // Always true
 
-  let timeoutId: number;
+  let timeoutId: any;
 
-  // Auto dismiss functionality
   $: if (show && autoDismiss && duration > 0) {
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {

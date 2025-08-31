@@ -29,7 +29,7 @@ onMount(() => {
 });
 
 // Lazy load icons
-let Wallet, ShoppingBag, Coins, Users, Clock, TrendingUp;
+let Wallet: any, ShoppingBag: any, Coins: any, Users: any, Clock: any, TrendingUp: any;
 let omzet = 0;
 let jumlahTransaksi = 0;
 let profit = 0;
@@ -37,9 +37,9 @@ let itemTerjual = 0;
 let totalItem = 0;
 let avgTransaksi = 0;
 let jamRamai = '';
-let weeklyIncome = [];
+let weeklyIncome: any[] = [];
 let weeklyMax = 1;
-let bestSellers = [];
+let bestSellers: any[] = [];
 
 // Subscribe ke store
 let currentUserRole = '';
@@ -127,17 +127,13 @@ onMount(async () => {
     // Fetch ulang data
     await loadDashboardData();
   });
-  if (browser) {
-    window.refreshDashboardData = loadDashboardData;
-  }
+  // window.refreshDashboardData removed
 });
 
 onDestroy(() => {
   if (unsubscribeBranch) unsubscribeBranch();
   realtimeManager.unsubscribeAll();
-  if (browser) {
-    delete window.refreshDashboardData;
-  }
+  // window.refreshDashboardData cleanup removed
 });
 
 // Load dashboard data dengan smart caching
@@ -198,7 +194,7 @@ function setupRealtimeSubscriptions() {
   });
 }
 
-function applyDashboardData(data) {
+function applyDashboardData(data: any) {
   if (!data) return;
   omzet = data.omzet;
   jumlahTransaksi = data.jumlahTransaksi;
@@ -220,7 +216,7 @@ async function refreshDashboardData() {
 // Removed fetchPin()
 
 // Data dummy, nanti diisi dari Supabase
-let modalAwal = null;
+let modalAwal: any = null;
 
 // Touch handling variables
 let touchStartX = 0;
@@ -259,7 +255,11 @@ const stats = [
   },
 ];
 
-let imageError = {};
+let imageError: Record<number, boolean> = {};
+
+function handleImgError(index: number) {
+  imageError[index] = true;
+}
 
 // Hapus deklarasi let days = ...
 // Tambahkan fungsi untuk generate label hari dinamis
@@ -306,12 +306,12 @@ let modalAwalInput = '';
 let pinInputToko = '';
 let pinErrorToko = '';
 let tokoAktifLocal = false;
-let sesiAktif = null;
+let sesiAktif: any = null;
 let ringkasanTutup = { modalAwal: 0, totalPenjualan: 0, pemasukanTunai: 0, pengeluaranTunai: 0, uangKasir: 0 };
 
-function updateTokoAktif(val) {
+function updateTokoAktif(val: any) {
   tokoAktifLocal = val;
-  if (browser) window.tokoAktif = val;
+  // window.tokoAktif removed
 }
 
 async function cekSesiToko() {
@@ -369,7 +369,7 @@ function handleOpenTokoModal() {
 }
 
 // Tambahkan state untuk pending action setelah PIN benar
-let pendingAction = null;
+let pendingAction: any = null;
 
 async function handleBukaToko() {
   const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
@@ -401,7 +401,7 @@ async function hitungRingkasanTutup() {
   const pengeluaranTunai = kas.filter((t) => t.tipe === 'out' && t.payment_method === 'tunai').reduce((a, b) => a + (b.amount || 0), 0);
   const modalAwal = sesiAktif.opening_cash || 0;
   // Total penjualan = semua pemasukan (in) dari sumber pos
-  const totalPenjualan = kas.filter((t) => t.tipe === 'in' && t.sumber === 'pos').reduce((a, b) => a + (b.amount || 0), 0);
+  const totalPenjualan = kas.filter((t: any) => t.tipe === 'in' && t.sumber === 'pos').reduce((a: number, b: any) => a + (b.amount || 0), 0);
   // Uang kasir seharusnya
   const uangKasir = modalAwal + penjualanTunai - pengeluaranTunai;
   ringkasanTutup = {
@@ -423,11 +423,11 @@ async function handleTutupToko() {
   cekSesiToko();
 }
 
-function handleTouchStart(e) {
+function handleTouchStart(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   // Don't handle touch on interactive elements
-  const target = e.target;
+  const target = e.target as HTMLElement;
   if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
       target.closest('button') || target.closest('input') || target.closest('a')) {
     return;
@@ -439,11 +439,11 @@ function handleTouchStart(e) {
   clickBlocked = false;
 }
 
-function handleTouchMove(e) {
+function handleTouchMove(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   // Don't handle touch on interactive elements
-  const target = e.target;
+  const target = e.target as HTMLElement;
   if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
       target.closest('button') || target.closest('input') || target.closest('a')) {
     return;
@@ -462,11 +462,11 @@ function handleTouchMove(e) {
   }
 }
 
-function handleTouchEnd(e) {
+function handleTouchEnd(e: TouchEvent) {
   if (!isTouchDevice) return;
   
   // Don't handle touch on interactive elements
-  const target = e.target;
+  const target = e.target as HTMLElement;
   if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
       target.closest('button') || target.closest('input') || target.closest('a')) {
     return;
@@ -496,7 +496,7 @@ function handleTouchEnd(e) {
   }
 }
 
-function handleGlobalClick(e) {
+function handleGlobalClick(e: Event) {
   if (clickBlocked) {
     e.preventDefault();
     e.stopPropagation();
@@ -505,8 +505,8 @@ function handleGlobalClick(e) {
 }
 
 // New function to format modalAwalInput to Rupiah format
-function formatModalAwalInput(e) {
-  let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+function formatModalAwalInput(e: Event) {
+  let value = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
   if (value.length > 0) {
     value = Number(value).toLocaleString('id-ID'); // Format as Rupiah
   }
@@ -524,7 +524,7 @@ function getModalAwalInputFormatted() {
 }
 
 // New function to set the formatted value for binding
-function setModalAwalInputFormatted(value) {
+function setModalAwalInputFormatted(value: any) {
   modalAwalInput = value;
 }
 
@@ -557,11 +557,11 @@ const sevenDaysAgoWITA = new Date(todayWITA);
 sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
 const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
-let selectedBarIndex = null;
+let selectedBarIndex: any = null;
 let showBarInsight = false;
-let barHoldTimeout = null;
+let barHoldTimeout: any = null;
 
-function handleBarPointerDown(i) {
+function handleBarPointerDown(i: any) {
   barHoldTimeout = setTimeout(() => {
     selectedBarIndex = i;
     showBarInsight = true;
@@ -575,27 +575,7 @@ function handleBarPointerUp() {
 }
 </script>
 
-{#if false} <!-- Removed showPinModal condition -->
-  <PinModal
-    show={false}
-    pin={''}
-    title="Akses Beranda"
-    subtitle="Masukkan PIN untuk melihat beranda"
-    on:success={() => {
-      // showPinModal = false;
-      if (pendingAction) {
-        pendingAction();
-        pendingAction = null;
-      }
-    }}
-    on:error={(event) => {
-      showToastNotification(event.detail.message, 'error');
-    }}
-    on:close={() => {
-      // showPinModal = false;
-    }}
-  />
-{/if}
+<!-- PinModal removed -->
 
 <!-- Toast Notification -->
 <ToastNotification
@@ -608,7 +588,9 @@ function handleBarPointerUp() {
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" aria-label="Modal buka tutup toko" onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)}>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" aria-label="Modal buka tutup toko" onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)} tabindex="-1" onkeypress={(e) => e.key === 'Enter' && (showTokoModal = false)}>
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup p-8 md:p-12 lg:max-w-lg lg:p-10 xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-16" onclick={event => event.stopPropagation()} role="document">
       {#if isBukaToko}
         <div class="flex flex-col items-center mb-4">
@@ -913,147 +895,12 @@ function handleBarPointerUp() {
   animation: glow 1.5s ease-in-out 1;
 }
 </style>
-    isSwiping = true;
-
-    clickBlocked = true;
-
-    }
-
-  }
 
 }
 
 
 
-function handleTouchEnd(e) {
 
-  if (!isTouchDevice) return;
-
-  
-
-  // Don't handle touch on interactive elements
-
-  const target = e.target;
-
-  if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || 
-
-      target.closest('button') || target.closest('input') || target.closest('a')) {
-
-    return;
-
-  }
-
-  
-
-  if (browser && isSwiping) {
-
-    // Handle swipe navigation
-
-    const deltaX = touchEndX - touchStartX;
-
-    const viewportWidth = window.innerWidth;
-
-    const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-
-    
-
-    if (Math.abs(deltaX) > swipeThreshold) {
-
-      const currentIndex = 0; // Beranda is index 0
-
-      if (deltaX > 0 && currentIndex > 0) {
-
-        // Swipe right - go to previous tab
-
-        goto(navs[currentIndex - 1].path);
-
-      } else if (deltaX < 0 && currentIndex < navs.length - 1) {
-
-        // Swipe left - go to next tab
-
-        goto(navs[currentIndex + 1].path);
-
-      }
-
-    }
-
-    
-
-    // Block any subsequent click events
-
-    setTimeout(() => {
-
-      clickBlocked = false;
-
-    }, 100);
-
-  }
-
-}
-
-
-
-function handleGlobalClick(e) {
-
-  if (clickBlocked) {
-
-    e.preventDefault();
-
-    e.stopPropagation();
-
-    return;
-
-  }
-
-}
-
-
-
-// New function to format modalAwalInput to Rupiah format
-
-function formatModalAwalInput(e) {
-
-  let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
-
-  if (value.length > 0) {
-
-    value = Number(value).toLocaleString('id-ID'); // Format as Rupiah
-
-  }
-
-  modalAwalInput = value;
-
-}
-
-
-
-// New function to get the raw number from formatted input
-
-function getModalAwalInputRaw() {
-
-  return Number(modalAwalInput.replace(/\./g, '')); // Remove dots and convert to number
-
-}
-
-
-
-// New function to set the raw number to formatted input
-
-function getModalAwalInputFormatted() {
-
-  return modalAwalInput;
-
-}
-
-
-
-// New function to set the formatted value for binding
-
-function setModalAwalInputFormatted(value) {
-
-  modalAwalInput = value;
-
-}
 
 
 
@@ -1063,55 +910,11 @@ let topbarRef: HTMLDivElement | null = null;
 
 let sentinelRef: HTMLDivElement | null = null;
 
-onMount(() => {
-
-  // Observer untuk sticky topbar
-
-  if (sentinelRef && topbarRef) {
-
-    const observer = new window.IntersectionObserver((entries) => {
-
-      hideTopbar = !entries[0].isIntersecting;
-
-    }, { threshold: 0 });
-
-    observer.observe(sentinelRef);
-
-  }
-
-});
 
 
 
-// Fungsi untuk mendapatkan tanggal hari ini WITA (tanpa jam)
-
-function getTodayWITA() {
-
-  // Ambil waktu sekarang di Asia/Makassar (WITA)
-
-  const now = new Date();
-
-  const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
-
-  const witaDate = new Date(witaString);
-
-  witaDate.setHours(0, 0, 0, 0); // Set ke jam 00:00:00
-
-  return witaDate;
-
-}
 
 
-
-// Inisialisasi range 7 hari terakhir berdasarkan hari WITA
-
-const todayWITA = getTodayWITA();
-
-const sevenDaysAgoWITA = new Date(todayWITA);
-
-sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
-
-const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
 
 
@@ -1123,75 +926,12 @@ let barHoldTimeout = null;
 
 
 
-function handleBarPointerDown(i) {
-
-  barHoldTimeout = setTimeout(() => {
-
-    selectedBarIndex = i;
-
-    showBarInsight = true;
-
-  }, 120); // Sedikit delay agar tidak accidental tap
-
-}
 
 
 
-function handleBarPointerUp() {
-
-  clearTimeout(barHoldTimeout);
-
-  showBarInsight = false;
-
-  selectedBarIndex = null;
-
-}
-
-</script>
 
 
-
-{#if false} <!-- Removed showPinModal condition -->
-
-  <PinModal
-
-    show={false}
-
-    pin={''}
-
-    title="Akses Beranda"
-
-    subtitle="Masukkan PIN untuk melihat beranda"
-
-    on:success={() => {
-
-      // showPinModal = false;
-
-      if (pendingAction) {
-
-        pendingAction();
-
-        pendingAction = null;
-
-      }
-
-    }}
-
-    on:error={(event) => {
-
-      showToastNotification(event.detail.message, 'error');
-
-    }}
-
-    on:close={() => {
-
-      // showPinModal = false;
-
-    }}
-
-  />
-
-{/if}
+<!-- PinModal removed -->
 
 
 
@@ -1214,144 +954,6 @@ function handleBarPointerUp() {
 
 
 <!-- Modal Buka/Tutup Toko -->
-
-{#if showTokoModal}
-
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onclick={() => showTokoModal = false} onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)} role="dialog" aria-modal="true" aria-label="Modal buka tutup toko" onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)}>
-
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] box-border mx-auto modal-slideup p-8 md:p-12 lg:max-w-lg lg:p-10 xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-16" onclick={event => event.stopPropagation()} role="document">
-
-      {#if isBukaToko}
-
-        <div class="flex flex-col items-center mb-4">
-
-          <div class="text-4xl mb-2">🍹</div>
-
-          <h2 class="font-bold text-xl mb-1 text-pink-500">Buka Toko</h2>
-
-          <div class="text-sm text-gray-400 mb-2">Yuk, buka toko dan mulai hari ini.</div>
-
-        </div>
-
-        <div class="mb-4">
-
-          <div class="relative">
-
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400 font-semibold select-none">Rp</span>
-
-            <input type="text" inputmode="numeric" pattern="[0-9]*" min="0"
-
-              bind:value={modalAwalInput}
-
-              oninput={formatModalAwalInput}
-
-              class="w-full border-2 border-pink-200 bg-pink-50 rounded-xl pl-12 pr-4 py-3 text-lg font-bold text-gray-800 focus:ring-2 focus:ring-pink-300 outline-none transition placeholder-pink-300 shadow-sm"
-
-              placeholder="Modal awal kas hari ini" />
-
-          </div>
-
-        </div>
-
-        {#if pinErrorToko}
-
-          <div 
-
-            class="fixed top-20 left-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ease-out"
-
-            style="transform: translateX(-50%);"
-
-            in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-
-            out:fade={{ duration: 200 }}
-
-          >
-
-            {pinErrorToko}
-
-          </div>
-
-        {/if}
-
-        <button class="w-full bg-gradient-to-r from-pink-500 to-pink-400 text-white font-extrabold rounded-xl py-3 mt-2 shadow-xl hover:scale-105 hover:shadow-2xl active:scale-100 transition-all text-lg flex items-center justify-center gap-2" onclick={handleBukaToko}>
-
-          <span class="text-2xl">🍹</span>
-
-          <span>Buka Toko Sekarang</span>
-
-        </button>
-
-      {:else}
-
-        <div class="flex flex-col items-center mb-4">
-
-          <div class="text-4xl mb-2">🔒</div>
-
-          <h2 class="font-bold text-xl mb-1 text-pink-500">Tutup Toko</h2>
-
-          <div class="text-sm text-gray-400 mb-2 text-center">Terima kasih atas kerja keras hari ini! Cek ringkasan sebelum tutup toko.</div>
-
-        </div>
-
-        <div class="space-y-3 text-gray-700 text-base mb-4">
-
-          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
-
-            <span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span>
-
-          </div>
-
-          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
-
-            <span>Total Penjualan</span><span>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span>
-
-          </div>
-
-          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
-
-            <span>Pemasukan Tunai</span><span>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span>
-
-          </div>
-
-          <div class="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3 flex justify-between items-center font-semibold">
-
-            <span>Pengeluaran Tunai</span><span>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span>
-
-          </div>
-
-          <div class="mb-1 flex flex-col items-center">
-
-            <div class="font-bold text-pink-600 mb-1 text-base md:text-lg text-center">Uang Kasir Seharusnya</div>
-
-            <div class="rounded-xl bg-white border-2 border-pink-400 px-2 py-5 flex flex-col items-center justify-center w-full max-w-xs mx-8 md:mx-16 shadow-sm">
-
-              <div class="text-4xl mb-1">💸</div>
-
-              <span class="whitespace-nowrap text-2xl md:text-3xl font-extrabold text-pink-600 animate-glow">Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span>
-
-              <div class="text-xs text-gray-400 mt-2 text-center">Pastikan uang kasir sesuai sebelum tutup toko</div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <button class="w-full bg-gradient-to-r from-pink-500 to-pink-400 text-white font-extrabold rounded-xl py-3 mt-2 shadow-xl hover:scale-105 hover:shadow-2xl active:scale-100 transition-all text-lg flex items-center justify-center gap-2" onclick={handleTutupToko}>
-
-          <span class="text-2xl">🔒</span>
-
-          <span>Tutup Toko Sekarang</span>
-
-        </button>
-
-      {/if}
-
-    </div>
-
-  </div>
-
-{/if}
 
 
 
@@ -1795,34 +1397,4 @@ function handleBarPointerUp() {
 
 
 
-<style>
 
-.modal-slideup {
-
-  animation: modalSlideUp 0.28s cubic-bezier(.4,1.4,.6,1);
-
-}
-
-@keyframes modalSlideUp {
-
-  from { transform: translateY(64px); opacity: 0; }
-
-  to { transform: translateY(0); opacity: 1; }
-
-}
-
-@keyframes glow {
-
-  0%, 100% { box-shadow: 0 0 0 0 #ec489980; }
-
-  50% { box-shadow: 0 0 16px 4px #ec489980; }
-
-}
-
-.animate-glow {
-
-  animation: glow 1.5s ease-in-out 1;
-
-}
-
-</style>

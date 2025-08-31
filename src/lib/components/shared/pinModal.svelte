@@ -31,7 +31,7 @@
           if (errorTimeout) clearTimeout(errorTimeout);
           errorTimeout = setTimeout(() => {
             pinError = '';
-          }, 2000);
+          }, 2000) as any;
           dispatch('error', { message: 'PIN salah!' });
         }
       }

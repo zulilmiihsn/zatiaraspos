@@ -90,24 +90,24 @@ onMount(async () => {
     <h1 class="text-lg font-bold text-pink-600 mb-6 text-center">Pengaturan Draft Struk</h1>
     <form class="space-y-5" onsubmit={simpanPengaturan}>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Toko</label>
-        <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={namaToko} maxlength="50" required />
+        <label for="nama-toko" class="block text-sm font-semibold text-gray-700 mb-1">Nama Toko</label>
+        <input type="text" id="nama-toko" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={namaToko} maxlength="50" required />
             </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat</label>
-        <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={alamat} maxlength="100" required />
+        <label for="alamat" class="block text-sm font-semibold text-gray-700 mb-1">Alamat</label>
+        <input type="text" id="alamat" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={alamat} maxlength="100" required />
               </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor Telepon</label>
-        <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={telepon} maxlength="20" required />
+        <label for="telepon" class="block text-sm font-semibold text-gray-700 mb-1">Nomor Telepon</label>
+        <input type="text" id="telepon" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={telepon} maxlength="20" required />
           </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
-        <input type="text" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={instagram} maxlength="30" />
+        <label for="instagram" class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
+        <input type="text" id="instagram" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" bind:value={instagram} maxlength="30" />
         </div>
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Ucapan di Bawah Struk</label>
-        <textarea class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" rows="3" bind:value={ucapan} maxlength="120"></textarea>
+        <label for="ucapan" class="block text-sm font-semibold text-gray-700 mb-1">Ucapan di Bawah Struk</label>
+        <textarea id="ucapan" class="w-full border-2 border-pink-200 rounded-lg px-3 py-2 text-base" rows="3" bind:value={ucapan} maxlength="120"></textarea>
             </div>
       <div class="flex flex-col sm:flex-row gap-3 mt-6">
         <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-6 py-2 border border-gray-200 w-full sm:w-1/2 order-1 sm:order-1" onclick={resetToDefault} disabled={isSaving}>Reset ke Default</button>

@@ -47,56 +47,61 @@
     temp.width = cropSize;
     temp.height = cropSize;
     const ctx = temp.getContext('2d');
-    ctx.drawImage(img, sx, sy, cropSize / zoom, cropSize / zoom, 0, 0, cropSize, cropSize);
-    preview = temp.toDataURL('image/jpeg', 0.92);
+    if (ctx) {
+      ctx.drawImage(img, sx, sy, cropSize / zoom, cropSize / zoom, 0, 0, cropSize, cropSize);
+      preview = temp.toDataURL('image/jpeg', 0.92);
+    }
   }
 
   function draw() {
     if (!canvasEl || !img.complete) return;
     const ctx = canvasEl.getContext('2d');
-    ctx.clearRect(0, 0, csize, csize);
-    // Hitung ukuran gambar setelah zoom
-    const drawW = img.width * zoom;
-    const drawH = img.height * zoom;
-    // Pusatkan gambar di canvas + offset
-    const centerX = csize / 2 + offset.x;
-    const centerY = csize / 2 + offset.y;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
-    ctx.clip();
-    ctx.drawImage(
-      img,
-      centerX - drawW / 2,
-      centerY - drawH / 2,
-      drawW,
-      drawH
-    );
-    ctx.restore();
-    // Overlay gelap di luar area crop
-    ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.rect(0, 0, csize, csize);
-    ctx.rect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
-    ctx.fill('evenodd');
-    ctx.restore();
-    // Border crop
-    ctx.strokeStyle = '#ff5fa2';
-    ctx.lineWidth = 2;
-    ctx.strokeRect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
-    updatePreview();
-  }
-
-  function getPointerPosition(e) {
-    if (e.touches && e.touches.length > 0) {
-      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else {
-      return { x: e.clientX, y: e.clientY };
+    if (ctx) {
+      ctx.clearRect(0, 0, csize, csize);
+      // Hitung ukuran gambar setelah zoom
+      const drawW = img.width * zoom;
+      const drawH = img.height * zoom;
+      // Pusatkan gambar di canvas + offset
+      const centerX = csize / 2 + offset.x;
+      const centerY = csize / 2 + offset.y;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
+      ctx.clip();
+      ctx.drawImage(
+        img,
+        centerX - drawW / 2,
+        centerY - drawH / 2,
+        drawW,
+        drawH
+      );
+      ctx.restore();
+      // Overlay gelap di luar area crop
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.rect(0, 0, csize, csize);
+      ctx.rect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
+      ctx.fill('evenodd');
+      ctx.restore();
+      // Border crop
+      ctx.strokeStyle = '#ff5fa2';
+      ctx.lineWidth = 2;
+      ctx.strokeRect((csize - cropSize) / 2, (csize - cropSize) / 2, cropSize, cropSize);
+      updatePreview();
     }
   }
-  function onPointerDown(e) {
+
+  function getPointerPosition(e: TouchEvent | MouseEvent) {
+    if ('touches' in e && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if ('clientX' in e) {
+      return { x: e.clientX, y: e.clientY };
+    }
+    return { x: 0, y: 0 };
+  }
+  function onPointerDown(e: TouchEvent | MouseEvent) {
     e.preventDefault();
     dragging = true;
     const pos = getPointerPosition(e);
@@ -104,7 +109,7 @@
     startY = pos.y;
     lastOffset = { ...offset };
   }
-  function onPointerMove(e) {
+  function onPointerMove(e: TouchEvent | MouseEvent) {
     if (!dragging) return;
     e.preventDefault();
     const pos = getPointerPosition(e);
@@ -123,17 +128,18 @@
     offset.y = Math.max(-maxY, Math.min(offset.y, maxY));
     draw();
   }
-  function onPointerUp(e) {
+  function onPointerUp(e: TouchEvent | MouseEvent) {
     dragging = false;
   }
-  function onWheel(e) {
+  function onWheel(e: WheelEvent) {
     e.preventDefault();
     const delta = e.deltaY < 0 ? 0.05 : -0.05;
     zoom = Math.max(minZoom, Math.min(zoom + delta, maxZoom));
     draw();
   }
-  function onZoomInput(e) {
-    zoom = parseFloat(e.target.value);
+  function onZoomInput(e: Event) {
+    const target = e.target as HTMLInputElement;
+    zoom = parseFloat(target.value);
     draw();
   }
 

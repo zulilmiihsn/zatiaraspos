@@ -9,21 +9,18 @@ export let showSettings: boolean = true;
 let pendingCount = 0;
 let showPopover = false;
 
-onMount(async () => {
-  // Get pending transactions count
-  const pendingTransactions = await getPendingTransactions();
-  pendingCount = pendingTransactions.length;
+onMount(() => {
+  getPendingTransactions().then(transactions => {
+    pendingCount = transactions.length;
+  });
   
-  // Update count when transactions change
   const updateCount = async () => {
     const transactions = await getPendingTransactions();
     pendingCount = transactions.length;
   };
   
-  // Listen for storage changes (offline transactions)
   window.addEventListener('storage', updateCount);
   
-  // Cleanup
   return () => {
     window.removeEventListener('storage', updateCount);
   };
