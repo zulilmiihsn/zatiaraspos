@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import Topbar from '$lib/components/shared/topbar.svelte';
-import BottomNav from '$lib/components/shared/bottomNav.svelte';
+	import Topbar from '$lib/components/shared/topBar.svelte';
+	import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -39,7 +39,7 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 				const d = new Date(today);
 				d.setDate(today.getDate() - i);
 				dateStrings.push(d.toISOString().slice(0, 10));
-	}
+			}
 			await Promise.all([
 				// Beranda, POS, POS/bayar, Catat
 				dataService.getProducts(),
@@ -48,9 +48,9 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 				dataService.getBestSellers(),
 				dataService.getWeeklyIncome(),
 				// Laporan: prefetch laporan harian/mingguan/bulanan untuk 30 hari ke belakang
-				...dateStrings.map(date => dataService.getReportData(date, 'daily')),
-				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'weekly')),
-				...dateStrings.map(date => dataService.getReportData(date.slice(0, 7), 'monthly')),
+				...dateStrings.map((date) => dataService.getReportData(date, 'daily')),
+				...dateStrings.map((date) => dataService.getReportData(date.slice(0, 7), 'weekly')),
+				...dateStrings.map((date) => dataService.getReportData(date.slice(0, 7), 'monthly')),
 				// Pengaturan, printer, pemilik, dsb.
 				dataService.supabaseClient?.from?.('pengaturan')?.select?.('*'),
 				// Manajemen menu, riwayat, dsb.
@@ -60,7 +60,7 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 				dataService.supabaseClient?.from?.('transaksi_kasir')?.select?.('*'),
 				dataService.supabaseClient?.from?.('buku_kas')?.select?.('*'),
 				// User profile (login)
-				dataService.supabaseClient?.from?.('profil')?.select?.('*'),
+				dataService.supabaseClient?.from?.('profil')?.select?.('*')
 			]);
 		} catch (e) {
 			// Ignore prefetch error
@@ -70,21 +70,29 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	onMount(() => {
 		// Cek auth sebelum lanjut
 		if (!requireAuth()) return;
-		
+
 		isOffline = !navigator.onLine;
 		updatePending();
 		prefetchAllData();
-		window.addEventListener('offline', () => { isOffline = true; });
-		window.addEventListener('online', () => { isOffline = false; updatePending(); prefetchAllData(); });
-		window.addEventListener('storage', () => { updatePending(); });
+		window.addEventListener('offline', () => {
+			isOffline = true;
+		});
+		window.addEventListener('online', () => {
+			isOffline = false;
+			updatePending();
+			prefetchAllData();
+		});
+		window.addEventListener('storage', () => {
+			updatePending();
+		});
 		window.addEventListener('pending-synced', () => {
 			showToast = true;
 			updatePending();
-			setTimeout(() => showToast = false, 3000);
+			setTimeout(() => (showToast = false), 3000);
 		});
 	});
 
-	// --- Logika Tampilan Navigasi --- 
+	// --- Logika Tampilan Navigasi ---
 	let showNav = true;
 	$: {
 		const path = $page.url.pathname;
@@ -112,11 +120,16 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 		}
 
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
-		const isCurrentPageLocked = currentSecuritySettings?.lockedPages && currentSecuritySettings.lockedPages.some(lockedPageName => {
-			const fullLockedPath = `/${lockedPageName}`; // Tambahkan awalan '/'
-			return currentPath === fullLockedPath || (currentPath.startsWith(fullLockedPath + '/') && fullLockedPath !== '/');
-		});
-		
+		const isCurrentPageLocked =
+			currentSecuritySettings?.lockedPages &&
+			currentSecuritySettings.lockedPages.some((lockedPageName) => {
+				const fullLockedPath = `/${lockedPageName}`; // Tambahkan awalan '/'
+				return (
+					currentPath === fullLockedPath ||
+					(currentPath.startsWith(fullLockedPath + '/') && fullLockedPath !== '/')
+				);
+			});
+
 		// Tentukan apakah modal PIN harus ditampilkan
 		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
 			showPinModal = true;
@@ -146,49 +159,90 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 </script>
 
 {#if pendingCount > 0}
-	<div class="fixed bottom-0 left-0 w-full bg-pink-500 text-white text-center py-2 z-50 font-semibold shadow animate-pulse animate-fade-in">
+	<div
+		class="animate-fade-in fixed bottom-0 left-0 z-50 w-full animate-pulse bg-pink-500 py-2 text-center font-semibold text-white shadow"
+	>
 		{pendingCount} transaksi menunggu untuk dikirim ke server
 	</div>
 {/if}
 
 {#if showToast}
-	<div class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-fade-in text-center">
+	<div
+		class="animate-fade-in fixed top-16 left-1/2 z-50 -translate-x-1/2 transform rounded-xl bg-green-500 px-6 py-3 text-center text-white shadow-lg"
+	>
 		Transaksi offline berhasil dikirim ke server!
 	</div>
 {/if}
 
 {#if showNav}
 	<!-- Layout standar dengan navigasi -->
-	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
+	<div class="page-transition flex h-screen min-h-0 flex-col bg-white">
 		<div class="sticky top-0 z-30 bg-white shadow-md">
 			<Topbar>
 				<svelte:fragment slot="actions">
 					{#if $page.url.pathname === '/pos'}
 						<button
-							class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-pink-50 transition-colors flex items-center justify-center mr-2"
-							on:click={() => posGridView.update(v => !v)}
+							class="mr-2 flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 transition-colors hover:bg-pink-50"
+							on:click={() => posGridView.update((v) => !v)}
 							aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
 							type="button"
 						>
 							{#if $posGridView}
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="h-5 w-5 text-gray-600"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+									><rect x="4" y="4" width="7" height="7" rx="2" /><rect
+										x="13"
+										y="4"
+										width="7"
+										height="7"
+										rx="2"
+									/><rect x="4" y="13" width="7" height="7" rx="2" /><rect
+										x="13"
+										y="13"
+										width="7"
+										height="7"
+										rx="2"
+									/></svg
+								>
 							{:else}
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="h-5 w-5 text-gray-600"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M4 6h16M4 12h16M4 18h16"
+									/></svg
+								>
 							{/if}
 						</button>
 					{/if}
 				</svelte:fragment>
 				<svelte:fragment slot="download">
 					{#if $page.url.pathname === '/laporan'}
-						<button class="w-[38px] h-[38px] rounded-lg bg-white border-[1.5px] border-gray-200 flex items-center justify-center text-2xl text-pink-500 shadow-lg shadow-pink-500/7 cursor-pointer transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12 mr-2" aria-label="Download Laporan">
+						<button
+							class="mr-2 flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-gray-200 bg-white text-2xl text-pink-500 shadow-lg shadow-pink-500/7 transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12"
+							aria-label="Download Laporan"
+						>
 							<Download size={22} />
 						</button>
 					{/if}
 				</svelte:fragment>
 			</Topbar>
 		</div>
-		<div class="flex-1 min-h-0 overflow-y-auto"
-			style="scrollbar-width:none;-ms-overflow-style:none;">
+		<div
+			class="min-h-0 flex-1 overflow-y-auto"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
 			<slot />
 		</div>
 		<div class="sticky bottom-0 z-30 bg-white">
@@ -196,9 +250,9 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 		</div>
 	</div>
 {:else}
-    <!-- Layout tanpa navigasi -->
-	<div class="flex flex-col h-screen min-h-0 bg-white page-transition">
-		<div class="flex-1 min-h-0 overflow-y-auto">
+	<!-- Layout tanpa navigasi -->
+	<div class="page-transition flex h-screen min-h-0 flex-col bg-white">
+		<div class="min-h-0 flex-1 overflow-y-auto">
 			<slot />
 		</div>
 	</div>
@@ -218,16 +272,23 @@ import BottomNav from '$lib/components/shared/bottomNav.svelte';
 {/if}
 
 <svelte:head>
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+	/>
 	<title>ZatiarasPOS</title>
 </svelte:head>
 
 <style>
-@keyframes fade-in {
-	from { opacity: 0; }
-	to { opacity: 1; }
-}
-.animate-fade-in {
-	animation: fade-in 0.4s ease;
-}
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+	.animate-fade-in {
+		animation: fade-in 0.4s ease;
+	}
 </style>

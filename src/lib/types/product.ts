@@ -1,6 +1,6 @@
 /**
  * 🏷️ PRODUCT TYPE DEFINITIONS
- * 
+ *
  * Type definitions untuk semua entity yang berkaitan dengan produk
  */
 
@@ -9,37 +9,37 @@
 // ============================================================================
 
 export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  harga?: number; // Alternative price field
-  category_id: number;
-  tipe: 'minuman' | 'makanan' | 'snack';
-  gambar?: string;
-  deskripsi?: string;
-  ekstra_ids: number[];
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
+	id: number;
+	name: string;
+	price: number;
+	harga?: number; // Alternative price field
+	category_id: number;
+	tipe: 'minuman' | 'makanan' | 'snack';
+	gambar?: string;
+	deskripsi?: string;
+	ekstra_ids: number[];
+	is_active: boolean;
+	created_at?: string;
+	updated_at?: string;
 }
 
 export interface Category {
-  id: number;
-  name: string;
-  description?: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
+	id: number;
+	name: string;
+	description?: string;
+	is_active: boolean;
+	created_at?: string;
+	updated_at?: string;
 }
 
 export interface AddOn {
-  id: number;
-  name: string;
-  price: number;
-  harga?: number; // Alternative price field
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
+	id: number;
+	name: string;
+	price: number;
+	harga?: number; // Alternative price field
+	is_active: boolean;
+	created_at?: string;
+	updated_at?: string;
 }
 
 // ============================================================================
@@ -47,18 +47,18 @@ export interface AddOn {
 // ============================================================================
 
 export interface CartItem {
-  product: Product;
-  qty: number;
-  addOns: AddOn[];
-  sugar?: string;
-  ice?: string;
-  note?: string;
-  total: number;
+	product: Product;
+	qty: number;
+	addOns: AddOn[];
+	sugar?: string;
+	ice?: string;
+	note?: string;
+	total: number;
 }
 
 export interface CartSummary {
-  totalQty: number;
-  totalHarga: number;
+	totalQty: number;
+	totalHarga: number;
 }
 
 // ============================================================================
@@ -66,21 +66,21 @@ export interface CartSummary {
 // ============================================================================
 
 export interface MenuForm {
-  id?: number;
-  name: string;
-  price: number;
-  tipe: 'minuman' | 'makanan' | 'snack';
-  kategori_id: number;
-  gambar: string;
-  deskripsi: string;
-  ekstra_ids: number[];
-  is_active: boolean;
+	id?: number;
+	name: string;
+	price: number;
+	tipe: 'minuman' | 'makanan' | 'snack';
+	kategori_id: number;
+	gambar: string;
+	deskripsi: string;
+	ekstra_ids: number[];
+	is_active: boolean;
 }
 
 export interface MenuFormState {
-  isEditing: boolean;
-  isLoading: boolean;
-  error: string | null;
+	isEditing: boolean;
+	isLoading: boolean;
+	error: string | null;
 }
 
 // ============================================================================
@@ -88,18 +88,18 @@ export interface MenuFormState {
 // ============================================================================
 
 export interface SearchFilters {
-  category: string | number;
-  searchKeyword: string;
-  priceRange?: {
-    min: number;
-    max: number;
-  };
+	category: string | number;
+	searchKeyword: string;
+	priceRange?: {
+		min: number;
+		max: number;
+	};
 }
 
 export interface FilteredProducts {
-  products: Product[];
-  totalCount: number;
-  categories: Category[];
+	products: Product[];
+	totalCount: number;
+	categories: Category[];
 }
 
 // ============================================================================
@@ -111,8 +111,8 @@ export type SortOrder = 'asc' | 'desc';
 export type SortField = 'name' | 'price' | 'created_at';
 
 export interface ProductSortOptions {
-  field: SortField;
-  order: SortOrder;
+	field: SortField;
+	order: SortOrder;
 }
 
 // ============================================================================
@@ -120,23 +120,23 @@ export interface ProductSortOptions {
 // ============================================================================
 
 export interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message?: string;
-  error?: string;
+	data: T;
+	success: boolean;
+	message?: string;
+	error?: string;
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+	data: T[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
 }
 
 export interface ProductListResponse extends PaginatedResponse<Product> {
-  categories: Category[];
-  addOns: AddOn[];
+	categories: Category[];
+	addOns: AddOn[];
 }
 
 // ============================================================================
@@ -144,21 +144,21 @@ export interface ProductListResponse extends PaginatedResponse<Product> {
 // ============================================================================
 
 export interface ProductState {
-  products: Product[];
-  categories: Category[];
-  addOns: AddOn[];
-  selectedCategory: string | number;
-  searchKeyword: string;
-  isLoading: boolean;
-  error: string | null;
+	products: Product[];
+	categories: Category[];
+	addOns: AddOn[];
+	selectedCategory: string | number;
+	searchKeyword: string;
+	isLoading: boolean;
+	error: string | null;
 }
 
 export interface MenuManagementState {
-  menus: Product[];
-  categories: Category[];
-  addOns: AddOn[];
-  selectedMenu: Product | null;
-  formState: MenuFormState;
-  isLoading: boolean;
-  error: string | null;
+	menus: Product[];
+	categories: Category[];
+	addOns: AddOn[];
+	selectedMenu: Product | null;
+	formState: MenuFormState;
+	isLoading: boolean;
+	error: string | null;
 }

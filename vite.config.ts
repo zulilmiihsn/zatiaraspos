@@ -72,14 +72,7 @@ export default defineConfig({
 	],
 	build: {
 		rollupOptions: {
-			external: [
-				'bcryptjs',
-				'bcrypt',
-				'crypto',
-				'fs',
-				'path',
-				'os'
-			],
+			external: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os'],
 			output: {
 				manualChunks: {
 					// Vendor chunks
@@ -97,24 +90,12 @@ export default defineConfig({
 				drop_debugger: true,
 				pure_funcs: ['console.log', 'console.info', 'console.debug']
 			}
-		},
+		}
 		// Tree shaking is enabled by default in Vite
 	},
 	optimizeDeps: {
-		include: [
-			'svelte',
-			'@sveltejs/kit',
-			'lucide-svelte',
-			'@supabase/supabase-js'
-		],
-		exclude: [
-			'bcryptjs',
-			'bcrypt',
-			'crypto',
-			'fs',
-			'path',
-			'os'
-		]
+		include: ['svelte', '@sveltejs/kit', 'lucide-svelte', '@supabase/supabase-js'],
+		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os']
 	},
 	server: {
 		fs: {
