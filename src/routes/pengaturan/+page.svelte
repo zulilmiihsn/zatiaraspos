@@ -15,7 +15,7 @@
 	import User from 'lucide-svelte/icons/user';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
-import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Type definitions
 	interface PengaturanData {

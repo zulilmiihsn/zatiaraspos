@@ -21,7 +21,7 @@
 	import { dataService } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
-import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Data Menu
 	let menus: any[] = [];

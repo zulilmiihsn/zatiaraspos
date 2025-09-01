@@ -12,7 +12,7 @@
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
-import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Lazy load icons with proper typing
 	let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
