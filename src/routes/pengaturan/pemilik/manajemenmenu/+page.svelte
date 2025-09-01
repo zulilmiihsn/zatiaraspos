@@ -20,7 +20,8 @@
 	import Tag from 'lucide-svelte/icons/tag';
 	import { dataService } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { createToastManager, ErrorHandler } from '$lib/utils/index';
+	import { createToastManager } from '$lib/utils/ui';
+import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Data Menu
 	let menus: any[] = [];

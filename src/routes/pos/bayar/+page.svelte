@@ -6,7 +6,7 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { v4 as uuidv4 } from 'uuid';
-	import { formatWitaDateTime } from '$lib/utils/index';
+	import { formatWitaDateTime } from '$lib/utils/dateTime';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole';
@@ -16,7 +16,7 @@
 	import { Base64 } from 'js-base64';
 	import { memoize } from '$lib/utils/performance';
 	import { addPendingTransaction } from '$lib/utils/offline';
-	import { ErrorHandler } from '$lib/utils/index';
+	import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	let cart: any[] = [];
 	let customerName = '';

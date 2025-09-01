@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { createToastManager } from '$lib/utils/index';
+	import { createToastManager } from '$lib/utils/ui';
 	let namaToko = '';
 	let alamat = '';
 	let telepon = '';

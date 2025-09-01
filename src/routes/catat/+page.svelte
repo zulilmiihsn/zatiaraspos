@@ -15,7 +15,7 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { auth } from '$lib/auth/auth';
 	import { goto } from '$app/navigation';
-	import { formatWitaDateTime, getWitaDateRangeUtc, witaToUtcISO } from '$lib/utils/index';
+	import { formatWitaDateTime, getWitaDateRangeUtc, witaToUtcISO } from '$lib/utils/dateTime';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';

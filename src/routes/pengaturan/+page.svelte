@@ -14,7 +14,8 @@
 	import CreditCard from 'lucide-svelte/icons/credit-card';
 	import User from 'lucide-svelte/icons/user';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { createToastManager, ErrorHandler } from '$lib/utils/index';
+	import { createToastManager } from '$lib/utils/ui';
+import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Type definitions
 	interface PengaturanData {

@@ -4,14 +4,15 @@
 	import { slide, fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
-	import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/index';
+	import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/dateTime';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import { memoize } from '$lib/utils/performance';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { createToastManager, ErrorHandler } from '$lib/utils/index';
+	import { createToastManager } from '$lib/utils/ui';
+import { ErrorHandler } from '$lib/utils/errorHandling';
 
 	// Lazy load icons with proper typing
 	let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
