@@ -2,7 +2,7 @@
 import Settings from 'lucide-svelte/icons/settings';
 import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
-import { getPendingTransactions } from '$lib/utils/core/offline';
+import { getPendingTransactions } from '$lib/utils/offline';
 
 export let showSettings: boolean = true;
 
