@@ -25,7 +25,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Fungsi untuk set user role dan profile (dipanggil saat login)
-export function setUserRole(role: string, profile: any) {
+export function setUserRole(role: string, profile: unknown) {
 	userRole.set(role);
 	userProfile.set(profile);
 }
@@ -151,3 +151,5 @@ export async function getCurrentProfile(): Promise<any | null> {
 
 	return null;
 }
+
+

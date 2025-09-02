@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { userRole } from '$lib/stores/userRole';
-	let Utensils: any, Shield: any;
+	let Utensils: unknown, Shield: unknown;
 	onMount(() => {
 		userRole.subscribe((role) => {
 			if (role !== 'pemilik') {
@@ -92,3 +92,6 @@
 		</div>
 	</div>
 </div>
+
+
+

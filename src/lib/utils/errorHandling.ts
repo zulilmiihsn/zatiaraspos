@@ -21,7 +21,7 @@ export class ErrorHandler {
 	/**
 	 * Create a validation error
 	 */
-	static createValidationError(field: string, message: string, value?: any): ValidationError {
+	static createValidationError(field: string, message: string, value?: unknown): ValidationError {
 		return {
 			field,
 			message,
@@ -164,7 +164,7 @@ export const ValidationHelper = {
 	/**
 	 * Validate required field
 	 */
-	required(value: any, fieldName: string): ValidationError | null {
+	required(value: unknown, fieldName: string): ValidationError | null {
 		if (value === null || value === undefined || value === '') {
 			return ErrorHandler.createValidationError(fieldName, `${fieldName} harus diisi`, value);
 		}
@@ -188,7 +188,7 @@ export const ValidationHelper = {
 	/**
 	 * Validate numeric value
 	 */
-	numeric(value: any, fieldName: string): ValidationError | null {
+	numeric(value: unknown, fieldName: string): ValidationError | null {
 		if (value && isNaN(Number(value))) {
 			return ErrorHandler.createValidationError(
 				fieldName,
@@ -202,7 +202,7 @@ export const ValidationHelper = {
 	/**
 	 * Validate positive number
 	 */
-	positive(value: any, fieldName: string): ValidationError | null {
+	positive(value: unknown, fieldName: string): ValidationError | null {
 		const num = Number(value);
 		if (value && (isNaN(num) || num <= 0)) {
 			return ErrorHandler.createValidationError(
@@ -214,3 +214,5 @@ export const ValidationHelper = {
 		return null;
 	}
 };
+
+

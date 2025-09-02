@@ -345,3 +345,5 @@ export const performanceUtils = {
 		return performanceMonitor.measureSync(`Component: ${componentName}`, renderFn);
 	}
 };
+
+

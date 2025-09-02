@@ -10,7 +10,7 @@
 	let showPopover = false;
 
 	onMount(() => {
-		getPendingTransactions().then((transactions: any[]) => {
+		getPendingTransactions().then((transactions: unknown[]) => {
 			pendingCount = transactions.length;
 		});
 
@@ -111,3 +111,6 @@
 		animation: fade-in 0.5s cubic-bezier(0.4, 1.4, 0.6, 1);
 	}
 </style>
+
+
+

@@ -190,3 +190,5 @@ export function requireAuth(): boolean {
 export function isAuthenticated(): boolean {
 	return authGuard.isAuthenticated();
 }
+
+

@@ -62,7 +62,7 @@ export const typescriptTests = {
 						details: 'All TypeScript files compiled without errors',
 						executionTime
 					};
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -97,7 +97,7 @@ export const typescriptTests = {
 						details: 'Application built without errors',
 						executionTime
 					};
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -142,7 +142,7 @@ export const lintingTests = {
 						details: 'No linting errors found',
 						executionTime
 					};
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -177,7 +177,7 @@ export const lintingTests = {
 						details: 'All files follow formatting standards',
 						executionTime
 					};
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -220,7 +220,7 @@ export const fileStructureTests = {
 						'src/routes/+page.svelte'
 					];
 
-					const missingFiles: string[] = [];
+					// Removed unused constant: missingFiles
 
 					for (const file of requiredFiles) {
 						if (!fs.existsSync(file)) {
@@ -247,7 +247,7 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -279,7 +279,7 @@ export const fileStructureTests = {
 						'src/lib/database'
 					];
 
-					const missingDirs: string[] = [];
+					// Removed unused constant: missingDirs
 
 					for (const dir of requiredDirs) {
 						if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
@@ -306,7 +306,7 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -341,7 +341,7 @@ export const dependencyTests = {
 					const packageJson = JSON.parse(packageContent);
 
 					const requiredFields = ['name', 'version', 'scripts', 'dependencies', 'devDependencies'];
-					const missingFields: string[] = [];
+					// Removed unused constant: missingFields
 
 					for (const field of requiredFields) {
 						if (!packageJson[field]) {
@@ -368,7 +368,7 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -413,7 +413,7 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -442,7 +442,7 @@ export class CodeQualityTestRunner {
 	async runAllTests(): Promise<CodeQualityTestSuite[]> {
 		console.log('🧪 Starting Code Quality Tests...\n');
 
-		const results: CodeQualityTestSuite[] = [];
+		// Removed unused constant: results
 
 		for (const suite of this.testSuites) {
 			console.log(`📋 Running ${suite.name}...`);
@@ -463,9 +463,9 @@ export class CodeQualityTestRunner {
 	/**
 	 * Jalankan satu test suite
 	 */
-	private async runTestSuite(suite: any): Promise<CodeQualityTestSuite> {
+	private async runTestSuite(suite: unknown): Promise<CodeQualityTestSuite> {
 		const startTime = Date.now();
-		const results: CodeQualityTestResult[] = [];
+		// Removed unused constant: results
 
 		for (const test of suite.tests) {
 			try {
@@ -475,7 +475,7 @@ export class CodeQualityTestRunner {
 				// Log individual test result
 				const status = result.success ? '✅' : '❌';
 				console.log(`  ${status} ${result.name}: ${result.message}`);
-			} catch (error: any) {
+			} catch (error: unknown) {
 				results.push({
 					name: test.name,
 					success: false,
@@ -730,3 +730,7 @@ if (process.argv[1] && process.argv[1].endsWith('code-quality-tests.ts')) {
 		process.exit(1);
 	});
 }
+
+
+
+

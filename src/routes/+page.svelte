@@ -32,7 +32,7 @@
 	});
 
 	// Lazy load icons
-	let Wallet: any, ShoppingBag: any, Coins: any, Users: any, Clock: any, TrendingUp: any;
+	let Wallet: unknown, ShoppingBag: unknown, Coins: unknown, Users: unknown, Clock: unknown, TrendingUp: unknown;
 	let omzet = 0;
 	let jumlahTransaksi = 0;
 	let profit = 0;
@@ -40,9 +40,9 @@
 	let totalItem = 0;
 	let avgTransaksi = 0;
 	let jamRamai = '';
-	let weeklyIncome: any[] = [];
+	let weeklyIncome: unknown[] = [];
 	let weeklyMax = 1;
-	let bestSellers: any[] = [];
+	let bestSellers: unknown[] = [];
 
 	// Subscribe ke store
 	let currentUserRole = '';
@@ -196,7 +196,7 @@
 		});
 	}
 
-	function applyDashboardData(data: any) {
+	function applyDashboardData(data: unknown) {
 		if (!data) return;
 		omzet = data.omzet;
 		jumlahTransaksi = data.jumlahTransaksi;
@@ -218,7 +218,7 @@
 	// Removed fetchPin()
 
 	// Data dummy, nanti diisi dari Supabase
-	let modalAwal: any = null;
+	let modalAwal: unknown = null;
 
 	// Touch handling variables
 	let touchStartX = 0;
@@ -311,7 +311,7 @@
 	let pinInputToko = '';
 	let pinErrorToko = '';
 	let tokoAktifLocal = false;
-	let sesiAktif: any = null;
+	let sesiAktif: unknown = null;
 	let ringkasanTutup = {
 		modalAwal: 0,
 		totalPenjualan: 0,
@@ -320,7 +320,7 @@
 		uangKasir: 0
 	};
 
-	function updateTokoAktif(val: any) {
+	function updateTokoAktif(val: unknown) {
 		tokoAktifLocal = val;
 		// window.tokoAktif removed
 	}
@@ -380,7 +380,7 @@
 	}
 
 	// Tambahkan state untuk pending action setelah PIN benar
-	let pendingAction: any = null;
+	let pendingAction: unknown = null;
 
 	async function handleBukaToko() {
 		const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
@@ -423,8 +423,8 @@
 		const modalAwal = sesiAktif.opening_cash || 0;
 		// Total penjualan = semua pemasukan (in) dari sumber pos
 		const totalPenjualan = kas
-			.filter((t: any) => t.tipe === 'in' && t.sumber === 'pos')
-			.reduce((a: number, b: any) => a + (b.amount || 0), 0);
+			.filter((t: unknown) => t.tipe === 'in' && t.sumber === 'pos')
+			.reduce((a: number, b: unknown) => a + (b.amount || 0), 0);
 		// Uang kasir seharusnya
 		const uangKasir = modalAwal + penjualanTunai - pengeluaranTunai;
 		ringkasanTutup = {
@@ -568,7 +568,7 @@
 	}
 
 	// New function to set the formatted value for binding
-	function setModalAwalInputFormatted(value: any) {
+	function setModalAwalInputFormatted(value: unknown) {
 		modalAwalInput = value;
 	}
 
@@ -604,11 +604,11 @@
 	sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
 	const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
-	let selectedBarIndex: any = null;
+	let selectedBarIndex: unknown = null;
 	let showBarInsight = false;
-	let barHoldTimeout: any = null;
+	let barHoldTimeout: unknown = null;
 
-	function handleBarPointerDown(i: any) {
+	function handleBarPointerDown(i: unknown) {
 		barHoldTimeout = setTimeout(() => {
 			selectedBarIndex = i;
 			showBarInsight = true;
@@ -957,7 +957,7 @@
 					</div>
 					{#if isLoadingBestSellers}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each Array(3) as _, i}
+							{#each Array(3) as _i (_)}
 								<div
 									class="relative flex animate-pulse items-center gap-3 rounded-xl bg-gray-100 p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-none"
 								>
@@ -977,7 +977,7 @@
 						</div>
 					{:else}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each bestSellers.slice(0, 3) as m, i}
+							{#each bestSellers.slice(0, 3) as mi (m)}
 								<div
 									class="relative flex items-center gap-3 rounded-xl bg-white p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:border md:border-pink-200 md:bg-white md:p-6 md:shadow-none {i ===
 									0
@@ -1065,7 +1065,7 @@
 							<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
 								{#if weeklyIncome.length === 0}
 									<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
-										{#each getLast7DaysLabelsWITA() as label, i}
+										{#each getLast7DaysLabelsWITA() as labeli (label)}
 											<div class="flex flex-1 flex-col items-center">
 												<div
 													class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10"
@@ -1083,7 +1083,7 @@
 										</div>
 									</div>
 								{:else}
-									{#each weeklyIncome as income, i}
+									{#each weeklyIncome as incomei (income)}
 										<div class="relative flex flex-1 flex-col items-center">
 											<div
 												class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"
@@ -1365,7 +1365,7 @@ barHoldTimeout = null;
 
 					{#if isLoadingBestSellers}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each Array(3) as _, i}
+							{#each Array(3) as _i (_)}
 								<div
 									class="relative flex animate-pulse items-center gap-3 rounded-xl bg-gray-100 p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-none"
 								>
@@ -1387,7 +1387,7 @@ barHoldTimeout = null;
 						</div>
 					{:else}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each bestSellers.slice(0, 3) as m, i}
+							{#each bestSellers.slice(0, 3) as mi (m)}
 								<div
 									class="relative flex items-center gap-3 rounded-xl bg-white p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:border md:border-pink-200 md:bg-white md:p-6 md:shadow-none {i ===
 									0
@@ -1487,7 +1487,7 @@ barHoldTimeout = null;
 							<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
 								{#if weeklyIncome.length === 0}
 									<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
-										{#each getLast7DaysLabelsWITA() as label, i}
+										{#each getLast7DaysLabelsWITA() as labeli (label)}
 											<div class="flex flex-1 flex-col items-center">
 												<div
 													class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10"
@@ -1507,7 +1507,7 @@ barHoldTimeout = null;
 										</div>
 									</div>
 								{:else}
-									{#each weeklyIncome as income, i}
+									{#each weeklyIncome as incomei (income)}
 										<div class="relative flex flex-1 flex-col items-center">
 											<div
 												class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"
@@ -1576,3 +1576,6 @@ barHoldTimeout = null;
 		animation: glow 1.5s ease-in-out 1;
 	}
 </style>
+
+
+
