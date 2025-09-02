@@ -47,9 +47,9 @@
 	}
 
 	let showLottieSuccess = false;
-	let lottieTimeout: any = null;
+	let lottieTimeout: unknown = null;
 	let showLottieError = false;
-	let lottieErrorTimeout: any = null;
+	let lottieErrorTimeout: unknown = null;
 
 	// Lottie event handlers
 	function handleLottieSuccessLoad(event: any) {
@@ -113,7 +113,7 @@
 			isLottieSuccessPlaying = true;
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			goto('/');
-		} catch (e: any) {
+		} catch (e: unknown) {
 			errorMessage = e.message;
 			securityUtils.logSecurityEvent('login_failed', {
 				username: sanitizedUsername,
@@ -378,3 +378,6 @@
 		animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 </style>
+
+
+

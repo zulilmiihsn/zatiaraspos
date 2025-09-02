@@ -1,6 +1,6 @@
 /**
  * 🧩 COMPONENT TYPE DEFINITIONS
- * 
+ *
  * Type definitions untuk komponen-komponen Svelte
  */
 
@@ -9,13 +9,13 @@
 // ============================================================================
 
 export interface TopbarProps {
-  showSettings?: boolean;
+	showSettings?: boolean;
 }
 
 export interface TopbarSlots {
-  default: any;
-  actions?: any;
-  download?: any;
+	default: any;
+	actions?: any;
+	download?: any;
 }
 
 // ============================================================================
@@ -23,31 +23,31 @@ export interface TopbarSlots {
 // ============================================================================
 
 export interface ModalProps {
-  show: boolean;
-  title?: string;
-  subtitle?: string;
+	show: boolean;
+	title?: string;
+	subtitle?: string;
 }
 
 export interface ModalSlots {
-  default: any;
-  header?: any;
-  footer?: any;
+	default: any;
+	header?: any;
+	footer?: any;
 }
 
 export interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  loading?: boolean;
-  type?: 'button' | 'submit' | 'reset';
+	variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+	size?: 'sm' | 'md' | 'lg';
+	disabled?: boolean;
+	loading?: boolean;
+	type?: 'button' | 'submit' | 'reset';
 }
 
 export interface InputProps {
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
-  readonly?: boolean;
-  error?: string;
-  help?: string;
+	type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+	placeholder?: string;
+	required?: boolean;
+	disabled?: boolean;
+	readonly?: boolean;
+	error?: string;
+	help?: string;
 }

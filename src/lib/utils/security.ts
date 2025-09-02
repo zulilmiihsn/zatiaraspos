@@ -383,7 +383,7 @@ export class SessionSecurity {
 	/**
 	 * Validate session token
 	 */
-	static validateSession(sessionData: any): boolean {
+	static validateSession(sessionData: unknown): boolean {
 		if (!sessionData || typeof sessionData !== 'object') {
 			return false;
 		}
@@ -453,10 +453,12 @@ export const securityUtils = {
 		return suspiciousPatterns.some((pattern) => pattern.test(input));
 	},
 
-	logSecurityEvent: (eventType: string, data: any): void => {
+	logSecurityEvent: (eventType: string, data: unknown): void => {
 		// Log security events (in production, this would go to a security log)
 		if (browser && console) {
 			console.log(`[SECURITY] ${eventType}:`, data);
 		}
 	}
 };
+
+

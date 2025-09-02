@@ -693,7 +693,7 @@ export interface TestResult {
 	name: string;
 	success: boolean;
 	message: string;
-	data?: any;
+	data?: unknown;
 	error?: string;
 	executionTime?: number;
 }
@@ -744,7 +744,7 @@ export class FeatureTestRunner {
 	/**
 	 * Jalankan satu test suite
 	 */
-	private async runTestSuite(suite: any): Promise<TestSuiteResult> {
+	private async runTestSuite(suite: unknown): Promise<TestSuiteResult> {
 		const startTime = Date.now();
 		const results: TestResult[] = [];
 
@@ -1059,3 +1059,5 @@ if (process.argv[1] && process.argv[1].endsWith('feature-tests.ts')) {
 		process.exit(1);
 	});
 }
+
+

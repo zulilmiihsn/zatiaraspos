@@ -25,7 +25,7 @@
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 
 	import { browser } from '$app/environment';
-	let sesiAktif: any = null;
+	let sesiAktif: unknown = null;
 	async function cekSesiTokoAktif(): Promise<void> {
 		const { data } = await dataService.supabaseClient
 			.from('sesi_toko')
@@ -44,9 +44,9 @@
 		}
 	});
 
-	let produkData: any[] = [];
-	let kategoriData: any[] = [];
-	let tambahanData: any[] = [];
+	let produkData: unknown[] = [];
+	let kategoriData: unknown[] = [];
+	let tambahanData: unknown[] = [];
 
 	let isLoadingProducts = true;
 
@@ -192,11 +192,11 @@
 	let selectedCategory = 'all';
 
 	// Produk mock dengan kategori
-	let products: any[] = [];
+	let products: unknown[] = [];
 	$: products = produkData;
 
 	// Topping mock tanpa emoji/icon
-	let addOns: any[] = [];
+	let addOns: unknown[] = [];
 	$: addOns = tambahanData;
 
 	// Jenis gula dan es
@@ -212,7 +212,7 @@
 	];
 
 	let showModal = false;
-	let selectedProduct: any = null;
+	let selectedProduct: unknown = null;
 	let selectedAddOns: number[] = [];
 	let selectedSugar = 'normal';
 	let selectedIce = 'normal';
@@ -245,7 +245,7 @@
 
 	// Memoized filtered products dengan optimasi
 	const memoizedFilter = memoize(
-		(products: any[], categories: any[], selectedCategory: string, search: string) => {
+		(products: unknown[], categories: unknown[], selectedCategory: string, search: string) => {
 			let filtered = products;
 			// Filter berdasarkan search
 			if (search) {
@@ -275,7 +275,7 @@
 		cart = cart.filter((_, i) => i !== idx);
 	}
 
-	function openAddOnModal(product: any): void {
+	function openAddOnModal(product: unknown): void {
 		showCartModal = false;
 		selectedProduct = product;
 		selectedAddOns = [];
@@ -343,9 +343,9 @@
 			.join(',');
 		const itemKey = `${selectedProduct.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
 
-		const existingIdx = cart.findIndex((item: any) => {
+		const existingIdx = cart.findIndex((item: unknown) => {
 			const itemAddOnsKey = (item.addOns || [])
-				.map((a: any) => a.id)
+				.map((a: unknown) => a.id)
 				.sort()
 				.join(',');
 			const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
@@ -401,7 +401,7 @@
 	let cartPreviewX = 0;
 	let cartPreviewStartX = 0;
 	let cartPreviewDragging = false;
-	let cartPreviewRef: any;
+	let cartPreviewRef: unknown;
 	let cartPreviewWidth = 0;
 	let showSnackbar = false;
 	let snackbarMsg = '';
@@ -454,7 +454,7 @@
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
 
-	let categories: any[] = [];
+	let categories: unknown[] = [];
 	$: categories = kategoriData;
 
 	let skeletonCount = 9;
@@ -470,7 +470,7 @@
 
 	let showErrorNotification = false;
 	let errorNotificationMessage = '';
-	let errorNotificationTimeout: any = null;
+	let errorNotificationTimeout: unknown = null;
 
 	function showErrorNotif(message: string) {
 		errorNotificationMessage = message;
@@ -537,7 +537,7 @@
 	// Helper untuk ambil nama kategori dari kategori_id
 	function getKategoriNameById(id: string | number): string {
 		if (!id) return '';
-		const kat = categories?.find((k: any) => k.id === id);
+		const kat = categories?.find((k: unknown) => k.id === id);
 		return kat?.name || '';
 	}
 
@@ -552,7 +552,7 @@
 	function handleSelectCategory(id: string | number): void {
 		selectedCategory = id as any;
 	}
-	function handleOpenAddOnModal(product: any): void {
+	function handleOpenAddOnModal(product: unknown): void {
 		openAddOnModal(product);
 	}
 	function handleShowCustomItemModal(): void {
@@ -571,7 +571,7 @@
 	function handleRemoveCartItem(idx: number): void {
 		removeCartItem(idx);
 	}
-	function handleKeydownOpenAddOnModal(product: any, e: KeyboardEvent): void {
+	function handleKeydownOpenAddOnModal(product: unknown, e: KeyboardEvent): void {
 		if (e.key === 'Enter') openAddOnModal(product);
 	}
 </script>
@@ -632,7 +632,7 @@
 				onclick={handleSelectCategoryAll}>Semua</button
 			>
 			{#if (categories ?? []).length === 0 && isLoadingProducts}
-				{#each Array(4) as _, i}
+				{#each Array(4) as _i (_)}
 					<div
 						class="mb-1 h-[40px] min-w-[96px] flex-shrink-0 animate-pulse rounded-lg bg-gray-100"
 					></div>
@@ -671,7 +671,7 @@
 					<span>Belum ada kategori</span>
 				</div>
 			{:else}
-				{#each categories ?? [] as c}
+				{#each categories ?? [] as c (c)}
 					<button
 						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-lg border px-4 py-2 text-base font-medium transition-colors duration-150 {selectedCategory ===
 						c.id
@@ -710,7 +710,7 @@
 						transition:slide={{ duration: 250 }}
 					>
 						{#if isLoadingProducts}
-							{#each Array(skeletonCount) as _, i}
+							{#each Array(skeletonCount) as _i (_)}
 								<div
 									class="flex max-h-[80px] min-h-[56px] animate-pulse cursor-pointer items-center justify-between rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 px-3 py-2 shadow-md transition-shadow"
 								></div>
@@ -724,7 +724,7 @@
 								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
 							</div>
 						{:else}
-							{#each filteredProducts as p}
+							{#each filteredProducts as p (p)}
 								<div
 									class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-100 bg-white px-3 py-2 transition-colors hover:bg-pink-50"
 									tabindex="0"
@@ -754,7 +754,7 @@
 						transition:slide={{ duration: 250 }}
 					>
 						{#if isLoadingProducts}
-							{#each Array(skeletonCount) as _, i}
+							{#each Array(skeletonCount) as _i (_)}
 								<div
 									class="flex aspect-[3/4] max-h-[260px] min-h-[140px] animate-pulse cursor-pointer flex-col items-center justify-between rounded-xl border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-2.5 shadow-md transition-shadow md:max-h-[320px] md:min-h-[180px] md:p-6"
 								></div>
@@ -768,7 +768,7 @@
 								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
 							</div>
 						{:else}
-							{#each filteredProducts as p}
+							{#each filteredProducts as p (p)}
 								<div
 									class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-gray-100 bg-white p-3 shadow-md transition-shadow md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6 md:hover:shadow-lg"
 									tabindex="0"
@@ -956,7 +956,7 @@
 					role="button"
 					tabindex="0"
 				>
-					{#each cart as item, idx}
+					{#each cart as itemidx (item)}
 						<div
 							class="mb-3 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 shadow-sm"
 						>
@@ -967,7 +967,7 @@
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
-											? item.addOns.map((a: any) => a.name).join(', ')
+											? item.addOns.map((a: unknown) => a.name).join(', ')
 											: '',
 										item.note ? `${item.note}` : '',
 										item.product.tipe === 'minuman' && item.sugar !== 'normal'
@@ -1036,7 +1036,7 @@
 					{#if selectedProduct && selectedProduct.tipe === 'minuman'}
 						<div class="mt-4 mb-2 text-base font-semibold text-gray-800">Jenis Gula</div>
 						<div class="mb-3 flex gap-2">
-							{#each sugarOptions as s}
+							{#each sugarOptions as s (s)}
 								<button
 									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-colors duration-150 {selectedSugar ===
 									s.id
@@ -1051,7 +1051,7 @@
 					{#if selectedProduct && selectedProduct.tipe === 'minuman'}
 						<div class="mt-4 mb-2 text-base font-semibold text-gray-800">Jenis Es</div>
 						<div class="mb-3 flex gap-2">
-							{#each iceOptions as i}
+							{#each iceOptions as i (i)}
 								<button
 									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-colors duration-150 {selectedIce ===
 									i.id
@@ -1066,7 +1066,7 @@
 					<div class="mt-4 mb-2 text-base font-semibold text-gray-800">Ekstra</div>
 					{#if selectedProduct && selectedProduct.ekstra_ids && selectedProduct.ekstra_ids.length > 0 && addOns.filter( (a) => selectedProduct.ekstra_ids.includes(a.id) ).length > 0}
 						<div class="mb-6 grid grid-cols-2 gap-3">
-							{#each addOns.filter((a) => selectedProduct.ekstra_ids.includes(a.id)) as a}
+							{#each addOns.filter((a) => selectedProduct.ekstra_ids.includes(a.id)) as a (a)}
 								<button
 									class="flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border py-1.5 text-center text-base font-medium whitespace-normal transition-colors duration-150 {selectedAddOns.includes(
 										a.id
@@ -1170,3 +1170,6 @@
 		}
 	}
 </style>
+
+
+

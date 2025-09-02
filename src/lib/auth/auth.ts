@@ -7,8 +7,8 @@ import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/security
 // Session store
 export const session = writable<{
 	isAuthenticated: boolean;
-	user: any;
-	token: any;
+	user: unknown;
+	token: unknown;
 }>({
 	isAuthenticated: false,
 	user: null,
@@ -42,7 +42,7 @@ export const auth = {
 		};
 
 		const user = Object.values(dummyCredentials).find(
-			(cred: any) => cred.username === username && cred.password === password
+			(cred: unknown) => cred.username === username && cred.password === password
 		);
 
 		if (user) {
@@ -97,7 +97,7 @@ export const auth = {
 };
 
 // Generate dummy JWT-like token
-function generateDummyToken(user: any): string {
+function generateDummyToken(user: unknown): string {
 	const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
 	const payload = btoa(
 		JSON.stringify({
@@ -191,3 +191,5 @@ export async function logout() {
 	localStorage.removeItem('zatiaras_session'); // Changed to localStorage
 	clearSecuritySettings(); // Clear security settings on logout
 }
+
+

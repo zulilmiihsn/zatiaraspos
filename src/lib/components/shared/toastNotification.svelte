@@ -13,7 +13,7 @@
 	export let position: 'top' | 'bottom' = 'top';
 	export let autoDismiss = true; // Always true
 
-	let timeoutId: any;
+	let timeoutId: unknown;
 
 	$: if (show && autoDismiss && duration > 0) {
 		if (timeoutId) clearTimeout(timeoutId);
@@ -106,3 +106,6 @@
 		<span class="flex-1">{message}</span>
 	</div>
 {/if}
+
+
+

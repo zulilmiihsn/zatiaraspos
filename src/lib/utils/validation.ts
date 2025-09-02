@@ -7,7 +7,7 @@ export interface ValidationRule {
 	pattern?: RegExp;
 	min?: number;
 	max?: number;
-	custom?: (value: any) => string | null;
+	custom?: (value: unknown) => string | null;
 }
 
 export interface ValidationResult {
@@ -29,7 +29,7 @@ export function sanitizeInput(input: string): string {
 }
 
 // Validasi nomor (untuk harga, quantity, dll)
-export function validateNumber(value: any, rules: ValidationRule = {}): ValidationResult {
+export function validateNumber(value: unknown, rules: ValidationRule = {}): ValidationResult {
 	const errors: string[] = [];
 
 	if (rules.required && (value === null || value === undefined || value === '')) {
@@ -61,7 +61,7 @@ export function validateNumber(value: any, rules: ValidationRule = {}): Validati
 }
 
 // Validasi teks
-export function validateText(value: any, rules: ValidationRule = {}): ValidationResult {
+export function validateText(value: unknown, rules: ValidationRule = {}): ValidationResult {
 	const errors: string[] = [];
 
 	if (rules.required && (!value || value.toString().trim() === '')) {
@@ -144,7 +144,7 @@ export function validatePasswordDemo(password: string): ValidationResult {
 }
 
 // Validasi pemasukan/pengeluaran
-export function validateIncomeExpense(data: any): ValidationResult {
+export function validateIncomeExpense(data: unknown): ValidationResult {
 	const errors: string[] = [];
 
 	// Validasi nominal
@@ -247,3 +247,5 @@ export function validateSKU(sku: string): ValidationResult {
 		}
 	});
 }
+
+

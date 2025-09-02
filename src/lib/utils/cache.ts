@@ -439,7 +439,7 @@ export class CacheUtils {
 	static async getReportData(
 		key: string,
 		dateRange: string,
-		fetcher: (etag?: string) => Promise<{ data: any; etag?: string }>
+		fetcher: (etag?: string) => Promise<{ data: unknown; etag?: string }>
 	) {
 		const cacheKey = `${key}_${dateRange}`;
 		return smartCache.getWithETag(cacheKey, fetcher, {
@@ -468,3 +468,5 @@ export class CacheUtils {
 		await smartCache.invalidate('yearly_report');
 	}
 }
+
+

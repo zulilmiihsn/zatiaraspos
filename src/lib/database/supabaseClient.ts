@@ -18,3 +18,5 @@ const supabaseClients: Record<string, SupabaseClient> = {
 export function getSupabaseClient(branch: 'samarinda' | 'berau' | 'dev'): SupabaseClient {
 	return supabaseClients[branch];
 }
+
+

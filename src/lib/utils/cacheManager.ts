@@ -227,7 +227,7 @@ class CacheManager {
 		}
 	}
 
-	private estimateSize(obj: any): number {
+	private estimateSize(obj: unknown): number {
 		if (obj === null || obj === undefined) return 0;
 
 		const type = typeof obj;
@@ -335,3 +335,5 @@ export const cacheUtils = {
 		}
 	}
 };
+
+

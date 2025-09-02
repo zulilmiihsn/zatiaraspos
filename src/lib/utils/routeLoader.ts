@@ -12,8 +12,8 @@ interface RouteConfig {
 
 interface RouteCache {
 	[key: string]: {
-		component: any;
-		data: any;
+		component: unknown;
+		data: unknown;
 		timestamp: number;
 		ttl: number;
 	};
@@ -192,3 +192,5 @@ export const routeUtils = {
 		}, 2000);
 	}
 };
+
+

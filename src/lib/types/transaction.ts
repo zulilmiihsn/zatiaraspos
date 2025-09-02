@@ -282,7 +282,7 @@ export interface TransactionExportOptions {
 export interface TransactionState {
 	transactions: Transaction[];
 	currentTransaction: Transaction | null;
-	cart: any[]; // CartItem dari product.ts
+	cart: unknown[]; // CartItem dari product.ts
 	filters: TransactionFilters;
 	sortOptions: TransactionSortOptions;
 	isLoading: boolean;
@@ -330,3 +330,5 @@ export interface PaginatedResponse<T> {
 }
 
 // CartItem sudah di-export dari product.ts
+
+
