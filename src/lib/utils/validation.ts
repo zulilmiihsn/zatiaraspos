@@ -247,5 +247,3 @@ export function validateSKU(sku: string): ValidationResult {
 		}
 	});
 }
-
-

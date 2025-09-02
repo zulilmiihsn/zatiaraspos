@@ -169,6 +169,3 @@
 		background: transparent !important;
 	}
 </style>
-
-
-

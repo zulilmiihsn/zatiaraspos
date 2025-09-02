@@ -106,6 +106,3 @@
 		<span class="flex-1">{message}</span>
 	</div>
 {/if}
-
-
-

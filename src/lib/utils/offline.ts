@@ -15,5 +15,3 @@ export async function getPendingTransactions(): Promise<any[]> {
 export async function clearPendingTransactions() {
 	await idbDel(PENDING_KEY);
 }
-
-

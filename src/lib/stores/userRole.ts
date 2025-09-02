@@ -151,5 +151,3 @@ export async function getCurrentProfile(): Promise<any | null> {
 
 	return null;
 }
-
-

@@ -214,5 +214,3 @@ export const ValidationHelper = {
 		return null;
 	}
 };
-
-

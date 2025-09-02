@@ -1059,5 +1059,3 @@ if (process.argv[1] && process.argv[1].endsWith('feature-tests.ts')) {
 		process.exit(1);
 	});
 }
-
-

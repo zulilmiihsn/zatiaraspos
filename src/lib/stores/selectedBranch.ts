@@ -12,5 +12,3 @@ export const selectedBranch = writable<'samarinda' | 'berau' | 'dev'>(initialBra
 if (typeof window !== 'undefined') {
 	selectedBranch.subscribe((val) => localStorage.setItem('selectedBranch', val)); // Changed to localStorage
 }
-
-

@@ -191,5 +191,3 @@ export async function logout() {
 	localStorage.removeItem('zatiaras_session'); // Changed to localStorage
 	clearSecuritySettings(); // Clear security settings on logout
 }
-
-

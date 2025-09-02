@@ -104,5 +104,3 @@ export function createImageObserver(callback: (entry: IntersectionObserverEntry)
 		}
 	);
 }
-
-

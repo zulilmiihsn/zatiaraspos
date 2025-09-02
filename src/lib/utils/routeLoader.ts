@@ -192,5 +192,3 @@ export const routeUtils = {
 		}, 2000);
 	}
 };
-
-

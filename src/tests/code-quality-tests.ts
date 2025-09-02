@@ -442,7 +442,7 @@ export class CodeQualityTestRunner {
 	async runAllTests(): Promise<CodeQualityTestSuite[]> {
 		console.log('🧪 Starting Code Quality Tests...\n');
 
-		// Removed unused constant: results
+		const results: CodeQualityTestSuite[] = [];
 
 		for (const suite of this.testSuites) {
 			console.log(`📋 Running ${suite.name}...`);
@@ -463,9 +463,9 @@ export class CodeQualityTestRunner {
 	/**
 	 * Jalankan satu test suite
 	 */
-	private async runTestSuite(suite: unknown): Promise<CodeQualityTestSuite> {
+	private async runTestSuite(suite: any): Promise<CodeQualityTestSuite> {
 		const startTime = Date.now();
-		// Removed unused constant: results
+		const results: any[] = [];
 
 		for (const test of suite.tests) {
 			try {
@@ -475,7 +475,7 @@ export class CodeQualityTestRunner {
 				// Log individual test result
 				const status = result.success ? '✅' : '❌';
 				console.log(`  ${status} ${result.name}: ${result.message}`);
-			} catch (error: unknown) {
+			} catch (error: any) {
 				results.push({
 					name: test.name,
 					success: false,
@@ -730,7 +730,3 @@ if (process.argv[1] && process.argv[1].endsWith('code-quality-tests.ts')) {
 		process.exit(1);
 	});
 }
-
-
-
-

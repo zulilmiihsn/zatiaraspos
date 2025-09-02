@@ -468,5 +468,3 @@ export class CacheUtils {
 		await smartCache.invalidate('yearly_report');
 	}
 }
-
-

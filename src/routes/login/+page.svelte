@@ -47,9 +47,9 @@
 	}
 
 	let showLottieSuccess = false;
-	let lottieTimeout: unknown = null;
+	let lottieTimeout: number | undefined = undefined;
 	let showLottieError = false;
-	let lottieErrorTimeout: unknown = null;
+	let lottieErrorTimeout: number | undefined = undefined;
 
 	// Lottie event handlers
 	function handleLottieSuccessLoad(event: any) {
@@ -88,7 +88,7 @@
 			errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
 			showLottieError = true;
 			isLottieErrorPlaying = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -102,7 +102,7 @@
 			});
 			showLottieError = true;
 			isLottieErrorPlaying = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -113,15 +113,15 @@
 			isLottieSuccessPlaying = true;
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			goto('/');
-		} catch (e: unknown) {
-			errorMessage = e.message;
+		} catch (e: any) {
+			errorMessage = e.message || 'Login gagal';
 			securityUtils.logSecurityEvent('login_failed', {
 				username: sanitizedUsername,
 				reason: 'invalid_credentials'
 			});
 			showLottieError = true;
 			isLottieErrorPlaying = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 		} finally {
 			isLoading = false;
@@ -378,6 +378,3 @@
 		animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 </style>
-
-
-

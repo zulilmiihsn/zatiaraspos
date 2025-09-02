@@ -111,5 +111,3 @@ export async function loadRouteIcons(routeName: keyof typeof ROUTE_ICONS): Promi
 	const icons = ROUTE_ICONS[routeName] || [];
 	await iconLoader.preloadIcons(icons);
 }
-
-

@@ -221,5 +221,3 @@ export function generateSuccessName(action: string, target: string): string {
 
 	return `success${toPascalCase(actionName)}${toPascalCase(targetName)}`;
 }
-
-
