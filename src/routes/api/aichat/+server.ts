@@ -79,11 +79,13 @@ TUGAS ANDA:
 
 ATURAN:
 - Gunakan tanggal Indonesia (WITA)
+- Jika user bertanya "2 bulan terakhir", berikan tanggal 2 bulan terakhir (misal: 1 Nov - 31 Des 2024)
+- Jika user bertanya "3 bulan terakhir", berikan tanggal 3 bulan terakhir
 - Jika user bertanya "5 hari pertama bulan ini", berikan tanggal 1-5 bulan ini
 - Jika user bertanya "bulan lalu", berikan tanggal 1-akhir bulan lalu
-- Jika user bertanya "3 bulan terakhir", berikan tanggal 3 bulan terakhir
 - Jika user bertanya "minggu ini", berikan tanggal Senin-Minggu minggu ini
 - Jika user bertanya "hari ini", berikan tanggal hari ini
+- PASTIKAN rentang tanggal mencakup data yang diminta user
 
 FORMAT JAWABAN (JSON):
 {
@@ -173,13 +175,15 @@ ATURAN ANALISIS:
 
 PENTING - KONTEKS TANGGAL:
 - Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
+- Jika user bertanya "2 bulan terakhir", data yang diberikan sudah mencakup 2 bulan terakhir
 - Jika user bertanya "5 hari pertama bulan ini", data yang diberikan sudah mencakup 5 hari pertama bulan ini
 - Jika user bertanya "3 bulan terakhir", data yang diberikan sudah mencakup 3 bulan terakhir
 - Jika user bertanya "bulan lalu", data yang diberikan sudah mencakup bulan lalu
-- JANGAN katakan "tidak ada data" jika data tersedia untuk periode yang diminta
+- JANGAN PERNAH katakan "data tidak tersedia" atau "tidak ada data" - data sudah di-fetch sesuai konteks
 - Gunakan konteks tanggal yang jelas dalam jawaban Anda
 - Selalu sebutkan rentang tanggal yang dianalisis
 - Data di bagian "DATA LAPORAN PERIODE YANG DIMINTA" sudah sesuai dengan konteks pertanyaan user
+- Jika ada data dalam konteks, ANALISIS data tersebut, jangan katakan tidak ada
 
 KEMAMPUAN ANALISIS TREN:
 - Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
@@ -541,7 +545,7 @@ Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Laba Bersih: Rp ${serverReportData.summary?.labaBersih?.toLocaleString('id-ID') || '0'}
 - Total Transaksi: ${serverReportData.summary?.totalTransaksi || '0'}
 
-PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh.
+PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "2 bulan terakhir", maka data di atas adalah data untuk 2 bulan terakhir. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh. ANALISIS data yang tersedia, jangan katakan tidak ada data.
 
 === DATA HISTORIS UNTUK PERBANDINGAN (6 BULAN TERAKHIR) ===
 - Total Pendapatan 6 Bulan: Rp ${serverReportData.summary?.historicalPendapatan?.toLocaleString('id-ID') || '0'}
@@ -609,6 +613,11 @@ ${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}
 
 		// AI 2: Analisis data bisnis
 		console.log('AI 2: Analyzing business data...');
+		console.log('Data summary:', {
+			pendapatan: serverReportData?.summary?.pendapatan,
+			totalTransaksi: serverReportData?.summary?.totalTransaksi,
+			dateRange: `${dateRange.start} to ${dateRange.end}`
+		});
 		const answer = await analyzeBusinessData(question, reportContext, rangeContext, apiKey);
 		console.log('AI 2 Result: Analysis completed');
 
