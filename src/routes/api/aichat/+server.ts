@@ -21,73 +21,6 @@ function toYMDWita(date: Date): string {
 	return `${yyyy}-${mm}-${dd}`;
 }
 
-// Fallback parser untuk AI 1 (jika AI gagal)
-function parseFlexibleRange(question: string): {
-	start: string;
-	end: string;
-	type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-} {
-	const q = (question || '').toLowerCase();
-	const now = new Date();
-	const today = toYMDWita(now);
-	const toYMD = (d: Date) => toYMDWita(d);
-	const addDays = (d: Date, n: number) => {
-		const x = new Date(d);
-		x.setDate(x.getDate() + n);
-		return x;
-	};
-
-	// Basic patterns sebagai fallback
-	if (q.includes('hari ini') || q.includes('today'))
-		return { start: today, end: today, type: 'daily' };
-	if (q.includes('kemarin') || q.includes('yesterday')) {
-		const d = new Date(now);
-		d.setDate(d.getDate() - 1);
-		const y = toYMD(d);
-		return { start: y, end: y, type: 'daily' };
-	}
-	if (q.includes('bulan ini') || q.includes('this month')) {
-		const startD = new Date(now.getFullYear(), now.getMonth(), 1);
-		const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-	}
-	if (q.includes('bulan lalu') || q.includes('last month')) {
-		const startD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		const endD = new Date(now.getFullYear(), now.getMonth(), 0);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-	}
-	
-	// Handle "X bulan terakhir" pattern
-	const bulanMatch = q.match(/(\d+)\s*bulan\s*terakhir/);
-	if (bulanMatch) {
-		const n = Math.max(1, parseInt(bulanMatch[1], 10));
-		const startD = new Date(now.getFullYear(), now.getMonth() - n, 1);
-		const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-	}
-	
-	// Handle "X hari terakhir" pattern
-	const hariMatch = q.match(/(\d+)\s*hari\s*terakhir/);
-	if (hariMatch) {
-		const n = Math.max(1, parseInt(hariMatch[1], 10));
-		const endD = new Date(now);
-		const startD = new Date(now);
-		startD.setDate(now.getDate() - (n - 1));
-		return { start: toYMD(startD), end: toYMD(endD), type: n >= 7 ? 'weekly' : 'daily' };
-	}
-	
-	// Handle "X minggu terakhir" pattern
-	const mingguMatch = q.match(/(\d+)\s*minggu\s*terakhir/);
-	if (mingguMatch) {
-		const n = Math.max(1, parseInt(mingguMatch[1], 10));
-		const endD = new Date(now);
-		const startD = new Date(now);
-		startD.setDate(now.getDate() - (n * 7 - 1));
-		return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
-	}
-	
-	return { start: today, end: today, type: 'daily' };
-}
 
 // AI 1: Date Range Identifier
 async function identifyDateRange(question: string, apiKey: string): Promise<{
@@ -170,6 +103,7 @@ Pertanyaan user: "${question}"`
 	
 	try {
 		const parsed = JSON.parse(content);
+		console.log('AI 1 JSON Parse Success:', parsed);
 		return {
 			start: parsed.start || new Date().toISOString().split('T')[0],
 			end: parsed.end || new Date().toISOString().split('T')[0],
@@ -178,14 +112,9 @@ Pertanyaan user: "${question}"`
 		};
 	} catch (error) {
 		console.error('AI 1 JSON Parse Error:', error);
-		// Fallback ke parser lama
-		const range = parseFlexibleRange(question);
-		return {
-			start: range.start,
-			end: range.end,
-			type: range.type,
-			reasoning: 'Menggunakan parser fallback'
-		};
+		console.error('Raw AI 1 response:', content);
+		// Tidak ada fallback, langsung error
+		throw new Error(`AI 1 gagal mengidentifikasi rentang tanggal: ${error}`);
 	}
 }
 
@@ -307,10 +236,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		console.log('Current date (WITA):', toYMDWita(new Date()));
 		
 		const dateRange = await identifyDateRange(question, apiKey);
-		console.log('AI 1 Result:', dateRange);
-		console.log('Parsed date range - start:', dateRange.start, 'end:', dateRange.end);
-		console.log('Date range type:', dateRange.type);
-		console.log('Reasoning:', dateRange.reasoning);
+		
+		console.log('=== AI 1 RESULT ===');
+		console.log('✅ Start Date:', dateRange.start);
+		console.log('✅ End Date:', dateRange.end);
+		console.log('✅ Type:', dateRange.type);
+		console.log('✅ Reasoning:', dateRange.reasoning);
+		console.log('=== END AI 1 RESULT ===');
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
@@ -362,9 +294,11 @@ export const POST: RequestHandler = async ({ request }) => {
 				.neq('sumber', 'pos')
 		]);
 
-		console.log('Database query results:');
-		console.log('- bukuKasPos count:', bukuKasPos?.length || 0);
-		console.log('- bukuKasManual count:', bukuKasManual?.length || 0);
+		console.log('=== DATABASE QUERY RESULTS ===');
+		console.log('📊 bukuKasPos count:', bukuKasPos?.length || 0);
+		console.log('📊 bukuKasManual count:', bukuKasManual?.length || 0);
+		console.log('📊 Total records found:', (bukuKasPos?.length || 0) + (bukuKasManual?.length || 0));
+		console.log('=== END DATABASE QUERY RESULTS ===');
 
 		// Data periode yang diminta
 		const laporan = [
