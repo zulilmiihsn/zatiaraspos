@@ -2,7 +2,7 @@
 
 ## Konfigurasi Environment
 
-1. File `.env` sudah ada di root project dengan isi:
+1. Buat file `.env` di root project dengan isi:
 ```env
 VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
 NODE_ENV=development

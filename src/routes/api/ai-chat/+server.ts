@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		
 		if (!apiKey) {
 			return json(
-				{ success: false, error: 'API key tidak dikonfigurasi' },
+				{ success: false, error: 'API key OpenRouter tidak dikonfigurasi. Silakan tambahkan VITE_OPENROUTER_API_KEY di file .env' },
 				{ status: 500 }
 			);
 		}

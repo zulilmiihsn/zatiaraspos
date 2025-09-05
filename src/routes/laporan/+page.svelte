@@ -70,7 +70,7 @@
 			}
 		} catch (error) {
 			console.error('AI Chat Error:', error);
-			aiAnswer = 'Error: Terjadi kesalahan saat menghubungi AI. Silakan coba lagi.';
+			aiAnswer = 'Maaf, terjadi kesalahan saat menghubungi Asisten AI. Pastikan API key sudah dikonfigurasi dengan benar di file .env. Silakan coba lagi nanti.';
 		} finally {
 			isAiLoading = false;
 		}
@@ -1758,10 +1758,7 @@
 			
 			<!-- Modal Footer -->
 			<div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-				<div class="flex items-center justify-between">
-					<p class="text-xs text-gray-500">
-						Didukung oleh OpenRouter AI
-					</p>
+				<div class="flex items-center justify-end">
 					<button
 						onclick={handleAiClose}
 						class="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg text-sm font-medium transition-colors"
