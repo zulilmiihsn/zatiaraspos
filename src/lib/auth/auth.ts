@@ -42,7 +42,7 @@ export const auth = {
 		};
 
 		const user = Object.values(dummyCredentials).find(
-			(cred: unknown) => cred.username === username && cred.password === password
+			(cred: any) => cred.username === username && cred.password === password
 		);
 
 		if (user) {
@@ -86,7 +86,7 @@ export const auth = {
 	// Check if user has specific role
 	hasRole(role: string): boolean {
 		const user = this.getCurrentUser();
-		return user?.role === role;
+		return (user as any)?.role === role;
 	},
 
 	// Validate token (dummy validation)
@@ -97,7 +97,7 @@ export const auth = {
 };
 
 // Generate dummy JWT-like token
-function generateDummyToken(user: unknown): string {
+function generateDummyToken(user: any): string {
 	const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
 	const payload = btoa(
 		JSON.stringify({

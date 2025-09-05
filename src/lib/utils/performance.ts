@@ -1,5 +1,5 @@
 // Performance utilities
-export function debounce<T extends (...args: unknown[]) => any>(
+export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number
 ): (...args: Parameters<T>) => void {
@@ -10,7 +10,7 @@ export function debounce<T extends (...args: unknown[]) => any>(
 	};
 }
 
-export function throttle<T extends (...args: unknown[]) => any>(
+export function throttle<T extends (...args: any[]) => any>(
 	func: T,
 	limit: number
 ): (...args: Parameters<T>) => void {
@@ -25,7 +25,7 @@ export function throttle<T extends (...args: unknown[]) => any>(
 }
 
 // Memoization untuk expensive calculations
-export function memoize<T extends (...args: unknown[]) => any>(
+export function memoize<T extends (...args: any[]) => any>(
 	func: T,
 	resolver?: (...args: Parameters<T>) => string
 ): T & { clearCache: () => void } {
@@ -56,14 +56,14 @@ export async function measureAsyncPerformance(name: string, fn: () => Promise<vo
 }
 
 // Cart calculations dengan memoization
-export const calculateCartTotal = memoize((cart: unknown[]) => {
+export const calculateCartTotal = memoize((cart: any[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
 		const itemTotal = (item.product?.price ?? item.product?.harga ?? 0) * (item.qty ?? 1);
 		const addOnsTotal =
 			(item.addOns || []).reduce(
-				(sum: number, addon: unknown) => sum + (addon.price ?? addon.harga ?? 0),
+				(sum: number, addon: any) => sum + (addon.price ?? addon.harga ?? 0),
 				0
 			) * (item.qty ?? 1);
 		total += itemTotal + addOnsTotal;
@@ -73,7 +73,7 @@ export const calculateCartTotal = memoize((cart: unknown[]) => {
 });
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch(query: string, items: unknown[], key: string = 'name'): unknown[] {
+export function fuzzySearch(query: string, items: any[], key: string = 'name'): any[] {
 	if (!query.trim()) return items;
 	const searchTerm = query.toLowerCase();
 	// Cari di name dan kategori (jika ada)

@@ -62,7 +62,7 @@ export const typescriptTests = {
 						details: 'All TypeScript files compiled without errors',
 						executionTime
 					};
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -97,7 +97,7 @@ export const typescriptTests = {
 						details: 'Application built without errors',
 						executionTime
 					};
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -142,7 +142,7 @@ export const lintingTests = {
 						details: 'No linting errors found',
 						executionTime
 					};
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -177,7 +177,7 @@ export const lintingTests = {
 						details: 'All files follow formatting standards',
 						executionTime
 					};
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -220,7 +220,7 @@ export const fileStructureTests = {
 						'src/routes/+page.svelte'
 					];
 
-					// Removed unused constant: missingFiles
+					const missingFiles: string[] = [];
 
 					for (const file of requiredFiles) {
 						if (!fs.existsSync(file)) {
@@ -247,7 +247,7 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -279,7 +279,7 @@ export const fileStructureTests = {
 						'src/lib/database'
 					];
 
-					// Removed unused constant: missingDirs
+					const missingDirs: string[] = [];
 
 					for (const dir of requiredDirs) {
 						if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
@@ -306,7 +306,7 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -341,7 +341,7 @@ export const dependencyTests = {
 					const packageJson = JSON.parse(packageContent);
 
 					const requiredFields = ['name', 'version', 'scripts', 'dependencies', 'devDependencies'];
-					// Removed unused constant: missingFields
+					const missingFields: string[] = [];
 
 					for (const field of requiredFields) {
 						if (!packageJson[field]) {
@@ -368,7 +368,7 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -413,7 +413,7 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: unknown) {
+				} catch (error: any) {
 					const executionTime = Date.now() - startTime;
 
 					return {
@@ -488,8 +488,8 @@ export class CodeQualityTestRunner {
 		}
 
 		const totalExecutionTime = Date.now() - startTime;
-		const passedTests = results.filter((r) => r.success).length;
-		const failedTests = results.filter((r) => !r.success).length;
+		const passedTests = results.filter((r: any) => r.success).length;
+		const failedTests = results.filter((r: any) => !r.success).length;
 
 		return {
 			name: suite.name,

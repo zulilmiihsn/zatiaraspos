@@ -1,81 +1,81 @@
 # 🧪 CODE QUALITY TEST REPORT
 
-**Generated:** 02/09/2025, 13.16.38
+**Generated:** 04/09/2025, 13.44.23
 
 ## 📊 SUMMARY
 
 - **Total Tests:** 8
-- **Passed:** 4 ✅
-- **Failed:** 4 ❌
-- **Success Rate:** 50.0%
-- **Total Time:** 194877ms
+- **Passed:** 7 ✅
+- **Failed:** 1 ❌
+- **Success Rate:** 87.5%
+- **Total Time:** 334276ms
 
 ## TypeScript Compilation
 
 - **Tests:** 2/2 passed
-- **Time:** 150840ms
+- **Time:** 269541ms
 
 ### ✅ TypeScript Check
 - **Status:** PASSED
 - **Message:** TypeScript compilation successful
 - **Details:** All TypeScript files compiled without errors
-- **Time:** 1538ms
+- **Time:** 64120ms
 
 ### ✅ TypeScript Build
 - **Status:** PASSED
 - **Message:** Build successful
 - **Details:** Application built without errors
-- **Time:** 149300ms
+- **Time:** 205416ms
 
 ## Code Linting
 
 - **Tests:** 1/2 passed
-- **Time:** 44028ms
+- **Time:** 64722ms
 
 ### ❌ ESLint Check
 - **Status:** FAILED
 - **Message:** ESLint failed
 - **Details:** 
 > zatiaraspos@0.0.1 lint D:\zatiaraspos
-> prettier --check .
+> prettier --check . && eslint .
 
 Checking formatting...
  ELIFECYCLE  Command failed with exit code 1.
 
-- **Time:** 21896ms
+- **Time:** 30002ms
 
 ### ✅ Prettier Format Check
 - **Status:** PASSED
 - **Message:** Code formatting is correct
 - **Details:** All files follow formatting standards
-- **Time:** 22131ms
+- **Time:** 34718ms
 
 ## File Structure
 
-- **Tests:** 0/2 passed
-- **Time:** 5ms
+- **Tests:** 2/2 passed
+- **Time:** 6ms
 
-### ❌ Required Files Exist
-- **Status:** FAILED
-- **Message:** File check failed
-- **Details:** missingFiles is not defined
-- **Time:** 1ms
+### ✅ Required Files Exist
+- **Status:** PASSED
+- **Message:** All required files present
+- **Details:** Found 10 required files
+- **Time:** 2ms
 
-### ❌ Directory Structure
-- **Status:** FAILED
-- **Message:** Directory check failed
-- **Details:** missingDirs is not defined
+### ✅ Directory Structure
+- **Status:** PASSED
+- **Message:** Directory structure is correct
+- **Details:** All 9 required directories present
 - **Time:** 2ms
 
 ## Dependencies
 
-- **Tests:** 1/2 passed
-- **Time:** 4ms
+- **Tests:** 2/2 passed
+- **Time:** 7ms
 
-### ❌ Package.json Valid
-- **Status:** FAILED
-- **Message:** Package.json validation failed
-- **Details:** missingFields is not defined
+### ✅ Package.json Valid
+- **Status:** PASSED
+- **Message:** Package.json is valid
+- **Details:** All required fields present: name, version, scripts, dependencies, devDependencies
 - **Time:** 1ms
 
 ### ✅ Dependencies Installed

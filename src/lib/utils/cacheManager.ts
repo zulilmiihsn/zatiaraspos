@@ -231,7 +231,7 @@ class CacheManager {
 		if (obj === null || obj === undefined) return 0;
 
 		const type = typeof obj;
-		if (type === 'string') return obj.length * 2; // UTF-16
+		if (type === 'string') return (obj as string).length * 2; // UTF-16
 		if (type === 'number') return 8;
 		if (type === 'boolean') return 4;
 		if (type === 'object') {
@@ -239,7 +239,7 @@ class CacheManager {
 				return obj.reduce((size, item) => size + this.estimateSize(item), 0);
 			}
 			return Object.keys(obj).reduce(
-				(size, key) => size + this.estimateSize(key) + this.estimateSize(obj[key]),
+				(size, key) => size + this.estimateSize(key) + this.estimateSize((obj as any)[key]),
 				0
 			);
 		}

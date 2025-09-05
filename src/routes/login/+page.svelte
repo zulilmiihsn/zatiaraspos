@@ -23,13 +23,6 @@
 	let branch: 'samarinda' | 'berau' | 'dev' = 'samarinda';
 	$: selectedBranch.set(branch);
 
-	// Lottie control states
-	let lottieSuccessRef: any = null;
-	let lottieErrorRef: any = null;
-	let lottiePreloadRef: any = null;
-	let isLottieSuccessPlaying = false;
-	let isLottieErrorPlaying = false;
-
 	// Validate form
 	function validateForm(): boolean {
 		let isValid = true;
@@ -47,38 +40,9 @@
 	}
 
 	let showLottieSuccess = false;
-	let lottieTimeout: number | undefined = undefined;
+	let lottieTimeout: any = null;
 	let showLottieError = false;
-	let lottieErrorTimeout: number | undefined = undefined;
-
-	// Lottie event handlers
-	function handleLottieSuccessLoad(event: any) {
-		lottieSuccessRef = event.detail;
-	}
-
-	function handleLottieErrorLoad(event: any) {
-		lottieErrorRef = event.detail;
-	}
-
-	function handleLottiePreloadLoad(event: any) {
-		lottiePreloadRef = event.detail;
-	}
-
-	function handleLottieSuccessComplete() {
-		// Animation selesai, freeze di frame terakhir
-		if (lottieSuccessRef) {
-			lottieSuccessRef.pause();
-			isLottieSuccessPlaying = false;
-		}
-	}
-
-	function handleLottieErrorComplete() {
-		// Animation selesai, freeze di frame terakhir
-		if (lottieErrorRef) {
-			lottieErrorRef.pause();
-			isLottieErrorPlaying = false;
-		}
-	}
+	let lottieErrorTimeout: any = null;
 
 	async function handleSubmit() {
 		errorMessage = '';
@@ -87,8 +51,7 @@
 		if (!securityUtils.checkFormRateLimit('login')) {
 			errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
 			showLottieError = true;
-			isLottieErrorPlaying = true;
-			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
+			clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -101,8 +64,7 @@
 				reason: 'suspicious_activity'
 			});
 			showLottieError = true;
-			isLottieErrorPlaying = true;
-			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
+			clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -110,18 +72,16 @@
 		try {
 			await loginWithUsername(sanitizedUsername, sanitizedPassword, branch);
 			showLottieSuccess = true;
-			isLottieSuccessPlaying = true;
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			goto('/');
 		} catch (e: any) {
-			errorMessage = e.message || 'Login gagal';
+			errorMessage = e.message;
 			securityUtils.logSecurityEvent('login_failed', {
 				username: sanitizedUsername,
 				reason: 'invalid_credentials'
 			});
 			showLottieError = true;
-			isLottieErrorPlaying = true;
-			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
+			clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 		} finally {
 			isLoading = false;
@@ -198,8 +158,7 @@
 				<DotLottieSvelte
 					src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
 					loop={false}
-					autoplay={false}
-					on:load={handleLottiePreloadLoad}
+					autoplay
 				/>
 			</div>
 
@@ -212,9 +171,7 @@
 						<DotLottieSvelte
 							src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
 							loop={false}
-							autoplay={true}
-							on:load={handleLottieSuccessLoad}
-							on:complete={handleLottieSuccessComplete}
+							autoplay
 						/>
 						<div class="mt-2 text-lg font-bold text-pink-500">Login Berhasil!</div>
 					</div>
@@ -227,13 +184,44 @@
 					<div
 						class="animate-fadeInUp flex flex-col items-center rounded-2xl border border-red-200 bg-white/80 px-8 py-6 shadow-2xl"
 					>
-						<DotLottieSvelte
-							src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
-							loop={false}
-							autoplay={true}
-							on:load={handleLottieErrorLoad}
-							on:complete={handleLottieErrorComplete}
-						/>
+						<div
+							class="mb-2 flex h-[90px] w-[90px] items-center justify-center rounded-full bg-red-100"
+						>
+							<svg
+								class="h-16 w-16 text-red-500"
+								fill="none"
+								viewBox="0 0 64 64"
+								stroke="currentColor"
+								stroke-width="3"
+							>
+								<circle
+									cx="32"
+									cy="32"
+									r="30"
+									stroke="currentColor"
+									stroke-width="3"
+									fill="#fee2e2"
+								/>
+								<line
+									x1="22"
+									y1="22"
+									x2="42"
+									y2="42"
+									stroke="currentColor"
+									stroke-width="4"
+									stroke-linecap="round"
+								/>
+								<line
+									x1="42"
+									y1="22"
+									x2="22"
+									y2="42"
+									stroke="currentColor"
+									stroke-width="4"
+									stroke-linecap="round"
+								/>
+							</svg>
+						</div>
 						<div class="mt-2 text-lg font-bold text-red-500">{errorMessage || 'Login Gagal!'}</div>
 					</div>
 				</div>

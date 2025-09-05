@@ -388,7 +388,7 @@ export class SessionSecurity {
 			return false;
 		}
 
-		const { timestamp, userId, branchId } = sessionData;
+		const { timestamp, userId, branchId } = sessionData as any;
 
 		if (!timestamp || !userId || !branchId) {
 			return false;

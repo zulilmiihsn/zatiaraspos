@@ -130,7 +130,7 @@
 			confirmPin = '';
 			pinError = '';
 			pin = newPin;
-		} catch (error: unknown) {
+		} catch (error: any) {
 			pinError = 'Gagal menyimpan perubahan: ' + error.message;
 		}
 	}
@@ -160,7 +160,7 @@
 			notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;
-		} catch (error: unknown) {
+		} catch (error: any) {
 			notifModalMsg = 'Gagal menyimpan pengaturan: ' + error.message;
 			notifModalType = 'error';
 			showNotifModal = true;

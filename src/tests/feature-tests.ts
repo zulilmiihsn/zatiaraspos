@@ -748,7 +748,7 @@ export class FeatureTestRunner {
 		const startTime = Date.now();
 		const results: TestResult[] = [];
 
-		for (const test of suite.tests) {
+		for (const test of (suite as any).tests) {
 			const testStartTime = Date.now();
 
 			try {
@@ -791,8 +791,8 @@ export class FeatureTestRunner {
 		const failedTests = results.filter((r) => !r.success).length;
 
 		return {
-			name: suite.name,
-			totalTests: suite.tests.length,
+			name: (suite as any).name,
+			totalTests: (suite as any).tests.length,
 			passedTests,
 			failedTests,
 			results,

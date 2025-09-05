@@ -12,7 +12,18 @@
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 
-	let dashboardData = null;
+	let dashboardData: {
+		omzet: number;
+		jumlahTransaksi: number;
+		profit: number;
+		itemTerjual: number;
+		totalItem: number;
+		avgTransaksi: number;
+		jamRamai: string;
+		weeklyIncome: number[];
+		weeklyMax: number;
+		bestSellers: { name: string; image?: string; total_qty: number }[];
+	} | null = null;
 
 	let barsVisible = false;
 	let incomeChartRef: HTMLDivElement | null = null;
@@ -32,12 +43,7 @@
 	});
 
 	// Lazy load icons
-	let Wallet: any = null,
-		ShoppingBag: any = null,
-		Coins: any = null,
-		Users: any = null,
-		Clock: any = null,
-		TrendingUp: any = null;
+	let Wallet: any, ShoppingBag: any, Coins: any, Users: any, Clock: any, TrendingUp: any;
 	let omzet = 0;
 	let jumlahTransaksi = 0;
 	let profit = 0;
@@ -45,16 +51,16 @@
 	let totalItem = 0;
 	let avgTransaksi = 0;
 	let jamRamai = '';
-	let weeklyIncome: any[] = [];
+	let weeklyIncome: number[] = [];
 	let weeklyMax = 1;
-	let bestSellers: any[] = [];
+	let bestSellers: { name: string; image?: string; total_qty: number }[] = [];
 
 	// Subscribe ke store
 	let currentUserRole = '';
-	let userProfileData = null;
+	let userProfileData: { role: string; username: string } | null = null;
 
 	userRole.subscribe((val) => (currentUserRole = val || ''));
-	userProfileData.subscribe((val) => (userProfileData = val));
+	userProfile.subscribe((val) => (userProfileData = val));
 
 	let isLoadingBestSellers = true;
 	let errorBestSellers = '';
@@ -201,7 +207,7 @@
 		});
 	}
 
-	function applyDashboardData(data: unknown) {
+	function applyDashboardData(data: any) {
 		if (!data) return;
 		omzet = data.omzet;
 		jumlahTransaksi = data.jumlahTransaksi;
@@ -316,8 +322,19 @@
 	let pinInputToko = '';
 	let pinErrorToko = '';
 	let tokoAktifLocal = false;
-	let sesiAktif: any = null;
-	let ringkasanTutup = {
+	let sesiAktif: {
+		id: string;
+		opening_cash: number;
+		opening_time: string;
+		is_active: boolean;
+	} | null = null;
+	let ringkasanTutup: {
+		modalAwal: number;
+		totalPenjualan: number;
+		pemasukanTunai: number;
+		pengeluaranTunai: number;
+		uangKasir: number;
+	} = {
 		modalAwal: 0,
 		totalPenjualan: 0,
 		pemasukanTunai: 0,
@@ -325,7 +342,7 @@
 		uangKasir: 0
 	};
 
-	function updateTokoAktif(val: any) {
+	function updateTokoAktif(val: boolean) {
 		tokoAktifLocal = val;
 		// window.tokoAktif removed
 	}
@@ -385,7 +402,7 @@
 	}
 
 	// Tambahkan state untuk pending action setelah PIN benar
-	let pendingAction: any = null;
+	let pendingAction: (() => void) | null = null;
 
 	async function handleBukaToko() {
 		const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
@@ -429,8 +446,8 @@
 		const modalAwal = sesiAktif.opening_cash || 0;
 		// Total penjualan = semua pemasukan (in) dari sumber pos
 		const totalPenjualan = kas
-			.filter((t: Kas) => t.tipe === 'in' && t.sumber === 'pos')
-			.reduce((a: number, b: Kas) => a + (b.amount || 0), 0);
+			.filter((t) => t.tipe === 'in' && t.sumber === 'pos')
+			.reduce((a, b) => a + (b.amount || 0), 0);
 		// Uang kasir seharusnya
 		const uangKasir = modalAwal + penjualanTunai - pengeluaranTunai;
 		ringkasanTutup = {
@@ -612,7 +629,7 @@
 
 	let selectedBarIndex: number | null = null;
 	let showBarInsight = false;
-	let barHoldTimeout: number | undefined = undefined;
+	let barHoldTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function handleBarPointerDown(i: number) {
 		barHoldTimeout = setTimeout(() => {
@@ -963,7 +980,7 @@
 					</div>
 					{#if isLoadingBestSellers}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each Array(3) as _i (_)}
+							{#each Array(3) as _, i}
 								<div
 									class="relative flex animate-pulse items-center gap-3 rounded-xl bg-gray-100 p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-none"
 								>
@@ -983,7 +1000,7 @@
 						</div>
 					{:else}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each bestSellers.slice(0, 3) as mi (m)}
+							{#each bestSellers.slice(0, 3) as m, i}
 								<div
 									class="relative flex items-center gap-3 rounded-xl bg-white p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:border md:border-pink-200 md:bg-white md:p-6 md:shadow-none {i ===
 									0
@@ -1071,7 +1088,7 @@
 							<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
 								{#if weeklyIncome.length === 0}
 									<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
-										{#each getLast7DaysLabelsWITA() as labeli (label)}
+										{#each getLast7DaysLabelsWITA() as label, i}
 											<div class="flex flex-1 flex-col items-center">
 												<div
 													class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10"
@@ -1089,7 +1106,7 @@
 										</div>
 									</div>
 								{:else}
-									{#each weeklyIncome as incomei (income)}
+									{#each weeklyIncome as income, i}
 										<div class="relative flex flex-1 flex-col items-center">
 											<div
 												class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"
@@ -1123,6 +1140,417 @@
 			</div>
 		</div>
 	</main>
+	<div class="sticky bottom-0 z-30 bg-white md:hidden">
+		<!-- BottomNav hanya muncul di mobile -->
+	</div>
+</div>
+
+<!-- Modal Buka/Tutup Toko -->
+
+<!-- Top Bar Status Toko -->
+
+<div class="relative min-h-[64px] w-full overflow-hidden md:mx-0">
+	{#key tokoAktifLocal}
+		<div
+			bind:this={topbarRef}
+			class="absolute top-0 left-0 flex w-full items-center justify-between gap-4 bg-gradient-to-r from-pink-400 to-pink-500 px-4 py-3 text-white transition-transform duration-500 ease-in-out"
+			style="height:64px"
+			in:fly={{ x: -64, duration: 350 }}
+			out:fly={{ x: 64, duration: 350 }}
+		>
+			<div class="flex items-center gap-3">
+				<span class="text-3xl md:text-4xl">{tokoAktifLocal ? '🍹' : '🔒'}</span>
+
+				<div class="flex flex-col">
+					<span class="text-base font-extrabold tracking-wide md:text-lg"
+						>{tokoAktifLocal ? 'Toko Sedang Buka' : 'Toko Sedang Tutup'}</span
+					>
+
+					<span class="text-xs opacity-80 md:text-sm"
+						>{tokoAktifLocal ? 'Siap melayani pelanggan' : 'Belum menerima transaksi'}</span
+					>
+				</div>
+			</div>
+
+			{#if currentUserRole === ''}
+				<div
+					class="h-9 min-w-[92px] animate-pulse rounded-lg bg-white/30 px-3 py-2 md:h-10 md:min-w-[110px]"
+				></div>
+			{:else if currentUserRole === 'kasir' || currentUserRole === 'pemilik'}
+				<button
+					class="flex h-9 min-w-[92px] items-center gap-2 rounded-lg bg-white/20 px-3 py-2 text-xs font-bold text-white shadow transition-all hover:bg-white/30 active:bg-white/40 md:h-10 md:min-w-[110px] md:text-sm"
+					onclick={handleOpenTokoModal}
+				>
+					<span class="text-lg">{tokoAktifLocal ? '🔒' : '🍹'}</span>
+
+					<span>{tokoAktifLocal ? 'Tutup Toko' : 'Buka Toko'}</span>
+				</button>
+			{/if}
+		</div>
+	{/key}
+</div>
+
+<div bind:this={sentinelRef} style="height:1px;width:100%"></div>
+
+<div
+	class="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-white"
+	ontouchstart={handleTouchStart}
+	ontouchmove={handleTouchMove}
+	ontouchend={handleTouchEnd}
+>
+	<main
+		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden md:mx-auto md:max-w-3xl md:rounded-2xl md:bg-white md:shadow-xl lg:max-w-5xl"
+	>
+		<div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
+			<div class="flex flex-col space-y-3 md:space-y-10">
+				<!-- Metrik Utama -->
+
+				<div
+					class="grid grid-cols-2 gap-3 md:grid-cols-2 md:grid-rows-2 md:gap-6 md:rounded-2xl md:border md:border-gray-100 md:bg-white md:p-6 md:shadow-lg"
+				>
+					<div
+						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-sky-200 to-sky-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-sky-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+					>
+						{#if ShoppingBag}
+							<svelte:component
+								this={ShoppingBag}
+								class="mb-2 h-6 w-6 text-sky-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							/>
+						{:else}
+							<div
+								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							>
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="mb-1 text-xs font-medium text-gray-500 md:mb-0 md:text-center md:text-base">
+							Item Terjual
+						</div>
+
+						<div class="text-xl font-bold text-sky-600 md:text-center md:text-3xl">
+							{itemTerjual ?? '--'}
+						</div>
+					</div>
+
+					<div
+						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-purple-200 to-purple-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-purple-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+					>
+						{#if TrendingUp}
+							<svelte:component
+								this={TrendingUp}
+								class="mb-2 h-6 w-6 text-purple-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							/>
+						{:else}
+							<div
+								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							>
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="mb-1 text-xs font-medium text-gray-500 md:mb-0 md:text-center md:text-base">
+							Jumlah Transaksi
+						</div>
+
+						<div class="text-xl font-bold text-purple-600 md:text-center md:text-3xl">
+							{jumlahTransaksi ?? '--'}
+						</div>
+					</div>
+
+					<div
+						class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-green-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+					>
+						{#if Wallet}
+							<svelte:component
+								this={Wallet}
+								class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							/>
+						{:else}
+							<div
+								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							>
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="text-sm font-medium text-green-900/80 md:text-center md:text-base">
+							Pendapatan
+						</div>
+
+						<div class="text-xl font-bold text-green-900 md:text-center md:text-3xl">
+							{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
+						</div>
+					</div>
+
+					<div
+						class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-cyan-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+					>
+						{#if Wallet}
+							<svelte:component
+								this={Wallet}
+								class="mb-2 h-6 w-6 text-cyan-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							/>
+						{:else}
+							<div
+								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
+							>
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="text-sm font-medium text-cyan-900/80 md:text-center md:text-base">
+							Modal Awal
+						</div>
+
+						<div class="text-xl font-bold text-cyan-900 md:text-center md:text-3xl">
+							{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
+						</div>
+					</div>
+				</div>
+
+				<!-- Box pendapatan & modal awal satu baris penuh di mobile, hilang di md+ -->
+
+				<div class="flex flex-col gap-3 md:hidden">
+					<div
+						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md"
+					>
+						{#if Wallet}
+							<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-green-900" />
+						{:else}
+							<div class="mb-2 flex h-6 w-6 items-center justify-center">
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="text-sm font-medium text-green-900/80">Pendapatan</div>
+
+						<div class="text-xl font-bold text-green-900">
+							{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
+						</div>
+					</div>
+
+					<div
+						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md"
+					>
+						{#if Wallet}
+							<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-cyan-900" />
+						{:else}
+							<div class="mb-2 flex h-6 w-6 items-center justify-center">
+								<span
+									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
+								></span>
+							</div>
+						{/if}
+
+						<div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
+
+						<div class="text-xl font-bold text-cyan-900">
+							{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
+						</div>
+					</div>
+				</div>
+
+				<!-- Menu Terlaris -->
+
+				<div class="mt-6 md:mt-12">
+					<div
+						class="mt-2 mb-2 text-base font-medium text-pink-500 md:mt-0 md:mb-6 md:text-2xl md:text-lg md:font-bold md:tracking-tight"
+					>
+						Menu Terlaris
+					</div>
+
+					{#if isLoadingBestSellers}
+						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
+							{#each Array(3) as _, i}
+								<div
+									class="relative flex animate-pulse items-center gap-3 rounded-xl bg-gray-100 p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:bg-white md:p-6 md:shadow-none"
+								>
+									<div class="h-12 w-12 rounded-lg bg-gray-200 md:h-16 md:w-16"></div>
+
+									<div class="min-w-0 flex-1">
+										<div class="mb-2 h-4 w-24 rounded bg-gray-200 md:mb-3 md:w-32"></div>
+
+										<div class="h-3 w-16 rounded bg-gray-200 md:w-24"></div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else if errorBestSellers}
+						<div class="py-6 text-center text-base text-red-400 md:text-lg">{errorBestSellers}</div>
+					{:else if bestSellers.length === 0}
+						<div class="py-6 text-center text-base text-gray-400 md:text-lg">
+							Belum ada data menu terlaris
+						</div>
+					{:else}
+						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
+							{#each bestSellers.slice(0, 3) as m, i}
+								<div
+									class="relative flex items-center gap-3 rounded-xl bg-white p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:border md:border-pink-200 md:bg-white md:p-6 md:shadow-none {i ===
+									0
+										? 'border-2 border-yellow-400 md:border-2 md:border-pink-200 md:border-yellow-400'
+										: ''}"
+								>
+									{#if i === 0}
+										<span class="absolute -top-4 -left-3 text-2xl md:static md:mr-4 md:text-3xl"
+											>👑</span
+										>
+									{:else if i === 1}
+										<span class="absolute -top-4 -left-3 text-2xl md:static md:mr-4 md:text-3xl"
+											>🥈</span
+										>
+									{:else if i === 2}
+										<span class="absolute -top-4 -left-3 text-2xl md:static md:mr-4 md:text-3xl"
+											>🥉</span
+										>
+									{/if}
+
+									{#if m.image && !imageError[i]}
+										<img
+											class="h-12 w-12 rounded-lg bg-pink-50 object-cover md:h-16 md:w-16"
+											src={m.image}
+											alt={m.name}
+											onerror={() => handleImgError(i)}
+										/>
+									{:else}
+										<div
+											class="flex h-12 w-12 items-center justify-center rounded-lg bg-pink-50 text-4xl text-pink-400 md:h-16 md:w-16 md:text-5xl"
+										>
+											🍹
+										</div>
+									{/if}
+
+									<div class="min-w-0 flex-1">
+										<div
+											class="truncate text-base font-semibold text-gray-900 md:mb-1 md:text-xl lg:text-2xl"
+										>
+											{m.name}
+										</div>
+
+										<div class="text-sm text-pink-400 md:text-lg">{m.total_qty} terjual</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<!-- Statistik -->
+
+				<div class="mt-6 md:mt-12">
+					<div
+						class="mt-2 mb-2 text-base font-medium text-pink-500 md:mt-0 md:mb-6 md:text-2xl md:text-lg md:font-bold md:tracking-tight"
+					>
+						Statistik
+					</div>
+
+					<div class="grid grid-cols-2 gap-3 md:mb-6 md:grid-cols-2 md:gap-6">
+						<div
+							class="flex flex-col items-center rounded-xl bg-white p-3 shadow md:rounded-2xl md:border md:border-pink-100 md:p-6 md:shadow-none"
+						>
+							<div class="text-xl font-bold text-pink-400 md:text-2xl lg:text-3xl">
+								{avgTransaksi ?? '--'}
+							</div>
+
+							<div class="mt-1 text-xs text-gray-500 md:text-sm">Rata-rata transaksi/hari</div>
+						</div>
+
+						<div
+							class="flex flex-col items-center rounded-xl bg-white p-3 shadow md:rounded-2xl md:border md:border-pink-100 md:p-6 md:shadow-none"
+						>
+							<div class="text-xl font-bold text-pink-400 md:text-2xl lg:text-3xl">
+								{#if jamRamai}
+									{jamRamai}
+								{:else}
+									00.00
+								{/if}
+							</div>
+
+							<div class="mt-1 text-xs text-gray-500 md:text-sm">Jam paling ramai</div>
+						</div>
+					</div>
+
+					<!-- Grafik Pendapatan 7 Hari -->
+
+					<div class="mt-3 md:mt-0">
+						<div
+							class="flex flex-col rounded-xl bg-white p-4 shadow md:rounded-2xl md:border md:border-pink-100 md:p-8 md:shadow-none"
+							bind:this={incomeChartRef}
+						>
+							<div class="mt-1 mb-2 text-xs text-gray-500 md:text-sm">
+								Pendapatan 7 Hari Terakhir
+							</div>
+
+							<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
+								{#if weeklyIncome.length === 0}
+									<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
+										{#each getLast7DaysLabelsWITA() as label, i}
+											<div class="flex flex-1 flex-col items-center">
+												<div
+													class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10"
+													style="height: 8px;"
+												></div>
+
+												<div class="mt-1 text-xs text-gray-400 md:text-sm">{label}</div>
+											</div>
+										{/each}
+
+										<div
+											class="pointer-events-none absolute inset-0 flex items-center justify-center"
+										>
+											<span class="text-center text-base text-gray-400 md:text-lg"
+												>Belum ada data grafik pendapatan</span
+											>
+										</div>
+									</div>
+								{:else}
+									{#each weeklyIncome as income, i}
+										<div class="relative flex flex-1 flex-col items-center">
+											<div
+												class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"
+												style="height: {barsVisible && income > 0 && weeklyMax > 0
+													? Math.max(Math.min((income / weeklyMax) * 96, 96), 4)
+													: 0}px"
+												onpointerdown={() => handleBarPointerDown(i)}
+												onpointerup={handleBarPointerUp}
+												onpointerleave={handleBarPointerUp}
+												ontouchstart={() => handleBarPointerDown(i)}
+												ontouchend={handleBarPointerUp}
+												ontouchcancel={handleBarPointerUp}
+											></div>
+
+											<div class="mt-1 text-xs md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
+
+											{#if showBarInsight && selectedBarIndex === i}
+												<div
+													class="animate-fade-in pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-xl border border-pink-200 bg-white px-4 py-2 text-center text-sm font-bold text-pink-600 shadow-lg"
+												>
+													<span class="font-normal text-gray-700"
+														>Rp {income.toLocaleString('id-ID')}</span
+													>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								{/if}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+
 	<div class="sticky bottom-0 z-30 bg-white md:hidden">
 		<!-- BottomNav hanya muncul di mobile -->
 	</div>

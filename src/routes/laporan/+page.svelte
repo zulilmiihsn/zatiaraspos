@@ -45,7 +45,7 @@
 			const reportData = await dataService.getReportData(dateRange, 'daily');
 
 			// Apply report data with null checks - HAPUS FILTERING KEDUA
-			summary = reportData?.summary || {
+			summary = (reportData as any)?.summary || {
 				pendapatan: 0,
 				pengeluaran: 0,
 				saldo: 0,
@@ -53,12 +53,12 @@
 				pajak: 0,
 				labaBersih: 0
 			};
-			pemasukanUsaha = reportData?.pemasukanUsaha || [];
-			pemasukanLain = reportData?.pemasukanLain || [];
-			bebanUsaha = reportData?.bebanUsaha || [];
-			bebanLain = reportData?.bebanLain || [];
+			pemasukanUsaha = (reportData as any)?.pemasukanUsaha || [];
+			pemasukanLain = (reportData as any)?.pemasukanLain || [];
+			bebanUsaha = (reportData as any)?.bebanUsaha || [];
+			bebanLain = (reportData as any)?.bebanLain || [];
 			// Gunakan data langsung dari dataService tanpa filtering tambahan
-			laporan = reportData?.transactions || [];
+			laporan = (reportData as any)?.transactions || [];
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			toastManager.showToastNotification('Gagal memuat data laporan', 'error');
@@ -349,7 +349,7 @@
 				labaBersih
 			};
 		},
-		(a, b, c, d) => `${a.length}-${b.length}-${c.length}-${d.length}`
+		(a: any, b: any, c: any, d: any) => `${a.length}-${b.length}-${c.length}-${d.length}`
 	);
 
 	// HAPUS reactive statement yang konflik - gunakan summary dari dataService langsung

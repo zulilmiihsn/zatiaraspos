@@ -7,7 +7,7 @@ export interface ValidationRule {
 	pattern?: RegExp;
 	min?: number;
 	max?: number;
-	custom?: (value: unknown) => string | null;
+	custom?: (value: any) => string | null;
 }
 
 export interface ValidationResult {
@@ -103,7 +103,7 @@ export function validateEmail(email: string): ValidationResult {
 	return validateText(email, {
 		required: true,
 		pattern: emailPattern,
-		custom: (value) => {
+		custom: (value: string) => {
 			if (!emailPattern.test(value)) {
 				return 'Format email tidak valid';
 			}
@@ -117,7 +117,7 @@ export function validatePassword(password: string): ValidationResult {
 	return validateText(password, {
 		required: true,
 		minLength: 6,
-		custom: (value) => {
+		custom: (value: string) => {
 			if (value.length < 6) {
 				return 'Password minimal 6 karakter';
 			}
@@ -144,7 +144,7 @@ export function validatePasswordDemo(password: string): ValidationResult {
 }
 
 // Validasi pemasukan/pengeluaran
-export function validateIncomeExpense(data: unknown): ValidationResult {
+export function validateIncomeExpense(data: any): ValidationResult {
 	const errors: string[] = [];
 
 	// Validasi nominal
@@ -239,7 +239,7 @@ export function validateSKU(sku: string): ValidationResult {
 		minLength: 3,
 		maxLength: 20,
 		pattern: /^[A-Z0-9-]+$/,
-		custom: (value) => {
+		custom: (value: string) => {
 			if (!/^[A-Z0-9-]+$/.test(value)) {
 				return 'SKU hanya boleh mengandung huruf besar, angka, dan tanda hubung';
 			}

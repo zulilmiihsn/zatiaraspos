@@ -13,7 +13,7 @@
 	export let position: 'top' | 'bottom' = 'top';
 	export let autoDismiss = true; // Always true
 
-	let timeoutId: unknown;
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	$: if (show && autoDismiss && duration > 0) {
 		if (timeoutId) clearTimeout(timeoutId);

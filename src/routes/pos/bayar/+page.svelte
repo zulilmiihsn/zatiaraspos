@@ -130,7 +130,7 @@
 		transactionCode = generateTransactionCode(); // Untuk tampilan/struk
 	});
 
-	const calculateCartSummary = memoize((cart) => {
+	const calculateCartSummary = memoize((cart: any) => {
 		let totalQty = 0;
 		let totalHarga = 0;
 		for (const item of cart) {
