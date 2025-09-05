@@ -13,6 +13,7 @@
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import AiChat from '$lib/components/shared/aiChat.svelte';
 
 	// Lazy load icons with proper typing
 	let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
@@ -25,8 +26,64 @@
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
 
+	// AI Chat state
+	let aiQuestion = '';
+	let aiAnswer = '';
+	let showAiModal = false;
+	let isAiLoading = false;
+
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 	userProfile.subscribe((val) => (userProfileData = val));
+
+	// AI Chat functions
+	async function handleAiAsk(event: CustomEvent) {
+		const { question } = event.detail;
+		aiQuestion = question;
+		showAiModal = true;
+		isAiLoading = true;
+		aiAnswer = '';
+
+		try {
+			const response = await fetch('/api/ai-chat', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					question: question,
+					reportData: {
+						summary,
+						pemasukanUsaha,
+						pengeluaran,
+						produkTerlaris,
+						kategoriTerlaris,
+						startDate,
+						endDate
+					}
+				})
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				aiAnswer = result.answer;
+			} else {
+				aiAnswer = `Error: ${result.error || 'Terjadi kesalahan saat memproses pertanyaan.'}`;
+			}
+		} catch (error) {
+			console.error('AI Chat Error:', error);
+			aiAnswer = 'Error: Terjadi kesalahan saat menghubungi AI. Silakan coba lagi.';
+		} finally {
+			isAiLoading = false;
+		}
+	}
+
+	function handleAiClose() {
+		showAiModal = false;
+		aiQuestion = '';
+		aiAnswer = '';
+		isAiLoading = false;
+	}
 
 	// Tambahkan deklarasi function loadLaporanData
 	async function loadLaporanData() {
@@ -255,10 +312,13 @@
 		pajak: null,
 		labaBersih: null
 	};
-	let pemasukanUsaha = [];
-	let pemasukanLain = [];
-	let bebanUsaha = [];
-	let bebanLain = [];
+	let pemasukanUsaha: any[] = [];
+	let pemasukanLain: any[] = [];
+	let bebanUsaha: any[] = [];
+	let bebanLain: any[] = [];
+	let pengeluaran: any = null;
+	let produkTerlaris: any[] = [];
+	let kategoriTerlaris: any[] = [];
 
 	let laporan: any[] = [];
 
@@ -580,7 +640,7 @@
 	aria-label="Halaman laporan keuangan"
 >
 	<main
-		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden"
+		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden pb-32"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
 		<!-- Konten utama halaman Laporan di sini -->
@@ -1527,6 +1587,16 @@
 		</div>
 	</main>
 </div>
+
+<!-- AI Chat Component -->
+<AiChat
+	bind:question={aiQuestion}
+	bind:answer={aiAnswer}
+	bind:showModal={showAiModal}
+	bind:isLoading={isAiLoading}
+	on:ask={handleAiAsk}
+	on:close={handleAiClose}
+/>
 
 <style>
 	.filter-sheet-anim {
