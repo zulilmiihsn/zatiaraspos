@@ -1743,14 +1743,37 @@
 						</div>
 					</div>
 				{:else if aiAnswer}
-					<div class="prose prose-sm max-w-none">
-						<div class="bg-gray-50 rounded-xl p-4 mb-4">
-							<p class="text-sm text-gray-600 mb-0">
-								<strong>Pertanyaan:</strong> {aiQuestion}
+					<div class="space-y-4">
+						<!-- Card Pertanyaan -->
+						<div class="rounded-xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 p-4">
+							<p class="text-sm text-gray-700 mb-0">
+								<span class="inline-flex items-center gap-2 font-semibold text-pink-700">
+									<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6m2 4H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2z"/></svg>
+									Pertanyaan
+								</span>
 							</p>
+							<p class="mt-1 text-gray-800">{aiQuestion}</p>
 						</div>
-						<div class="text-gray-800 leading-relaxed whitespace-pre-wrap">
-							{aiAnswer}
+
+						<!-- Card Jawaban Asisten AI -->
+						<div class="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+							<div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-4 py-3">
+								<div class="flex items-center gap-2 text-white">
+									<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+									<span class="font-semibold">Rekomendasi Pakar</span>
+								</div>
+							</div>
+							<div class="p-4">
+								<!-- Konten markdown dari AI -->
+								<div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
+									{aiAnswer}
+								</div>
+
+								<!-- Divider -->
+								<div class="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
+									Catatan: Saran bersifat umum. Sesuaikan dengan kondisi bisnis Anda.
+								</div>
+							</div>
 						</div>
 					</div>
 				{/if}

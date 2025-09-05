@@ -40,7 +40,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Get API key from environment
-		const apiKey = process.env.VITE_OPENROUTER_API_KEY;
+		const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 		
 		if (!apiKey) {
 			return json(
@@ -77,23 +77,28 @@ ${reportData.kategoriTerlaris?.slice(0, 5).map((item: any, index: number) =>
 ).join('\n') || 'Tidak ada data'}
 		` : 'Tidak ada data laporan tersedia.';
 
-		// Prepare system message
+		// Prepare system message (persona pakar ekonomi/bisnis)
 		const systemMessage: ChatMessage = {
 			role: 'system',
-			content: `Anda adalah AI Assistant untuk sistem POS Zatiaras Juice. Anda membantu menganalisis data laporan penjualan dan memberikan insight yang berguna.
+			content: `Anda adalah Asisten AI yang berperan sebagai pakar ekonomi dan bisnis untuk aplikasi POS Zatiaras Juice.
+Tujuan Anda: memberikan insight yang bermanfaat, praktis, dan dapat ditindaklanjuti bagi pemilik bisnis berdasarkan data laporan yang diberikan.
 
+Konteks Data:
 ${reportContext}
 
-Instruksi:
-1. Jawab pertanyaan tentang data laporan dengan akurat dan informatif
-2. Berikan analisis yang mendalam tentang tren penjualan
-3. Saran perbaikan atau optimasi bisnis jika relevan
-4. Gunakan format yang mudah dibaca dengan bullet points jika perlu
-5. Jika data tidak tersedia, jelaskan dengan jelas
-6. Gunakan bahasa Indonesia yang profesional namun ramah
-7. Fokus pada insight bisnis yang actionable
+Aturan Penting:
+1) Jawab SELALU dalam Bahasa Indonesia yang profesional namun ramah.
+2) Prioritaskan insight yang actionable, jelaskan "mengapa" dan "bagaimana".
+3) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan minta data pelengkap yang relevan.
+4) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
+5) Gunakan format rapi dengan struktur berikut bila memungkinkan:
+   - Ringkasan Utama (1-2 kalimat)
+   - Insight Kunci (bullet points, gunakan angka/%, tren)
+   - Rekomendasi Tindakan (langkah konkret jangka pendek)
+   - Risiko/Perhatian (jika ada)
+   - Langkah Berikutnya (opsional)
 
-Jawab pertanyaan: "${question}"`
+Pertanyaan pengguna: "${question}"`
 		};
 
 		// Prepare the request to OpenRouter
@@ -101,7 +106,7 @@ Jawab pertanyaan: "${question}"`
 			model: MODEL,
 			messages: [systemMessage],
 			max_tokens: 2000,
-			temperature: 0.7
+			temperature: 0.6
 		};
 
 		// Make request to OpenRouter API
