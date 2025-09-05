@@ -31,6 +31,56 @@
 	let showAiModal = false;
 	let isAiLoading = false;
 
+	// Renderer Markdown sederhana agar output rapi
+	function renderMarkdown(md: string): string {
+		if (!md) return '';
+		// Escape HTML terlebih dulu
+		const escapeHtml = (s: string) =>
+			s
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;');
+		let text = escapeHtml(md.trim());
+
+		// Bold **teks**
+		text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+		// Italic *teks*
+		text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+		// Garis miring _teks_
+		text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+		// Heading sederhana: **Ringkasan Utama:** sudah dibold, jadikan h4 jika berada di awal baris
+		text = text.replace(/(^|\n)\s*<strong>([^<]+)<\/strong>\s*:?\s*(?=\n|$)/g, '$1<h4 class="text-gray-900 font-semibold">$2</h4>');
+
+		// List: baris yang diawali "- " menjadi <li>
+		const lines = text.split(/\n/);
+		let html = '';
+		let inList = false;
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (/^-\s+/.test(trimmed)) {
+				if (!inList) {
+					html += '<ul class="list-disc pl-5 space-y-1">';
+					inList = true;
+				}
+				html += `<li>${trimmed.replace(/^-\s+/, '')}</li>`;
+			} else if (trimmed.length === 0) {
+				if (inList) {
+					html += '</ul>';
+					inList = false;
+				}
+				html += '<br/>';
+			} else {
+				if (inList) {
+					html += '</ul>';
+					inList = false;
+				}
+				html += `<p>${trimmed}</p>`;
+			}
+		}
+		if (inList) html += '</ul>';
+		return html;
+	}
+
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 	userProfile.subscribe((val) => (userProfileData = val));
 
@@ -116,7 +166,7 @@
 				},
 				body: JSON.stringify({
 					question: question,
-					reportData: fetchedReport
+					branch: $selectedBranch
 				})
 			});
 
@@ -1825,7 +1875,7 @@
 							<div class="p-4">
 								<!-- Konten markdown dari AI -->
 								<div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
-									{aiAnswer}
+									{@html renderMarkdown(aiAnswer)}
 								</div>
 
 								<!-- Divider -->
