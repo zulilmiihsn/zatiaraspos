@@ -11,23 +11,6 @@ interface ChatMessage {
 	content: string;
 }
 
-interface OpenRouterRequest {
-	model: string;
-	messages: ChatMessage[];
-	max_tokens: number;
-	temperature: number;
-}
-
-interface OpenRouterResponse {
-	choices: Array<{
-		message: {
-			content: string;
-		};
-	}>;
-	error?: {
-		message: string;
-	};
-}
 
 // Util: format YYYY-MM-DD dalam zona WITA
 function toYMDWita(date: Date): string {
@@ -38,7 +21,7 @@ function toYMDWita(date: Date): string {
 	return `${yyyy}-${mm}-${dd}`;
 }
 
-// Parser rentang waktu yang lebih fleksibel
+// Fallback parser untuk AI 1 (jika AI gagal)
 function parseFlexibleRange(question: string): {
 	start: string;
 	end: string;
@@ -53,85 +36,8 @@ function parseFlexibleRange(question: string): {
 		x.setDate(x.getDate() + n);
 		return x;
 	};
-	const addMonths = (d: Date, n: number) => {
-		const x = new Date(d);
-		x.setMonth(x.getMonth() + n);
-		return x;
-	};
 
-	// Handle specific day ranges like "5 hari pertama bulan ini"
-	const firstDaysMatch = q.match(/(\d+)\s*hari\s*pertama\s*bulan\s*ini/);
-	if (firstDaysMatch) {
-		const days = Math.max(1, parseInt(firstDaysMatch[1], 10));
-		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		const endOfFirstDays = new Date(startOfMonth);
-		endOfFirstDays.setDate(startOfMonth.getDate() + days - 1);
-		return { start: toYMD(startOfMonth), end: toYMD(endOfFirstDays), type: 'daily' };
-	}
-
-	// Handle "5 hari terakhir bulan lalu"
-	const lastDaysMatch = q.match(/(\d+)\s*hari\s*terakhir\s*bulan\s*lalu/);
-	if (lastDaysMatch) {
-		const days = Math.max(1, parseInt(lastDaysMatch[1], 10));
-		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-		const startOfLastDays = new Date(endOfLastMonth);
-		startOfLastDays.setDate(endOfLastMonth.getDate() - days + 1);
-		return { start: toYMD(startOfLastDays), end: toYMD(endOfLastMonth), type: 'daily' };
-	}
-
-	// Handle "minggu pertama bulan ini"
-	if (q.includes('minggu pertama bulan ini')) {
-		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		const endOfFirstWeek = new Date(startOfMonth);
-		endOfFirstWeek.setDate(startOfMonth.getDate() + 6);
-		return { start: toYMD(startOfMonth), end: toYMD(endOfFirstWeek), type: 'weekly' };
-	}
-
-	// Handle "minggu terakhir bulan lalu"
-	if (q.includes('minggu terakhir bulan lalu')) {
-		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-		const startOfLastWeek = new Date(endOfLastMonth);
-		startOfLastWeek.setDate(endOfLastMonth.getDate() - 6);
-		return { start: toYMD(startOfLastWeek), end: toYMD(endOfLastMonth), type: 'weekly' };
-	}
-
-	// Handle "pertengahan bulan ini"
-	if (q.includes('pertengahan bulan ini')) {
-		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		const midMonth = new Date(startOfMonth);
-		midMonth.setDate(15);
-		const endOfMidMonth = new Date(midMonth);
-		endOfMidMonth.setDate(15);
-		return { start: toYMD(midMonth), end: toYMD(endOfMidMonth), type: 'daily' };
-	}
-
-	// Handle "akhir bulan ini"
-	if (q.includes('akhir bulan ini')) {
-		const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-		const startOfEndMonth = new Date(endOfMonth);
-		startOfEndMonth.setDate(endOfMonth.getDate() - 6);
-		return { start: toYMD(startOfEndMonth), end: toYMD(endOfMonth), type: 'daily' };
-	}
-
-	// Handle "awal bulan lalu"
-	if (q.includes('awal bulan lalu')) {
-		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		const endOfFirstWeek = new Date(lastMonth);
-		endOfFirstWeek.setDate(lastMonth.getDate() + 6);
-		return { start: toYMD(lastMonth), end: toYMD(endOfFirstWeek), type: 'weekly' };
-	}
-
-	// Handle "akhir bulan lalu"
-	if (q.includes('akhir bulan lalu')) {
-		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-		const startOfEndMonth = new Date(endOfLastMonth);
-		startOfEndMonth.setDate(endOfLastMonth.getDate() - 6);
-		return { start: toYMD(startOfEndMonth), end: toYMD(endOfLastMonth), type: 'daily' };
-	}
-
+	// Basic patterns sebagai fallback
 	if (q.includes('hari ini') || q.includes('today'))
 		return { start: today, end: today, type: 'daily' };
 	if (q.includes('kemarin') || q.includes('yesterday')) {
@@ -139,22 +45,6 @@ function parseFlexibleRange(question: string): {
 		d.setDate(d.getDate() - 1);
 		const y = toYMD(d);
 		return { start: y, end: y, type: 'daily' };
-	}
-	if (q.includes('minggu ini') || q.includes('pekan ini') || q.includes('this week')) {
-		const d = new Date(now);
-		const day = d.getDay();
-		const diffToMonday = (day + 6) % 7;
-		const startD = new Date(d);
-		startD.setDate(d.getDate() - diffToMonday);
-		const endD = new Date(startD);
-		endD.setDate(startD.getDate() + 6);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
-	}
-	if (q.includes('dua minggu') || q.includes('2 minggu')) {
-		const endD = new Date(now);
-		const startD = new Date(endD);
-		startD.setDate(endD.getDate() - 13);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
 	}
 	if (q.includes('bulan ini') || q.includes('this month')) {
 		const startD = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -166,63 +56,7 @@ function parseFlexibleRange(question: string): {
 		const endD = new Date(now.getFullYear(), now.getMonth(), 0);
 		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
 	}
-	if (q.includes('dua bulan') || q.includes('2 bulan')) {
-		const startD = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-		const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-	}
-	if (q.includes('tahun ini') || q.includes('this year')) {
-		const startD = new Date(now.getFullYear(), 0, 1);
-		const endD = new Date(now.getFullYear(), 11, 31);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'yearly' };
-	}
-	if (q.includes('tahun lalu') || q.includes('last year')) {
-		const startD = new Date(now.getFullYear() - 1, 0, 1);
-		const endD = new Date(now.getFullYear() - 1, 11, 31);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'yearly' };
-	}
-	const nMatch = q.match(/(\d+)\s*hari/);
-	if (nMatch) {
-		const n = Math.max(1, parseInt(nMatch[1], 10));
-		const endD = new Date(now);
-		const startD = addDays(endD, -(n - 1));
-		return { start: toYMD(startD), end: toYMD(endD), type: n >= 28 ? 'monthly' : 'weekly' };
-	}
-	// X hari terakhir
-	const lastDays = q.match(/(\d+)\s*hari\s*terakhir/);
-	if (lastDays) {
-		const n = Math.max(1, parseInt(lastDays[1], 10));
-		const endD = new Date(now);
-		const startD = addDays(endD, -(n - 1));
-		return { start: toYMD(startD), end: toYMD(endD), type: 'daily' };
-	}
-	// X minggu terakhir
-	const lastWeeks = q.match(/(\d+)\s*minggu\s*terakhir/);
-	if (lastWeeks) {
-		const n = Math.max(1, parseInt(lastWeeks[1], 10));
-		const endD = new Date(now);
-		const startD = addDays(endD, -(n * 7 - 1));
-		return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
-	}
-	// X bulan terakhir
-	const lastMonths = q.match(/(\d+)\s*bulan\s*terakhir/);
-	if (lastMonths) {
-		const n = Math.max(1, parseInt(lastMonths[1], 10));
-		const endD = new Date(now);
-		const startD = addMonths(endD, -n);
-		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-	}
-	const rangeMatch = q.match(
-		/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s*[-–]\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/
-	);
-	if (rangeMatch) {
-		const [, d1, m1, y1, d2, m2, y2] = rangeMatch;
-		const y1Full = y1.length === 2 ? `20${y1}` : y1;
-		const y2Full = y2.length === 2 ? `20${y2}` : y2;
-		const startD = new Date(parseInt(y1Full, 10), parseInt(m1, 10) - 1, parseInt(d1, 10));
-		const endD = new Date(parseInt(y2Full, 10), parseInt(m2, 10) - 1, parseInt(d2, 10));
-		return { start: toYMD(startD), end: toYMD(endD), type: 'daily' };
-	}
+	
 	return { start: today, end: today, type: 'daily' };
 }
 
@@ -456,35 +290,38 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		};
 
-		// Ambil data untuk periode yang diminta
-		const { data: bukuKasPos } = await supabase
-			.from('buku_kas')
-			.select('*, transaksi_kasir (*, produk(name))')
-			.gte('waktu', startDate)
-			.lte('waktu', endDate)
-			.eq('sumber', 'pos');
-
-		const { data: bukuKasManual } = await supabase
-			.from('buku_kas')
-			.select('*')
-			.gte('waktu', startDate)
-			.lte('waktu', endDate)
-			.neq('sumber', 'pos');
-
-		// Ambil data historis untuk perbandingan tren (6 bulan terakhir)
-		const { data: historicalBukuKasPos } = await supabase
-			.from('buku_kas')
-			.select('*, transaksi_kasir (*, produk(name))')
-			.gte('waktu', historicalStartDate)
-			.lte('waktu', historicalEndDate)
-			.eq('sumber', 'pos');
-
-		const { data: historicalBukuKasManual } = await supabase
-			.from('buku_kas')
-			.select('*')
-			.gte('waktu', historicalStartDate)
-			.lte('waktu', historicalEndDate)
-			.neq('sumber', 'pos');
+		// Ambil data untuk periode yang diminta dan data historis secara paralel
+		const [
+			{ data: bukuKasPos },
+			{ data: bukuKasManual },
+			{ data: historicalBukuKasPos },
+			{ data: historicalBukuKasManual }
+		] = await Promise.all([
+			supabase
+				.from('buku_kas')
+				.select('*, transaksi_kasir (*, produk(name))')
+				.gte('waktu', startDate)
+				.lte('waktu', endDate)
+				.eq('sumber', 'pos'),
+			supabase
+				.from('buku_kas')
+				.select('*')
+				.gte('waktu', startDate)
+				.lte('waktu', endDate)
+				.neq('sumber', 'pos'),
+			supabase
+				.from('buku_kas')
+				.select('*, transaksi_kasir (*, produk(name))')
+				.gte('waktu', historicalStartDate)
+				.lte('waktu', historicalEndDate)
+				.eq('sumber', 'pos'),
+			supabase
+				.from('buku_kas')
+				.select('*')
+				.gte('waktu', historicalStartDate)
+				.lte('waktu', historicalEndDate)
+				.neq('sumber', 'pos')
+		]);
 
 		// Data periode yang diminta
 		const laporan = [
@@ -671,9 +508,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Sederhanakan konteks server
 		const serverReportData = {
 			summary,
-			startDate: range.start,
-			endDate: range.end,
-			tipe: range.type,
+			startDate: dateRange.start,
+			endDate: dateRange.end,
+			tipe: dateRange.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
 			products: (products || []).map((p: any) => ({ id: p.id, name: p.name, price: p.price })),
