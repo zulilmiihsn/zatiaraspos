@@ -205,6 +205,11 @@ KEMAMPUAN ANALISIS TREN:
 - Anda dapat menganalisis tren 3 bulan terakhir, 6 bulan terakhir
 - Anda dapat menghitung persentase perubahan dan tren pertumbuhan
 - Anda dapat mengidentifikasi pola musiman dan fluktuasi
+- Anda dapat menganalisis data per bulan dalam periode yang diminta
+- Anda dapat membandingkan performa antar bulan (Bulan A vs Bulan B vs Bulan C)
+- Anda dapat mengidentifikasi bulan terbaik dan terburuk dalam periode
+- Anda dapat menganalisis tren produk terlaris per bulan
+- Anda dapat menganalisis preferensi metode pembayaran per bulan
 
 FORMAT JAWABAN (jika memungkinkan):
 - Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
@@ -420,6 +425,72 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
+		// Hitung data per bulan untuk periode yang diminta (untuk analisis detail)
+		const requestedMonthlyData: Record<string, { 
+			pemasukan: number; 
+			pengeluaran: number; 
+			laba: number; 
+			transaksi: number;
+			produkTerlaris: Record<string, { qty: number; revenue: number; name: string }>;
+			paymentMethods: Record<string, { jumlah: number; nominal: number }>;
+		}> = {};
+		
+		// Proses data periode yang diminta per bulan
+		for (const item of laporan) {
+			const date = new Date(item.waktu);
+			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+			const monthName = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+			
+			if (!requestedMonthlyData[monthKey]) {
+				requestedMonthlyData[monthKey] = { 
+					pemasukan: 0, 
+					pengeluaran: 0, 
+					laba: 0, 
+					transaksi: 0,
+					produkTerlaris: {},
+					paymentMethods: {}
+				};
+			}
+			
+			const amount = item.amount || item.nominal || 0;
+			if (item.tipe === 'in') {
+				requestedMonthlyData[monthKey].pemasukan += amount;
+			} else {
+				requestedMonthlyData[monthKey].pengeluaran += amount;
+			}
+			requestedMonthlyData[monthKey].laba = requestedMonthlyData[monthKey].pemasukan - requestedMonthlyData[monthKey].pengeluaran;
+			
+			if (item.sumber === 'pos' && item.transaction_id) {
+				requestedMonthlyData[monthKey].transaksi += 1;
+			}
+
+			// Hitung metode pembayaran per bulan
+			const pm = (item as any)?.payment_method || 'lainnya';
+			if (!requestedMonthlyData[monthKey].paymentMethods[pm]) {
+				requestedMonthlyData[monthKey].paymentMethods[pm] = { jumlah: 0, nominal: 0 };
+			}
+			requestedMonthlyData[monthKey].paymentMethods[pm].jumlah += 1;
+			requestedMonthlyData[monthKey].paymentMethods[pm].nominal += amount;
+
+			// Hitung produk terlaris per bulan
+			if (item.sumber === 'pos' && (item as any)?.transaksi_kasir) {
+				for (const it of (item as any).transaksi_kasir) {
+					const pid = (it as any)?.produk_id;
+					if (!pid) continue;
+					const qty = Number((it as any)?.qty || 0) || 0;
+					const unit = Number((it as any)?.price || (it as any)?.amount || 0) || 0;
+					const revenue = unit * (qty || 1);
+					const productName = (it as any)?.produk?.name || (it as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+					
+					if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
+						requestedMonthlyData[monthKey].produkTerlaris[pid] = { qty: 0, revenue: 0, name: productName };
+					}
+					requestedMonthlyData[monthKey].produkTerlaris[pid].qty += qty || 0;
+					requestedMonthlyData[monthKey].produkTerlaris[pid].revenue += revenue;
+				}
+			}
+		}
+
 		// Urutkan data bulanan
 		const sortedMonthlyData = Object.entries(monthlyData)
 			.sort(([a], [b]) => a.localeCompare(b))
@@ -442,6 +513,29 @@ export const POST: RequestHandler = async ({ request }) => {
 			? ((currentMonthData.laba - lastMonthData.laba) / lastMonthData.laba * 100)
 			: 0;
 
+		// Format data per bulan untuk AI
+		const formattedRequestedMonthlyData = Object.entries(requestedMonthlyData)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([monthKey, data]) => {
+				const date = new Date(monthKey + '-01');
+				const monthName = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+				const topProducts = Object.entries(data.produkTerlaris)
+					.map(([pid, prod]) => ({ id: pid, nama: prod.name, totalTerjual: prod.qty, totalPendapatan: prod.revenue }))
+					.sort((a, b) => b.totalTerjual - a.totalTerjual)
+					.slice(0, 3);
+				
+				return {
+					month: monthKey,
+					monthName,
+					pemasukan: data.pemasukan,
+					pengeluaran: data.pengeluaran,
+					laba: data.laba,
+					transaksi: data.transaksi,
+					paymentMethods: data.paymentMethods,
+					topProducts
+				};
+			});
+
 		const summary = {
 			pendapatan: totalPemasukan,
 			pengeluaran: totalPengeluaran,
@@ -457,6 +551,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			historicalLabaBersih: historicalLabaBersih,
 			// Tren bulanan
 			monthlyData: sortedMonthlyData,
+			// Data per bulan untuk periode yang diminta
+			requestedMonthlyData: formattedRequestedMonthlyData,
 			trenPemasukan,
 			trenPengeluaran,
 			trenLaba,
@@ -570,6 +666,25 @@ PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user b
 ${(serverReportData.summary?.monthlyData || []).map(([month, data]: any) => 
 	`- ${month}: Pendapatan Rp ${data.pemasukan.toLocaleString('id-ID')}, Pengeluaran Rp ${data.pengeluaran.toLocaleString('id-ID')}, Laba Rp ${data.laba.toLocaleString('id-ID')}, Transaksi ${data.transaksi}`
 ).join('\n') || '- (tidak ada data historis)'}
+
+=== DATA PER BULAN UNTUK PERIODE YANG DIMINTA ===
+${(serverReportData.summary?.requestedMonthlyData || []).map((month: any) => `
+Bulan ${month.monthName} (${month.month}):
+- Pendapatan: Rp ${month.pemasukan.toLocaleString('id-ID')}
+- Pengeluaran: Rp ${month.pengeluaran.toLocaleString('id-ID')}
+- Laba: Rp ${month.laba.toLocaleString('id-ID')}
+- Total Transaksi: ${month.transaksi}
+- Metode Pembayaran: ${Object.entries(month.paymentMethods).map(([method, data]: any) => {
+	const methodLabels: Record<string, string> = {
+		'tunai': 'Tunai (Cash)',
+		'qris': 'QRIS (Digital Payment)',
+		'lainnya': 'Lainnya'
+	};
+	const label = methodLabels[method] || method;
+	return `${label}: ${data.jumlah} trx (Rp ${data.nominal.toLocaleString('id-ID')})`;
+}).join(', ')}
+- Top 3 Produk Terlaris: ${month.topProducts.map((p: any) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
+`).join('\n') || '- (tidak ada data per bulan)'}
 
 === PERBANDINGAN BULAN INI VS BULAN LALU ===
 Bulan Ini (${serverReportData.summary?.currentMonthData ? Object.keys(serverReportData.summary.currentMonthData).length > 0 ? 'Data tersedia' : 'Tidak ada data' : 'Tidak ada data'}):
