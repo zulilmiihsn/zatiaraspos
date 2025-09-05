@@ -59,6 +59,79 @@ function parseFlexibleRange(question: string): {
 		return x;
 	};
 
+	// Handle specific day ranges like "5 hari pertama bulan ini"
+	const firstDaysMatch = q.match(/(\d+)\s*hari\s*pertama\s*bulan\s*ini/);
+	if (firstDaysMatch) {
+		const days = Math.max(1, parseInt(firstDaysMatch[1], 10));
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const endOfFirstDays = new Date(startOfMonth);
+		endOfFirstDays.setDate(startOfMonth.getDate() + days - 1);
+		return { start: toYMD(startOfMonth), end: toYMD(endOfFirstDays), type: 'daily' };
+	}
+
+	// Handle "5 hari terakhir bulan lalu"
+	const lastDaysMatch = q.match(/(\d+)\s*hari\s*terakhir\s*bulan\s*lalu/);
+	if (lastDaysMatch) {
+		const days = Math.max(1, parseInt(lastDaysMatch[1], 10));
+		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+		const startOfLastDays = new Date(endOfLastMonth);
+		startOfLastDays.setDate(endOfLastMonth.getDate() - days + 1);
+		return { start: toYMD(startOfLastDays), end: toYMD(endOfLastMonth), type: 'daily' };
+	}
+
+	// Handle "minggu pertama bulan ini"
+	if (q.includes('minggu pertama bulan ini')) {
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const endOfFirstWeek = new Date(startOfMonth);
+		endOfFirstWeek.setDate(startOfMonth.getDate() + 6);
+		return { start: toYMD(startOfMonth), end: toYMD(endOfFirstWeek), type: 'weekly' };
+	}
+
+	// Handle "minggu terakhir bulan lalu"
+	if (q.includes('minggu terakhir bulan lalu')) {
+		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+		const startOfLastWeek = new Date(endOfLastMonth);
+		startOfLastWeek.setDate(endOfLastMonth.getDate() - 6);
+		return { start: toYMD(startOfLastWeek), end: toYMD(endOfLastMonth), type: 'weekly' };
+	}
+
+	// Handle "pertengahan bulan ini"
+	if (q.includes('pertengahan bulan ini')) {
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const midMonth = new Date(startOfMonth);
+		midMonth.setDate(15);
+		const endOfMidMonth = new Date(midMonth);
+		endOfMidMonth.setDate(15);
+		return { start: toYMD(midMonth), end: toYMD(endOfMidMonth), type: 'daily' };
+	}
+
+	// Handle "akhir bulan ini"
+	if (q.includes('akhir bulan ini')) {
+		const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+		const startOfEndMonth = new Date(endOfMonth);
+		startOfEndMonth.setDate(endOfMonth.getDate() - 6);
+		return { start: toYMD(startOfEndMonth), end: toYMD(endOfMonth), type: 'daily' };
+	}
+
+	// Handle "awal bulan lalu"
+	if (q.includes('awal bulan lalu')) {
+		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		const endOfFirstWeek = new Date(lastMonth);
+		endOfFirstWeek.setDate(lastMonth.getDate() + 6);
+		return { start: toYMD(lastMonth), end: toYMD(endOfFirstWeek), type: 'weekly' };
+	}
+
+	// Handle "akhir bulan lalu"
+	if (q.includes('akhir bulan lalu')) {
+		const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+		const startOfEndMonth = new Date(endOfLastMonth);
+		startOfEndMonth.setDate(endOfLastMonth.getDate() - 6);
+		return { start: toYMD(startOfEndMonth), end: toYMD(endOfLastMonth), type: 'daily' };
+	}
+
 	if (q.includes('hari ini') || q.includes('today'))
 		return { start: today, end: today, type: 'daily' };
 	if (q.includes('kemarin') || q.includes('yesterday')) {
@@ -177,6 +250,10 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Tentukan rentang waktu berdasarkan pertanyaan
 		const range = parseFlexibleRange(question);
+		
+		// Debug logging
+		console.log('AI Question:', question);
+		console.log('Parsed Range:', range);
 
 		// Ambil data langsung dari database sesuai branch & range
 		const supabase = getSupabaseClient((branch || 'dev') as any);
@@ -457,7 +534,7 @@ DATA HISTORIS UNTUK PERBANDINGAN:
 - Rentang: ${rangeContext.historical.startFormatted} s.d. ${rangeContext.historical.endFormatted}
 - Format: ${rangeContext.historical.start} s.d. ${rangeContext.historical.end}
 
-=== DATA LAPORAN PERIODE YANG DIMINTA ===
+=== DATA LAPORAN PERIODE YANG DIMINTA (SUDAH DIFETCH SESUAI KONTEKS) ===
 Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Pendapatan: Rp ${serverReportData.summary?.pendapatan?.toLocaleString('id-ID') || '0'}
 - Pengeluaran: Rp ${serverReportData.summary?.pengeluaran?.toLocaleString('id-ID') || '0'}
@@ -465,6 +542,8 @@ Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Pajak: Rp ${serverReportData.summary?.pajak?.toLocaleString('id-ID') || '0'}
 - Laba Bersih: Rp ${serverReportData.summary?.labaBersih?.toLocaleString('id-ID') || '0'}
 - Total Transaksi: ${serverReportData.summary?.totalTransaksi || '0'}
+
+PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh.
 
 === DATA HISTORIS UNTUK PERBANDINGAN (6 BULAN TERAKHIR) ===
 - Total Pendapatan 6 Bulan: Rp ${serverReportData.summary?.historicalPendapatan?.toLocaleString('id-ID') || '0'}
@@ -551,10 +630,13 @@ ATURAN ANALISIS:
 
 PENTING - KONTEKS TANGGAL:
 - Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
+- Jika user bertanya "5 hari pertama bulan ini", data yang diberikan sudah mencakup 5 hari pertama bulan ini
 - Jika user bertanya "3 bulan terakhir", data yang diberikan sudah mencakup 3 bulan terakhir
 - Jika user bertanya "bulan lalu", data yang diberikan sudah mencakup bulan lalu
+- JANGAN katakan "tidak ada data" jika data tersedia untuk periode yang diminta
 - Gunakan konteks tanggal yang jelas dalam jawaban Anda
 - Selalu sebutkan rentang tanggal yang dianalisis
+- Data di bagian "DATA LAPORAN PERIODE YANG DIMINTA" sudah sesuai dengan konteks pertanyaan user
 
 KEMAMPUAN ANALISIS TREN:
 - Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
