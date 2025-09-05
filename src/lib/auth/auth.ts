@@ -64,7 +64,6 @@ export const auth = {
 		return { success: false, message: 'Username atau password salah' };
 	},
 
-
 	// Check if user is authenticated
 	isAuthenticated(): boolean {
 		const currentSession = get(session) as any;
@@ -97,13 +96,13 @@ export const auth = {
 			user: null,
 			token: null
 		});
-		
+
 		// Clear localStorage
 		if (typeof window !== 'undefined') {
 			localStorage.removeItem('zatiaras_session');
 			localStorage.removeItem('selectedBranch');
 		}
-		
+
 		// Clear user role and profile
 		clearUserRole();
 		clearSecuritySettings();
@@ -180,13 +179,13 @@ export async function loginWithUsername(
 		token: null // Tidak pakai token Supabase Auth
 	};
 	session.set(sessionData);
-	
+
 	// Simpan ke localStorage untuk persistensi setelah refresh
 	if (typeof window !== 'undefined') {
 		localStorage.setItem('zatiaras_session', JSON.stringify(sessionData));
 		localStorage.setItem('selectedBranch', branch);
 	}
-	
+
 	return result.user;
 }
 

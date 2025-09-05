@@ -36,11 +36,13 @@
 		if (!md) return '';
 		// Escape HTML terlebih dulu
 		const escapeHtml = (s: string) =>
-			s
-				.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;');
+			s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 		let text = escapeHtml(md.trim());
+
+		// Heading markdown (###, ##, #) -> heading kecil
+		text = text.replace(/^(?:\s*)###\s+(.+)$/gm, '<h4 class="text-gray-900 font-semibold">$1</h4>');
+		text = text.replace(/^(?:\s*)##\s+(.+)$/gm, '<h4 class="text-gray-900 font-semibold">$1</h4>');
+		text = text.replace(/^(?:\s*)#\s+(.+)$/gm, '<h4 class="text-gray-900 font-semibold">$1</h4>');
 
 		// Bold **teks**
 		text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -49,7 +51,10 @@
 		// Garis miring _teks_
 		text = text.replace(/_(.*?)_/g, '<em>$1</em>');
 		// Heading sederhana: **Ringkasan Utama:** sudah dibold, jadikan h4 jika berada di awal baris
-		text = text.replace(/(^|\n)\s*<strong>([^<]+)<\/strong>\s*:?\s*(?=\n|$)/g, '$1<h4 class="text-gray-900 font-semibold">$2</h4>');
+		text = text.replace(
+			/(^|\n)\s*<strong>([^<]+)<\/strong>\s*:?\s*(?=\n|$)/g,
+			'$1<h4 class="text-gray-900 font-semibold">$2</h4>'
+		);
 
 		// List: baris yang diawali "- " menjadi <li>
 		const lines = text.split(/\n/);
@@ -86,7 +91,11 @@
 
 	// AI Chat functions
 	// Ekstrak rentang waktu dari pertanyaan user dan kembalikan start, end, dan tipe
-	function parseDateRangeFromQuestion(question: string): { start: string; end: string; type: 'daily' | 'weekly' | 'monthly' | 'yearly' } {
+	function parseDateRangeFromQuestion(question: string): {
+		start: string;
+		end: string;
+		type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+	} {
 		const q = (question || '').toLowerCase();
 		const today = getLocalDateStringWITA();
 
@@ -136,7 +145,9 @@
 			startD.setDate(endD.getDate() - (n - 1));
 			return { start: toYMD(startD), end: toYMD(endD), type: n >= 28 ? 'monthly' : 'weekly' };
 		}
-		const rangeMatch = q.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s*[-–]\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+		const rangeMatch = q.match(
+			/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s*[-–]\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/
+		);
 		if (rangeMatch) {
 			const [, d1, m1, y1, d2, m2, y2] = rangeMatch;
 			const y1Full = y1.length === 2 ? `20${y1}` : y1;
@@ -157,12 +168,13 @@
 		try {
 			const derived = parseDateRangeFromQuestion(question);
 			await dataService.clearAllCaches();
-			const dateRangeKey = derived.start === derived.end ? derived.start : `${derived.start}_${derived.end}`;
+			const dateRangeKey =
+				derived.start === derived.end ? derived.start : `${derived.start}_${derived.end}`;
 			const fetchedReport: any = await dataService.getReportData(dateRangeKey, derived.type);
-			const response = await fetch('/api/ai-chat', {
+			const response = await fetch('/api/aichat', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					question: question,
@@ -179,7 +191,8 @@
 			}
 		} catch (error) {
 			console.error('AI Chat Error:', error);
-			aiAnswer = 'Maaf, terjadi kesalahan saat menghubungi Asisten AI. Pastikan API key sudah dikonfigurasi dengan benar di file .env. Silakan coba lagi nanti.';
+			aiAnswer =
+				'Maaf, terjadi kesalahan saat menghubungi Asisten AI. Pastikan API key sudah dikonfigurasi dengan benar di file .env. Silakan coba lagi nanti.';
 		} finally {
 			isAiLoading = false;
 		}
@@ -1367,101 +1380,147 @@
 
 			<!-- AI Assistant Section -->
 			<div class="mt-4 px-2 md:mt-8 md:px-0">
-				<div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 p-8 shadow-2xl">
+				<div
+					class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 p-8 shadow-2xl"
+				>
 					<!-- Background Pattern -->
 					<div class="absolute inset-0 opacity-10">
 						<svg class="h-full w-full" viewBox="0 0 100 100" fill="currentColor">
 							<defs>
 								<pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-									<path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
+									<path
+										d="M 10 0 L 0 0 0 10"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="0.5"
+									/>
 								</pattern>
 							</defs>
-							<rect width="100" height="100" fill="url(#grid)"/>
+							<rect width="100" height="100" fill="url(#grid)" />
 						</svg>
 					</div>
-					
+
 					<!-- Floating Elements -->
 					<div class="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
-					<div class="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-pink-300/20 blur-2xl"></div>
-					
+					<div
+						class="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-pink-300/20 blur-2xl"
+					></div>
+
 					<!-- Content -->
 					<div class="relative z-10">
 						<!-- Header -->
 						<div class="mb-6 flex items-center gap-4">
 							<div class="relative">
-								<div class="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-									<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+								<div
+									class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 shadow-lg backdrop-blur-sm"
+								>
+									<svg
+										class="h-8 w-8 text-white"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+										/>
 									</svg>
 								</div>
-								<div class="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-green-400 flex items-center justify-center">
+								<div
+									class="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-400"
+								>
 									<svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-										<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+										<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 									</svg>
 								</div>
 							</div>
 							<div class="flex-1">
-								<h3 class="text-2xl font-bold text-white mb-1">Asisten AI</h3>
-								<p class="text-pink-100 text-sm">Dapatkan insight cerdas dan analisis mendalam tentang laporan keuangan Anda</p>
+								<h3 class="mb-1 text-2xl font-bold text-white">Asisten AI</h3>
+								<p class="text-sm text-pink-100">
+									Dapatkan insight cerdas dan analisis mendalam tentang laporan keuangan Anda
+								</p>
 							</div>
 						</div>
-						
+
 						<!-- Input Section -->
 						<div class="relative">
 							<div class="flex items-center gap-3">
-								<div class="flex-1 relative">
+								<div class="relative flex-1">
 									<input
 										type="text"
 										placeholder="Tanya AI tentang laporan ini... (contoh: 'Bagaimana performa penjualan hari ini?')"
 										bind:value={aiQuestion}
 										onkeypress={(e) => e.key === 'Enter' && !isAiLoading && handleAiAsk(aiQuestion)}
 										disabled={isAiLoading}
-										class="w-full px-6 py-4 pr-16 rounded-2xl border-0 bg-white/90 backdrop-blur-sm text-gray-800 placeholder-gray-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-white/30 transition-all duration-300 disabled:bg-white/70 disabled:cursor-not-allowed shadow-lg"
+										class="w-full rounded-2xl border-0 bg-white/90 px-6 py-4 pr-16 text-gray-800 placeholder-gray-500 shadow-lg backdrop-blur-sm transition-all duration-300 focus:bg-white focus:ring-4 focus:ring-white/30 focus:outline-none disabled:cursor-not-allowed disabled:bg-white/70"
 									/>
-									
+
 									<!-- Send Button -->
 									<button
 										onclick={() => !isAiLoading && handleAiAsk(aiQuestion)}
 										disabled={!aiQuestion.trim() || isAiLoading}
-										class="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none"
+										class="absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 shadow-lg transition-all duration-300 hover:from-pink-600 hover:to-purple-700 hover:shadow-xl disabled:from-gray-400 disabled:to-gray-500 disabled:shadow-none"
 									>
 										{#if isAiLoading}
-											<svg class="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-												<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+											<svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+												<circle
+													class="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													stroke-width="4"
+												></circle>
+												<path
+													class="opacity-75"
+													fill="currentColor"
+													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												></path>
 											</svg>
 										{:else}
-											<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+											<svg
+												class="h-5 w-5 text-white"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+												/>
 											</svg>
 										{/if}
 									</button>
 								</div>
 							</div>
-							
+
 							<!-- Quick Suggestions -->
 							<div class="mt-4 flex flex-wrap gap-2">
 								<button
-									onclick={() => aiQuestion = 'Bagaimana performa penjualan hari ini?'}
-									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+									onclick={() => (aiQuestion = 'Bagaimana performa penjualan hari ini?')}
+									class="rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/30"
 								>
 									📊 Performa Penjualan
 								</button>
 								<button
-									onclick={() => aiQuestion = 'Produk apa yang paling laris?'}
-									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+									onclick={() => (aiQuestion = 'Produk apa yang paling laris?')}
+									class="rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/30"
 								>
 									🏆 Produk Terlaris
 								</button>
 								<button
-									onclick={() => aiQuestion = 'Berapa keuntungan bersih hari ini?'}
-									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+									onclick={() => (aiQuestion = 'Berapa keuntungan bersih hari ini?')}
+									class="rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/30"
 								>
 									💰 Keuntungan Bersih
 								</button>
 								<button
-									onclick={() => aiQuestion = 'Bagaimana tren penjualan minggu ini?'}
-									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+									onclick={() => (aiQuestion = 'Bagaimana tren penjualan minggu ini?')}
+									class="rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white/30"
 								>
 									📈 Tren Penjualan
 								</button>
@@ -1797,14 +1856,13 @@
 					</div>
 				</div>
 			{/if}
-
 		</div>
 	</main>
 </div>
 
 <!-- AI Response Modal -->
 {#if showAiModal}
-	<div 
+	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
@@ -1812,88 +1870,107 @@
 		aria-modal="true"
 		tabindex="-1"
 	>
-		<div 
-			class="w-full max-w-2xl max-h-[80vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
+		<div
+			class="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
 			transition:slide={{ duration: 300, easing: cubicOut }}
 		>
 			<!-- Modal Header -->
-			<div class="bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-4">
+			<div class="bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-3">
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
-						<div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-							<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-								<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						<div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+							<svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+								<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 							</svg>
 						</div>
 						<h3 class="text-lg font-bold text-white">Asisten AI</h3>
 					</div>
 					<button
 						onclick={handleAiClose}
-						class="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+						class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"
 						aria-label="Tutup"
 					>
-						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+						<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
 						</svg>
 					</button>
 				</div>
 			</div>
-			
+
 			<!-- Modal Content -->
-			<div class="p-6 overflow-y-auto max-h-[60vh]">
+			<div class="max-h-[60vh] overflow-y-auto p-3 md:p-4">
 				{#if isAiLoading}
 					<div class="flex items-center justify-center py-8">
 						<div class="flex items-center gap-3">
-							<svg class="w-6 h-6 text-pink-500 animate-spin" fill="none" viewBox="0 0 24 24">
-								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							<svg class="h-6 w-6 animate-spin text-pink-500" fill="none" viewBox="0 0 24 24">
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
 							</svg>
-							<span class="text-gray-600 font-medium">Asisten AI sedang memproses pertanyaan Anda...</span>
+							<span class="font-medium text-gray-600"
+								>Asisten AI sedang memproses pertanyaan Anda...</span
+							>
 						</div>
 					</div>
 				{:else if aiAnswer}
 					<div class="space-y-4">
 						<!-- Card Pertanyaan -->
-						<div class="rounded-xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 p-4">
-							<p class="text-sm text-gray-700 mb-0">
+						<div
+							class="rounded-xl border border-pink-100 bg-gradient-to-r from-pink-50 to-purple-50 p-3"
+						>
+							<p class="mb-0 text-sm text-gray-700">
 								<span class="inline-flex items-center gap-2 font-semibold text-pink-700">
-									<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6m2 4H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2z"/></svg>
+									<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M8 10h.01M12 10h.01M16 10h.01M9 16h6m2 4H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2z"
+										/></svg
+									>
 									Pertanyaan
 								</span>
 							</p>
 							<p class="mt-1 text-gray-800">{aiQuestion}</p>
 						</div>
 
-						<!-- Card Jawaban Asisten AI -->
-						<div class="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-							<div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-4 py-3">
-								<div class="flex items-center gap-2 text-white">
-									<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-									<span class="font-semibold">Rekomendasi Pakar</span>
-								</div>
+						<!-- Card Jawaban Asisten AI (tanpa header) -->
+						<div class="overflow-hidden rounded-xl border border-gray-200 p-3 shadow-sm md:p-4">
+							<!-- Konten markdown dari AI -->
+							<div class="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
+								{@html renderMarkdown(aiAnswer)}
 							</div>
-							<div class="p-4">
-								<!-- Konten markdown dari AI -->
-								<div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
-									{@html renderMarkdown(aiAnswer)}
-								</div>
 
-								<!-- Divider -->
-								<div class="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
-									Catatan: Saran bersifat umum. Sesuaikan dengan kondisi bisnis Anda.
-								</div>
+							<!-- Divider -->
+							<div class="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
+								Catatan: Saran bersifat umum. Sesuaikan dengan kondisi bisnis Anda.
 							</div>
 						</div>
 					</div>
 				{/if}
 			</div>
-			
+
 			<!-- Modal Footer -->
-			<div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+			<div class="border-t border-gray-200 bg-gray-50 px-3 py-3">
 				<div class="flex items-center justify-end">
 					<button
 						onclick={handleAiClose}
-						class="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg text-sm font-medium transition-colors"
+						class="rounded-lg bg-pink-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-pink-600"
 					>
 						Tutup
 					</button>
