@@ -330,9 +330,6 @@ ${
 			const methodLabels: Record<string, string> = {
 				'tunai': 'Tunai (Cash)',
 				'qris': 'QRIS (Digital Payment)',
-				'transfer': 'Transfer Bank',
-				'e-wallet': 'E-Wallet',
-				'card': 'Kartu Kredit/Debit',
 				'lainnya': 'Lainnya'
 			};
 			const label = methodLabels[k] || k;
