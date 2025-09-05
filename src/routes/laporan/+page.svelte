@@ -1292,7 +1292,7 @@
 								</div>
 							</div>
 							<div class="flex-1">
-								<h3 class="text-2xl font-bold text-white mb-1">AI Assistant</h3>
+								<h3 class="text-2xl font-bold text-white mb-1">Asisten AI</h3>
 								<p class="text-pink-100 text-sm">Dapatkan insight cerdas dan analisis mendalam tentang laporan keuangan Anda</p>
 							</div>
 						</div>
@@ -1716,7 +1716,7 @@
 								<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
 							</svg>
 						</div>
-						<h3 class="text-lg font-bold text-white">AI Assistant</h3>
+						<h3 class="text-lg font-bold text-white">Asisten AI</h3>
 					</div>
 					<button
 						onclick={handleAiClose}
@@ -1739,7 +1739,7 @@
 								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 							</svg>
-							<span class="text-gray-600 font-medium">AI sedang memproses pertanyaan Anda...</span>
+							<span class="text-gray-600 font-medium">Asisten AI sedang memproses pertanyaan Anda...</span>
 						</div>
 					</div>
 				{:else if aiAnswer}
