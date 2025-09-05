@@ -191,6 +191,33 @@ export const POST: RequestHandler = async ({ request }) => {
 		const historicalStartDate = new Date(`${toYMDWita(sixMonthsAgo)}T00:00:00+08:00`).toISOString();
 		const historicalEndDate = new Date(`${toYMDWita(now)}T23:59:59+08:00`).toISOString();
 
+		// Konversi tanggal untuk konteks AI
+		const formatDateForAI = (dateStr: string) => {
+			const date = new Date(dateStr);
+			return date.toLocaleDateString('id-ID', { 
+				weekday: 'long', 
+				year: 'numeric', 
+				month: 'long', 
+				day: 'numeric' 
+			});
+		};
+
+		const rangeContext = {
+			requested: {
+				start: range.start,
+				end: range.end,
+				startFormatted: formatDateForAI(range.start),
+				endFormatted: formatDateForAI(range.end),
+				type: range.type
+			},
+			historical: {
+				start: toYMDWita(sixMonthsAgo),
+				end: toYMDWita(now),
+				startFormatted: formatDateForAI(toYMDWita(sixMonthsAgo)),
+				endFormatted: formatDateForAI(toYMDWita(now))
+			}
+		};
+
 		// Ambil data untuk periode yang diminta
 		const { data: bukuKasPos } = await supabase
 			.from('buku_kas')
@@ -420,6 +447,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Prepare context about the report data
 		const reportContext = serverReportData
 			? `
+=== KONTEKS RENTANG WAKTU ===
+PERIODE YANG DIMINTA USER:
+- Rentang: ${rangeContext.requested.startFormatted} s.d. ${rangeContext.requested.endFormatted}
+- Format: ${rangeContext.requested.start} s.d. ${rangeContext.requested.end}
+- Tipe: ${rangeContext.requested.type}
+
+DATA HISTORIS UNTUK PERBANDINGAN:
+- Rentang: ${rangeContext.historical.startFormatted} s.d. ${rangeContext.historical.endFormatted}
+- Format: ${rangeContext.historical.start} s.d. ${rangeContext.historical.end}
+
 === DATA LAPORAN PERIODE YANG DIMINTA ===
 Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Pendapatan: Rp ${serverReportData.summary?.pendapatan?.toLocaleString('id-ID') || '0'}
@@ -512,6 +549,13 @@ ATURAN ANALISIS:
 7) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan sebutkan data tambahan yang diperlukan.
 8) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
 
+PENTING - KONTEKS TANGGAL:
+- Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
+- Jika user bertanya "3 bulan terakhir", data yang diberikan sudah mencakup 3 bulan terakhir
+- Jika user bertanya "bulan lalu", data yang diberikan sudah mencakup bulan lalu
+- Gunakan konteks tanggal yang jelas dalam jawaban Anda
+- Selalu sebutkan rentang tanggal yang dianalisis
+
 KEMAMPUAN ANALISIS TREN:
 - Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
 - Anda dapat membandingkan bulan ini vs bulan lalu
@@ -520,7 +564,7 @@ KEMAMPUAN ANALISIS TREN:
 - Anda dapat mengidentifikasi pola musiman dan fluktuasi
 
 FORMAT JAWABAN (jika memungkinkan):
-- Ringkasan Utama (1-2 kalimat)
+- Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
 - Analisis Tren & Perbandingan (dengan angka dan persentase)
 - Insight Kunci (bullet points dengan data pendukung)
 - Rekomendasi Tindakan (langkah konkret berdasarkan tren)
