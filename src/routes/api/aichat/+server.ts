@@ -326,7 +326,18 @@ Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 Rincian Pembayaran:
 ${
 	Object.entries(serverReportData.pembayaran || {})
-		.map(([k, v]: any) => `- ${k}: ${v.jumlah} trx, Rp ${v.nominal.toLocaleString('id-ID')}`)
+		.map(([k, v]: any) => {
+			const methodLabels: Record<string, string> = {
+				'tunai': 'Tunai (Cash)',
+				'qris': 'QRIS (Digital Payment)',
+				'transfer': 'Transfer Bank',
+				'e-wallet': 'E-Wallet',
+				'card': 'Kartu Kredit/Debit',
+				'lainnya': 'Lainnya'
+			};
+			const label = methodLabels[k] || k;
+			return `- ${label}: ${v.jumlah} trx, Rp ${v.nominal.toLocaleString('id-ID')}`;
+		})
 		.join('\n') || '- (tidak ada)'
 }
 

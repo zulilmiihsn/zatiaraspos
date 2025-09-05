@@ -22,7 +22,7 @@
 	let customerName = '';
 	let paymentMethod = '';
 	const paymentOptions = [
-		{ id: 'cash', label: 'Tunai' },
+		{ id: 'tunai', label: 'Tunai' },
 		{ id: 'qris', label: 'QRIS' }
 	];
 	let showCancelModal = false;
@@ -161,11 +161,11 @@
 		showCancelModal = false;
 	}
 	function handleBayar() {
-		if (paymentMethod === 'cash') {
+		if (paymentMethod === 'tunai') {
 			showCashModal = true;
 			cashReceived = '';
 		} else {
-			// QRIS: tampilkan modal warning dulu
+			// Non-tunai: tampilkan modal warning dulu
 			showQrisWarning = true;
 		}
 	}
@@ -268,7 +268,7 @@
 		}
 		const now = new Date();
 		const waktu = now.toISOString();
-		const payment = paymentMethod === 'cash' ? 'tunai' : 'non-tunai';
+		const payment = paymentMethod;
 		// Generate transaction_id sekali per transaksi
 		const transactionId =
 			typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : uuidv4();
@@ -449,8 +449,15 @@
 		// Ringkasan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
 		html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${totalHarga.toLocaleString('id-ID')}</b></td></tr>`;
-		html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}</td></tr>`;
-		if (paymentMethod === 'cash') {
+		const methodLabels: Record<string, string> = {
+			'tunai': 'Tunai',
+			'qris': 'QRIS',
+			'transfer': 'Transfer',
+			'e-wallet': 'E-Wallet',
+			'card': 'Kartu'
+		};
+		html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
+		if (paymentMethod === 'tunai') {
 			html += `<tr><td style='text-align:left;'>Dibayar:</td><td style='text-align:right;'>Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</td></tr>`;
 			html += `<tr><td style='text-align:left;'>Kembalian:</td><td style='text-align:right;'>Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</td></tr>`;
 		}
@@ -751,7 +758,7 @@
 			</div>
 			<div class="mb-1 text-center text-2xl font-bold text-green-600">Transaksi Berhasil!</div>
 			<div class="mb-2 text-center text-gray-700">
-				Pembayaran {paymentMethod === 'qris' ? 'QRIS' : 'tunai'} telah diterima.<br />
+				Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br />
 				{#if customerName.trim()}
 					<span class="font-semibold text-pink-500">{customerName.trim()}</span><br />
 				{/if}
