@@ -90,74 +90,6 @@
 	userProfile.subscribe((val) => (userProfileData = val));
 
 	// AI Chat functions
-	// Ekstrak rentang waktu dari pertanyaan user dan kembalikan start, end, dan tipe
-	function parseDateRangeFromQuestion(question: string): {
-		start: string;
-		end: string;
-		type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-	} {
-		const q = (question || '').toLowerCase();
-		const today = getLocalDateStringWITA();
-
-		const toYMD = (d: Date) => {
-			const yyyy = d.getFullYear();
-			const mm = String(d.getMonth() + 1).padStart(2, '0');
-			const dd = String(d.getDate()).padStart(2, '0');
-			return `${yyyy}-${mm}-${dd}`;
-		};
-
-		if (q.includes('hari ini') || q.includes('today')) {
-			return { start: today, end: today, type: 'daily' };
-		}
-		if (q.includes('kemarin') || q.includes('yesterday')) {
-			const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-			d.setDate(d.getDate() - 1);
-			const y = toYMD(d);
-			return { start: y, end: y, type: 'daily' };
-		}
-		if (q.includes('minggu ini') || q.includes('pekan ini') || q.includes('this week')) {
-			const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-			const day = now.getDay();
-			const diffToMonday = (day + 6) % 7;
-			const startD = new Date(now);
-			startD.setDate(now.getDate() - diffToMonday);
-			const endD = new Date(startD);
-			endD.setDate(startD.getDate() + 6);
-			return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
-		}
-		if (q.includes('bulan ini') || q.includes('this month')) {
-			const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-			const startD = new Date(now.getFullYear(), now.getMonth(), 1);
-			const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-			return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-		}
-		if (q.includes('bulan lalu') || q.includes('last month') || q.includes('sebulan')) {
-			const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-			const startD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			const endD = new Date(now.getFullYear(), now.getMonth(), 0);
-			return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
-		}
-		const nMatch = q.match(/(\d+)\s*hari/);
-		if (nMatch) {
-			const n = Math.max(1, parseInt(nMatch[1], 10));
-			const endD = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-			const startD = new Date(endD);
-			startD.setDate(endD.getDate() - (n - 1));
-			return { start: toYMD(startD), end: toYMD(endD), type: n >= 28 ? 'monthly' : 'weekly' };
-		}
-		const rangeMatch = q.match(
-			/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s*[-–]\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/
-		);
-		if (rangeMatch) {
-			const [, d1, m1, y1, d2, m2, y2] = rangeMatch;
-			const y1Full = y1.length === 2 ? `20${y1}` : y1;
-			const y2Full = y2.length === 2 ? `20${y2}` : y2;
-			const startD = toYMD(new Date(parseInt(y1Full, 10), parseInt(m1, 10) - 1, parseInt(d1, 10)));
-			const endD = toYMD(new Date(parseInt(y2Full, 10), parseInt(m2, 10) - 1, parseInt(d2, 10)));
-			return { start: startD, end: endD, type: 'daily' };
-		}
-		return { start: startDate, end: endDate, type: 'daily' };
-	}
 
 	async function handleAiAsk(question: string) {
 		aiQuestion = question;
@@ -166,11 +98,6 @@
 		aiAnswer = '';
 
 		try {
-			const derived = parseDateRangeFromQuestion(question);
-			await dataService.clearAllCaches();
-			const dateRangeKey =
-				derived.start === derived.end ? derived.start : `${derived.start}_${derived.end}`;
-			const fetchedReport: any = await dataService.getReportData(dateRangeKey, derived.type);
 			const response = await fetch('/api/aichat', {
 				method: 'POST',
 				headers: {
