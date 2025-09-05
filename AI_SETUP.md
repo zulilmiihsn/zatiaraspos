@@ -2,15 +2,15 @@
 
 ## Konfigurasi Environment
 
-1. Buat file `.env` di root project dengan isi:
+1. File `.env` sudah ada di root project dengan isi:
 ```env
-VITE_DEEPSEEK_API_KEY=your_deepseek_api_key_here
+VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
 NODE_ENV=development
 ```
 
 2. Dapatkan API key dari:
-   - Buka https://platform.openai.com/api-keys
-   - Login dengan akun OpenAI
+   - Buka https://openrouter.ai/keys
+   - Login dengan akun OpenRouter
    - Buat API key baru
    - Copy dan paste ke file `.env`
 
@@ -44,3 +44,4 @@ NODE_ENV=development
 - Restart development server setelah mengubah `.env`
 - Cek console browser untuk error messages
 - Pastikan koneksi internet stabil
+- Pastikan API key OpenRouter masih aktif dan memiliki kredit

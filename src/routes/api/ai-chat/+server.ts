@@ -1,23 +1,23 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// DeepSeek API configuration
-const DEEPSEEK_API_URL = 'https://api.openai.com/v1/chat/completions';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+// OpenRouter API configuration
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MODEL = 'deepseek/deepseek-chat';
 
 interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
 	content: string;
 }
 
-interface DeepSeekRequest {
+interface OpenRouterRequest {
 	model: string;
 	messages: ChatMessage[];
 	max_tokens: number;
 	temperature: number;
 }
 
-interface DeepSeekResponse {
+interface OpenRouterResponse {
 	choices: Array<{
 		message: {
 			content: string;
@@ -40,7 +40,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Get API key from environment
-		const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+		const apiKey = process.env.VITE_OPENROUTER_API_KEY;
 		
 		if (!apiKey) {
 			return json(
@@ -96,27 +96,29 @@ Instruksi:
 Jawab pertanyaan: "${question}"`
 		};
 
-		// Prepare the request to DeepSeek
-		const deepSeekRequest: DeepSeekRequest = {
-			model: DEEPSEEK_MODEL,
+		// Prepare the request to OpenRouter
+		const openRouterRequest: OpenRouterRequest = {
+			model: MODEL,
 			messages: [systemMessage],
 			max_tokens: 2000,
 			temperature: 0.7
 		};
 
-		// Make request to DeepSeek API
-		const response = await fetch(DEEPSEEK_API_URL, {
+		// Make request to OpenRouter API
+		const response = await fetch(OPENROUTER_API_URL, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${apiKey}`,
 				'Content-Type': 'application/json',
+				'HTTP-Referer': 'https://zatiaraspos.com',
+				'X-Title': 'Zatiaras POS'
 			},
-			body: JSON.stringify(deepSeekRequest)
+			body: JSON.stringify(openRouterRequest)
 		});
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}));
-			console.error('DeepSeek API Error:', errorData);
+			console.error('OpenRouter API Error:', errorData);
 			
 			return json(
 				{ 
@@ -127,7 +129,7 @@ Jawab pertanyaan: "${question}"`
 			);
 		}
 
-		const data: DeepSeekResponse = await response.json();
+		const data: OpenRouterResponse = await response.json();
 
 		if (data.error) {
 			return json(
