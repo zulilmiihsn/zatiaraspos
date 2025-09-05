@@ -66,6 +66,26 @@ function parseFlexibleRange(question: string): {
 		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
 	}
 	
+	// Handle "X hari terakhir" pattern
+	const hariMatch = q.match(/(\d+)\s*hari\s*terakhir/);
+	if (hariMatch) {
+		const n = Math.max(1, parseInt(hariMatch[1], 10));
+		const endD = new Date(now);
+		const startD = new Date(now);
+		startD.setDate(now.getDate() - (n - 1));
+		return { start: toYMD(startD), end: toYMD(endD), type: n >= 7 ? 'weekly' : 'daily' };
+	}
+	
+	// Handle "X minggu terakhir" pattern
+	const mingguMatch = q.match(/(\d+)\s*minggu\s*terakhir/);
+	if (mingguMatch) {
+		const n = Math.max(1, parseInt(mingguMatch[1], 10));
+		const endD = new Date(now);
+		const startD = new Date(now);
+		startD.setDate(now.getDate() - (n * 7 - 1));
+		return { start: toYMD(startD), end: toYMD(endD), type: 'weekly' };
+	}
+	
 	return { start: today, end: today, type: 'daily' };
 }
 
@@ -76,9 +96,15 @@ async function identifyDateRange(question: string, apiKey: string): Promise<{
 	type: 'daily' | 'weekly' | 'monthly' | 'yearly';
 	reasoning: string;
 }> {
+	// Hitung tanggal saat ini dalam WITA
+	const now = new Date();
+	const todayWita = toYMDWita(now);
+	
 	const systemMessage: ChatMessage = {
 		role: 'system',
 		content: `Anda adalah AI yang bertugas mengidentifikasi rentang tanggal dari pertanyaan user untuk analisis laporan bisnis.
+
+TANGGAL SAAT INI: ${todayWita} (WITA)
 
 TUGAS ANDA:
 1. Analisis pertanyaan user dan tentukan rentang tanggal yang diperlukan
@@ -86,8 +112,9 @@ TUGAS ANDA:
 3. Tentukan tipe periode (daily, weekly, monthly, yearly)
 4. Berikan reasoning singkat mengapa rentang tersebut dipilih
 
-ATURAN:
+ATURAN PENTING:
 - Gunakan tanggal Indonesia (WITA)
+- Tanggal saat ini: ${todayWita}
 - Untuk "X bulan terakhir" (1, 2, 3, 4, 5, 6, dst), hitung dari X bulan yang lalu hingga hari ini
 - Untuk "X hari terakhir" (1, 2, 3, 7, 14, 30, dst), hitung dari X hari yang lalu hingga hari ini
 - Untuk "X minggu terakhir" (1, 2, 3, 4, dst), hitung dari X minggu yang lalu hingga hari ini
@@ -100,12 +127,12 @@ ATURAN:
 - PASTIKAN rentang tanggal mencakup SEMUA data yang diminta user
 - Jika user bertanya perbandingan (vs), berikan rentang yang mencakup kedua periode
 
-CONTOH:
-- "2 bulan terakhir" → start: "2024-11-01", end: "2024-12-31", type: "monthly"
-- "3 hari terakhir" → start: "2024-12-29", end: "2024-12-31", type: "daily"
+CONTOH BERDASARKAN TANGGAL SAAT INI (${todayWita}):
+- "2 bulan terakhir" → start: "2024-11-01", end: "${todayWita}", type: "monthly"
+- "3 hari terakhir" → start: "2024-12-29", end: "${todayWita}", type: "daily"
 - "5 hari pertama bulan ini" → start: "2024-12-01", end: "2024-12-05", type: "daily"
-- "bulan ini vs bulan lalu" → start: "2024-11-01", end: "2024-12-31", type: "monthly"
-- "6 bulan terakhir" → start: "2024-07-01", end: "2024-12-31", type: "monthly"
+- "bulan ini vs bulan lalu" → start: "2024-11-01", end: "${todayWita}", type: "monthly"
+- "6 bulan terakhir" → start: "2024-07-01", end: "${todayWita}", type: "monthly"
 
 FORMAT JAWABAN (JSON):
 {
@@ -275,10 +302,15 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// AI 1: Identifikasi rentang tanggal
-		console.log('AI 1: Identifying date range for question:', question);
+		console.log('=== AI 1: DATE RANGE IDENTIFICATION ===');
+		console.log('Question:', question);
+		console.log('Current date (WITA):', toYMDWita(new Date()));
+		
 		const dateRange = await identifyDateRange(question, apiKey);
 		console.log('AI 1 Result:', dateRange);
-		console.log('Date range start:', dateRange.start, 'end:', dateRange.end);
+		console.log('Parsed date range - start:', dateRange.start, 'end:', dateRange.end);
+		console.log('Date range type:', dateRange.type);
+		console.log('Reasoning:', dateRange.reasoning);
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
