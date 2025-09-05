@@ -177,10 +177,10 @@ RENTANG TANGGAL YANG DIANALISIS:
 ATURAN ANALISIS:
 1) Jawab SELALU dalam Bahasa Indonesia yang profesional namun ramah.
 2) Berikan jawaban LENGKAP dan DETAIL sesuai data, jangan disingkat, kecuali diminta singkat.
-3) WAJIB analisis tren dan perbandingan periode - gunakan data historis yang tersedia.
+3) WAJIB analisis tren dan perbandingan dalam periode yang diminta.
 4) Sertakan angka, persentase, tren, perbandingan periode dalam setiap analisis.
 5) Jelaskan "mengapa" dan "bagaimana" (reasoning bisnis) untuk setiap insight penting.
-6) Jika diminta perbandingan (bulan lalu vs bulan ini, 3 bulan terakhir, dll), WAJIB gunakan data tren yang tersedia.
+6) Jika diminta perbandingan (bulan A vs bulan B, dll), WAJIB gunakan data yang tersedia dalam periode.
 7) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan sebutkan data tambahan yang diperlukan.
 8) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
 
@@ -197,19 +197,16 @@ PENTING - KONTEKS TANGGAL:
 - Selalu sebutkan rentang tanggal yang dianalisis
 - Data di bagian "DATA LAPORAN PERIODE YANG DIMINTA" sudah sesuai dengan konteks pertanyaan user
 - Jika ada data dalam konteks, ANALISIS data tersebut, jangan katakan tidak ada
-- Untuk perbandingan, gunakan data historis yang tersedia untuk analisis tren
+- Untuk perbandingan, gunakan data yang tersedia dalam periode yang diminta
 
 KEMAMPUAN ANALISIS TREN:
-- Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
-- Anda dapat membandingkan bulan ini vs bulan lalu
-- Anda dapat menganalisis tren 3 bulan terakhir, 6 bulan terakhir
-- Anda dapat menghitung persentase perubahan dan tren pertumbuhan
-- Anda dapat mengidentifikasi pola musiman dan fluktuasi
 - Anda dapat menganalisis data per bulan dalam periode yang diminta
 - Anda dapat membandingkan performa antar bulan (Bulan A vs Bulan B vs Bulan C)
 - Anda dapat mengidentifikasi bulan terbaik dan terburuk dalam periode
 - Anda dapat menganalisis tren produk terlaris per bulan
 - Anda dapat menganalisis preferensi metode pembayaran per bulan
+- Anda dapat menghitung persentase perubahan dan tren pertumbuhan dalam periode
+- Anda dapat mengidentifikasi pola dan fluktuasi dalam periode yang diminta
 
 FORMAT JAWABAN (jika memungkinkan):
 - Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
@@ -280,11 +277,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const startDate = new Date(`${dateRange.start}T00:00:00+08:00`).toISOString();
 		const endDate = new Date(`${dateRange.end}T23:59:59+08:00`).toISOString();
 
-		// Untuk analisis tren, ambil data historis yang lebih luas (6 bulan terakhir)
-		const now = new Date();
-		const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-		const historicalStartDate = new Date(`${toYMDWita(sixMonthsAgo)}T00:00:00+08:00`).toISOString();
-		const historicalEndDate = new Date(`${toYMDWita(now)}T23:59:59+08:00`).toISOString();
+		// Konversi tanggal untuk konteks AI
 
 		// Konversi tanggal untuk konteks AI
 		const formatDateForAI = (dateStr: string) => {
@@ -304,21 +297,13 @@ export const POST: RequestHandler = async ({ request }) => {
 				startFormatted: formatDateForAI(dateRange.start),
 				endFormatted: formatDateForAI(dateRange.end),
 				type: dateRange.type
-			},
-			historical: {
-				start: toYMDWita(sixMonthsAgo),
-				end: toYMDWita(now),
-				startFormatted: formatDateForAI(toYMDWita(sixMonthsAgo)),
-				endFormatted: formatDateForAI(toYMDWita(now))
 			}
 		};
 
-		// Ambil data untuk periode yang diminta dan data historis secara paralel
+		// Ambil data untuk periode yang diminta
 		const [
 			{ data: bukuKasPos },
-			{ data: bukuKasManual },
-			{ data: historicalBukuKasPos },
-			{ data: historicalBukuKasManual }
+			{ data: bukuKasManual }
 		] = await Promise.all([
 			supabase
 				.from('buku_kas')
@@ -331,18 +316,6 @@ export const POST: RequestHandler = async ({ request }) => {
 				.select('*')
 				.gte('waktu', startDate)
 				.lte('waktu', endDate)
-				.neq('sumber', 'pos'),
-			supabase
-				.from('buku_kas')
-				.select('*, transaksi_kasir (*, produk(name))')
-				.gte('waktu', historicalStartDate)
-				.lte('waktu', historicalEndDate)
-				.eq('sumber', 'pos'),
-			supabase
-				.from('buku_kas')
-				.select('*')
-				.gte('waktu', historicalStartDate)
-				.lte('waktu', historicalEndDate)
 				.neq('sumber', 'pos')
 		]);
 
@@ -353,18 +326,6 @@ export const POST: RequestHandler = async ({ request }) => {
 				sumber: 'pos'
 			})),
 			...(bukuKasManual || []).map((item: any) => ({
-				...item,
-				sumber: item.sumber || 'catat'
-			}))
-		];
-
-		// Data historis untuk perbandingan
-		const historicalLaporan = [
-			...(historicalBukuKasPos || []).map((item: any) => ({
-				...item,
-				sumber: 'pos'
-			})),
-			...(historicalBukuKasManual || []).map((item: any) => ({
 				...item,
 				sumber: item.sumber || 'catat'
 			}))
@@ -385,45 +346,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
 
-		// Hitung data historis untuk perbandingan
-		const historicalPemasukan = historicalLaporan.filter((t: any) => t.tipe === 'in');
-		const historicalPengeluaran = historicalLaporan.filter((t: any) => t.tipe === 'out');
-		const historicalTotalPemasukan = historicalPemasukan.reduce(
-			(s: number, t: any) => s + (t.amount || t.nominal || 0),
-			0
-		);
-		const historicalTotalPengeluaran = historicalPengeluaran.reduce(
-			(s: number, t: any) => s + (t.amount || t.nominal || 0),
-			0
-		);
-		const historicalLabaKotor = historicalTotalPemasukan - historicalTotalPengeluaran;
-		const historicalPajak = historicalLabaKotor > 0 ? Math.round(historicalLabaKotor * 0.005) : 0;
-		const historicalLabaBersih = historicalLabaKotor - historicalPajak;
-
-		// Hitung tren bulanan untuk perbandingan
-		const monthlyData: Record<string, { pemasukan: number; pengeluaran: number; laba: number; transaksi: number }> = {};
-		
-		// Proses data historis per bulan
-		for (const item of historicalLaporan) {
-			const date = new Date(item.waktu);
-			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-			
-			if (!monthlyData[monthKey]) {
-				monthlyData[monthKey] = { pemasukan: 0, pengeluaran: 0, laba: 0, transaksi: 0 };
-			}
-			
-			const amount = item.amount || item.nominal || 0;
-			if (item.tipe === 'in') {
-				monthlyData[monthKey].pemasukan += amount;
-			} else {
-				monthlyData[monthKey].pengeluaran += amount;
-			}
-			monthlyData[monthKey].laba = monthlyData[monthKey].pemasukan - monthlyData[monthKey].pengeluaran;
-			
-			if (item.sumber === 'pos' && item.transaction_id) {
-				monthlyData[monthKey].transaksi += 1;
-			}
-		}
 
 		// Hitung data per bulan untuk periode yang diminta (untuk analisis detail)
 		const requestedMonthlyData: Record<string, { 
@@ -491,27 +413,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
-		// Urutkan data bulanan
-		const sortedMonthlyData = Object.entries(monthlyData)
-			.sort(([a], [b]) => a.localeCompare(b))
-			.slice(-6); // Ambil 6 bulan terakhir
-
-		// Hitung tren (perbandingan bulan ini vs bulan lalu)
-		const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-		const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
-		
-		const currentMonthData = monthlyData[currentMonth] || { pemasukan: 0, pengeluaran: 0, laba: 0, transaksi: 0 };
-		const lastMonthData = monthlyData[lastMonth] || { pemasukan: 0, pengeluaran: 0, laba: 0, transaksi: 0 };
-		
-		const trenPemasukan = lastMonthData.pemasukan > 0 
-			? ((currentMonthData.pemasukan - lastMonthData.pemasukan) / lastMonthData.pemasukan * 100)
-			: 0;
-		const trenPengeluaran = lastMonthData.pengeluaran > 0 
-			? ((currentMonthData.pengeluaran - lastMonthData.pengeluaran) / lastMonthData.pengeluaran * 100)
-			: 0;
-		const trenLaba = lastMonthData.laba > 0 
-			? ((currentMonthData.laba - lastMonthData.laba) / lastMonthData.laba * 100)
-			: 0;
 
 		// Format data per bulan untuk AI
 		const formattedRequestedMonthlyData = Object.entries(requestedMonthlyData)
@@ -545,19 +446,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			labaBersih,
 			totalTransaksi: new Set((bukuKasPos || []).map((b: any) => b.transaction_id).filter(Boolean))
 				.size,
-			// Data historis untuk perbandingan
-			historicalPendapatan: historicalTotalPemasukan,
-			historicalPengeluaran: historicalTotalPengeluaran,
-			historicalLabaBersih: historicalLabaBersih,
-			// Tren bulanan
-			monthlyData: sortedMonthlyData,
 			// Data per bulan untuk periode yang diminta
-			requestedMonthlyData: formattedRequestedMonthlyData,
-			trenPemasukan,
-			trenPengeluaran,
-			trenLaba,
-			currentMonthData,
-			lastMonthData
+			requestedMonthlyData: formattedRequestedMonthlyData
 		};
 
 		// Breakdown metode pembayaran & pola waktu
@@ -642,10 +532,6 @@ PERIODE YANG DIMINTA USER:
 - Format: ${rangeContext.requested.start} s.d. ${rangeContext.requested.end}
 - Tipe: ${rangeContext.requested.type}
 
-DATA HISTORIS UNTUK PERBANDINGAN:
-- Rentang: ${rangeContext.historical.startFormatted} s.d. ${rangeContext.historical.endFormatted}
-- Format: ${rangeContext.historical.start} s.d. ${rangeContext.historical.end}
-
 === DATA LAPORAN PERIODE YANG DIMINTA (SUDAH DIFETCH SESUAI KONTEKS) ===
 Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Pendapatan: Rp ${serverReportData.summary?.pendapatan?.toLocaleString('id-ID') || '0'}
@@ -656,16 +542,6 @@ Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 - Total Transaksi: ${serverReportData.summary?.totalTransaksi || '0'}
 
 PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "2 bulan terakhir", maka data di atas adalah data untuk 2 bulan terakhir. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh. ANALISIS data yang tersedia, jangan katakan tidak ada data.
-
-=== DATA HISTORIS UNTUK PERBANDINGAN (6 BULAN TERAKHIR) ===
-- Total Pendapatan 6 Bulan: Rp ${serverReportData.summary?.historicalPendapatan?.toLocaleString('id-ID') || '0'}
-- Total Pengeluaran 6 Bulan: Rp ${serverReportData.summary?.historicalPengeluaran?.toLocaleString('id-ID') || '0'}
-- Total Laba Bersih 6 Bulan: Rp ${serverReportData.summary?.historicalLabaBersih?.toLocaleString('id-ID') || '0'}
-
-=== TREN BULANAN (6 BULAN TERAKHIR) ===
-${(serverReportData.summary?.monthlyData || []).map(([month, data]: any) => 
-	`- ${month}: Pendapatan Rp ${data.pemasukan.toLocaleString('id-ID')}, Pengeluaran Rp ${data.pengeluaran.toLocaleString('id-ID')}, Laba Rp ${data.laba.toLocaleString('id-ID')}, Transaksi ${data.transaksi}`
-).join('\n') || '- (tidak ada data historis)'}
 
 === DATA PER BULAN UNTUK PERIODE YANG DIMINTA ===
 ${(serverReportData.summary?.requestedMonthlyData || []).map((month: any) => `
@@ -685,22 +561,6 @@ Bulan ${month.monthName} (${month.month}):
 }).join(', ')}
 - Top 3 Produk Terlaris: ${month.topProducts.map((p: any) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
 `).join('\n') || '- (tidak ada data per bulan)'}
-
-=== PERBANDINGAN BULAN INI VS BULAN LALU ===
-Bulan Ini (${serverReportData.summary?.currentMonthData ? Object.keys(serverReportData.summary.currentMonthData).length > 0 ? 'Data tersedia' : 'Tidak ada data' : 'Tidak ada data'}):
-- Pendapatan: Rp ${serverReportData.summary?.currentMonthData?.pemasukan?.toLocaleString('id-ID') || '0'}
-- Pengeluaran: Rp ${serverReportData.summary?.currentMonthData?.pengeluaran?.toLocaleString('id-ID') || '0'}
-- Laba: Rp ${serverReportData.summary?.currentMonthData?.laba?.toLocaleString('id-ID') || '0'}
-
-Bulan Lalu (${serverReportData.summary?.lastMonthData ? Object.keys(serverReportData.summary.lastMonthData).length > 0 ? 'Data tersedia' : 'Tidak ada data' : 'Tidak ada data'}):
-- Pendapatan: Rp ${serverReportData.summary?.lastMonthData?.pemasukan?.toLocaleString('id-ID') || '0'}
-- Pengeluaran: Rp ${serverReportData.summary?.lastMonthData?.pengeluaran?.toLocaleString('id-ID') || '0'}
-- Laba: Rp ${serverReportData.summary?.lastMonthData?.laba?.toLocaleString('id-ID') || '0'}
-
-Tren Perubahan:
-- Tren Pendapatan: ${serverReportData.summary?.trenPemasukan ? (serverReportData.summary.trenPemasukan > 0 ? '+' : '') + serverReportData.summary.trenPemasukan.toFixed(1) + '%' : 'Tidak dapat dihitung'}
-- Tren Pengeluaran: ${serverReportData.summary?.trenPengeluaran ? (serverReportData.summary.trenPengeluaran > 0 ? '+' : '') + serverReportData.summary.trenPengeluaran.toFixed(1) + '%' : 'Tidak dapat dihitung'}
-- Tren Laba: ${serverReportData.summary?.trenLaba ? (serverReportData.summary.trenLaba > 0 ? '+' : '') + serverReportData.summary.trenLaba.toFixed(1) + '%' : 'Tidak dapat dihitung'}
 
 === RINCIAN PEMBAYARAN ===
 ${
