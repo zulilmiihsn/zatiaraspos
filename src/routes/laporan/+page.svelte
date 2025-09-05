@@ -1428,13 +1428,6 @@
 										/>
 									</svg>
 								</div>
-								<div
-									class="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-400"
-								>
-									<svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-										<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-								</div>
 							</div>
 							<div class="flex-1">
 								<h3 class="mb-1 text-2xl font-bold text-white">Asisten AI</h3>
@@ -1878,11 +1871,6 @@
 			<div class="bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-3">
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
-						<div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-							<svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-								<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-							</svg>
-						</div>
 						<h3 class="text-lg font-bold text-white">Asisten AI</h3>
 					</div>
 					<button
