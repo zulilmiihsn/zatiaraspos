@@ -226,6 +226,169 @@ function parseFlexibleRange(question: string): {
 	return { start: today, end: today, type: 'daily' };
 }
 
+// AI 1: Date Range Identifier
+async function identifyDateRange(question: string, apiKey: string): Promise<{
+	start: string;
+	end: string;
+	type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+	reasoning: string;
+}> {
+	const systemMessage: ChatMessage = {
+		role: 'system',
+		content: `Anda adalah AI yang bertugas mengidentifikasi rentang tanggal dari pertanyaan user untuk analisis laporan bisnis.
+
+TUGAS ANDA:
+1. Analisis pertanyaan user dan tentukan rentang tanggal yang diperlukan
+2. Berikan format tanggal YYYY-MM-DD untuk start dan end
+3. Tentukan tipe periode (daily, weekly, monthly, yearly)
+4. Berikan reasoning singkat mengapa rentang tersebut dipilih
+
+ATURAN:
+- Gunakan tanggal Indonesia (WITA)
+- Jika user bertanya "5 hari pertama bulan ini", berikan tanggal 1-5 bulan ini
+- Jika user bertanya "bulan lalu", berikan tanggal 1-akhir bulan lalu
+- Jika user bertanya "3 bulan terakhir", berikan tanggal 3 bulan terakhir
+- Jika user bertanya "minggu ini", berikan tanggal Senin-Minggu minggu ini
+- Jika user bertanya "hari ini", berikan tanggal hari ini
+
+FORMAT JAWABAN (JSON):
+{
+  "start": "YYYY-MM-DD",
+  "end": "YYYY-MM-DD", 
+  "type": "daily|weekly|monthly|yearly",
+  "reasoning": "Penjelasan singkat mengapa rentang ini dipilih"
+}
+
+Pertanyaan user: "${question}"`
+	};
+
+	const response = await fetch(OPENROUTER_API_URL, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+			'HTTP-Referer': 'https://zatiaraspos.com',
+			'X-Title': 'Zatiaras POS - Date Range Identifier'
+		},
+		body: JSON.stringify({
+			model: MODEL,
+			messages: [systemMessage],
+			max_tokens: 500,
+			temperature: 0.3
+		})
+	});
+
+	if (!response.ok) {
+		throw new Error(`AI 1 Error: ${response.status}`);
+	}
+
+	const data = await response.json();
+	const content = data.choices?.[0]?.message?.content || '{}';
+	
+	try {
+		const parsed = JSON.parse(content);
+		return {
+			start: parsed.start || new Date().toISOString().split('T')[0],
+			end: parsed.end || new Date().toISOString().split('T')[0],
+			type: parsed.type || 'daily',
+			reasoning: parsed.reasoning || 'Rentang tanggal diidentifikasi'
+		};
+	} catch (error) {
+		console.error('AI 1 JSON Parse Error:', error);
+		// Fallback ke parser lama
+		const range = parseFlexibleRange(question);
+		return {
+			start: range.start,
+			end: range.end,
+			type: range.type,
+			reasoning: 'Menggunakan parser fallback'
+		};
+	}
+}
+
+// AI 2: Business Analyst
+async function analyzeBusinessData(
+	question: string, 
+	reportData: any, 
+	dateRange: any,
+	apiKey: string
+): Promise<string> {
+	const systemMessage: ChatMessage = {
+		role: 'system',
+		content: `Anda adalah Asisten AI yang berperan sebagai pakar ekonomi dan bisnis untuk aplikasi POS Zatiaras Juice.
+Zatiaras Juice adalah brand jus buah segar yang menjual berbagai varian minuman jus, smoothie, dan minuman sehat lainnya.
+
+KONTEKS DATA LENGKAP:
+${reportData}
+
+RENTANG TANGGAL YANG DIANALISIS:
+- Start: ${dateRange.start} (${dateRange.startFormatted})
+- End: ${dateRange.end} (${dateRange.endFormatted})
+- Tipe: ${dateRange.type}
+- Reasoning: ${dateRange.reasoning}
+
+ATURAN ANALISIS:
+1) Jawab SELALU dalam Bahasa Indonesia yang profesional namun ramah.
+2) Berikan jawaban LENGKAP dan DETAIL sesuai data, jangan disingkat, kecuali diminta singkat.
+3) WAJIB analisis tren dan perbandingan periode - gunakan data historis yang tersedia.
+4) Sertakan angka, persentase, tren, perbandingan periode dalam setiap analisis.
+5) Jelaskan "mengapa" dan "bagaimana" (reasoning bisnis) untuk setiap insight penting.
+6) Jika diminta perbandingan (bulan lalu vs bulan ini, 3 bulan terakhir, dll), WAJIB gunakan data tren yang tersedia.
+7) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan sebutkan data tambahan yang diperlukan.
+8) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
+
+PENTING - KONTEKS TANGGAL:
+- Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
+- Jika user bertanya "5 hari pertama bulan ini", data yang diberikan sudah mencakup 5 hari pertama bulan ini
+- Jika user bertanya "3 bulan terakhir", data yang diberikan sudah mencakup 3 bulan terakhir
+- Jika user bertanya "bulan lalu", data yang diberikan sudah mencakup bulan lalu
+- JANGAN katakan "tidak ada data" jika data tersedia untuk periode yang diminta
+- Gunakan konteks tanggal yang jelas dalam jawaban Anda
+- Selalu sebutkan rentang tanggal yang dianalisis
+- Data di bagian "DATA LAPORAN PERIODE YANG DIMINTA" sudah sesuai dengan konteks pertanyaan user
+
+KEMAMPUAN ANALISIS TREN:
+- Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
+- Anda dapat membandingkan bulan ini vs bulan lalu
+- Anda dapat menganalisis tren 3 bulan terakhir, 6 bulan terakhir
+- Anda dapat menghitung persentase perubahan dan tren pertumbuhan
+- Anda dapat mengidentifikasi pola musiman dan fluktuasi
+
+FORMAT JAWABAN (jika memungkinkan):
+- Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
+- Analisis Tren & Perbandingan (dengan angka dan persentase)
+- Insight Kunci (bullet points dengan data pendukung)
+- Rekomendasi Tindakan (langkah konkret berdasarkan tren)
+- Risiko/Perhatian (berdasarkan analisis historis)
+- Langkah Berikutnya (data tambahan yang diperlukan)
+
+Pertanyaan pengguna: "${question}"`
+	};
+
+	const response = await fetch(OPENROUTER_API_URL, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+			'HTTP-Referer': 'https://zatiaraspos.com',
+			'X-Title': 'Zatiaras POS - Business Analyst'
+		},
+		body: JSON.stringify({
+			model: MODEL,
+			messages: [systemMessage],
+			max_tokens: 2000,
+			temperature: 0.6
+		})
+	});
+
+	if (!response.ok) {
+		throw new Error(`AI 2 Error: ${response.status}`);
+	}
+
+	const data = await response.json();
+	return data.choices?.[0]?.message?.content || 'Maaf, tidak dapat menghasilkan jawaban.';
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const { question, branch } = await request.json();
@@ -248,19 +411,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// Tentukan rentang waktu berdasarkan pertanyaan
-		const range = parseFlexibleRange(question);
-		
-		// Debug logging
-		console.log('AI Question:', question);
-		console.log('Parsed Range:', range);
+		// AI 1: Identifikasi rentang tanggal
+		console.log('AI 1: Identifying date range for question:', question);
+		const dateRange = await identifyDateRange(question, apiKey);
+		console.log('AI 1 Result:', dateRange);
 
-		// Ambil data langsung dari database sesuai branch & range
+		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
 
 		// Hitung waktu UTC dari rentang WITA (approx: gunakan string Y-M-D 00:00:00/23:59:59 WITA yang dikonversi ke ISO)
-		const startDate = new Date(`${range.start}T00:00:00+08:00`).toISOString();
-		const endDate = new Date(`${range.end}T23:59:59+08:00`).toISOString();
+		const startDate = new Date(`${dateRange.start}T00:00:00+08:00`).toISOString();
+		const endDate = new Date(`${dateRange.end}T23:59:59+08:00`).toISOString();
 
 		// Untuk analisis tren, ambil data historis yang lebih luas (6 bulan terakhir)
 		const now = new Date();
@@ -281,11 +442,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const rangeContext = {
 			requested: {
-				start: range.start,
-				end: range.end,
-				startFormatted: formatDateForAI(range.start),
-				endFormatted: formatDateForAI(range.end),
-				type: range.type
+				start: dateRange.start,
+				end: dateRange.end,
+				startFormatted: formatDateForAI(dateRange.start),
+				endFormatted: formatDateForAI(dateRange.end),
+				type: dateRange.type
 			},
 			historical: {
 				start: toYMDWita(sixMonthsAgo),
@@ -609,97 +770,19 @@ ${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}
 		`
 			: 'Tidak ada data laporan tersedia.';
 
-		// Prepare system message (persona pakar ekonomi/bisnis)
-		const systemMessage: ChatMessage = {
-			role: 'system',
-			content: `Anda adalah Asisten AI yang berperan sebagai pakar ekonomi dan bisnis untuk aplikasi POS Zatiaras Juice.
-Zatiaras Juice adalah brand jus buah segar yang menjual berbagai varian minuman jus, smoothie, dan minuman sehat lainnya.
-
-KONTEKS DATA LENGKAP:
-${reportContext}
-
-ATURAN ANALISIS:
-1) Jawab SELALU dalam Bahasa Indonesia yang profesional namun ramah.
-2) Berikan jawaban LENGKAP dan DETAIL sesuai data, jangan disingkat, kecuali diminta singkat.
-3) WAJIB analisis tren dan perbandingan periode - gunakan data historis yang tersedia.
-4) Sertakan angka, persentase, tren, perbandingan periode dalam setiap analisis.
-5) Jelaskan "mengapa" dan "bagaimana" (reasoning bisnis) untuk setiap insight penting.
-6) Jika diminta perbandingan (bulan lalu vs bulan ini, 3 bulan terakhir, dll), WAJIB gunakan data tren yang tersedia.
-7) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan sebutkan data tambahan yang diperlukan.
-8) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
-
-PENTING - KONTEKS TANGGAL:
-- Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
-- Jika user bertanya "5 hari pertama bulan ini", data yang diberikan sudah mencakup 5 hari pertama bulan ini
-- Jika user bertanya "3 bulan terakhir", data yang diberikan sudah mencakup 3 bulan terakhir
-- Jika user bertanya "bulan lalu", data yang diberikan sudah mencakup bulan lalu
-- JANGAN katakan "tidak ada data" jika data tersedia untuk periode yang diminta
-- Gunakan konteks tanggal yang jelas dalam jawaban Anda
-- Selalu sebutkan rentang tanggal yang dianalisis
-- Data di bagian "DATA LAPORAN PERIODE YANG DIMINTA" sudah sesuai dengan konteks pertanyaan user
-
-KEMAMPUAN ANALISIS TREN:
-- Anda memiliki akses ke data 6 bulan terakhir untuk analisis tren
-- Anda dapat membandingkan bulan ini vs bulan lalu
-- Anda dapat menganalisis tren 3 bulan terakhir, 6 bulan terakhir
-- Anda dapat menghitung persentase perubahan dan tren pertumbuhan
-- Anda dapat mengidentifikasi pola musiman dan fluktuasi
-
-FORMAT JAWABAN (jika memungkinkan):
-- Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
-- Analisis Tren & Perbandingan (dengan angka dan persentase)
-- Insight Kunci (bullet points dengan data pendukung)
-- Rekomendasi Tindakan (langkah konkret berdasarkan tren)
-- Risiko/Perhatian (berdasarkan analisis historis)
-- Langkah Berikutnya (data tambahan yang diperlukan)
-
-Pertanyaan pengguna: "${question}"`
-		};
-
-		// Prepare the request to OpenRouter
-		const openRouterRequest: OpenRouterRequest = {
-			model: MODEL,
-			messages: [systemMessage],
-			max_tokens: 2000,
-			temperature: 0.6
-		};
-
-		// Make request to OpenRouter API
-		const response = await fetch(OPENROUTER_API_URL, {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${apiKey}`,
-				'Content-Type': 'application/json',
-				'HTTP-Referer': 'https://zatiaraspos.com',
-				'X-Title': 'Zatiaras POS'
-			},
-			body: JSON.stringify(openRouterRequest)
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			console.error('OpenRouter API Error:', errorData);
-
-			return json(
-				{
-					success: false,
-					error: `API Error: ${response.status} - ${errorData.error?.message || response.statusText}`
-				},
-				{ status: response.status }
-			);
-		}
-
-		const data: OpenRouterResponse = await response.json();
-
-		if (data.error) {
-			return json({ success: false, error: data.error.message }, { status: 500 });
-		}
-
-		const answer = data.choices?.[0]?.message?.content || 'Maaf, tidak dapat menghasilkan jawaban.';
+		// AI 2: Analisis data bisnis
+		console.log('AI 2: Analyzing business data...');
+		const answer = await analyzeBusinessData(question, reportContext, rangeContext, apiKey);
+		console.log('AI 2 Result: Analysis completed');
 
 		return json({
 			success: true,
-			answer: answer.trim()
+			answer: answer.trim(),
+			dateRange: {
+				start: dateRange.start,
+				end: dateRange.end,
+				reasoning: dateRange.reasoning
+			}
 		});
 	} catch (error) {
 		console.error('AI Chat Error:', error);
