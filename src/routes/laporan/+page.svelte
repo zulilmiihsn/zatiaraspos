@@ -1256,6 +1256,112 @@
 				</div>
 			</div>
 
+			<!-- AI Assistant Section -->
+			<div class="mt-4 px-2 md:mt-8 md:px-0">
+				<div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 p-8 shadow-2xl">
+					<!-- Background Pattern -->
+					<div class="absolute inset-0 opacity-10">
+						<svg class="h-full w-full" viewBox="0 0 100 100" fill="currentColor">
+							<defs>
+								<pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+									<path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
+								</pattern>
+							</defs>
+							<rect width="100" height="100" fill="url(#grid)"/>
+						</svg>
+					</div>
+					
+					<!-- Floating Elements -->
+					<div class="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
+					<div class="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-pink-300/20 blur-2xl"></div>
+					
+					<!-- Content -->
+					<div class="relative z-10">
+						<!-- Header -->
+						<div class="mb-6 flex items-center gap-4">
+							<div class="relative">
+								<div class="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+									<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+									</svg>
+								</div>
+								<div class="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-green-400 flex items-center justify-center">
+									<svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+										<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+									</svg>
+								</div>
+							</div>
+							<div class="flex-1">
+								<h3 class="text-2xl font-bold text-white mb-1">AI Assistant</h3>
+								<p class="text-pink-100 text-sm">Dapatkan insight cerdas dan analisis mendalam tentang laporan keuangan Anda</p>
+							</div>
+						</div>
+						
+						<!-- Input Section -->
+						<div class="relative">
+							<div class="flex items-center gap-3">
+								<div class="flex-1 relative">
+									<input
+										type="text"
+										placeholder="Tanya AI tentang laporan ini... (contoh: 'Bagaimana performa penjualan hari ini?')"
+										bind:value={aiQuestion}
+										onkeypress={(e) => e.key === 'Enter' && !isAiLoading && handleAiAsk(aiQuestion)}
+										disabled={isAiLoading}
+										class="w-full px-6 py-4 pr-16 rounded-2xl border-0 bg-white/90 backdrop-blur-sm text-gray-800 placeholder-gray-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-white/30 transition-all duration-300 disabled:bg-white/70 disabled:cursor-not-allowed shadow-lg"
+									/>
+									
+									<!-- Send Button -->
+									<button
+										onclick={() => !isAiLoading && handleAiAsk(aiQuestion)}
+										disabled={!aiQuestion.trim() || isAiLoading}
+										class="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none"
+									>
+										{#if isAiLoading}
+											<svg class="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+												<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+											</svg>
+										{:else}
+											<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+											</svg>
+										{/if}
+									</button>
+								</div>
+							</div>
+							
+							<!-- Quick Suggestions -->
+							<div class="mt-4 flex flex-wrap gap-2">
+								<button
+									onclick={() => aiQuestion = 'Bagaimana performa penjualan hari ini?'}
+									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+								>
+									📊 Performa Penjualan
+								</button>
+								<button
+									onclick={() => aiQuestion = 'Produk apa yang paling laris?'}
+									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+								>
+									🏆 Produk Terlaris
+								</button>
+								<button
+									onclick={() => aiQuestion = 'Berapa keuntungan bersih hari ini?'}
+									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+								>
+									💰 Keuntungan Bersih
+								</button>
+								<button
+									onclick={() => aiQuestion = 'Bagaimana tren penjualan minggu ini?'}
+									class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+								>
+									📈 Tren Penjualan
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Modal Filter -->
 			{#if showFilter}
 				<div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
@@ -1583,54 +1689,6 @@
 				</div>
 			{/if}
 
-			<!-- AI Chat Section -->
-			<div class="mt-8 mb-6">
-				<div class="rounded-2xl bg-gradient-to-br from-pink-50 to-purple-50 p-6 border border-pink-200">
-					<div class="flex items-center gap-3 mb-4">
-						<div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-							<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-								<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-							</svg>
-						</div>
-						<div>
-							<h3 class="text-lg font-bold text-gray-800">Tanya AI</h3>
-							<p class="text-sm text-gray-600">Dapatkan insight cerdas tentang laporan Anda</p>
-						</div>
-					</div>
-					
-					<div class="flex items-center gap-3">
-						<input
-							type="text"
-							placeholder="Tanya AI tentang laporan ini..."
-							bind:value={aiQuestion}
-							onkeypress={(e) => e.key === 'Enter' && !isAiLoading && handleAiAsk(aiQuestion)}
-							disabled={isAiLoading}
-							class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-pink-500 focus:outline-none transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
-						/>
-						
-						<button
-							onclick={() => !isAiLoading && handleAiAsk(aiQuestion)}
-							disabled={!aiQuestion.trim() || isAiLoading}
-							class="w-12 h-12 bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 rounded-xl flex items-center justify-center transition-colors"
-						>
-							{#if isAiLoading}
-								<svg class="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-								</svg>
-							{:else}
-								<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-								</svg>
-							{/if}
-						</button>
-					</div>
-					
-					<p class="text-xs text-gray-500 mt-3 text-center">
-						💡 Tanya tentang pendapatan, pengeluaran, tren penjualan, atau analisis laporan
-					</p>
-				</div>
-			</div>
 		</div>
 	</main>
 </div>
