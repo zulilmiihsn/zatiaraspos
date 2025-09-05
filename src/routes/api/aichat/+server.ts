@@ -57,6 +57,15 @@ function parseFlexibleRange(question: string): {
 		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
 	}
 	
+	// Handle "X bulan terakhir" pattern
+	const bulanMatch = q.match(/(\d+)\s*bulan\s*terakhir/);
+	if (bulanMatch) {
+		const n = Math.max(1, parseInt(bulanMatch[1], 10));
+		const startD = new Date(now.getFullYear(), now.getMonth() - n, 1);
+		const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+		return { start: toYMD(startD), end: toYMD(endD), type: 'monthly' };
+	}
+	
 	return { start: today, end: today, type: 'daily' };
 }
 
@@ -269,6 +278,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		console.log('AI 1: Identifying date range for question:', question);
 		const dateRange = await identifyDateRange(question, apiKey);
 		console.log('AI 1 Result:', dateRange);
+		console.log('Date range start:', dateRange.start, 'end:', dateRange.end);
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
@@ -276,6 +286,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Hitung waktu UTC dari rentang WITA (approx: gunakan string Y-M-D 00:00:00/23:59:59 WITA yang dikonversi ke ISO)
 		const startDate = new Date(`${dateRange.start}T00:00:00+08:00`).toISOString();
 		const endDate = new Date(`${dateRange.end}T23:59:59+08:00`).toISOString();
+		console.log('Query date range - start:', startDate, 'end:', endDate);
 
 		// Konversi tanggal untuk konteks AI
 
@@ -318,6 +329,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				.lte('waktu', endDate)
 				.neq('sumber', 'pos')
 		]);
+
+		console.log('Database query results:');
+		console.log('- bukuKasPos count:', bukuKasPos?.length || 0);
+		console.log('- bukuKasManual count:', bukuKasManual?.length || 0);
 
 		// Data periode yang diminta
 		const laporan = [
