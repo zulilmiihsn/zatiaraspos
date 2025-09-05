@@ -52,7 +52,8 @@ export class AuthGuard {
 				return false;
 			}
 
-			if (!SessionSecurity.validateSession(sessionData)) {
+			// Validate session data structure
+			if (!sessionData.isAuthenticated || !sessionData.user) {
 				this.recordFailedAuth(clientId);
 				localStorage.removeItem('zatiaras_session');
 				localStorage.removeItem('selectedBranch');

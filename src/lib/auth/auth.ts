@@ -16,13 +16,17 @@ export const session = writable<{
 });
 
 if (typeof window !== 'undefined') {
-	const saved = localStorage.getItem('zatiaras_session'); // Changed to localStorage
+	const saved = localStorage.getItem('zatiaras_session');
 	if (saved) {
 		try {
-			session.set(JSON.parse(saved));
-		} catch {}
+			const parsed = JSON.parse(saved);
+			if (parsed.isAuthenticated && parsed.user) {
+				session.set(parsed);
+			}
+		} catch (e) {
+			console.error('Gagal mem-parsing sesi dari localStorage:', e);
+		}
 	}
-	session.subscribe((val) => localStorage.setItem('zatiaras_session', JSON.stringify(val))); // Changed to localStorage
 }
 
 // Authentication functions
@@ -60,16 +64,6 @@ export const auth = {
 		return { success: false, message: 'Username atau password salah' };
 	},
 
-	// Logout
-	logout() {
-		session.set({
-			isAuthenticated: false,
-			user: null,
-			token: null
-		});
-		localStorage.removeItem('zatiaras_session'); // Changed to localStorage
-		clearSecuritySettings(); // Clear security settings on logout
-	},
 
 	// Check if user is authenticated
 	isAuthenticated(): boolean {
@@ -93,6 +87,26 @@ export const auth = {
 	validateToken(token: string): boolean {
 		// Dummy token validation - in production this would validate against backend
 		return Boolean(token && token.length > 10);
+	},
+
+	// Logout function
+	logout() {
+		// Clear session store
+		session.set({
+			isAuthenticated: false,
+			user: null,
+			token: null
+		});
+		
+		// Clear localStorage
+		if (typeof window !== 'undefined') {
+			localStorage.removeItem('zatiaras_session');
+			localStorage.removeItem('selectedBranch');
+		}
+		
+		// Clear user role and profile
+		clearUserRole();
+		clearSecuritySettings();
 	}
 };
 
@@ -159,13 +173,20 @@ export async function loginWithUsername(
 
 	// Tidak perlu reset/fetch cache apapun
 
-	// Simpan session hanya ke store
+	// Simpan session ke store dan localStorage
 	const sessionData = {
 		isAuthenticated: true,
 		user: result.user,
 		token: null // Tidak pakai token Supabase Auth
 	};
 	session.set(sessionData);
+	
+	// Simpan ke localStorage untuk persistensi setelah refresh
+	if (typeof window !== 'undefined') {
+		localStorage.setItem('zatiaras_session', JSON.stringify(sessionData));
+		localStorage.setItem('selectedBranch', branch);
+	}
+	
 	return result.user;
 }
 
