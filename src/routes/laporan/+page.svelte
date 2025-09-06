@@ -146,10 +146,10 @@
 				endDate = endDate || startDate;
 			}
 
-			// LOADING PROGRESS: 20% - Clear cache
+			// LOADING PROGRESS: 20% - Prepare data
 			loadingProgress = 20;
 			loadingMessage = 'Menyiapkan...';
-			await dataService.clearAllCaches();
+			// Tidak perlu clear cache untuk setiap load
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
@@ -157,7 +157,9 @@
 			// LOADING PROGRESS: 40% - Fetch data
 			loadingProgress = 40;
 			loadingMessage = 'Mengambil data...';
+			console.log('Loading report data for:', { dateRange, startDate, endDate });
 			const reportData = await dataService.getReportData(dateRange, 'daily');
+			console.log('Report data received:', reportData);
 
 			// LOADING PROGRESS: 70% - Process data
 			loadingProgress = 70;
@@ -223,10 +225,7 @@
 			endDate = startDate;
 		}
 
-		// Clear cache untuk memastikan data terbaru
-		await dataService.clearAllCaches();
-
-		// Load initial data
+		// Load initial data (tidak perlu clear cache untuk initial load)
 		await loadLaporanData();
 
 		// Setup realtime subscriptions
