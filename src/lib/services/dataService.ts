@@ -480,35 +480,13 @@ export class DataService {
 				}
 			}
 
-			// Gunakan pagination untuk posBukuKas
-			let posBukuKas: any[] = [];
-			let posHasMore = true;
-			let posOffset = 0;
-			const posLimit = 1000;
-			
-			while (posHasMore) {
-				const { data: posBatchData, error: errorPosBatch } = await this.supabase
-					.from('buku_kas')
-					.select('*')
-					.gte('waktu', startDate + 'T00:00:00')
-					.lte('waktu', endDate + 'T23:59:59')
-					.eq('sumber', 'pos')
-					.range(posOffset, posOffset + posLimit - 1)
-					.order('waktu', { ascending: true });
-				
-				if (errorPosBatch) {
-					console.error('Error fetching pos batch:', errorPosBatch);
-					break;
-				}
-				
-				if (posBatchData && posBatchData.length > 0) {
-					posBukuKas = posBukuKas.concat(posBatchData);
-					posOffset += posLimit;
-					posHasMore = posBatchData.length === posLimit;
-				} else {
-					posHasMore = false;
-				}
-			}
+			// PARALLEL PAGINATION: Ambil posBukuKas secara parallel
+			const posBukuKas = await this.fetchAllDataParallel(
+				'buku_kas',
+				startDate + 'T00:00:00',
+				endDate + 'T23:59:59',
+				{ sumber: 'pos' }
+			);
 				
 
 			// Ambil detail transaksi kasir untuk POS yang sudah difilter
@@ -555,65 +533,21 @@ export class DataService {
 				}
 			}
 
-			// Gunakan pagination untuk manualItems
-			let manualItems: any[] = [];
-			let manualHasMore = true;
-			let manualOffset = 0;
-			const manualLimit = 1000;
-			
-			while (manualHasMore) {
-				const { data: manualBatchData, error: errorManualBatch } = await this.supabase
-					.from('buku_kas')
-					.select('*')
-					.gte('waktu', startDate + 'T00:00:00')
-					.lte('waktu', endDate + 'T23:59:59')
-					.neq('sumber', 'pos')
-					.range(manualOffset, manualOffset + manualLimit - 1)
-					.order('waktu', { ascending: true });
-				
-				if (errorManualBatch) {
-					console.error('Error fetching manual batch:', errorManualBatch);
-					break;
-				}
-				
-				if (manualBatchData && manualBatchData.length > 0) {
-					manualItems = manualItems.concat(manualBatchData);
-					manualOffset += manualLimit;
-					manualHasMore = manualBatchData.length === manualLimit;
-				} else {
-					manualHasMore = false;
-				}
-			}
+			// PARALLEL PAGINATION: Ambil manualItems secara parallel
+			const manualItems = await this.fetchAllDataParallel(
+				'buku_kas',
+				startDate + 'T00:00:00',
+				endDate + 'T23:59:59',
+				{ sumber: { neq: 'pos' } }
+			);
 
 
-			// Gunakan pagination untuk mengambil semua data
-			let allBukuKas: any[] = [];
-			let hasMore = true;
-			let offset = 0;
-			const limit = 1000;
-			
-			while (hasMore) {
-				const { data: batchData, error: errorBatch } = await this.supabase
-					.from('buku_kas')
-					.select('*')
-					.gte('waktu', startDate + 'T00:00:00')
-					.lte('waktu', endDate + 'T23:59:59')
-					.range(offset, offset + limit - 1)
-					.order('waktu', { ascending: true });
-				
-				if (errorBatch) {
-					console.error('Error fetching batch:', errorBatch);
-					break;
-				}
-				
-				if (batchData && batchData.length > 0) {
-					allBukuKas = allBukuKas.concat(batchData);
-					offset += limit;
-					hasMore = batchData.length === limit;
-				} else {
-					hasMore = false;
-				}
-			}
+			// PARALLEL PAGINATION: Ambil semua data secara parallel
+			const allBukuKas = await this.fetchAllDataParallel(
+				'buku_kas',
+				startDate + 'T00:00:00',
+				endDate + 'T23:59:59'
+			);
 			
 
 
@@ -758,6 +692,115 @@ export class DataService {
 	// Clear all caches
 	async clearAllCaches() {
 		await smartCache.clear();
+	}
+
+	// PARALLEL PAGINATION: Fetch all data using parallel queries
+	async fetchAllDataParallel(
+		table: string, 
+		startTime: string, 
+		endTime: string, 
+		additionalFilters: any = {}
+	): Promise<any[]> {
+		try {
+			// First, get total count to determine how many batches we need
+			let query = this.supabase
+				.from(table)
+				.select('*', { count: 'exact', head: true })
+				.gte('waktu', startTime)
+				.lte('waktu', endTime);
+
+			// Apply additional filters
+			Object.keys(additionalFilters).forEach(key => {
+				const filter = additionalFilters[key];
+				if (typeof filter === 'object' && filter.neq) {
+					query = query.neq(key, filter.neq);
+				} else {
+					query = query.eq(key, filter);
+				}
+			});
+
+			const { count, error: countError } = await query;
+			
+			if (countError) {
+				console.error('Error getting count:', countError);
+				return [];
+			}
+
+			if (!count || count === 0) {
+				return [];
+			}
+
+			// Calculate number of batches needed
+			const batchSize = 1000;
+			const totalBatches = Math.ceil(count / batchSize);
+			
+			// Create parallel queries for all batches
+			const batchPromises = [];
+			
+			for (let i = 0; i < totalBatches; i++) {
+				const offset = i * batchSize;
+				const promise = this.fetchBatch(table, startTime, endTime, offset, batchSize, additionalFilters);
+				batchPromises.push(promise);
+			}
+
+			// Execute all queries in parallel
+			const batchResults = await Promise.all(batchPromises);
+			
+			// Combine all results
+			const allData = [];
+			for (const batchData of batchResults) {
+				if (batchData && batchData.length > 0) {
+					allData.push(...batchData);
+				}
+			}
+
+			return allData;
+		} catch (error) {
+			console.error('Error in fetchAllDataParallel:', error);
+			return [];
+		}
+	}
+
+	// Helper function to fetch a single batch
+	private async fetchBatch(
+		table: string, 
+		startTime: string, 
+		endTime: string, 
+		offset: number, 
+		limit: number, 
+		additionalFilters: any = {}
+	): Promise<any[]> {
+		try {
+			let query = this.supabase
+				.from(table)
+				.select('*')
+				.gte('waktu', startTime)
+				.lte('waktu', endTime)
+				.range(offset, offset + limit - 1)
+				.order('waktu', { ascending: true });
+
+			// Apply additional filters
+			Object.keys(additionalFilters).forEach(key => {
+				const filter = additionalFilters[key];
+				if (typeof filter === 'object' && filter.neq) {
+					query = query.neq(key, filter.neq);
+				} else {
+					query = query.eq(key, filter);
+				}
+			});
+
+			const { data, error } = await query;
+			
+			if (error) {
+				console.error(`Error fetching batch ${offset}-${offset + limit - 1}:`, error);
+				return [];
+			}
+
+			return data || [];
+		} catch (error) {
+			console.error(`Error in fetchBatch ${offset}-${offset + limit - 1}:`, error);
+			return [];
+		}
 	}
 }
 
