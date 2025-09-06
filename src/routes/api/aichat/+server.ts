@@ -278,23 +278,68 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		};
 
-		// Ambil data untuk periode yang diminta
-		const [
-			{ data: bukuKasPos },
-			{ data: bukuKasManual }
-		] = await Promise.all([
-			supabase
-				.from('buku_kas')
-				.select('*, transaksi_kasir (*, produk(name))')
-				.gte('waktu', startDate)
-				.lte('waktu', endDate)
-				.eq('sumber', 'pos'),
-			supabase
-				.from('buku_kas')
-				.select('*')
-				.gte('waktu', startDate)
-				.lte('waktu', endDate)
-				.neq('sumber', 'pos')
+		// Function untuk fetch data dengan pagination (mengatasi limit 1000 row)
+		async function fetchAllData(table: string, filters: any) {
+			let allData: any[] = [];
+			let page = 0;
+			const pageSize = 1000; // Max per page
+			let hasMore = true;
+			
+			console.log(`=== FETCHING ${table.toUpperCase()} WITH PAGINATION ===`);
+			
+			while (hasMore) {
+				const query = supabase
+					.from(table)
+					.select('*, transaksi_kasir (*, produk(name))')
+					.gte('waktu', startDate)
+					.lte('waktu', endDate)
+					.range(page * pageSize, (page + 1) * pageSize - 1)
+					.order('waktu', { ascending: true });
+				
+				// Apply filters
+				if (filters.sumber) {
+					query.eq('sumber', filters.sumber);
+				}
+				if (filters.excludeSumber) {
+					query.neq('sumber', filters.excludeSumber);
+				}
+				if (filters.cabang) {
+					query.eq('cabang', filters.cabang);
+				}
+				
+				const { data, error } = await query;
+				
+				if (error) {
+					console.error(`❌ Error fetching ${table} page ${page + 1}:`, error);
+					break;
+				}
+				
+				if (data && data.length > 0) {
+					allData = [...allData, ...data];
+					console.log(`📄 ${table} page ${page + 1}: ${data.length} records (total: ${allData.length})`);
+					
+					// Jika data kurang dari pageSize, berarti sudah habis
+					if (data.length < pageSize) {
+						hasMore = false;
+						console.log(`✅ ${table} fetch completed - no more data`);
+					} else {
+						page++;
+					}
+				} else {
+					hasMore = false;
+					console.log(`✅ ${table} fetch completed - no data found`);
+				}
+			}
+			
+			console.log(`🎯 ${table} FINAL TOTAL: ${allData.length} records`);
+			return allData;
+		}
+
+		// Ambil data untuk periode yang diminta dengan pagination
+		console.log('=== STARTING PAGINATED DATA FETCH ===');
+		const [bukuKasPos, bukuKasManual] = await Promise.all([
+			fetchAllData('buku_kas', { sumber: 'pos', cabang: branch || 'dev' }),
+			fetchAllData('buku_kas', { excludeSumber: 'pos', cabang: branch || 'dev' })
 		]);
 
 		console.log('=== DATABASE QUERY RESULTS ===');
