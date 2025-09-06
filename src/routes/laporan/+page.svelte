@@ -157,9 +157,7 @@
 			// LOADING PROGRESS: 40% - Fetch data
 			loadingProgress = 40;
 			loadingMessage = 'Mengambil data...';
-			console.log('Loading report data for:', { dateRange, startDate, endDate });
 			const reportData = await dataService.getReportData(dateRange, 'daily');
-			console.log('Report data received:', reportData);
 
 			// LOADING PROGRESS: 70% - Process data
 			loadingProgress = 70;
@@ -167,7 +165,6 @@
 
 			// Apply report data with null checks - data ada di reportData.data
 			const reportDataContent = (reportData as any)?.data || reportData;
-			console.log('Report data content:', reportDataContent);
 			summary = reportDataContent?.summary || {
 				pendapatan: 0,
 				pengeluaran: 0,
@@ -176,7 +173,6 @@
 				pajak: 0,
 				labaBersih: 0
 			};
-			console.log('Summary assigned:', summary);
 			pemasukanUsaha = reportDataContent?.pemasukanUsaha || [];
 			pemasukanLain = reportDataContent?.pemasukanLain || [];
 			bebanUsaha = reportDataContent?.bebanUsaha || [];
