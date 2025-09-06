@@ -1712,20 +1712,21 @@
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="harian-date"
 									>Pilih Tanggal</label
 								>
-								<button
-									id="harian-date"
-									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-									onclick={() => {
-										// Trigger native date picker
-										const input = document.createElement('input');
-										input.type = 'date';
-										input.value = startDate;
-										input.onchange = (e) => {
-											startDate = (e.target as HTMLInputElement).value;
-										};
-										input.click();
-									}}
-								>
+								<div class="relative">
+									<input
+										id="harian-date"
+										type="date"
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
+										bind:value={startDate}
+										style="opacity: 0; position: absolute; z-index: 1;"
+									/>
+									<button
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+										onclick={() => {
+											document.getElementById('harian-date')?.click();
+										}}
+										style="position: relative; z-index: 0;"
+									>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal'}</span>
 									<svg
 										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
@@ -1740,27 +1741,29 @@
 											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 										/>
 									</svg>
-								</button>
+									</button>
+								</div>
 							</div>
 						{:else if filterType === 'mingguan'}
 							<div class="mb-6">
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="mingguan-date"
 									>Pilih Tanggal Awal Minggu</label
 								>
-								<button
-									id="mingguan-date"
-									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-									onclick={() => {
-										// Trigger native date picker
-										const input = document.createElement('input');
-										input.type = 'date';
-										input.value = startDate;
-										input.onchange = (e) => {
-											startDate = (e.target as HTMLInputElement).value;
-										};
-										input.click();
-									}}
-								>
+								<div class="relative">
+									<input
+										id="mingguan-date"
+										type="date"
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
+										bind:value={startDate}
+										style="opacity: 0; position: absolute; z-index: 1;"
+									/>
+									<button
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+										onclick={() => {
+											document.getElementById('mingguan-date')?.click();
+										}}
+										style="position: relative; z-index: 0;"
+									>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal minggu'}</span>
 									<svg
 										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
@@ -1775,7 +1778,8 @@
 											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 										/>
 									</svg>
-								</button>
+									</button>
+								</div>
 							</div>
 						{:else if filterType === 'bulanan'}
 							<div class="mb-6">
