@@ -266,6 +266,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		const startDate = startUtc;
 		const endDate = endUtc;
 		console.log('Query date range - start:', startDate, 'end:', endDate);
+		console.log('Original date range from AI 1 - start:', dateRange.start, 'end:', dateRange.end);
+		console.log('Timezone conversion - WITA to UTC');
 
 		// Konversi tanggal untuk konteks AI
 
@@ -310,6 +312,14 @@ export const POST: RequestHandler = async ({ request }) => {
 						.lte('waktu', endDate)
 						.range(page * pageSize, (page + 1) * pageSize - 1)
 						.order('waktu', { ascending: true });
+					
+					// Debug query untuk halaman pertama
+					if (page === 0) {
+						console.log(`🔍 Debug query for ${table}:`);
+						console.log(`  - startDate: ${startDate}`);
+						console.log(`  - endDate: ${endDate}`);
+						console.log(`  - filters:`, filters);
+					}
 					
 					// Apply filters
 					if (filters.sumber) {
@@ -364,6 +374,24 @@ export const POST: RequestHandler = async ({ request }) => {
 			console.log(`🎯 ${table} FINAL TOTAL: ${allData.length} records`);
 			return allData;
 		}
+
+		// Debug: Cek data yang ada di database dulu
+		console.log('=== DEBUG: CHECKING EXISTING DATA ===');
+		const { data: debugData, error: debugError } = await supabase
+			.from('buku_kas')
+			.select('waktu, sumber, amount, description')
+			.order('waktu', { ascending: false })
+			.limit(10);
+		
+		if (debugError) {
+			console.error('Debug query error:', debugError);
+		} else {
+			console.log('Recent data in database:', debugData);
+			if (debugData && debugData.length > 0) {
+				console.log('Sample data dates:', debugData.map(d => d.waktu));
+			}
+		}
+		console.log('=== END DEBUG ===');
 
 		// Ambil data untuk periode yang diminta dengan pagination
 		console.log('=== STARTING PAGINATED DATA FETCH ===');
