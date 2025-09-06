@@ -304,10 +304,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			
 			while (hasMore && page < maxPages) {
 				try {
-					// Add timeout wrapper
-					const queryPromise = supabase
+					// Add timeout wrapper - gunakan query yang lebih sederhana dulu
+					let queryPromise = supabase
 						.from(table)
-						.select('*, transaksi_kasir (*, produk(name))')
+						.select('*')
 						.gte('waktu', startDate)
 						.lte('waktu', endDate)
 						.range(page * pageSize, (page + 1) * pageSize - 1)
@@ -393,6 +393,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		console.log('=== END DEBUG ===');
 
+		// Test query sederhana dulu tanpa filter
+		console.log('=== TESTING SIMPLE QUERY ===');
+		const { data: testData, error: testError } = await supabase
+			.from('buku_kas')
+			.select('waktu, sumber, amount, description')
+			.gte('waktu', startDate)
+			.lte('waktu', endDate)
+			.limit(5);
+		
+		console.log('Test query result:', { testData, testError });
+		console.log('Test query range:', { startDate, endDate });
+		
 		// Ambil data untuk periode yang diminta dengan pagination
 		console.log('=== STARTING PAGINATED DATA FETCH ===');
 		const [bukuKasPos, bukuKasManual] = await Promise.all([
