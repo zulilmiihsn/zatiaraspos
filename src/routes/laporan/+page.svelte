@@ -165,8 +165,10 @@
 			loadingProgress = 70;
 			loadingMessage = 'Memproses...';
 
-			// Apply report data with null checks
-			summary = (reportData as any)?.summary || {
+			// Apply report data with null checks - data ada di reportData.data
+			const reportDataContent = (reportData as any)?.data || reportData;
+			console.log('Report data content:', reportDataContent);
+			summary = reportDataContent?.summary || {
 				pendapatan: 0,
 				pengeluaran: 0,
 				saldo: 0,
@@ -174,11 +176,12 @@
 				pajak: 0,
 				labaBersih: 0
 			};
-			pemasukanUsaha = (reportData as any)?.pemasukanUsaha || [];
-			pemasukanLain = (reportData as any)?.pemasukanLain || [];
-			bebanUsaha = (reportData as any)?.bebanUsaha || [];
-			bebanLain = (reportData as any)?.bebanLain || [];
-			laporan = (reportData as any)?.transactions || [];
+			console.log('Summary assigned:', summary);
+			pemasukanUsaha = reportDataContent?.pemasukanUsaha || [];
+			pemasukanLain = reportDataContent?.pemasukanLain || [];
+			bebanUsaha = reportDataContent?.bebanUsaha || [];
+			bebanLain = reportDataContent?.bebanLain || [];
+			laporan = reportDataContent?.transactions || [];
 
 			// LOADING PROGRESS: 100% - Complete
 			loadingProgress = 100;
