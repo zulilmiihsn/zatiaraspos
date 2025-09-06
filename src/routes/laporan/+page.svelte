@@ -846,6 +846,7 @@
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
 			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 transition-all duration-300 {isLoadingReport ? 'blur-sm opacity-60' : 'blur-0 opacity-100'}"
+			style="pointer-events: auto;"
 		>
 			<div class="mb-3 flex w-full items-center gap-2 px-2 md:mb-6 md:gap-4 md:px-0">
 				<!-- Button Filter -->
@@ -872,11 +873,13 @@
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-200 bg-pink-50 text-pink-400'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openDatePicker}
+					on:click={openDatePicker}
+					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
 						class="h-5 w-5 md:h-7 md:w-7 {startDate
 							? 'text-pink-300'
-							: 'text-pink-200'} flex-shrink-0"
+							: 'text-pink-200'} flex-shrink-0 pointer-events-none"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -887,18 +890,20 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						/></svg
 					>
-					<span class="truncate">{formatDate(startDate)}</span>
+					<span class="truncate pointer-events-none">{formatDate(startDate)}</span>
 				</button>
 				<button
 					class="h-12 min-w-[140px] flex-1 rounded-xl md:h-14 {endDate
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-100 bg-pink-50 text-pink-200'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openEndDatePicker}
+					on:click={openEndDatePicker}
+					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
 						class="h-5 w-5 md:h-7 md:w-7 {endDate
 							? 'text-pink-300'
-							: 'text-pink-200'} flex-shrink-0"
+							: 'text-pink-200'} flex-shrink-0 pointer-events-none"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -909,7 +914,7 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						/></svg
 					>
-					<span class="truncate select-none">{endDate ? formatDate(endDate, true) : '-'}</span>
+					<span class="truncate pointer-events-none">{endDate ? formatDate(endDate, true) : '-'}</span>
 				</button>
 			</div>
 
@@ -943,9 +948,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-									Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
-										? summary.pendapatan.toLocaleString('id-ID')
-										: '--'}
+								Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
+									? summary.pendapatan.toLocaleString('id-ID')
+									: '--'}
 								{/if}
 							</div>
 						</div>
@@ -975,9 +980,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-									Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
-										? summary.pengeluaran.toLocaleString('id-ID')
-										: '--'}
+								Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
+									? summary.pengeluaran.toLocaleString('id-ID')
+									: '--'}
 								{/if}
 							</div>
 						</div>
@@ -1007,9 +1012,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-									Rp {summary?.saldo !== null && summary?.saldo !== undefined
-										? summary.saldo.toLocaleString('id-ID')
-										: '--'}
+								Rp {summary?.saldo !== null && summary?.saldo !== undefined
+									? summary.saldo.toLocaleString('id-ID')
+									: '--'}
 								{/if}
 							</div>
 						</div>
