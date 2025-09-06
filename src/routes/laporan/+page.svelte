@@ -234,6 +234,11 @@
 
 		// Removed fetchPin() and locked_pages check
 		initializePageData().then(() => {
+			// SMART CACHING: Preload common date ranges untuk performa yang lebih baik
+			dataService.preloadCommonDateRanges().catch(error => {
+				console.warn('Preload failed:', error);
+			});
+
 			// Jika role belum ada di store, coba validasi dengan Supabase
 			if (!currentUserRole) {
 				dataService.supabaseClient.auth.getSession().then(({ data: { session } }: any) => {

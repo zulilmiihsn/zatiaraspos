@@ -391,9 +391,13 @@ export class DataService {
 
 	// Report data dengan ETag support
 	async getReportData(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
-		const cacheKey = `${type}_report_${dateRange}`;
-
-		return CacheUtils.getReportData(cacheKey, dateRange, async (etag?: string) => {
+		// SMART CACHING: Cache per date range dengan strategi yang lebih pintar
+		const cacheKey = this.generateSmartCacheKey(type, dateRange);
+		
+		// Check cache first dengan TTL yang berbeda per type
+		const cacheOptions = this.getCacheOptionsForType(type);
+		
+		return smartCache.get(cacheKey, async () => {
 			// Generate ETag based on date range and type
 			const etagValue = `${type}_${dateRange}_${Date.now()}`;
 
@@ -641,7 +645,7 @@ export class DataService {
 			};
 
 			return { data: reportData, etag: etagValue };
-		});
+		}, cacheOptions);
 	}
 
 	// Real-time data subscription
@@ -656,7 +660,7 @@ export class DataService {
 		return subscription;
 	}
 
-	// Invalidate cache when data changes
+	// SMART CACHE INVALIDATION: Invalidate cache when data changes
 	async invalidateCacheOnChange(table: string) {
 		switch (table) {
 			case 'produk':
@@ -668,6 +672,8 @@ export class DataService {
 			case 'transaksi_kasir':
 				await CacheUtils.invalidateDashboardData();
 				await CacheUtils.invalidateReportData();
+				// SMART: Invalidate semua report caches yang mungkin terpengaruh
+				await this.invalidateAllReportCaches();
 				break;
 			case 'profil':
 				await smartCache.invalidate(CACHE_KEYS.USER_PROFILE);
@@ -677,6 +683,15 @@ export class DataService {
 				await smartCache.invalidate(CACHE_KEYS.SECURITY_SETTINGS);
 				break;
 		}
+	}
+
+	// SMART CACHE INVALIDATION: Invalidate semua report caches
+	async invalidateAllReportCaches() {
+		const reportTypes = ['daily', 'weekly', 'monthly', 'yearly'];
+		const invalidationPromises = reportTypes.map(type => 
+			this.invalidateReportCache(type)
+		);
+		await Promise.allSettled(invalidationPromises);
 	}
 
 	// Force refresh specific data
@@ -801,6 +816,120 @@ export class DataService {
 			console.error(`Error in fetchBatch ${offset}-${offset + limit - 1}:`, error);
 			return [];
 		}
+	}
+
+	// SMART CACHING: Generate cache key yang lebih pintar
+	private generateSmartCacheKey(type: string, dateRange: string): string {
+		// Normalize date range untuk konsistensi cache
+		const normalizedRange = this.normalizeDateRange(dateRange, type);
+		return `smart_${type}_${normalizedRange}`;
+	}
+
+	// SMART CACHING: Normalize date range untuk cache consistency
+	private normalizeDateRange(dateRange: string, type: string): string {
+		switch (type) {
+			case 'daily':
+				if (dateRange.includes('_')) {
+					const [start, end] = dateRange.split('_');
+					return `${start}_${end}`;
+				}
+				return dateRange;
+			case 'weekly':
+				// Normalize ke start of week
+				const date = new Date(dateRange);
+				const startOfWeek = new Date(date);
+				startOfWeek.setDate(date.getDate() - date.getDay());
+				return startOfWeek.toISOString().split('T')[0];
+			case 'monthly':
+				// Normalize ke YYYY-MM format
+				return dateRange;
+			case 'yearly':
+				// Normalize ke YYYY format
+				return dateRange;
+			default:
+				return dateRange;
+		}
+	}
+
+	// SMART CACHING: Get cache options berdasarkan type
+	private getCacheOptionsForType(type: string): any {
+		const baseOptions = {
+			backgroundRefresh: true,
+			staleWhileRevalidate: true
+		};
+
+		switch (type) {
+			case 'daily':
+				return {
+					...baseOptions,
+					ttl: 300000, // 5 menit - data harian lebih sering berubah
+					backgroundRefreshInterval: 60000 // 1 menit
+				};
+			case 'weekly':
+				return {
+					...baseOptions,
+					ttl: 900000, // 15 menit - data mingguan lebih stabil
+					backgroundRefreshInterval: 300000 // 5 menit
+				};
+			case 'monthly':
+				return {
+					...baseOptions,
+					ttl: 1800000, // 30 menit - data bulanan sangat stabil
+					backgroundRefreshInterval: 900000 // 15 menit
+				};
+			case 'yearly':
+				return {
+					...baseOptions,
+					ttl: 3600000, // 1 jam - data tahunan sangat stabil
+					backgroundRefreshInterval: 1800000 // 30 menit
+				};
+			default:
+				return {
+					...baseOptions,
+					ttl: 300000, // 5 menit default
+					backgroundRefreshInterval: 60000
+				};
+		}
+	}
+
+	// SMART CACHING: Invalidate cache berdasarkan date range
+	async invalidateReportCache(type: string, dateRange?: string) {
+		if (dateRange) {
+			// Invalidate specific date range
+			const cacheKey = this.generateSmartCacheKey(type, dateRange);
+			await smartCache.invalidate(cacheKey);
+		} else {
+			// Invalidate all report caches for this type
+			const pattern = `smart_${type}_*`;
+			await smartCache.invalidate(pattern);
+		}
+	}
+
+	// SMART CACHING: Preload data untuk date ranges yang sering digunakan
+	async preloadCommonDateRanges() {
+		const today = new Date();
+		const commonRanges = [
+			// Hari ini
+			{ type: 'daily', range: today.toISOString().split('T')[0] },
+			// Kemarin
+			{ type: 'daily', range: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
+			// Minggu ini
+			{ type: 'weekly', range: today.toISOString().split('T')[0] },
+			// Bulan ini
+			{ type: 'monthly', range: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}` },
+			// Tahun ini
+			{ type: 'yearly', range: today.getFullYear().toString() }
+		];
+
+		// Preload secara parallel
+		const preloadPromises = commonRanges.map(({ type, range }) => 
+			this.getReportData(range, type as any).catch(error => {
+				console.warn(`Preload failed for ${type} ${range}:`, error);
+				return null;
+			})
+		);
+
+		await Promise.allSettled(preloadPromises);
 	}
 }
 
