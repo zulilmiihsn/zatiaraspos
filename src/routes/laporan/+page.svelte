@@ -873,7 +873,6 @@
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-200 bg-pink-50 text-pink-400'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openDatePicker}
-					on:click={openDatePicker}
 					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
@@ -897,7 +896,6 @@
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-100 bg-pink-50 text-pink-200'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openEndDatePicker}
-					on:click={openEndDatePicker}
 					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
