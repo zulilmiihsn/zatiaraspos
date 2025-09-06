@@ -537,15 +537,6 @@
 							endDate: formatDate(last)
 						};
 						
-						// Debug khusus untuk Agustus
-						if (m === 7) { // Agustus (0-indexed)
-								year: y,
-								month: m + 1,
-								first,
-								last,
-								result
-							});
-						}
 						
 						return result;
 					}
@@ -598,13 +589,6 @@
 		if (range.startDate && range.endDate) {
 			startDate = range.startDate;
 			endDate = range.endDate;
-				startDate, 
-				endDate, 
-				range, 
-				filterMonth, 
-				filterYear,
-				monthName: new Date(parseInt(filterYear), parseInt(filterMonth) - 1).toLocaleDateString('id-ID', { month: 'long' })
-			});
 			// Panggil loadLaporanData setelah update range
 			loadLaporanData();
 		}
