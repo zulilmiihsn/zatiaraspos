@@ -303,9 +303,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (filters.excludeSumber) {
 					query.neq('sumber', filters.excludeSumber);
 				}
-				if (filters.cabang) {
-					query.eq('cabang', filters.cabang);
-				}
+				// Note: Branch filtering is handled by getSupabaseClient(branch), not by column
 				
 				const { data, error } = await query;
 				

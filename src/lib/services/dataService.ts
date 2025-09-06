@@ -722,6 +722,10 @@ export class DataService {
 			// Apply additional filters
 			Object.keys(additionalFilters).forEach(key => {
 				const filter = additionalFilters[key];
+				if (key === 'cabang') {
+					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
+					return;
+				}
 				if (typeof filter === 'object' && filter.neq) {
 					query = query.neq(key, filter.neq);
 				} else {
@@ -792,6 +796,10 @@ export class DataService {
 			// Apply additional filters
 			Object.keys(additionalFilters).forEach(key => {
 				const filter = additionalFilters[key];
+				if (key === 'cabang') {
+					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
+					return;
+				}
 				if (typeof filter === 'object' && filter.neq) {
 					query = query.neq(key, filter.neq);
 				} else {
