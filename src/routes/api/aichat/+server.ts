@@ -288,55 +288,75 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		};
 
-		// Function untuk fetch data dengan pagination (mengatasi limit 1000 row)
+		// Function untuk fetch data dengan pagination dan timeout handling
 		async function fetchAllData(table: string, filters: any) {
 			let allData: any[] = [];
 			let page = 0;
-			const pageSize = 1000; // Max per page
+			const pageSize = 500; // Reduce page size untuk menghindari timeout
 			let hasMore = true;
+			const maxPages = 20; // Limit maksimal halaman untuk menghindari infinite loop
 			
 			console.log(`=== FETCHING ${table.toUpperCase()} WITH PAGINATION ===`);
 			
-			while (hasMore) {
-				const query = supabase
-					.from(table)
-					.select('*, transaksi_kasir (*, produk(name))')
-					.gte('waktu', startDate)
-					.lte('waktu', endDate)
-					.range(page * pageSize, (page + 1) * pageSize - 1)
-					.order('waktu', { ascending: true });
-				
-				// Apply filters
-				if (filters.sumber) {
-					query.eq('sumber', filters.sumber);
-				}
-				if (filters.excludeSumber) {
-					query.neq('sumber', filters.excludeSumber);
-				}
-				// Note: Branch filtering is handled by getSupabaseClient(branch), not by column
-				
-				const { data, error } = await query;
-				
-				if (error) {
-					console.error(`❌ Error fetching ${table} page ${page + 1}:`, error);
+			while (hasMore && page < maxPages) {
+				try {
+					// Add timeout wrapper
+					const queryPromise = supabase
+						.from(table)
+						.select('*, transaksi_kasir (*, produk(name))')
+						.gte('waktu', startDate)
+						.lte('waktu', endDate)
+						.range(page * pageSize, (page + 1) * pageSize - 1)
+						.order('waktu', { ascending: true });
+					
+					// Apply filters
+					if (filters.sumber) {
+						queryPromise.eq('sumber', filters.sumber);
+					}
+					if (filters.excludeSumber) {
+						queryPromise.neq('sumber', filters.excludeSumber);
+					}
+					// Note: Branch filtering is handled by getSupabaseClient(branch), not by column
+					
+					// Add timeout (30 seconds)
+					const timeoutPromise = new Promise((_, reject) => 
+						setTimeout(() => reject(new Error('Query timeout')), 30000)
+					);
+					
+					const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+					
+					if (error) {
+						console.error(`❌ Error fetching ${table} page ${page + 1}:`, error);
+						if (error.code === '57014' || error.message?.includes('timeout')) {
+							console.warn(`⏰ Timeout detected for ${table}, stopping pagination`);
+							break;
+						}
+						break;
+					}
+					
+					if (data && data.length > 0) {
+						allData = [...allData, ...data];
+						console.log(`📄 ${table} page ${page + 1}: ${data.length} records (total: ${allData.length})`);
+						
+						// Jika data kurang dari pageSize, berarti sudah habis
+						if (data.length < pageSize) {
+							hasMore = false;
+							console.log(`✅ ${table} fetch completed - no more data`);
+						} else {
+							page++;
+						}
+					} else {
+						hasMore = false;
+						console.log(`✅ ${table} fetch completed - no data found`);
+					}
+				} catch (timeoutError) {
+					console.error(`⏰ Timeout error for ${table} page ${page + 1}:`, timeoutError);
 					break;
 				}
-				
-				if (data && data.length > 0) {
-					allData = [...allData, ...data];
-					console.log(`📄 ${table} page ${page + 1}: ${data.length} records (total: ${allData.length})`);
-					
-					// Jika data kurang dari pageSize, berarti sudah habis
-					if (data.length < pageSize) {
-						hasMore = false;
-						console.log(`✅ ${table} fetch completed - no more data`);
-					} else {
-						page++;
-					}
-				} else {
-					hasMore = false;
-					console.log(`✅ ${table} fetch completed - no data found`);
-				}
+			}
+			
+			if (page >= maxPages) {
+				console.warn(`⚠️ ${table} reached max pages limit (${maxPages}), stopping pagination`);
 			}
 			
 			console.log(`🎯 ${table} FINAL TOTAL: ${allData.length} records`);
@@ -346,8 +366,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Ambil data untuk periode yang diminta dengan pagination
 		console.log('=== STARTING PAGINATED DATA FETCH ===');
 		const [bukuKasPos, bukuKasManual] = await Promise.all([
-			fetchAllData('buku_kas', { sumber: 'pos', cabang: branch || 'dev' }),
-			fetchAllData('buku_kas', { excludeSumber: 'pos', cabang: branch || 'dev' })
+			fetchAllData('buku_kas', { sumber: 'pos' }),
+			fetchAllData('buku_kas', { excludeSumber: 'pos' })
 		]);
 
 		console.log('=== DATABASE QUERY RESULTS ===');
@@ -355,6 +375,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		console.log('📊 bukuKasManual count:', bukuKasManual?.length || 0);
 		console.log('📊 Total records found:', (bukuKasPos?.length || 0) + (bukuKasManual?.length || 0));
 		console.log('=== END DATABASE QUERY RESULTS ===');
+
+		// Handle case when no data found
+		if ((!bukuKasPos || bukuKasPos.length === 0) && (!bukuKasManual || bukuKasManual.length === 0)) {
+			console.warn('⚠️ No data found for the requested period');
+			return new Response(
+				JSON.stringify({
+					success: false,
+					error: 'Tidak ada data ditemukan untuk periode yang diminta',
+					dateRange: `${dateRange.start} hingga ${dateRange.end}`,
+					suggestion: 'Coba gunakan periode yang lebih pendek atau periksa apakah ada data transaksi dalam rentang waktu tersebut'
+				}),
+				{
+					headers: { 'Content-Type': 'application/json' },
+					status: 404
+				}
+			);
+		}
 
 		// Data periode yang diminta
 		const laporan = [
