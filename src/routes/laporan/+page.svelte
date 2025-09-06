@@ -330,7 +330,7 @@
 
 		// Clear any pending timeouts
 		// Removed errorTimeout
-		if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
+		// if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
 	});
 
 	// Removed fetchPin()
@@ -506,17 +506,17 @@
 	//   loadLaporanData();
 	// }
 
-	// Watcher untuk reload data saat filter berubah (hanya jika tidak sedang di modal filter)
-	let filterChangeTimeout: number;
-	$: if (!showFilter && startDate && endDate && filterType) {
-		// Clear existing timeout
-		if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
+	// Watcher untuk reload data saat filter berubah - DISABLED untuk mencegah double fetching
+	// let filterChangeTimeout: number;
+	// $: if (!showFilter && startDate && endDate && filterType) {
+	// 	// Clear existing timeout
+	// 	if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
 
-		// Debounce untuk menghindari multiple calls
-		filterChangeTimeout = setTimeout(() => {
-			loadLaporanData();
-		}, 300) as any;
-	}
+	// 	// Debounce untuk menghindari multiple calls
+	// 	filterChangeTimeout = setTimeout(() => {
+	// 		loadLaporanData();
+	// 	}, 300) as any;
+	// }
 
 	// Fungsi untuk menghitung range tanggal berdasarkan filter type
 	function calculateDateRange(type: string, date?: string, month?: string, year?: string) {
@@ -597,53 +597,53 @@
 		return { startDate: '', endDate: '' };
 	}
 
-	// Watcher untuk filter harian
-	$: if (filterType === 'harian' && startDate) {
-		const range = calculateDateRange('harian', startDate);
-		if (range.startDate && range.endDate) {
-			endDate = range.endDate;
-			// Panggil loadLaporanData setelah update range
-			loadLaporanData();
-		}
-	}
+	// Watcher untuk filter harian - DISABLED untuk mencegah double fetching
+	// $: if (filterType === 'harian' && startDate) {
+	// 	const range = calculateDateRange('harian', startDate);
+	// 	if (range.startDate && range.endDate) {
+	// 		endDate = range.endDate;
+	// 		// Panggil loadLaporanData setelah update range
+	// 		loadLaporanData();
+	// 	}
+	// }
 
-	// Watcher untuk filter mingguan
-	$: if (filterType === 'mingguan' && startDate) {
-		const range = calculateDateRange('mingguan', startDate);
-		if (range.startDate && range.endDate) {
-			endDate = range.endDate;
-			// Panggil loadLaporanData setelah update range
-			loadLaporanData();
-		}
-	}
+	// Watcher untuk filter mingguan - DISABLED untuk mencegah double fetching
+	// $: if (filterType === 'mingguan' && startDate) {
+	// 	const range = calculateDateRange('mingguan', startDate);
+	// 	if (range.startDate && range.endDate) {
+	// 		endDate = range.endDate;
+	// 		// Panggil loadLaporanData setelah update range
+	// 		loadLaporanData();
+	// 	}
+	// }
 
-	// Watcher untuk filter bulanan
-	$: if (filterType === 'bulanan' && filterMonth && filterYear) {
-		const range = calculateDateRange('bulanan', undefined, filterMonth, filterYear);
-		if (range.startDate && range.endDate) {
-			startDate = range.startDate;
-			endDate = range.endDate;
-			// Panggil loadLaporanData setelah update range
-			loadLaporanData();
-		}
-	}
+	// Watcher untuk filter bulanan - DISABLED untuk mencegah double fetching
+	// $: if (filterType === 'bulanan' && filterMonth && filterYear) {
+	// 	const range = calculateDateRange('bulanan', undefined, filterMonth, filterYear);
+	// 	if (range.startDate && range.endDate) {
+	// 		startDate = range.startDate;
+	// 		endDate = range.endDate;
+	// 		// Panggil loadLaporanData setelah update range
+	// 		loadLaporanData();
+	// 	}
+	// }
 
-	// Watcher untuk filter tahunan
-	$: if (filterType === 'tahunan') {
-		if (filterYear) {
-			const range = calculateDateRange('tahunan', undefined, undefined, filterYear);
-			if (range.startDate && range.endDate) {
-				startDate = range.startDate;
-				endDate = range.endDate;
-				// Panggil loadLaporanData setelah update range
-				loadLaporanData();
-			} else {
-				console.error('Tahunan range is invalid:', range);
-			}
-		} else {
-			console.error('Tahunan watcher: filterType is tahunan but filterYear is missing:', { filterType, filterYear });
-		}
-	}
+	// Watcher untuk filter tahunan - DISABLED untuk mencegah double fetching
+	// $: if (filterType === 'tahunan') {
+	// 	if (filterYear) {
+	// 		const range = calculateDateRange('tahunan', undefined, undefined, filterYear);
+	// 		if (range.startDate && range.endDate) {
+	// 			startDate = range.startDate;
+	// 			endDate = range.endDate;
+	// 			// Panggil loadLaporanData setelah update range
+	// 			loadLaporanData();
+	// 		} else {
+	// 			console.error('Tahunan range is invalid:', range);
+	// 		}
+	// 	} else {
+	// 		console.error('Tahunan watcher: filterType is tahunan but filterYear is missing:', { filterType, filterYear });
+	// 	}
+	// }
 
 	// Helper function untuk format currency yang aman
 	function formatCurrency(amount: any): string {
