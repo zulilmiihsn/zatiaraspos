@@ -1713,19 +1713,16 @@
 									>Pilih Tanggal</label
 								>
 								<div class="relative">
-									<input
-										id="harian-date"
-										type="date"
+								<input
+									id="harian-date"
+									type="date"
 										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
-										bind:value={startDate}
-										style="opacity: 0; position: absolute; z-index: 1;"
+									bind:value={startDate}
+										style="opacity: 0; position: absolute; z-index: 2; width: 100%; height: 100%; cursor: pointer;"
 									/>
 									<button
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-										onclick={() => {
-											document.getElementById('harian-date')?.click();
-										}}
-										style="position: relative; z-index: 0;"
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50 pointer-events-none"
+										style="position: relative; z-index: 1;"
 									>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal'}</span>
 									<svg
@@ -1750,19 +1747,16 @@
 									>Pilih Tanggal Awal Minggu</label
 								>
 								<div class="relative">
-									<input
-										id="mingguan-date"
-										type="date"
+								<input
+									id="mingguan-date"
+									type="date"
 										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
-										bind:value={startDate}
-										style="opacity: 0; position: absolute; z-index: 1;"
+									bind:value={startDate}
+										style="opacity: 0; position: absolute; z-index: 2; width: 100%; height: 100%; cursor: pointer;"
 									/>
 									<button
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-										onclick={() => {
-											document.getElementById('mingguan-date')?.click();
-										}}
-										style="position: relative; z-index: 0;"
+										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50 pointer-events-none"
+										style="position: relative; z-index: 1;"
 									>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal minggu'}</span>
 									<svg
