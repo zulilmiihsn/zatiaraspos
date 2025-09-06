@@ -118,6 +118,7 @@ class MemoryCache {
 // IndexedDB cache (persistent storage)
 class IndexedDBCache {
 	async set<T>(key: string, data: T, ttl: number = CACHE_CONFIG.INDEXEDDB_TTL): Promise<void> {
+		if (!browser) return;
 		try {
 			await setCache(key, {
 				data,
@@ -130,6 +131,7 @@ class IndexedDBCache {
 	}
 
 	async get<T>(key: string): Promise<T | null> {
+		if (!browser) return null;
 		try {
 			const entry = await getCache(key);
 			if (!entry) return null;
@@ -146,6 +148,7 @@ class IndexedDBCache {
 	}
 
 	async delete(key: string): Promise<void> {
+		if (!browser) return;
 		try {
 			await delCache(key);
 		} catch (error) {
@@ -154,6 +157,7 @@ class IndexedDBCache {
 	}
 
 	async clear(): Promise<void> {
+		if (!browser) return;
 		// Hapus seluruh data cache IndexedDB
 		try {
 			// idb-keyval menyediakan clear() untuk menghapus semua key
@@ -355,7 +359,9 @@ export class SmartCache {
 	// Clear all caches
 	async clear(): Promise<void> {
 		this.memoryCache.clear();
-		await this.indexedDBCache.clear();
+		if (browser) {
+			await this.indexedDBCache.clear();
+		}
 
 		// Clear background refresh intervals
 		for (const refreshId of this.backgroundRefreshMap.values()) {

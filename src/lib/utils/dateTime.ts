@@ -114,11 +114,6 @@ export function witaRangeToUtcRange(startDate: string, endDate: string): { start
 	}
 }
 
-// DEPRECATED: Gunakan witaToUtcRange() untuk konsistensi
-export function getWitaDateRangeUtc(dateStr: string) {
-	console.warn('getWitaDateRangeUtc is deprecated. Use witaToUtcRange() instead.');
-	return witaToUtcRange(dateStr);
-}
 
 // Format UTC ke string waktu WITA untuk tampilan
 export function formatWitaDateTime(dateStr: string | Date, opts?: Intl.DateTimeFormatOptions) {

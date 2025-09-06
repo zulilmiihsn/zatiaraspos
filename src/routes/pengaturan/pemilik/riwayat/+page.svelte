@@ -8,7 +8,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-	import { getWitaDateRangeUtc, getTodayWita } from '$lib/utils/dateTime';
+	import { witaToUtcRange, getTodayWita } from '$lib/utils/dateTime';
 	import { userRole } from '$lib/stores/userRole';
 	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
 	import { createToastManager } from '$lib/utils/ui';
@@ -40,7 +40,7 @@
 		const yyyy = todayWita.getFullYear();
 		const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
 		const dd = String(todayWita.getDate()).padStart(2, '0');
-		return getWitaDateRangeUtc(`${yyyy}-${mm}-${dd}`);
+		return witaToUtcRange(`${yyyy}-${mm}-${dd}`);
 	}
 
 	async function fetchTransaksiHariIni() {

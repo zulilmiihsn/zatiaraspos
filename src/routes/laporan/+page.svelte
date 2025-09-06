@@ -4,7 +4,7 @@
 	import { slide, fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
-	import { getWitaDateRangeUtc, formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
+	import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import { memoize } from '$lib/utils/performance';

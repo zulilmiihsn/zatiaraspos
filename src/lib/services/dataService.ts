@@ -2,7 +2,7 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
-import { getWitaDateRangeUtc, formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
+import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import {
@@ -37,8 +37,8 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 		const dd = String(d.getDate()).padStart(2, '0');
 		hariLabels.push(`${yyyy}-${mm}-${dd}`);
 	}
-	const { startUtc: start7Utc } = getWitaDateRangeUtc(hariLabels[0]);
-	const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
+	const { startUtc: start7Utc } = witaToUtcRange(hariLabels[0]);
+	const { endUtc: end7LastUtc } = witaToUtcRange(hariLabels[6]);
 	const { data: kas7, error: error7 } = await supabase
 		.from('buku_kas')
 		.select('transaction_id, waktu')
@@ -80,7 +80,7 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
 		return cached.value;
 	}
 	// Hitung ulang
-	const { startUtc, endUtc } = getWitaDateRangeUtc(todayStr);
+	const { startUtc, endUtc } = witaToUtcRange(todayStr);
 	const { data: kas, error } = await supabase
 		.from('buku_kas')
 		.select('waktu')
@@ -235,8 +235,8 @@ export class DataService {
 					pendapatanPerHari[tanggal] = 0;
 				}
 
-				const { startUtc: start7Utc, endUtc: end7Utc } = getWitaDateRangeUtc(hariLabels[0]);
-				const { endUtc: end7LastUtc } = getWitaDateRangeUtc(hariLabels[6]);
+				const { startUtc: start7Utc, endUtc: end7Utc } = witaToUtcRange(hariLabels[0]);
+				const { endUtc: end7LastUtc } = witaToUtcRange(hariLabels[6]);
 
 				const { data: items, error } = await this.supabase
 					.from('transaksi_kasir')
@@ -309,7 +309,7 @@ export class DataService {
 					const dd = String(d.getDate()).padStart(2, '0');
 					const tanggal = `${yyyy}-${mm}-${dd}`;
 
-					const { startUtc, endUtc } = getWitaDateRangeUtc(tanggal);
+					const { startUtc, endUtc } = witaToUtcRange(tanggal);
 					const { data: kas } = await this.supabase
 						.from('buku_kas')
 						.select('amount')
@@ -468,8 +468,8 @@ export class DataService {
 				// Fallback to current date if date conversion fails
 				const today = new Date().toISOString().split('T')[0];
 				try {
-					const { startUtc: startUtcTemp, endUtc } = getWitaDateRangeUtc(today);
-					const { endUtc: endUtcFinalTemp } = getWitaDateRangeUtc(today);
+					const { startUtc: startUtcTemp, endUtc } = witaToUtcRange(today);
+					const { endUtc: endUtcFinalTemp } = witaToUtcRange(today);
 					startUtc = startUtcTemp;
 					endUtcFinal = endUtcFinalTemp;
 				} catch (fallbackError) {
