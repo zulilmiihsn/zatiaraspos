@@ -447,15 +447,23 @@ export const POST: RequestHandler = async ({ request }) => {
 			}))
 		];
 
-		// Hitung data periode yang diminta - SAMA PERSIS dengan dataService
+		// Hitung data periode yang diminta - dengan fallback yang lebih baik
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+		
+		// Gunakan fallback yang lebih robust untuk memastikan data terhitung
 		const totalPemasukan = pemasukan.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
+			(s: number, t: any) => {
+				const value = t.nominal || t.amount || 0;
+				return s + (typeof value === 'number' ? value : 0);
+			},
 			0
 		);
 		const totalPengeluaran = pengeluaran.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
+			(s: number, t: any) => {
+				const value = t.nominal || t.amount || 0;
+				return s + (typeof value === 'number' ? value : 0);
+			},
 			0
 		);
 		const labaKotor = totalPemasukan - totalPengeluaran;
@@ -472,6 +480,25 @@ export const POST: RequestHandler = async ({ request }) => {
 		console.log('💰 Laba Kotor:', labaKotor);
 		console.log('💰 Pajak:', pajak);
 		console.log('💰 Laba Bersih:', labaBersih);
+		
+		// Debug: Cek sample data untuk melihat field yang ada
+		if (laporan.length > 0) {
+			console.log('🔍 Sample data structure:');
+			console.log('Sample record 1:', {
+				tipe: laporan[0].tipe,
+				nominal: laporan[0].nominal,
+				amount: laporan[0].amount,
+				sumber: laporan[0].sumber,
+				description: laporan[0].description
+			});
+		}
+		
+		// Debug: Cek apakah ada data dengan nominal > 0
+		const recordsWithNominal = laporan.filter(r => (r.nominal || 0) > 0);
+		const recordsWithAmount = laporan.filter(r => (r.amount || 0) > 0);
+		console.log('📊 Records with nominal > 0:', recordsWithNominal.length);
+		console.log('📊 Records with amount > 0:', recordsWithAmount.length);
+		
 		console.log('=== END AI CALCULATION DEBUG ===');
 
 
@@ -502,7 +529,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				};
 			}
 			
-			const amount = item.nominal || 0;
+			const amount = item.nominal || item.amount || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
