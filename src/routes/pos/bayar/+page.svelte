@@ -6,7 +6,7 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { v4 as uuidv4 } from 'uuid';
-	import { formatWitaDateTime } from '$lib/utils/dateTime';
+	import { formatWitaDateTime, getNowWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole';
@@ -266,8 +266,9 @@
 			notifModalType = 'warning';
 			showNotifModal = true;
 		}
-		const now = new Date();
-		const waktu = now.toISOString();
+		// PERBAIKAN: Gunakan WITA timezone yang konsisten
+		const nowWita = getNowWita();
+		const waktu = witaToUtcISO(nowWita.split('T')[0], nowWita.split('T')[1]);
 		const payment = paymentMethod;
 		// Generate transaction_id sekali per transaksi
 		const transactionId =

@@ -2,7 +2,7 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
-import { getWitaDateRangeUtc, formatWitaDateTime } from '$lib/utils/dateTime';
+import { getWitaDateRangeUtc, formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import {
@@ -12,13 +12,10 @@ import {
 } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
-// Helper untuk dapatkan tanggal hari ini WITA (YYYY-MM-DD)
+// DEPRECATED: Gunakan getTodayWita() dari dateTime utils
 function getTodayWitaStr() {
-	const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-	const yyyy = todayWita.getFullYear();
-	const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-	const dd = String(todayWita.getDate()).padStart(2, '0');
-	return `${yyyy}-${mm}-${dd}`;
+	console.warn('getTodayWitaStr is deprecated. Use getTodayWita() from dateTime utils instead.');
+	return getTodayWita();
 }
 
 // Fungsi cache harian untuk rata-rata transaksi/hari
@@ -31,7 +28,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	}
 	// Hitung ulang
 	const hariLabels = [];
-	const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+		const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
 	for (let i = 6; i >= 0; i--) {
 		const d = new Date(todayWita);
 		d.setDate(todayWita.getDate() - i);
@@ -94,7 +91,7 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
 	if (!error && kas) {
 		for (const t of kas) {
 			const waktu = new Date(t.waktu);
-			const waktuWITA = new Date(waktu.toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+			const waktuWITA = new Date(waktu);
 			const jam = waktuWITA.getHours();
 			jamCount[jam] = (jamCount[jam] || 0) + 1;
 		}
@@ -151,11 +148,7 @@ export class DataService {
 	async getDashboardStats() {
 		const branch = storeGet(selectedBranch);
 		// Ambil data real-time untuk metrik lain
-		const todayWita = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
-		const yyyy = todayWita.getFullYear();
-		const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-		const dd = String(todayWita.getDate()).padStart(2, '0');
-		const todayStr = `${yyyy}-${mm}-${dd}`;
+		const todayStr = getTodayWita();
 
 		// Data hari ini untuk item terjual, jumlah transaksi, omzet, dst
 		const now = new Date();
@@ -221,7 +214,7 @@ export class DataService {
 			`${CACHE_KEYS.BEST_SELLERS}_${branch}`,
 			async () => {
 				const todayWita = new Date(
-					new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' })
+					getNowWita()
 				);
 				const yyyy = todayWita.getFullYear();
 				const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
@@ -303,7 +296,7 @@ export class DataService {
 			`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`,
 			async () => {
 				const todayWita = new Date(
-					new Date().toLocaleString('en-US', { timeZone: 'Asia/Makassar' })
+					getNowWita()
 				);
 				const weeklyIncome = [];
 				let weeklyMax = 1;
@@ -400,9 +393,26 @@ export class DataService {
 	async getReportData(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
 		const cacheKey = `${type}_report_${dateRange}`;
 
+		console.log('getReportData - Cache key:', cacheKey);
+
+		// Debug: Bypass cache untuk troubleshooting
+		console.log('getReportData - BYPASSING CACHE FOR DEBUG');
+		return this.fetchReportDataDirectly(dateRange, type);
+	}
+
+	// Direct data fetch without cache for debugging
+	async fetchReportDataDirectly(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
+		const cacheKey = `${type}_report_${dateRange}`;
 		return CacheUtils.getReportData(cacheKey, dateRange, async (etag?: string) => {
 			// Generate ETag based on date range and type
 			const etagValue = `${type}_${dateRange}_${Date.now()}`;
+			
+			console.log('getReportData - Starting fresh data fetch:', {
+				cacheKey,
+				dateRange,
+				type,
+				etagValue
+			});
 
 			let startDate: string, endDate: string;
 
@@ -417,10 +427,6 @@ export class DataService {
 						startDate = dateRange;
 						endDate = dateRange;
 					}
-
-					// Clean up any remaining underscores in the dates
-					startDate = startDate.replace(/_/g, '');
-					endDate = endDate.replace(/_/g, '');
 					break;
 				case 'weekly':
 					// Calculate week range
@@ -452,11 +458,37 @@ export class DataService {
 
 			let startUtc: string, endUtcFinal: string;
 
+			console.log('getReportData - Processing date range:', {
+				dateRange,
+				type,
+				startDate,
+				endDate,
+				cacheKey
+			});
+
 			try {
-				const { startUtc: startUtcTemp, endUtc } = getWitaDateRangeUtc(startDate);
-				const { endUtc: endUtcFinalTemp } = getWitaDateRangeUtc(endDate);
+				// STANDAR: Gunakan fungsi timezone yang konsisten
+				if (startDate === endDate) {
+					// Single date: gunakan witaToUtcRange
+					const { startUtc: startUtcTemp, endUtc: endUtcTemp } = witaToUtcRange(startDate);
+					startUtc = startUtcTemp;
+					endUtcFinal = endUtcTemp;
+				} else {
+					// Range date: gunakan witaRangeToUtcRange
+					const { startUtc: startUtcTemp, endUtc: endUtcTemp } = witaRangeToUtcRange(startDate, endDate);
 				startUtc = startUtcTemp;
-				endUtcFinal = endUtcFinalTemp;
+					endUtcFinal = endUtcTemp;
+				}
+				
+			console.log('getReportData - UTC conversion (simplified):', {
+				startDate,
+				endDate,
+				startUtc,
+				endUtcFinal,
+				cacheKey,
+				startUtcDate: new Date(startUtc),
+				endUtcDate: new Date(endUtcFinal)
+			});
 			} catch (error) {
 				console.error(
 					'Error converting date range:',
@@ -481,63 +513,366 @@ export class DataService {
 				}
 			}
 
-			// Ambil transaksi POS dari buku_kas dulu
-			const { data: posBukuKas, error: errorPosBukuKas } = await this.supabase
-				.from('buku_kas')
-				.select('*')
-				.gte('waktu', startUtc)
-				.lt('waktu', endUtcFinal)
-				.eq('sumber', 'pos');
+			// PERBAIKAN: Gunakan pagination untuk posBukuKas juga
+			console.log('getReportData - Querying posBukuKas with pagination...');
+			let posBukuKas: any[] = [];
+			let posHasMore = true;
+			let posOffset = 0;
+			const posLimit = 1000;
+			
+			while (posHasMore) {
+				const { data: posBatchData, error: errorPosBatch } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', startDate + 'T00:00:00')
+					.lte('waktu', endDate + 'T23:59:59')
+					.eq('sumber', 'pos')
+					.range(posOffset, posOffset + posLimit - 1)
+					.order('waktu', { ascending: true });
+				
+				if (errorPosBatch) {
+					console.error('getReportData - Error fetching pos batch:', errorPosBatch);
+					break;
+				}
+				
+				if (posBatchData && posBatchData.length > 0) {
+					posBukuKas = posBukuKas.concat(posBatchData);
+					posOffset += posLimit;
+					posHasMore = posBatchData.length === posLimit;
+					
+					console.log(`getReportData - Fetched pos batch ${Math.floor(posOffset/posLimit)}: ${posBatchData.length} records (total: ${posBukuKas.length})`);
+				} else {
+					posHasMore = false;
+				}
+			}
+				
+			console.log('getReportData - posBukuKas query result:', {
+				dataCount: posBukuKas?.length || 0,
+				totalAmount: posBukuKas?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+				sampleData: posBukuKas?.slice(0, 2)
+			});
 
 			// Ambil detail transaksi kasir untuk POS yang sudah difilter
 			let posItems = [];
 			if (posBukuKas && posBukuKas.length > 0) {
-				const bukuKasIds = posBukuKas.map((bk: any) => bk.id);
-				const { data: transaksiKasir, error: errorTransaksiKasir } = await this.supabase
-					.from('transaksi_kasir')
-					.select('*, produk(name)')
-					.in('buku_kas_id', bukuKasIds);
+				// Gunakan buku_kas_id untuk relasi yang benar
+				const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
+				console.log('getReportData - Querying transaksi_kasir by buku_kas_id:', {
+					bukuKasIdsCount: bukuKasIds.length,
+					sampleBukuKasIds: bukuKasIds.slice(0, 5),
+					posBukuKasCount: posBukuKas.length,
+					samplePosBukuKas: posBukuKas.slice(0, 2)
+				});
+				
+				// PERBAIKAN: Batasi query jika terlalu banyak buku_kas_id
+				let transaksiKasir, errorTransaksiKasir;
+				if (bukuKasIds.length > 1000) {
+					console.log('getReportData - Too many buku_kas_ids, using alternative query method');
+					// Gunakan query berdasarkan created_at range sebagai alternatif
+					const { data: transaksiKasirAlt, error: errorTransaksiKasirAlt } = await this.supabase
+						.from('transaksi_kasir')
+						.select('*, produk(name)')
+						.gte('created_at', startDate + 'T00:00:00')
+						.lte('created_at', endDate + 'T23:59:59');
+					
+					transaksiKasir = transaksiKasirAlt;
+					errorTransaksiKasir = errorTransaksiKasirAlt;
+					
+					console.log('getReportData - Alternative transaksi_kasir query result:', {
+						dataCount: transaksiKasir?.length || 0,
+						error: errorTransaksiKasir,
+						query: `created_at >= '${startDate}T00:00:00' AND created_at <= '${endDate}T23:59:59'`
+					});
+				} else {
+					const { data: transaksiKasirData, error: errorTransaksiKasirData } = await this.supabase
+						.from('transaksi_kasir')
+						.select('*, produk(name)')
+						.in('buku_kas_id', bukuKasIds);
+					
+					transaksiKasir = transaksiKasirData;
+					errorTransaksiKasir = errorTransaksiKasirData;
+				}
+
+				console.log('getReportData - transaksi_kasir query result:', {
+					dataCount: transaksiKasir?.length || 0,
+					error: errorTransaksiKasir,
+					errorDetails: errorTransaksiKasir ? {
+						message: errorTransaksiKasir.message,
+						details: errorTransaksiKasir.details,
+						hint: errorTransaksiKasir.hint,
+						code: errorTransaksiKasir.code
+					} : null,
+					sampleData: transaksiKasir?.slice(0, 2),
+					bukuKasIdsCount: bukuKasIds.length,
+					sampleBukuKasIds: bukuKasIds.slice(0, 5)
+				});
 
 				if (!errorTransaksiKasir && transaksiKasir) {
-					// Gabungkan data buku_kas dengan transaksi_kasir
+					// Gabungkan data buku_kas dengan transaksi_kasir menggunakan buku_kas_id
 					posItems = transaksiKasir.map((tk: any) => {
 						const bukuKas = posBukuKas.find((bk: any) => bk.id === tk.buku_kas_id);
 						return {
 							...tk,
 							buku_kas: bukuKas
 						};
+					}).filter((item: any) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
+					
+					console.log('getReportData - posItems created from transaksi_kasir:', {
+						posItemsCount: posItems.length,
+						totalTransaksiKasir: transaksiKasir.length,
+						matchedWithBukuKas: posItems.length,
+						samplePosItem: posItems[0]
 					});
+				} else {
+					console.log('getReportData - Error or no data in transaksi_kasir:', {
+						error: errorTransaksiKasir,
+						dataCount: transaksiKasir?.length || 0
+					});
+					posItems = [];
 				}
 			}
 
-			// Ambil transaksi manual/catat
-			const { data: manualItems, error: errorManual } = await this.supabase
+			// PERBAIKAN: Gunakan pagination untuk manualItems juga
+			console.log('getReportData - Querying manualItems with pagination...');
+			let manualItems: any[] = [];
+			let manualHasMore = true;
+			let manualOffset = 0;
+			const manualLimit = 1000;
+			
+			while (manualHasMore) {
+				const { data: manualBatchData, error: errorManualBatch } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', startDate + 'T00:00:00')
+					.lte('waktu', endDate + 'T23:59:59')
+					.neq('sumber', 'pos')
+					.range(manualOffset, manualOffset + manualLimit - 1)
+					.order('waktu', { ascending: true });
+				
+				if (errorManualBatch) {
+					console.error('getReportData - Error fetching manual batch:', errorManualBatch);
+					break;
+				}
+				
+				if (manualBatchData && manualBatchData.length > 0) {
+					manualItems = manualItems.concat(manualBatchData);
+					manualOffset += manualLimit;
+					manualHasMore = manualBatchData.length === manualLimit;
+					
+					console.log(`getReportData - Fetched manual batch ${Math.floor(manualOffset/manualLimit)}: ${manualBatchData.length} records (total: ${manualItems.length})`);
+				} else {
+					manualHasMore = false;
+				}
+			}
+
+			console.log('getReportData - manual items query result:', {
+				dataCount: manualItems?.length || 0,
+				totalAmount: manualItems?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+				sampleData: manualItems?.slice(0, 2)
+			});
+
+			// PERBAIKAN: Gunakan pagination untuk mengambil semua data (mengatasi limit 1000)
+			let allBukuKas: any[] = [];
+			let hasMore = true;
+			let offset = 0;
+			const limit = 1000;
+			
+			console.log('getReportData - Fetching all data with pagination...');
+			
+			while (hasMore) {
+				const { data: batchData, error: errorBatch } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', startDate + 'T00:00:00')
+					.lte('waktu', endDate + 'T23:59:59')
+					.range(offset, offset + limit - 1)
+					.order('waktu', { ascending: true });
+				
+				if (errorBatch) {
+					console.error('getReportData - Error fetching batch:', errorBatch);
+					break;
+				}
+				
+				if (batchData && batchData.length > 0) {
+					allBukuKas = allBukuKas.concat(batchData);
+					offset += limit;
+					hasMore = batchData.length === limit; // Lanjut jika batch penuh
+					
+					console.log(`getReportData - Fetched batch ${Math.floor(offset/limit)}: ${batchData.length} records (total: ${allBukuKas.length})`);
+				} else {
+					hasMore = false;
+				}
+			}
+			
+			console.log('getReportData - Pagination complete:', {
+				totalRecords: allBukuKas.length,
+				totalBatches: Math.ceil(offset / limit)
+			});
+
+			console.log('getReportData - All buku_kas (using pagination):', {
+				dataCount: allBukuKas?.length || 0,
+				totalAmount: allBukuKas?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+				query: `waktu >= '${startDate}T00:00:00' AND waktu <= '${endDate}T23:59:59'`,
+				dateRange: `${startDate} to ${endDate}`,
+				sampleData: allBukuKas?.slice(0, 2)
+			});
+
+			// DEBUG: Periksa data yang tersimpan di database untuk troubleshooting
+			if (type === 'yearly' && allBukuKas && allBukuKas.length > 0) {
+				console.log('DEBUG - Sample data timestamps from database:');
+				allBukuKas.slice(0, 5).forEach((item: any, index: number) => {
+					console.log(`Item ${index + 1}:`, {
+						id: item.id,
+						waktu: item.waktu,
+						waktuLocal: new Date(item.waktu).toLocaleString('id-ID', { timeZone: 'Asia/Makassar' }),
+						amount: item.amount,
+						sumber: item.sumber,
+						description: item.description
+					});
+				});
+
+				// DEBUG: Periksa data Agustus dan September secara spesifik
+				const augustData = allBukuKas.filter((item: any) => {
+					const date = new Date(item.waktu);
+					return date.getMonth() === 7 && date.getFullYear() === 2025; // Agustus = month 7
+				});
+				const septemberData = allBukuKas.filter((item: any) => {
+					const date = new Date(item.waktu);
+					return date.getMonth() === 8 && date.getFullYear() === 2025; // September = month 8
+				});
+
+				console.log('DEBUG - August 2025 data:', {
+					count: augustData.length,
+					totalAmount: augustData.reduce((sum: number, item: any) => sum + (item.amount || 0), 0),
+					sample: augustData.slice(0, 2)
+				});
+
+				console.log('DEBUG - September 2025 data:', {
+					count: septemberData.length,
+					totalAmount: septemberData.reduce((sum: number, item: any) => sum + (item.amount || 0), 0),
+					sample: septemberData.slice(0, 2)
+				});
+
+				// DEBUG: Periksa apakah ada data yang tidak ter-fetch karena timezone
+				console.log('DEBUG - Checking for data outside query range:');
+				const allData = allBukuKas;
+				const dataOutsideRange = allData.filter((item: any) => {
+					const itemDate = new Date(item.waktu);
+					const itemYear = itemDate.getFullYear();
+					const itemMonth = itemDate.getMonth();
+					return itemYear === 2025 && (itemMonth === 7 || itemMonth === 8); // Agustus atau September
+				});
+
+				console.log('DEBUG - Data outside query range (Aug-Sep 2025):', {
+					count: dataOutsideRange.length,
+					totalAmount: dataOutsideRange.reduce((sum: number, item: any) => sum + (item.amount || 0), 0),
+					sample: dataOutsideRange.slice(0, 3)
+				});
+			}
+
+			// Debug: Bandingkan dengan query UTC untuk troubleshooting
+			const { data: allBukuKasUtc, error: errorAllBukuKasUtc } = await this.supabase
 				.from('buku_kas')
 				.select('*')
 				.gte('waktu', startUtc)
-				.lt('waktu', endUtcFinal)
-				.neq('sumber', 'pos');
+				.lte('waktu', endUtcFinal);
 
-			if (errorPosBukuKas || errorManual) {
-				console.error('Error fetching report data:', errorPosBukuKas, errorManual);
-				return { data: [], etag: etagValue };
+			console.log('getReportData - All buku_kas (UTC query comparison):', {
+				dataCount: allBukuKasUtc?.length || 0,
+				error: errorAllBukuKasUtc,
+				totalAmount: allBukuKasUtc?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+				query: `waktu >= '${startUtc}' AND waktu <= '${endUtcFinal}'`,
+				dateRange: `${startDate} to ${endDate}`,
+				comparison: {
+					stringQuery: `waktu >= '${startDate}T00:00:00' AND waktu <= '${endDate}T23:59:59'`,
+					utcQuery: `waktu >= '${startUtc}' AND waktu <= '${endUtcFinal}'`
+				}
+			});
+
+			// DEBUG: Periksa data yang tersimpan di database dengan range yang lebih luas
+			if (type === 'yearly') {
+				console.log('DEBUG - Checking all data in database for 2025:');
+				const { data: allData2025, error: errorAllData2025 } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', '2025-01-01T00:00:00')
+					.lte('waktu', '2025-12-31T23:59:59');
+
+				console.log('DEBUG - All data in 2025:', {
+					dataCount: allData2025?.length || 0,
+					error: errorAllData2025,
+					totalAmount: allData2025?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+					query: `waktu >= '2025-01-01T00:00:00' AND waktu <= '2025-12-31T23:59:59'`
+				});
+
+				// DEBUG: Periksa data per bulan untuk 2025
+				if (allData2025 && allData2025.length > 0) {
+					const monthlyData: { [key: string]: { count: number; total: number } } = {};
+					allData2025.forEach((item: any) => {
+						const date = new Date(item.waktu);
+						const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+						if (!monthlyData[monthKey]) {
+							monthlyData[monthKey] = { count: 0, total: 0 };
+						}
+						monthlyData[monthKey].count++;
+						monthlyData[monthKey].total += item.amount || 0;
+					});
+
+					console.log('DEBUG - Monthly breakdown for 2025:', monthlyData);
+				}
+
+				// DEBUG: Periksa data yang tersimpan dengan timezone yang berbeda
+				console.log('DEBUG - Checking data with different timezone ranges:');
+				const { data: dataWithTimezone1, error: errorTz1 } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', '2024-12-31T16:00:00.000Z') // UTC untuk 2025-01-01 00:00 WITA
+					.lte('waktu', '2025-12-31T15:59:59.999Z'); // UTC untuk 2025-12-31 23:59 WITA
+
+				console.log('DEBUG - Data with WITA timezone range:', {
+					dataCount: dataWithTimezone1?.length || 0,
+					error: errorTz1,
+					totalAmount: dataWithTimezone1?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+					query: `waktu >= '2024-12-31T16:00:00.000Z' AND waktu <= '2025-12-31T15:59:59.999Z'`
+				});
+
+				// DEBUG: Periksa data yang tersimpan dengan timezone browser (UTC+7)
+				const { data: dataWithTimezone2, error: errorTz2 } = await this.supabase
+					.from('buku_kas')
+					.select('*')
+					.gte('waktu', '2024-12-31T17:00:00.000Z') // UTC untuk 2025-01-01 00:00 WIB
+					.lte('waktu', '2025-12-31T16:59:59.999Z'); // UTC untuk 2025-12-31 23:59 WIB
+
+				console.log('DEBUG - Data with WIB timezone range:', {
+					dataCount: dataWithTimezone2?.length || 0,
+					error: errorTz2,
+					totalAmount: dataWithTimezone2?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0,
+					query: `waktu >= '2024-12-31T17:00:00.000Z' AND waktu <= '2025-12-31T16:59:59.999Z'`
+				});
 			}
 
-			// Gabungkan hasil
-			const laporan = [
-				...posItems.map((item: any) => ({
+			// Error handling sudah ditangani dalam loop pagination
+
+			// Gunakan data yang lebih lengkap untuk laporan
+			const laporan: any[] = [];
+			
+			// Tambahkan data POS dari transaksi_kasir
+			posItems.forEach((item: any) => {
+				laporan.push({
 					...item,
 					sumber: 'pos',
 					payment_method: item.buku_kas?.payment_method,
 					waktu: item.buku_kas?.waktu,
 					jenis: item.buku_kas?.jenis,
 					tipe: item.buku_kas?.tipe,
-					// Untuk item POS, gunakan nama produk atau custom_name
 					description: item.produk?.name || item.custom_name || 'Item Custom',
-					// nominal transaksi per item = amount (sudah total, tidak perlu dikali qty lagi)
 					nominal: item.amount || 0
-				})),
-				...(manualItems || []).map((item: any) => ({
+				});
+			});
+			
+			// Tambahkan data manual/catat
+			(manualItems || []).forEach((item: any) => {
+				laporan.push({
 					...item,
 					sumber: item.sumber || 'catat',
 					payment_method: item.payment_method,
@@ -546,8 +881,52 @@ export class DataService {
 					tipe: item.tipe,
 					description: item.description,
 					nominal: item.amount || 0
-				}))
-			];
+				});
+			});
+			
+			// Jika masih kurang data, gunakan data buku_kas yang belum terhitung
+			const usedBukuKasIds = new Set(posItems.map((item: any) => item.buku_kas?.id).filter(Boolean));
+			const remainingBukuKas = (allBukuKas || []).filter((item: any) => !usedBukuKasIds.has(item.id));
+			
+			remainingBukuKas.forEach((item: any) => {
+				laporan.push({
+					...item,
+					sumber: item.sumber || 'lainnya',
+					payment_method: item.payment_method,
+					waktu: item.waktu,
+					jenis: item.jenis,
+					tipe: item.tipe,
+					description: item.description || 'Transaksi Lainnya',
+					nominal: item.amount || 0
+				});
+			});
+
+			console.log('getReportData - Final laporan data:', {
+				totalLaporanItems: laporan.length,
+				posItemsCount: posItems.length,
+				manualItemsCount: manualItems?.length || 0,
+				remainingBukuKasCount: remainingBukuKas.length,
+				totalBukuKasCount: allBukuKas?.length || 0,
+				totalAmount: laporan.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0),
+				dateRange: `${startDate} to ${endDate}`,
+				cacheKey,
+				sampleLaporanItem: laporan[0]
+			});
+
+			// Debug: Breakdown data berdasarkan sumber
+			const posData = laporan.filter(item => item.sumber === 'pos');
+			const manualData = laporan.filter(item => item.sumber !== 'pos');
+			
+			console.log('getReportData - Data breakdown by source:', {
+				posDataCount: posData.length,
+				posDataTotal: posData.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0),
+				manualDataCount: manualData.length,
+				manualDataTotal: manualData.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0),
+				totalLaporanAmount: laporan.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0),
+				dateRange: `${startDate} to ${endDate}`,
+				filterType: type,
+				cacheKey
+			});
 
 			// Pemasukan/pengeluaran per jenis
 			const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
@@ -569,6 +948,17 @@ export class DataService {
 			// Hitung Laba (Rugi) Bersih
 			const labaBersih = labaKotor - pajak;
 
+			console.log('getReportData - Summary calculation:', {
+				totalPemasukan,
+				totalPengeluaran,
+				labaKotor,
+				pajak,
+				labaBersih,
+				dateRange: `${startDate} to ${endDate}`,
+				filterType: type,
+				cacheKey
+			});
+
 			const reportData = {
 				summary: {
 					pendapatan: totalPemasukan,
@@ -584,6 +974,13 @@ export class DataService {
 				bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
 				transactions: laporan
 			};
+			console.log('getReportData - Final report data:', {
+				summary: reportData.summary,
+				dateRange: `${startDate} to ${endDate}`,
+				filterType: type,
+				cacheKey
+			});
+
 			return { data: reportData, etag: etagValue };
 		});
 	}
@@ -635,7 +1032,9 @@ export class DataService {
 
 	// Clear all caches
 	async clearAllCaches() {
+		console.log('clearAllCaches - Clearing all caches');
 		await smartCache.clear();
+		console.log('clearAllCaches - All caches cleared');
 	}
 }
 

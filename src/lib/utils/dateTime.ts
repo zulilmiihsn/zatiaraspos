@@ -1,5 +1,6 @@
 /**
  * DateTime utilities untuk konversi UTC dan WITA
+ * STANDAR: Semua waktu disimpan dalam UTC, ditampilkan dalam WITA (+08:00)
  */
 
 // Konversi UTC ke waktu WITA (Asia/Makassar)
@@ -22,9 +23,36 @@ export function witaToUtc(dateStr: string): Date {
 	return witaDate;
 }
 
-// Dapatkan rentang UTC dari tanggal lokal WITA (YYYY-MM-DD)
-export function getWitaDateRangeUtc(dateStr: string) {
-	// dateStr: '2025-07-09'
+// STANDAR: Dapatkan tanggal hari ini dalam WITA (YYYY-MM-DD)
+export function getTodayWita(): string {
+	const now = new Date();
+	const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
+	const witaDate = new Date(witaString);
+	const year = witaDate.getFullYear();
+	const month = String(witaDate.getMonth() + 1).padStart(2, '0');
+	const day = String(witaDate.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
+// STANDAR: Dapatkan waktu sekarang dalam WITA (YYYY-MM-DDTHH:mm:ss)
+export function getNowWita(): string {
+	const now = new Date();
+	const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
+	const witaDate = new Date(witaString);
+	const year = witaDate.getFullYear();
+	const month = String(witaDate.getMonth() + 1).padStart(2, '0');
+	const day = String(witaDate.getDate()).padStart(2, '0');
+	const hours = String(witaDate.getHours()).padStart(2, '0');
+	const minutes = String(witaDate.getMinutes()).padStart(2, '0');
+	const seconds = String(witaDate.getSeconds()).padStart(2, '0');
+	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
+// STANDAR: Konversi tanggal WITA ke UTC range untuk query database
+export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: string } {
+	// Input: 'YYYY-MM-DD' (tanggal WITA)
+	// Output: { startUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ', endUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ' }
+	
 	// Validasi input
 	if (!dateStr || typeof dateStr !== 'string') {
 		throw new Error('Invalid date string');
@@ -34,6 +62,7 @@ export function getWitaDateRangeUtc(dateStr: string) {
 		throw new Error('Invalid date format. Expected YYYY-MM-DD');
 	}
 	const [year, month, day] = parts.map(Number);
+	
 	// Validasi nilai tanggal
 	if (isNaN(year) || isNaN(month) || isNaN(day)) {
 		throw new Error('Invalid date values');
@@ -47,19 +76,48 @@ export function getWitaDateRangeUtc(dateStr: string) {
 	if (day < 1 || day > 31) {
 		throw new Error('Day out of valid range');
 	}
+	
 	try {
-		// Start: 00:00:00 WITA (UTC+8) = 16:00:00 UTC hari sebelumnya
+		// Start: 00:00:00 WITA = 16:00:00 UTC hari sebelumnya
 		const startUtc = new Date(Date.UTC(year, month - 1, day - 1, 16, 0, 0));
-		// End: 00:00:00 WITA hari berikutnya (UTC+8) = 16:00:00 UTC hari ini
-		const endUtc = new Date(Date.UTC(year, month - 1, day, 16, 0, 0));
+		// End: 23:59:59.999 WITA = 15:59:59.999 UTC hari berikutnya
+		const endUtc = new Date(Date.UTC(year, month - 1, day, 15, 59, 59, 999));
+		
 		return {
 			startUtc: startUtc.toISOString(),
 			endUtc: endUtc.toISOString()
 		};
 	} catch (error) {
-		console.error('Error in getWitaDateRangeUtc:', error, 'dateStr:', dateStr);
+		console.error('Error in witaToUtcRange:', error, 'dateStr:', dateStr);
 		throw new Error(`Failed to convert date: ${dateStr}`);
 	}
+}
+
+// STANDAR: Konversi range tanggal WITA ke UTC range untuk query database
+export function witaRangeToUtcRange(startDate: string, endDate: string): { startUtc: string; endUtc: string } {
+	// Input: 'YYYY-MM-DD', 'YYYY-MM-DD' (range tanggal WITA)
+	// Output: { startUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ', endUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ' }
+	
+	try {
+		// Start: 00:00:00 WITA tanggal pertama
+		const startDateObj = new Date(startDate + 'T00:00:00+08:00');
+		// End: 23:59:59.999 WITA tanggal terakhir
+		const endDateObj = new Date(endDate + 'T23:59:59.999+08:00');
+		
+		return {
+			startUtc: startDateObj.toISOString(),
+			endUtc: endDateObj.toISOString()
+		};
+	} catch (error) {
+		console.error('Error in witaRangeToUtcRange:', error, 'startDate:', startDate, 'endDate:', endDate);
+		throw new Error(`Failed to convert date range: ${startDate} to ${endDate}`);
+	}
+}
+
+// DEPRECATED: Gunakan witaToUtcRange() untuk konsistensi
+export function getWitaDateRangeUtc(dateStr: string) {
+	console.warn('getWitaDateRangeUtc is deprecated. Use witaToUtcRange() instead.');
+	return witaToUtcRange(dateStr);
 }
 
 // Format UTC ke string waktu WITA untuk tampilan

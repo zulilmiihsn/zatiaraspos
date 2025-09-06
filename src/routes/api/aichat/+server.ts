@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { RequestHandler } from './$types';
+import { witaRangeToUtcRange } from '$lib/utils/dateTime';
 
 // OpenRouter API configuration
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -14,7 +15,7 @@ interface ChatMessage {
 
 // Util: format YYYY-MM-DD dalam zona WITA
 function toYMDWita(date: Date): string {
-	const d = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+	const d = new Date(date);
 	const yyyy = d.getFullYear();
 	const mm = String(d.getMonth() + 1).padStart(2, '0');
 	const dd = String(d.getDate()).padStart(2, '0');
@@ -248,8 +249,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		const supabase = getSupabaseClient((branch || 'dev') as any);
 
 		// Hitung waktu UTC dari rentang WITA (approx: gunakan string Y-M-D 00:00:00/23:59:59 WITA yang dikonversi ke ISO)
-		const startDate = new Date(`${dateRange.start}T00:00:00+08:00`).toISOString();
-		const endDate = new Date(`${dateRange.end}T23:59:59+08:00`).toISOString();
+		// STANDAR: Gunakan timezone conversion yang konsisten
+		const { startUtc, endUtc } = witaRangeToUtcRange(dateRange.start, dateRange.end);
+		const startDate = startUtc;
+		const endDate = endUtc;
 		console.log('Query date range - start:', startDate, 'end:', endDate);
 
 		// Konversi tanggal untuk konteks AI
@@ -444,7 +447,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const hourCount: Record<string, number> = {};
 		for (const t of bukuKasPos || []) {
 			const waktu = new Date(t.waktu);
-			const wita = new Date(waktu.toLocaleString('en-US', { timeZone: 'Asia/Makassar' }));
+			const wita = new Date(waktu);
 			const h = wita.getHours();
 			const key = h.toString().padStart(2, '0');
 			hourCount[key] = (hourCount[key] || 0) + 1;

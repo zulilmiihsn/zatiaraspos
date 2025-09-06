@@ -11,6 +11,7 @@
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
 
 	let dashboardData: {
 		omzet: number;
@@ -412,7 +413,7 @@
 		}
 		await dataService.supabaseClient.from('sesi_toko').insert({
 			opening_cash: modalAwalRaw,
-			opening_time: new Date().toISOString(),
+			opening_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
 			is_active: true
 		});
 		showTokoModal = false;
@@ -464,7 +465,7 @@
 		await dataService.supabaseClient
 			.from('sesi_toko')
 			.update({
-				closing_time: new Date().toISOString(),
+				closing_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
 				is_active: false
 			})
 			.eq('id', sesiAktif.id);
@@ -615,7 +616,7 @@
 	function getTodayWITA() {
 		// Ambil waktu sekarang di Asia/Makassar (WITA)
 		const now = new Date();
-		const witaString = now.toLocaleString('en-US', { timeZone: 'Asia/Makassar' });
+		const witaString = getNowWita();
 		const witaDate = new Date(witaString);
 		witaDate.setHours(0, 0, 0, 0); // Set ke jam 00:00:00
 		return witaDate;
