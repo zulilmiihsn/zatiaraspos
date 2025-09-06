@@ -148,7 +148,7 @@
 
 			// LOADING PROGRESS: 20% - Clear cache
 			loadingProgress = 20;
-			loadingMessage = 'Menyiapkan data...';
+			loadingMessage = 'Menyiapkan...';
 			await dataService.clearAllCaches();
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
@@ -156,12 +156,12 @@
 			
 			// LOADING PROGRESS: 40% - Fetch data
 			loadingProgress = 40;
-			loadingMessage = 'Mengambil data laporan...';
+			loadingMessage = 'Mengambil data...';
 			const reportData = await dataService.getReportData(dateRange, 'daily');
 
 			// LOADING PROGRESS: 70% - Process data
 			loadingProgress = 70;
-			loadingMessage = 'Memproses data...';
+			loadingMessage = 'Memproses...';
 
 			// Apply report data with null checks
 			summary = (reportData as any)?.summary || {
@@ -191,7 +191,7 @@
 				isLoadingReport = false;
 				loadingProgress = 0;
 				loadingMessage = 'Memuat data...';
-			}, 500); // Delay kecil untuk smooth transition
+			}, 300); // Delay lebih pendek untuk smooth transition
 		}
 	}
 
@@ -813,27 +813,36 @@
 		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
-		<!-- LOADING OVERLAY: Progress indicator -->
+		<!-- LOADING BLUR: Elegant loading dengan blur effect -->
 		{#if isLoadingReport}
-			<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-				<div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-					<div class="text-center">
-						<!-- Spinner -->
-						<div class="flex justify-center mb-4">
-							<div class="animate-spin rounded-full h-12 w-12 border-4 border-pink-200 border-t-pink-500"></div>
+			<div class="fixed inset-0 z-40 pointer-events-none">
+				<!-- Blur overlay untuk page laporan -->
+				<div class="absolute inset-0 bg-white bg-opacity-20 backdrop-blur-sm"></div>
+				
+				<!-- Loading indicator di tengah -->
+				<div class="absolute inset-0 flex items-center justify-center">
+					<div class="bg-white/90 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20">
+						<div class="text-center">
+							<!-- Elegant Spinner -->
+							<div class="flex justify-center mb-4">
+								<div class="relative">
+									<div class="animate-spin rounded-full h-10 w-10 border-3 border-pink-100 border-t-pink-500"></div>
+									<div class="absolute inset-0 animate-ping rounded-full h-10 w-10 border-3 border-pink-200 opacity-20"></div>
+								</div>
+							</div>
+							
+							<!-- Progress Bar -->
+							<div class="w-48 bg-gray-100 rounded-full h-1.5 mb-3">
+								<div 
+									class="bg-gradient-to-r from-pink-400 to-pink-600 h-1.5 rounded-full transition-all duration-500 ease-out"
+									style="width: {loadingProgress}%"
+								></div>
+							</div>
+							
+							<!-- Loading Message -->
+							<p class="text-gray-700 font-medium text-sm">{loadingMessage}</p>
+							<p class="text-xs text-gray-500 mt-1">{loadingProgress}%</p>
 						</div>
-						
-						<!-- Progress Bar -->
-						<div class="w-full bg-gray-200 rounded-full h-2 mb-4">
-							<div 
-								class="bg-pink-500 h-2 rounded-full transition-all duration-300 ease-out"
-								style="width: {loadingProgress}%"
-							></div>
-						</div>
-						
-						<!-- Loading Message -->
-						<p class="text-gray-700 font-medium">{loadingMessage}</p>
-						<p class="text-sm text-gray-500 mt-1">{loadingProgress}%</p>
 					</div>
 				</div>
 			</div>
@@ -841,7 +850,7 @@
 
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
-			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10"
+			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 transition-all duration-300 {isLoadingReport ? 'blur-sm opacity-60' : 'blur-0 opacity-100'}"
 		>
 			<div class="mb-3 flex w-full items-center gap-2 px-2 md:mb-6 md:gap-4 md:px-0">
 				<!-- Button Filter -->
