@@ -1715,7 +1715,16 @@
 								<button
 									id="harian-date"
 									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-									onclick={() => (showDatePicker = true)}
+									onclick={() => {
+										// Trigger native date picker
+										const input = document.createElement('input');
+										input.type = 'date';
+										input.value = startDate;
+										input.onchange = (e) => {
+											startDate = (e.target as HTMLInputElement).value;
+										};
+										input.click();
+									}}
 								>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal'}</span>
 									<svg
@@ -1741,7 +1750,16 @@
 								<button
 									id="mingguan-date"
 									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-									onclick={() => (showDatePicker = true)}
+									onclick={() => {
+										// Trigger native date picker
+										const input = document.createElement('input');
+										input.type = 'date';
+										input.value = startDate;
+										input.onchange = (e) => {
+											startDate = (e.target as HTMLInputElement).value;
+										};
+										input.click();
+									}}
 								>
 									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal minggu'}</span>
 									<svg
