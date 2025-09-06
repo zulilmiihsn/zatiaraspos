@@ -103,7 +103,16 @@ Pertanyaan user: "${question}"`
 	const content = data.choices?.[0]?.message?.content || '{}';
 	
 	try {
-		const parsed = JSON.parse(content);
+		// Clean up response - remove markdown code blocks if present
+		let cleanContent = content.trim();
+		if (cleanContent.startsWith('```json')) {
+			cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+		}
+		if (cleanContent.startsWith('```')) {
+			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+		}
+		
+		const parsed = JSON.parse(cleanContent);
 		console.log('AI 1 JSON Parse Success:', parsed);
 		return {
 			start: parsed.start || new Date().toISOString().split('T')[0],
@@ -114,6 +123,7 @@ Pertanyaan user: "${question}"`
 	} catch (error) {
 		console.error('AI 1 JSON Parse Error:', error);
 		console.error('Raw AI 1 response:', content);
+		console.error('Cleaned content:', content.trim().replace(/^```json\s*/, '').replace(/\s*```$/, ''));
 		// Tidak ada fallback, langsung error
 		throw new Error(`AI 1 gagal mengidentifikasi rentang tanggal: ${error}`);
 	}
