@@ -266,7 +266,7 @@
 			notifModalType = 'warning';
 			showNotifModal = true;
 		}
-		// PERBAIKAN: Gunakan WITA timezone yang konsisten
+		// Gunakan WITA timezone yang konsisten
 		const nowWita = getNowWita();
 		const waktu = witaToUtcISO(nowWita.split('T')[0], nowWita.split('T')[1]);
 		const payment = paymentMethod;

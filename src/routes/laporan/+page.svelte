@@ -134,7 +134,6 @@
 
 	// Tambahkan deklarasi function loadLaporanData
 	async function loadLaporanData() {
-		console.log('loadLaporanData called with:', { filterType, startDate, endDate, filterYear });
 		try {
 			// Pastikan startDate dan endDate sudah ada
 			if (!startDate || !endDate) {
@@ -148,14 +147,6 @@
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
 			
-			// Debug: Log date range untuk troubleshooting
-			console.log('loadLaporanData - Date range calculation:', {
-				filterType,
-				startDate,
-				endDate,
-				dateRange,
-				dateRangeType: startDate === endDate ? 'single' : 'range'
-			});
 			
 			const reportData = await dataService.getReportData(dateRange, 'daily');
 
@@ -174,14 +165,6 @@
 			bebanLain = (reportData as any)?.bebanLain || [];
 			laporan = (reportData as any)?.transactions || [];
 
-			console.log('Laporan data loaded:', {
-				filterType,
-				startDate,
-				endDate,
-				dateRange,
-				transactionCount: laporan.length,
-				summary
-			});
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			toastManager.showToastNotification('Gagal memuat data laporan', 'error');
@@ -243,27 +226,11 @@
 		filterDate = getTodayWita();
 		// filterMonth dan filterYear sudah diinisialisasi di deklarasi awal, tidak perlu diinisialisasi ulang
 		
-		// Debug: Log initial values
-		console.log('Initial filter values:', {
-			filterType,
-			filterYear,
-			filterMonth,
-			startDate,
-			endDate
-		});
 
 		// Set default startDate dan endDate untuk filter harian
 		startDate = getLocalDateStringWITA();
 		endDate = startDate;
 		
-		// Debug: Log initial values
-		console.log('Initial filter values:', {
-			filterType,
-			filterYear,
-			filterMonth,
-			startDate,
-			endDate
-		});
 
 		// Removed fetchPin() and locked_pages check
 		initializePageData().then(() => {
@@ -363,19 +330,6 @@
 	let showEndDatePicker = false;
 	let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
 	
-	// Debug watcher untuk filterType
-	$: {
-		console.log('FilterType changed to:', filterType);
-		if (filterType === 'tahunan') {
-			console.log('Tahunan selected, current filterYear:', filterYear);
-		}
-	}
-	
-	// Debug watcher untuk filterYear
-	$: console.log('FilterYear changed to:', filterYear);
-	
-	// Debug watcher untuk startDate dan endDate
-	$: console.log('Date range changed:', { startDate, endDate });
 	let filterDate = getLocalDateStringWITA();
 	let filterMonth = (
 		new Date(getNowWita()).getMonth() + 1
@@ -585,7 +539,6 @@
 						
 						// Debug khusus untuk Agustus
 						if (m === 7) { // Agustus (0-indexed)
-							console.log('August date calculation:', {
 								year: y,
 								month: m + 1,
 								first,
@@ -600,7 +553,6 @@
 				case 'tahunan':
 					if (year) {
 						const y = parseInt(year);
-						console.log('Tahunan case - year:', year, 'parsed:', y);
 						// Validasi tahun
 						if (isNaN(y) || y < 1900 || y > 2100) {
 							console.error('Invalid year for yearly filter:', year);
@@ -610,7 +562,6 @@
 							startDate: `${y}-01-01`,
 							endDate: `${y}-12-31`
 						};
-						console.log('Tahunan result:', result);
 						return result;
 					}
 					break;
@@ -626,7 +577,6 @@
 		const range = calculateDateRange('harian', startDate);
 		if (range.startDate && range.endDate) {
 			endDate = range.endDate;
-			console.log('Harian filter updated:', { startDate, endDate, range });
 			// Panggil loadLaporanData setelah update range
 			loadLaporanData();
 		}
@@ -637,7 +587,6 @@
 		const range = calculateDateRange('mingguan', startDate);
 		if (range.startDate && range.endDate) {
 			endDate = range.endDate;
-			console.log('Mingguan filter updated:', { startDate, endDate, range });
 			// Panggil loadLaporanData setelah update range
 			loadLaporanData();
 		}
@@ -649,7 +598,6 @@
 		if (range.startDate && range.endDate) {
 			startDate = range.startDate;
 			endDate = range.endDate;
-			console.log('Bulanan filter updated:', { 
 				startDate, 
 				endDate, 
 				range, 
@@ -664,14 +612,11 @@
 
 	// Watcher untuk filter tahunan
 	$: if (filterType === 'tahunan') {
-		console.log('Tahunan watcher triggered:', { filterType, filterYear });
 		if (filterYear) {
 			const range = calculateDateRange('tahunan', undefined, undefined, filterYear);
-			console.log('Tahunan range calculated:', range);
 			if (range.startDate && range.endDate) {
 				startDate = range.startDate;
 				endDate = range.endDate;
-				console.log('Tahunan filter updated:', { startDate, endDate, range, filterYear });
 				// Panggil loadLaporanData setelah update range
 				loadLaporanData();
 			} else {
@@ -753,7 +698,7 @@
 		if (!dateString) {
 			return '';
 		}
-		// PERBAIKAN: Langsung konversi ke WITA tanpa double conversion
+		// Langsung konversi ke WITA tanpa double conversion
 		const date = new Date(dateString + 'T00:00:00+08:00');
 		return date.toLocaleDateString('id-ID', {
 			day: 'numeric',
@@ -774,7 +719,6 @@
 
 	// Fungsi untuk menerapkan filter
 	async function applyFilter(): Promise<void> {
-		console.log('applyFilter called with:', { filterType, startDate, endDate, filterYear, filterMonth });
 		// Update filter state
 		showFilter = false;
 
@@ -1682,7 +1626,6 @@
 										? 'border-pink-500 bg-pink-50 text-pink-600'
 										: 'border-gray-200 bg-white text-gray-600 hover:border-pink-200'}"
 									onclick={() => {
-										console.log('Tahunan button clicked, current filterYear:', filterYear);
 										filterType = 'tahunan';
 									}}
 									onkeydown={(e) => e.key === 'Enter' && (filterType = 'tahunan')}
