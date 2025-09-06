@@ -49,7 +49,8 @@ TUGAS ANDA:
 ATURAN PENTING:
 - Gunakan tanggal Indonesia (WITA)
 - Tanggal saat ini: ${todayWita}
-- Untuk "X bulan terakhir" (1, 2, 3, 4, 5, 6, dst), hitung dari X bulan yang lalu hingga hari ini
+- Untuk "X bulan terakhir" (1, 2, 3, 4, 5, 6, dst), hitung dari AWAL BULAN X bulan yang lalu hingga hari ini
+  Contoh: "2 bulan terakhir" dari 2025-09-07 = 2025-07-01 hingga 2025-09-07
 - Untuk "X hari terakhir" (1, 2, 3, 7, 14, 30, dst), hitung dari X hari yang lalu hingga hari ini
 - Untuk "X minggu terakhir" (1, 2, 3, 4, dst), hitung dari X minggu yang lalu hingga hari ini
 - Untuk "X hari pertama bulan ini" (1, 2, 3, 5, 7, 10, dst), hitung dari tanggal 1 hingga X bulan ini
@@ -62,11 +63,12 @@ ATURAN PENTING:
 - Jika user bertanya perbandingan (vs), berikan rentang yang mencakup kedua periode
 
 CONTOH BERDASARKAN TANGGAL SAAT INI (${todayWita}):
-- "2 bulan terakhir" → start: "2024-11-01", end: "${todayWita}", type: "monthly"
-- "3 hari terakhir" → start: "2024-12-29", end: "${todayWita}", type: "daily"
-- "5 hari pertama bulan ini" → start: "2024-12-01", end: "2024-12-05", type: "daily"
-- "bulan ini vs bulan lalu" → start: "2024-11-01", end: "${todayWita}", type: "monthly"
-- "6 bulan terakhir" → start: "2024-07-01", end: "${todayWita}", type: "monthly"
+- "2 bulan terakhir" → start: "2025-07-01", end: "${todayWita}", type: "monthly"
+- "3 bulan terakhir" → start: "2025-06-01", end: "${todayWita}", type: "monthly"
+- "6 bulan terakhir" → start: "2025-03-01", end: "${todayWita}", type: "monthly"
+- "3 hari terakhir" → start: "2025-09-04", end: "${todayWita}", type: "daily"
+- "5 hari pertama bulan ini" → start: "2025-09-01", end: "2025-09-05", type: "daily"
+- "bulan ini vs bulan lalu" → start: "2025-08-01", end: "${todayWita}", type: "monthly"
 
 FORMAT JAWABAN (JSON):
 {
