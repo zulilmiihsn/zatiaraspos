@@ -816,12 +816,9 @@
 		<!-- LOADING BLUR: Elegant loading dengan blur effect -->
 		{#if isLoadingReport}
 			<div class="fixed inset-0 z-40 pointer-events-none">
-				<!-- Blur overlay untuk page laporan -->
-				<div class="absolute inset-0 bg-white bg-opacity-20 backdrop-blur-sm"></div>
-				
-				<!-- Loading indicator di tengah -->
+				<!-- Loading indicator di tengah tanpa background overlay -->
 				<div class="absolute inset-0 flex items-center justify-center">
-					<div class="bg-white/90 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20">
+					<div class="bg-white/95 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/30">
 						<div class="text-center">
 							<!-- Elegant Spinner -->
 							<div class="flex justify-center mb-4">
