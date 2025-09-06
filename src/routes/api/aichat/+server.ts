@@ -447,20 +447,32 @@ export const POST: RequestHandler = async ({ request }) => {
 			}))
 		];
 
-		// Hitung data periode yang diminta
+		// Hitung data periode yang diminta - SAMA PERSIS dengan dataService
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
 		const totalPemasukan = pemasukan.reduce(
-			(s: number, t: any) => s + (t.amount || t.nominal || 0),
+			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
 		const totalPengeluaran = pengeluaran.reduce(
-			(s: number, t: any) => s + (t.amount || t.nominal || 0),
+			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
+
+		// Debug: Log perhitungan untuk membandingkan dengan laporan
+		console.log('=== AI CALCULATION DEBUG ===');
+		console.log('📊 Total records processed:', laporan.length);
+		console.log('📊 Pemasukan records:', pemasukan.length);
+		console.log('📊 Pengeluaran records:', pengeluaran.length);
+		console.log('💰 Total Pemasukan:', totalPemasukan);
+		console.log('💰 Total Pengeluaran:', totalPengeluaran);
+		console.log('💰 Laba Kotor:', labaKotor);
+		console.log('💰 Pajak:', pajak);
+		console.log('💰 Laba Bersih:', labaBersih);
+		console.log('=== END AI CALCULATION DEBUG ===');
 
 
 		// Hitung data per bulan untuk periode yang diminta (untuk analisis detail)
@@ -490,7 +502,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				};
 			}
 			
-			const amount = item.amount || item.nominal || 0;
+			const amount = item.nominal || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
