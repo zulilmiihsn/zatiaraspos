@@ -12,15 +12,10 @@ import {
 } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
-// DEPRECATED: Gunakan getTodayWita() dari dateTime utils
-function getTodayWitaStr() {
-	console.warn('getTodayWitaStr is deprecated. Use getTodayWita() from dateTime utils instead.');
-	return getTodayWita();
-}
 
 // Fungsi cache harian untuk rata-rata transaksi/hari
 async function getAvgTransaksiHarian(supabase: any): Promise<number> {
-	const todayStr = getTodayWitaStr();
+	const todayStr = getTodayWita();
 	const cacheKey = `avg_transaksi_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
@@ -73,7 +68,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 
 // Fungsi cache harian untuk jam paling ramai
 async function getJamRamaiHarian(supabase: any): Promise<string> {
-	const todayStr = getTodayWitaStr();
+	const todayStr = getTodayWita();
 	const cacheKey = `jam_ramai_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
