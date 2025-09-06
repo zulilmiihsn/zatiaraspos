@@ -1712,24 +1712,52 @@
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="harian-date"
 									>Pilih Tanggal</label
 								>
-								<input
+								<button
 									id="harian-date"
-									type="date"
-									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
-									bind:value={startDate}
-								/>
+									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+									onclick={() => (showDatePicker = true)}
+								>
+									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal'}</span>
+									<svg
+										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+										/>
+									</svg>
+								</button>
 							</div>
 						{:else if filterType === 'mingguan'}
 							<div class="mb-6">
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="mingguan-date"
 									>Pilih Tanggal Awal Minggu</label
 								>
-								<input
+								<button
 									id="mingguan-date"
-									type="date"
-									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
-									bind:value={startDate}
-								/>
+									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+									onclick={() => (showDatePicker = true)}
+								>
+									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal minggu'}</span>
+									<svg
+										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+										/>
+									</svg>
+								</button>
 							</div>
 						{:else if filterType === 'bulanan'}
 							<div class="mb-6">
@@ -1823,12 +1851,35 @@
 							<label class="mb-2 block text-sm font-medium text-gray-700" for="date-picker-start"
 								>Tanggal Awal</label
 							>
-							<input
+							<button
 								id="date-picker-start"
-								type="date"
-								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
-								bind:value={startDate}
-							/>
+								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+								onclick={() => {
+									// Trigger native date picker
+									const input = document.createElement('input');
+									input.type = 'date';
+									input.value = startDate;
+									input.onchange = (e) => {
+										startDate = (e.target as HTMLInputElement).value;
+									};
+									input.click();
+								}}
+							>
+								<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal'}</span>
+								<svg
+									class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+									/>
+								</svg>
+							</button>
 						</div>
 
 						<div class="flex gap-3">
@@ -1882,12 +1933,35 @@
 							<label class="mb-2 block text-sm font-medium text-gray-700" for="date-picker-end"
 								>Tanggal Akhir</label
 							>
-							<input
+							<button
 								id="date-picker-end"
-								type="date"
-								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
-								bind:value={endDate}
-							/>
+								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
+								onclick={() => {
+									// Trigger native date picker
+									const input = document.createElement('input');
+									input.type = 'date';
+									input.value = endDate;
+									input.onchange = (e) => {
+										endDate = (e.target as HTMLInputElement).value;
+									};
+									input.click();
+								}}
+							>
+								<span class="text-gray-700">{endDate ? formatDate(endDate, true) : 'Pilih tanggal akhir'}</span>
+								<svg
+									class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+									/>
+								</svg>
+							</button>
 						</div>
 
 						<div class="flex gap-3">
