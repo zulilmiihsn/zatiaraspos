@@ -135,20 +135,33 @@
 	// Tambahkan deklarasi function loadLaporanData
 	async function loadLaporanData() {
 		try {
+			// LOADING STATE: Mulai loading
+			isLoadingReport = true;
+			loadingProgress = 0;
+			loadingMessage = 'Memuat data...';
+
 			// Pastikan startDate dan endDate sudah ada
 			if (!startDate || !endDate) {
 				startDate = startDate || getLocalDateStringWITA();
 				endDate = endDate || startDate;
 			}
 
-			// Force clear cache untuk memastikan data terbaru
+			// LOADING PROGRESS: 20% - Clear cache
+			loadingProgress = 20;
+			loadingMessage = 'Menyiapkan data...';
 			await dataService.clearAllCaches();
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
 			
-			
+			// LOADING PROGRESS: 40% - Fetch data
+			loadingProgress = 40;
+			loadingMessage = 'Mengambil data laporan...';
 			const reportData = await dataService.getReportData(dateRange, 'daily');
+
+			// LOADING PROGRESS: 70% - Process data
+			loadingProgress = 70;
+			loadingMessage = 'Memproses data...';
 
 			// Apply report data with null checks
 			summary = (reportData as any)?.summary || {
@@ -165,9 +178,20 @@
 			bebanLain = (reportData as any)?.bebanLain || [];
 			laporan = (reportData as any)?.transactions || [];
 
+			// LOADING PROGRESS: 100% - Complete
+			loadingProgress = 100;
+			loadingMessage = 'Selesai!';
+
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			toastManager.showToastNotification('Gagal memuat data laporan', 'error');
+		} finally {
+			// LOADING STATE: Selesai loading
+			setTimeout(() => {
+				isLoadingReport = false;
+				loadingProgress = 0;
+				loadingMessage = 'Memuat data...';
+			}, 500); // Delay kecil untuk smooth transition
 		}
 	}
 
@@ -333,6 +357,11 @@
 	let showFilter = false;
 	let showDatePicker = false;
 	let showEndDatePicker = false;
+	
+	// LOADING STATES: Untuk better UX
+	let isLoadingReport = false;
+	let loadingProgress = 0;
+	let loadingMessage = 'Memuat data...';
 	let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
 	
 	let filterDate = getLocalDateStringWITA();
@@ -784,6 +813,32 @@
 		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
+		<!-- LOADING OVERLAY: Progress indicator -->
+		{#if isLoadingReport}
+			<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+				<div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+					<div class="text-center">
+						<!-- Spinner -->
+						<div class="flex justify-center mb-4">
+							<div class="animate-spin rounded-full h-12 w-12 border-4 border-pink-200 border-t-pink-500"></div>
+						</div>
+						
+						<!-- Progress Bar -->
+						<div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+							<div 
+								class="bg-pink-500 h-2 rounded-full transition-all duration-300 ease-out"
+								style="width: {loadingProgress}%"
+							></div>
+						</div>
+						
+						<!-- Loading Message -->
+						<p class="text-gray-700 font-medium">{loadingMessage}</p>
+						<p class="text-sm text-gray-500 mt-1">{loadingProgress}%</p>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
 			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10"
@@ -881,9 +936,13 @@
 								Pemasukan
 							</div>
 							<div class="text-xl font-bold text-green-900 md:text-center md:text-2xl lg:text-lg">
-								Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
-									? summary.pendapatan.toLocaleString('id-ID')
-									: '--'}
+								{#if isLoadingReport}
+									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+								{:else}
+									Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
+										? summary.pendapatan.toLocaleString('id-ID')
+										: '--'}
+								{/if}
 							</div>
 						</div>
 						<div
@@ -909,9 +968,13 @@
 								Pengeluaran
 							</div>
 							<div class="text-xl font-bold text-red-900 md:text-center md:text-2xl lg:text-lg">
-								Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
-									? summary.pengeluaran.toLocaleString('id-ID')
-									: '--'}
+								{#if isLoadingReport}
+									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+								{:else}
+									Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
+										? summary.pengeluaran.toLocaleString('id-ID')
+										: '--'}
+								{/if}
 							</div>
 						</div>
 						<div
@@ -937,9 +1000,13 @@
 								Laba (Rugi)
 							</div>
 							<div class="text-xl font-bold text-cyan-900 md:text-center md:text-2xl lg:text-lg">
-								Rp {summary?.saldo !== null && summary?.saldo !== undefined
-									? summary.saldo.toLocaleString('id-ID')
-									: '--'}
+								{#if isLoadingReport}
+									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+								{:else}
+									Rp {summary?.saldo !== null && summary?.saldo !== undefined
+										? summary.saldo.toLocaleString('id-ID')
+										: '--'}
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -1031,6 +1098,14 @@
 												Tidak ada data
 											</li>
 										{/if}
+									{#if isLoadingReport}
+										{#each Array(3) as _}
+											<li class="flex justify-between text-sm text-gray-600 md:text-base">
+												<div class="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+												<div class="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+											</li>
+										{/each}
+									{:else}
 										{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 											<li class="flex justify-between text-sm text-gray-600 md:text-base">
 												<span
@@ -1048,6 +1123,7 @@
 												>
 											</li>
 										{/each}
+									{/if}
 									</ul>
 									<div
 										class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm"
