@@ -23,11 +23,16 @@ function toYMDWita(date: Date): string {
 }
 
 
-// AI 1: Date Range Identifier
-async function identifyDateRange(question: string, apiKey: string): Promise<{
-	start: string;
-	end: string;
-	type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+// AI 1: Data Requirement Analyzer
+async function identifyDataRequirements(question: string, apiKey: string): Promise<{
+	periode: {
+		start: string;
+		end: string;
+		type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+	};
+	jenisData: string[];
+	prioritas: string;
+	scope: string;
 	reasoning: string;
 }> {
 	// Hitung tanggal saat ini dalam WITA
@@ -36,17 +41,46 @@ async function identifyDateRange(question: string, apiKey: string): Promise<{
 	
 	const systemMessage: ChatMessage = {
 		role: 'system',
-		content: `Anda adalah AI yang bertugas mengidentifikasi rentang tanggal dari pertanyaan user untuk analisis laporan bisnis.
+		content: `Anda adalah AI yang bertugas mengidentifikasi kebutuhan data dari pertanyaan user untuk analisis laporan bisnis.
 
 TANGGAL SAAT INI: ${todayWita} (WITA)
 
 TUGAS ANDA:
-1. Analisis pertanyaan user dan tentukan rentang tanggal yang diperlukan
-2. Berikan format tanggal YYYY-MM-DD untuk start dan end
-3. Tentukan tipe periode (daily, weekly, monthly, yearly)
-4. Berikan reasoning singkat mengapa rentang tersebut dipilih
+1. Analisis pertanyaan user dan tentukan RENTANG TANGGAL yang diperlukan
+2. Identifikasi JENIS DATA yang dibutuhkan user
+3. Tentukan PRIORITAS analisis yang diperlukan
+4. Tentukan SCOPE analisis yang tepat
+5. Berikan reasoning singkat mengapa pilihan tersebut dipilih
 
-ATURAN PENTING:
+JENIS DATA YANG TERSEDIA:
+- buku_kas: Data transaksi keuangan (pendapatan, pengeluaran)
+- transaksi_kasir: Detail transaksi per item dengan nama produk
+- produk: Master data produk (nama, harga, kategori)
+- kategori: Master data kategori produk
+- daily_trends: Analisis tren harian dan performa
+- payment_analysis: Analisis metode pembayaran (tunai, QRIS)
+- product_performance: Performa produk (terlaris, revenue)
+- financial_summary: Ringkasan keuangan (laba, pajak, dll)
+- customer_behavior: Perilaku customer dan preferensi
+- seasonal_analysis: Analisis musiman dan tren
+
+PRIORITAS ANALISIS:
+- product_analysis: Fokus pada analisis produk
+- sales_analysis: Fokus pada analisis penjualan
+- financial_analysis: Fokus pada analisis keuangan
+- trend_analysis: Fokus pada analisis tren
+- operational_analysis: Fokus pada analisis operasional
+- customer_analysis: Fokus pada analisis customer
+
+SCOPE ANALISIS:
+- product_performance: Performa produk dan penjualan
+- trend_analysis: Analisis tren dan perubahan
+- revenue_analysis: Analisis pendapatan dan keuangan
+- customer_insights: Insight customer dan behavior
+- operational_efficiency: Efisiensi operasional
+- market_analysis: Analisis pasar dan kompetitif
+
+ATURAN TANGGAL:
 - Gunakan tanggal Indonesia (WITA)
 - Tanggal saat ini: ${todayWita}
 - Untuk "X bulan terakhir" (1, 2, 3, 4, 5, 6, dst), hitung dari AWAL BULAN X bulan yang lalu hingga hari ini
@@ -62,21 +96,24 @@ ATURAN PENTING:
 - PASTIKAN rentang tanggal mencakup SEMUA data yang diminta user
 - Jika user bertanya perbandingan (vs), berikan rentang yang mencakup kedua periode
 
-CONTOH BERDASARKAN TANGGAL SAAT INI (${todayWita}):
-- "2 bulan terakhir" → start: "2025-07-01", end: "${todayWita}", type: "monthly"
-- "3 bulan terakhir" → start: "2025-06-01", end: "${todayWita}", type: "monthly"
-- "6 bulan terakhir" → start: "2025-03-01", end: "${todayWita}", type: "monthly"
-- "3 hari terakhir" → start: "2025-09-04", end: "${todayWita}", type: "daily"
-- "5 hari pertama bulan ini" → start: "2025-09-01", end: "2025-09-05", type: "daily"
-- "bulan ini vs bulan lalu" → start: "2025-08-01", end: "${todayWita}", type: "monthly"
-
-FORMAT JAWABAN (JSON):
+CONTOH OUTPUT:
 {
-  "start": "YYYY-MM-DD",
-  "end": "YYYY-MM-DD", 
-  "type": "daily|weekly|monthly|yearly",
-  "reasoning": "Penjelasan singkat mengapa rentang ini dipilih"
+  "periode": {
+    "start": "2025-09-01",
+    "end": "2025-09-07",
+    "type": "daily"
+  },
+  "jenisData": ["produk_terlaris", "transaksi_kasir"],
+  "prioritas": "product_analysis",
+  "scope": "product_performance",
+  "reasoning": "User bertanya tentang produk terlaris, jadi fokus pada data produk dan transaksi"
 }
+
+CONTOH BERDASARKAN TANGGAL SAAT INI (${todayWita}):
+- "Produk apa yang paling laris?" → periode: "2025-09-01 to ${todayWita}", jenisData: ["produk_terlaris", "transaksi_kasir"], prioritas: "product_analysis", scope: "product_performance"
+- "Bagaimana tren penjualan 2 bulan terakhir?" → periode: "2025-07-01 to ${todayWita}", jenisData: ["buku_kas", "daily_trends"], prioritas: "trend_analysis", scope: "trend_analysis"
+- "Berapa pendapatan hari ini?" → periode: "${todayWita} to ${todayWita}", jenisData: ["buku_kas"], prioritas: "financial_analysis", scope: "revenue_analysis"
+- "Metode pembayaran apa yang paling banyak digunakan?" → periode: "2025-09-01 to ${todayWita}", jenisData: ["buku_kas", "payment_analysis"], prioritas: "operational_analysis", scope: "operational_efficiency"
 
 Pertanyaan user: "${question}"`
 	};
@@ -87,7 +124,7 @@ Pertanyaan user: "${question}"`
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
 			'HTTP-Referer': 'https://zatiaraspos.com',
-			'X-Title': 'Zatiaras POS - Date Range Identifier'
+			'X-Title': 'Zatiaras POS - Data Requirement Analyzer'
 		},
 		body: JSON.stringify({
 			model: MODEL,
@@ -117,17 +154,22 @@ Pertanyaan user: "${question}"`
 		const parsed = JSON.parse(cleanContent);
 		console.log('AI 1 JSON Parse Success:', parsed);
 		return {
-			start: parsed.start || new Date().toISOString().split('T')[0],
-			end: parsed.end || new Date().toISOString().split('T')[0],
-			type: parsed.type || 'daily',
-			reasoning: parsed.reasoning || 'Rentang tanggal diidentifikasi'
+			periode: {
+				start: parsed.periode?.start || parsed.start || new Date().toISOString().split('T')[0],
+				end: parsed.periode?.end || parsed.end || new Date().toISOString().split('T')[0],
+				type: parsed.periode?.type || parsed.type || 'daily'
+			},
+			jenisData: parsed.jenisData || [],
+			prioritas: parsed.prioritas || 'general_analysis',
+			scope: parsed.scope || 'general_analysis',
+			reasoning: parsed.reasoning || 'Kebutuhan data diidentifikasi berdasarkan pertanyaan user'
 		};
 	} catch (error) {
 		console.error('AI 1 JSON Parse Error:', error);
 		console.error('Raw AI 1 response:', content);
 		console.error('Cleaned content:', content.trim().replace(/^```json\s*/, '').replace(/\s*```$/, ''));
 		// Tidak ada fallback, langsung error
-		throw new Error(`AI 1 gagal mengidentifikasi rentang tanggal: ${error}`);
+		throw new Error(`AI 1 gagal mengidentifikasi kebutuhan data: ${error}`);
 	}
 }
 
@@ -152,6 +194,11 @@ RENTANG TANGGAL YANG DIANALISIS:
 - Tipe: ${dateRange.type}
 - Reasoning: ${dateRange.reasoning}
 
+KEBUTUHAN DATA YANG DIPERLUKAN:
+- Jenis Data: ${dateRange.dataRequirements?.jenisData?.join(', ') || 'semua data'}
+- Prioritas: ${dateRange.dataRequirements?.prioritas || 'general_analysis'}
+- Scope: ${dateRange.dataRequirements?.scope || 'general_analysis'}
+
 ATURAN ANALISIS:
 1) Jawab SELALU dalam Bahasa Indonesia yang profesional namun ramah.
 2) Berikan jawaban LENGKAP dan DETAIL sesuai data, jangan disingkat, kecuali diminta singkat.
@@ -161,6 +208,13 @@ ATURAN ANALISIS:
 6) Jika diminta perbandingan (bulan A vs bulan B, dll), WAJIB gunakan data yang tersedia dalam periode.
 7) Jika data terbatas/tidak ada, nyatakan keterbatasannya dan sebutkan data tambahan yang diperlukan.
 8) Hindari klaim tanpa dukungan data pada konteks yang diberikan.
+
+FOKUS ANALISIS BERDASARKAN KEBUTUHAN DATA:
+- Prioritas: ${dateRange.dataRequirements?.prioritas || 'general_analysis'}
+- Scope: ${dateRange.dataRequirements?.scope || 'general_analysis'}
+- Jenis Data: ${dateRange.dataRequirements?.jenisData?.join(', ') || 'semua data'}
+
+PENTING: Sesuaikan analisis Anda dengan prioritas dan scope yang ditentukan. Jika prioritas adalah "product_analysis", fokus pada analisis produk. Jika scope adalah "trend_analysis", fokus pada analisis tren dan perubahan.
 
 PENTING - KONTEKS TANGGAL:
 - Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
@@ -259,18 +313,19 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// AI 1: Identifikasi rentang tanggal
-		console.log('=== AI 1: DATE RANGE IDENTIFICATION ===');
+		// AI 1: Identifikasi kebutuhan data
+		console.log('=== AI 1: DATA REQUIREMENT ANALYSIS ===');
 		console.log('Question:', question);
 		console.log('Current date (WITA):', toYMDWita(new Date()));
 		
-		const dateRange = await identifyDateRange(question, apiKey);
+		const dataRequirements = await identifyDataRequirements(question, apiKey);
 		
 		console.log('=== AI 1 RESULT ===');
-		console.log('✅ Start Date:', dateRange.start);
-		console.log('✅ End Date:', dateRange.end);
-		console.log('✅ Type:', dateRange.type);
-		console.log('✅ Reasoning:', dateRange.reasoning);
+		console.log('✅ Periode:', dataRequirements.periode);
+		console.log('✅ Jenis Data:', dataRequirements.jenisData);
+		console.log('✅ Prioritas:', dataRequirements.prioritas);
+		console.log('✅ Scope:', dataRequirements.scope);
+		console.log('✅ Reasoning:', dataRequirements.reasoning);
 		console.log('=== END AI 1 RESULT ===');
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
@@ -278,11 +333,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database
-		const { startWita, endWita } = witaRangeToWitaQuery(dateRange.start, dateRange.end);
+		const { startWita, endWita } = witaRangeToWitaQuery(dataRequirements.periode.start, dataRequirements.periode.end);
 		const startDate = startWita;
 		const endDate = endWita;
 		console.log('Query date range - start:', startDate, 'end:', endDate);
-		console.log('Original date range from AI 1 - start:', dateRange.start, 'end:', dateRange.end);
+		console.log('Original date range from AI 1 - start:', dataRequirements.periode.start, 'end:', dataRequirements.periode.end);
+		console.log('Data requirements - jenisData:', dataRequirements.jenisData, 'prioritas:', dataRequirements.prioritas, 'scope:', dataRequirements.scope);
 		console.log('Timezone conversion - WITA format');
 
 		// Konversi tanggal untuk konteks AI
@@ -300,11 +356,16 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const rangeContext = {
 			requested: {
-				start: dateRange.start,
-				end: dateRange.end,
-				startFormatted: formatDateForAI(dateRange.start),
-				endFormatted: formatDateForAI(dateRange.end),
-				type: dateRange.type
+				start: dataRequirements.periode.start,
+				end: dataRequirements.periode.end,
+				startFormatted: formatDateForAI(dataRequirements.periode.start),
+				endFormatted: formatDateForAI(dataRequirements.periode.end),
+				type: dataRequirements.periode.type
+			},
+			dataRequirements: {
+				jenisData: dataRequirements.jenisData,
+				prioritas: dataRequirements.prioritas,
+				scope: dataRequirements.scope
 			}
 		};
 
@@ -481,7 +542,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				JSON.stringify({
 					success: false,
 					error: 'Tidak ada data ditemukan untuk periode yang diminta',
-					dateRange: `${dateRange.start} hingga ${dateRange.end}`,
+					dateRange: `${dataRequirements.periode.start} hingga ${dataRequirements.periode.end}`,
+					dataRequirements: {
+						jenisData: dataRequirements.jenisData,
+						prioritas: dataRequirements.prioritas,
+						scope: dataRequirements.scope
+					},
 					suggestion: 'Coba gunakan periode yang lebih pendek atau periksa apakah ada data transaksi dalam rentang waktu tersebut'
 				}),
 				{
@@ -758,9 +824,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Sederhanakan konteks server
 		const serverReportData = {
 			summary,
-			startDate: dateRange.start,
-			endDate: dateRange.end,
-			tipe: dateRange.type,
+			startDate: dataRequirements.periode.start,
+			endDate: dataRequirements.periode.end,
+			tipe: dataRequirements.periode.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
 			products: (products || []).map((p: any) => ({ id: p.id, name: p.name, price: p.price })),
@@ -786,6 +852,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					transactions: worstDay.count,
 					avgTicket: Math.round(worstDay.avgTicket)
 				} : null
+			},
+			// Data requirements untuk konteks AI
+			dataRequirements: {
+				jenisData: dataRequirements.jenisData,
+				prioritas: dataRequirements.prioritas,
+				scope: dataRequirements.scope
 			}
 		};
 
@@ -797,6 +869,11 @@ PERIODE YANG DIMINTA USER:
 - Rentang: ${rangeContext.requested.startFormatted} s.d. ${rangeContext.requested.endFormatted}
 - Format: ${rangeContext.requested.start} s.d. ${rangeContext.requested.end}
 - Tipe: ${rangeContext.requested.type}
+
+=== KEBUTUHAN DATA YANG DIPERLUKAN ===
+- Jenis Data: ${rangeContext.dataRequirements?.jenisData?.join(', ') || 'semua data'}
+- Prioritas: ${rangeContext.dataRequirements?.prioritas || 'general_analysis'}
+- Scope: ${rangeContext.dataRequirements?.scope || 'general_analysis'}
 
 === DATA LAPORAN PERIODE YANG DIMINTA (SUDAH DIFETCH SESUAI KONTEKS) ===
 Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
@@ -887,7 +964,10 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 		console.log('Data summary:', {
 			pendapatan: serverReportData?.summary?.pendapatan,
 			totalTransaksi: serverReportData?.summary?.totalTransaksi,
-			dateRange: `${dateRange.start} to ${dateRange.end}`
+			dateRange: `${dataRequirements.periode.start} to ${dataRequirements.periode.end}`,
+			jenisData: dataRequirements.jenisData,
+			prioritas: dataRequirements.prioritas,
+			scope: dataRequirements.scope
 		});
 		const answer = await analyzeBusinessData(question, reportContext, rangeContext, apiKey);
 		console.log('AI 2 Result: Analysis completed');
@@ -896,9 +976,14 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 			success: true,
 			answer: answer.trim(),
 			dateRange: {
-				start: dateRange.start,
-				end: dateRange.end,
-				reasoning: dateRange.reasoning
+				start: dataRequirements.periode.start,
+				end: dataRequirements.periode.end,
+				reasoning: dataRequirements.reasoning
+			},
+			dataRequirements: {
+				jenisData: dataRequirements.jenisData,
+				prioritas: dataRequirements.prioritas,
+				scope: dataRequirements.scope
 			}
 		});
 	} catch (error) {
