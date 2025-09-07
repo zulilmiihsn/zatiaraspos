@@ -451,28 +451,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Data periode yang diminta - gunakan logika yang sama dengan DataService
 		const laporan: any[] = [];
 		
-		// 1. Tambahkan data POS (sumber: 'pos')
+		// 1. Tambahkan data POS dari buku_kas (sumber='pos')
 		(bukuKasPos || []).forEach((item: any) => {
 			laporan.push({
 				...item,
 				sumber: 'pos',
-				nominal: item.amount || 0
+				nominal: item.amount || 0  // Map amount ke nominal seperti DataService
 			});
 		});
 		
-		// 2. Tambahkan data manual/catat (sumber: 'catat' atau lainnya)
+		// 2. Tambahkan data manual/catat
 		(bukuKasManual || []).forEach((item: any) => {
 			laporan.push({
 				...item,
 				sumber: item.sumber || 'catat',
-				nominal: item.amount || 0
+				nominal: item.amount || 0  // Map amount ke nominal seperti DataService
 			});
 		});
-		
-		console.log('=== DATA SOURCES ===');
-		console.log('POS data count:', bukuKasPos?.length || 0);
-		console.log('Manual data count:', bukuKasManual?.length || 0);
-		console.log('Total laporan count:', laporan.length);
 
 		// Hitung data periode yang diminta
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
@@ -534,7 +529,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				};
 			}
 			
-			const amount = item.nominal || item.amount || 0;
+			const amount = item.nominal || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
