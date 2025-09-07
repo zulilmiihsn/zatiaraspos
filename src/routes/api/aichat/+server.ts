@@ -448,17 +448,31 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// Data periode yang diminta
-		const laporan = [
-			...(bukuKasPos || []).map((item: any) => ({
+		// Data periode yang diminta - gunakan logika yang sama dengan DataService
+		const laporan: any[] = [];
+		
+		// 1. Tambahkan data POS (sumber: 'pos')
+		(bukuKasPos || []).forEach((item: any) => {
+			laporan.push({
 				...item,
-				sumber: 'pos'
-			})),
-			...(bukuKasManual || []).map((item: any) => ({
+				sumber: 'pos',
+				nominal: item.amount || 0
+			});
+		});
+		
+		// 2. Tambahkan data manual/catat (sumber: 'catat' atau lainnya)
+		(bukuKasManual || []).forEach((item: any) => {
+			laporan.push({
 				...item,
-				sumber: item.sumber || 'catat'
-			}))
-		];
+				sumber: item.sumber || 'catat',
+				nominal: item.amount || 0
+			});
+		});
+		
+		console.log('=== DATA SOURCES ===');
+		console.log('POS data count:', bukuKasPos?.length || 0);
+		console.log('Manual data count:', bukuKasManual?.length || 0);
+		console.log('Total laporan count:', laporan.length);
 
 		// Hitung data periode yang diminta
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
@@ -478,11 +492,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		})));
 		
 		const totalPemasukan = pemasukan.reduce(
-			(s: number, t: any) => s + (t.nominal || t.amount || 0),
+			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
 		const totalPengeluaran = pengeluaran.reduce(
-			(s: number, t: any) => s + (t.nominal || t.amount || 0),
+			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
 		
