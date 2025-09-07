@@ -482,8 +482,8 @@ export class DataService {
 			// PARALLEL PAGINATION: Ambil posBukuKas secara parallel
 			const posBukuKas = await this.fetchAllDataParallel(
 				'buku_kas',
-				startDate + 'T00:00:00',
-				endDate + 'T23:59:59',
+				startUtc,  // Gunakan UTC yang sudah dikonversi
+				endUtcFinal,  // Gunakan UTC yang sudah dikonversi
 				{ sumber: 'pos' }
 			);
 				
@@ -535,8 +535,8 @@ export class DataService {
 			// PARALLEL PAGINATION: Ambil manualItems secara parallel
 			const manualItems = await this.fetchAllDataParallel(
 				'buku_kas',
-				startDate + 'T00:00:00',
-				endDate + 'T23:59:59',
+				startUtc,  // Gunakan UTC yang sudah dikonversi
+				endUtcFinal,  // Gunakan UTC yang sudah dikonversi
 				{ sumber: { neq: 'pos' } }
 			);
 
@@ -544,8 +544,8 @@ export class DataService {
 			// PARALLEL PAGINATION: Ambil semua data secara parallel
 			const allBukuKas = await this.fetchAllDataParallel(
 				'buku_kas',
-				startDate + 'T00:00:00',
-				endDate + 'T23:59:59'
+				startUtc,  // Gunakan UTC yang sudah dikonversi
+				endUtcFinal  // Gunakan UTC yang sudah dikonversi
 			);
 			
 
