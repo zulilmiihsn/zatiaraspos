@@ -425,6 +425,33 @@ export const POST: RequestHandler = async ({ request }) => {
 			fetchAllData('buku_kas', { excludeSumber: 'pos' })
 		]);
 
+		// Ambil data transaksi_kasir dengan relasi produk untuk data POS
+		console.log('=== FETCHING TRANSAKSI_KASIR WITH PRODUCTS ===');
+		let transaksiKasirData: any[] = [];
+		if (bukuKasPos && bukuKasPos.length > 0) {
+			// Ambil buku_kas_id dari data POS
+			const bukuKasIds = bukuKasPos.map((item: any) => item.id).filter(Boolean);
+			console.log('Buku kas IDs for transaksi_kasir:', bukuKasIds.length);
+			
+			if (bukuKasIds.length > 0) {
+				try {
+					const { data: transaksiKasir, error: errorTransaksiKasir } = await supabase
+						.from('transaksi_kasir')
+						.select('*, produk(name)')
+						.in('buku_kas_id', bukuKasIds);
+					
+					if (errorTransaksiKasir) {
+						console.error('Error fetching transaksi_kasir:', errorTransaksiKasir);
+					} else {
+						transaksiKasirData = transaksiKasir || [];
+						console.log('Transaksi kasir fetched:', transaksiKasirData.length);
+					}
+				} catch (error) {
+					console.error('Error in transaksi_kasir query:', error);
+				}
+			}
+		}
+
 		console.log('=== DATABASE QUERY RESULTS ===');
 		console.log('📊 bukuKasPos count:', bukuKasPos?.length || 0);
 		console.log('📊 bukuKasManual count:', bukuKasManual?.length || 0);
@@ -549,25 +576,29 @@ export const POST: RequestHandler = async ({ request }) => {
 			requestedMonthlyData[monthKey].paymentMethods[pm].jumlah += 1;
 			requestedMonthlyData[monthKey].paymentMethods[pm].nominal += amount;
 
-			// Hitung produk terlaris per bulan
-			if (item.sumber === 'pos' && (item as any)?.transaksi_kasir) {
-				for (const it of (item as any).transaksi_kasir) {
-					const pid = (it as any)?.produk_id;
-					if (!pid) continue;
-					const qty = Number((it as any)?.qty || 0) || 0;
-					const unit = Number((it as any)?.price || (it as any)?.amount || 0) || 0;
-					const revenue = unit * (qty || 1);
-					const productName = (it as any)?.produk?.name || (it as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
-					
-					if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
-						requestedMonthlyData[monthKey].produkTerlaris[pid] = { qty: 0, revenue: 0, name: productName };
-					}
-					requestedMonthlyData[monthKey].produkTerlaris[pid].qty += qty || 0;
-					requestedMonthlyData[monthKey].produkTerlaris[pid].revenue += revenue;
-				}
-			}
+			// Hitung produk terlaris per bulan - akan dihitung terpisah menggunakan transaksiKasirData
 		}
 
+		// Hitung produk terlaris per bulan menggunakan data transaksi_kasir
+		for (const item of transaksiKasirData || []) {
+			const date = new Date(item.created_at || item.waktu);
+			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+			
+			if (requestedMonthlyData[monthKey]) {
+				const pid = (item as any)?.produk_id;
+				if (!pid) continue;
+				const qty = Number((item as any)?.qty || 0) || 0;
+				const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
+				const revenue = unit * (qty || 1);
+				const productName = (item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+				
+				if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
+					requestedMonthlyData[monthKey].produkTerlaris[pid] = { qty: 0, revenue: 0, name: productName };
+				}
+				requestedMonthlyData[monthKey].produkTerlaris[pid].qty += qty || 0;
+				requestedMonthlyData[monthKey].produkTerlaris[pid].revenue += revenue;
+			}
+		}
 
 		// Format data per bulan untuk AI
 		const formattedRequestedMonthlyData = Object.entries(requestedMonthlyData)
@@ -635,24 +666,21 @@ export const POST: RequestHandler = async ({ request }) => {
 			supabase.from('tambahan').select('id, name, price').limit(1000)
 		]);
 
-		// Hitung produk terlaris berdasarkan transaksi_kasir yang terkait buku_kas POS
+		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil
 		const productIdToSale: Record<string, { qty: number; revenue: number; name?: string }> = {};
-		for (const row of bukuKasPos || []) {
-			const items = (row as any)?.transaksi_kasir || [];
-			for (const it of items) {
-				const pid = (it as any)?.produk_id;
-				if (!pid) continue;
-				const qty = Number((it as any)?.qty || 0) || 0;
-				const unit = Number((it as any)?.price || (it as any)?.amount || 0) || 0;
-				const revenue = unit * (qty || 1);
-				// Ambil nama dari relasi produk atau custom_name
-				const productName =
-					(it as any)?.produk?.name || (it as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
-				if (!productIdToSale[pid]) productIdToSale[pid] = { qty: 0, revenue: 0, name: productName };
-				productIdToSale[pid].qty += qty || 0;
-				productIdToSale[pid].revenue += revenue;
-				if (!productIdToSale[pid].name) productIdToSale[pid].name = productName;
-			}
+		for (const item of transaksiKasirData || []) {
+			const pid = (item as any)?.produk_id;
+			if (!pid) continue;
+			const qty = Number((item as any)?.qty || 0) || 0;
+			const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
+			const revenue = unit * (qty || 1);
+			// Ambil nama dari relasi produk atau custom_name
+			const productName =
+				(item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+			if (!productIdToSale[pid]) productIdToSale[pid] = { qty: 0, revenue: 0, name: productName };
+			productIdToSale[pid].qty += qty || 0;
+			productIdToSale[pid].revenue += revenue;
+			if (!productIdToSale[pid].name) productIdToSale[pid].name = productName;
 		}
 		const produkTerlaris = Object.entries(productIdToSale)
 			.map(([pid, v]) => ({
