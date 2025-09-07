@@ -177,7 +177,6 @@ class CacheManager {
 			this.set(key, data, ttl);
 			return data;
 		} catch (error) {
-			console.warn(`Failed to preload cache for key: ${key}`, error);
 			throw error;
 		}
 	}

@@ -172,14 +172,11 @@ class PerformanceMonitor {
 			const result = await fn();
 			const duration = performance.now() - start;
 
-			if (duration > this.thresholds.renderTimeWarning) {
-				console.warn(`Slow execution detected: ${name} took ${duration.toFixed(2)}ms`);
-			}
+			// Performance monitoring disabled for production
 
 			return result;
 		} catch (error) {
 			const duration = performance.now() - start;
-			console.error(`Error in ${name} after ${duration.toFixed(2)}ms:`, error);
 			throw error;
 		}
 	}
@@ -193,14 +190,11 @@ class PerformanceMonitor {
 			const result = fn();
 			const duration = performance.now() - start;
 
-			if (duration > this.thresholds.renderTimeWarning) {
-				console.warn(`Slow execution detected: ${name} took ${duration.toFixed(2)}ms`);
-			}
+			// Performance monitoring disabled for production
 
 			return result;
 		} catch (error) {
 			const duration = performance.now() - start;
-			console.error(`Error in ${name} after ${duration.toFixed(2)}ms:`, error);
 			throw error;
 		}
 	}
@@ -300,9 +294,7 @@ class PerformanceMonitor {
 			);
 		}
 
-		if (warnings.length > 0) {
-			console.warn('Performance warnings:', warnings);
-		}
+		// Performance warnings disabled for production
 	}
 
 	private notifyObservers(metrics: PerformanceMetrics): void {
@@ -310,7 +302,7 @@ class PerformanceMonitor {
 			try {
 				callback(metrics);
 			} catch (error) {
-				console.error('Error in performance observer:', error);
+				// Silent error handling
 			}
 		});
 	}
@@ -326,9 +318,7 @@ export const performanceUtils = {
 	 */
 	quickCheck: (): void => {
 		const metrics = performanceMonitor.getCurrentMetrics();
-		if (metrics) {
-			console.log(performanceMonitor.generateReport());
-		}
+		// Performance reporting disabled for production
 	},
 
 	/**

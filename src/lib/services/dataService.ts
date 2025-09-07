@@ -2,7 +2,7 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
-import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange, witaRangeToWitaQuery } from '$lib/utils/dateTime';
+import { getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange, witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import {
@@ -165,7 +165,6 @@ export class DataService {
 			.lte('waktu', endUTC)
 			.eq('sumber', 'pos');
 		if (error || errorKasir) {
-			console.error('Error fetching dashboard stats:', error, errorKasir);
 			return {
 				itemTerjual: 0,
 				jumlahTransaksi: 0,
@@ -339,7 +338,6 @@ export class DataService {
 			.select('*')
 			.order('created_at', { ascending: false });
 		if (error) {
-			console.error('Error fetching products:', error);
 			return [];
 		}
 		await idbSet('products', data || []);
@@ -358,7 +356,6 @@ export class DataService {
 			.select('*')
 			.order('created_at', { ascending: false });
 		if (error) {
-			console.error('Error fetching categories:', error);
 			return [];
 		}
 		await idbSet('categories', data || []);
@@ -377,7 +374,6 @@ export class DataService {
 			.select('*')
 			.order('created_at', { ascending: false });
 		if (error) {
-			console.error('Error fetching add-ons:', error);
 			return [];
 		}
 		await idbSet('addons', data || []);
@@ -455,14 +451,6 @@ export class DataService {
 				}
 				
 			} catch (error) {
-				console.error(
-					'Error converting date range to WITA:',
-					error,
-					'startDate:',
-					startDate,
-					'endDate:',
-					endDate
-				);
 				// Fallback to current date if date conversion fails
 				const today = getTodayWita();
 				try {
@@ -470,7 +458,6 @@ export class DataService {
 					startWita = startWitaTemp;
 					endWita = endWitaTemp;
 				} catch (fallbackError) {
-					console.error('Fallback date conversion also failed:', fallbackError);
 					// Use hardcoded fallback
 					startWita = today + 'T00:00:00+08:00';
 					endWita = today + 'T23:59:59+08:00';
@@ -583,8 +570,13 @@ export class DataService {
 			});
 			
 			// Jika masih kurang data, gunakan data buku_kas yang belum terhitung
+			// HINDARI DUPLIKASI: Jangan hitung manualItems yang sudah dihitung
 			const usedBukuKasIds = new Set(posItems.map((item: any) => item.buku_kas?.id).filter(Boolean));
-			const remainingBukuKas = (allBukuKas || []).filter((item: any) => !usedBukuKasIds.has(item.id));
+			const usedManualIds = new Set(manualItems.map((item: any) => item.id).filter(Boolean));
+			const remainingBukuKas = (allBukuKas || []).filter((item: any) => 
+				!usedBukuKasIds.has(item.id) && !usedManualIds.has(item.id)
+			);
+			
 			
 			remainingBukuKas.forEach((item: any) => {
 				laporan.push({
@@ -734,7 +726,6 @@ export class DataService {
 			const { count, error: countError } = await query;
 			
 			if (countError) {
-				console.error('Error getting count:', countError);
 				return [];
 			}
 
@@ -768,7 +759,6 @@ export class DataService {
 
 			return allData;
 		} catch (error) {
-			console.error('Error in fetchAllDataParallel:', error);
 			return [];
 		}
 	}
@@ -808,13 +798,11 @@ export class DataService {
 			const { data, error } = await query;
 			
 			if (error) {
-				console.error(`Error fetching batch ${offset}-${offset + limit - 1}:`, error);
 				return [];
 			}
 
 			return data || [];
 		} catch (error) {
-			console.error(`Error in fetchBatch ${offset}-${offset + limit - 1}:`, error);
 			return [];
 		}
 	}
@@ -925,7 +913,6 @@ export class DataService {
 		// Preload secara parallel
 		const preloadPromises = commonRanges.map(({ type, range }) => 
 			this.getReportData(range, type as any).catch(error => {
-				console.warn(`Preload failed for ${type} ${range}:`, error);
 				return null;
 			})
 		);

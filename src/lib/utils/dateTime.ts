@@ -88,7 +88,6 @@ export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: str
 			endUtc: endUtc.toISOString()
 		};
 	} catch (error) {
-		console.error('Error in witaToUtcRange:', error, 'dateStr:', dateStr);
 		throw new Error(`Failed to convert date: ${dateStr}`);
 	}
 }
@@ -109,7 +108,6 @@ export function witaRangeToUtcRange(startDate: string, endDate: string): { start
 			endUtc: endDateObj.toISOString()
 		};
 	} catch (error) {
-		console.error('Error in witaRangeToUtcRange:', error, 'startDate:', startDate, 'endDate:', endDate);
 		throw new Error(`Failed to convert date range: ${startDate} to ${endDate}`);
 	}
 }
@@ -146,7 +144,6 @@ export function witaRangeToWitaQuery(startDate: string, endDate: string): { star
 			endWita: endWita
 		};
 	} catch (error) {
-		console.error('Error in witaRangeToWitaQuery:', error, 'startDate:', startDate, 'endDate:', endDate);
 		throw new Error(`Failed to convert date range to WITA: ${startDate} to ${endDate}`);
 	}
 }

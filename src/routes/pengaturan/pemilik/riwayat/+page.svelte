@@ -64,7 +64,8 @@
 						transaction_id: t.transaction_id, // Tambahkan transaction_id untuk delete operation
 						waktu: t.waktu,
 						nama: t.description || t.customer_name || t.nama || '-',
-						nominal: t.amount,
+						nominal: t.amount || t.nominal, // Support both amount and nominal fields
+						amount: t.amount || t.nominal, // Keep both for compatibility
 						tipe: t.tipe || t.type, // Handle kemungkinan perbedaan nama kolom
 						sumber: t.sumber || 'catat',
 						payment_method: t.payment_method || 'tunai',
@@ -76,8 +77,8 @@
 			// Urutkan terbaru dulu
 			transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
-			// Filter hanya nominal > 0
-			transaksiHariIni = transaksiHariIni.filter((t) => t.nominal && t.nominal > 0);
+			// Filter hanya nominal > 0 (support both nominal and amount fields)
+			transaksiHariIni = transaksiHariIni.filter((t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0));
 
 			// Filter berdasarkan search
 			if (searchKeyword.trim()) {

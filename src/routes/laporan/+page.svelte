@@ -4,7 +4,7 @@
 	import { slide, fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
-	import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
+	import { getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import { memoize } from '$lib/utils/performance';
@@ -117,7 +117,6 @@
 				aiAnswer = `Error: ${result.error || 'Terjadi kesalahan saat memproses pertanyaan.'}`;
 			}
 		} catch (error) {
-			console.error('AI Chat Error:', error);
 			aiAnswer =
 				'Maaf, terjadi kesalahan saat menghubungi Asisten AI. Pastikan API key sudah dikonfigurasi dengan benar di file .env. Silakan coba lagi nanti.';
 		} finally {
@@ -258,7 +257,7 @@
 		initializePageData().then(() => {
 			// SMART CACHING: Preload common date ranges untuk performa yang lebih baik
 			dataService.preloadCommonDateRanges().catch(error => {
-				console.warn('Preload failed:', error);
+				// Silent error handling
 			});
 
 			// Jika role belum ada di store, coba validasi dengan Supabase
@@ -532,7 +531,6 @@
 						const startDate = new Date(date + 'T00:00:00');
 						// Validasi tanggal
 						if (isNaN(startDate.getTime())) {
-							console.error('Invalid date for weekly filter:', date);
 							return { startDate: '', endDate: '' };
 						}
 						const endDate = new Date(startDate);
@@ -549,7 +547,6 @@
 						const m = parseInt(month) - 1;
 						// Validasi bulan dan tahun
 						if (isNaN(y) || isNaN(m) || m < 0 || m > 11) {
-							console.error('Invalid month/year for monthly filter:', month, year);
 							return { startDate: '', endDate: '' };
 						}
 						// Gunakan timezone WITA untuk konsistensi
@@ -578,7 +575,6 @@
 						const y = parseInt(year);
 						// Validasi tahun
 						if (isNaN(y) || y < 1900 || y > 2100) {
-							console.error('Invalid year for yearly filter:', year);
 							return { startDate: '', endDate: '' };
 						}
 						const result = {
@@ -590,7 +586,7 @@
 					break;
 			}
 		} catch (error) {
-			console.error('Error calculating date range:', error, { type, date, month, year });
+			// Silent error handling
 		}
 		return { startDate: '', endDate: '' };
 	}
@@ -635,11 +631,7 @@
 	// 			endDate = range.endDate;
 	// 			// Panggil loadLaporanData setelah update range
 	// 			loadLaporanData();
-	// 		} else {
-	// 			console.error('Tahunan range is invalid:', range);
 	// 		}
-	// 	} else {
-	// 		console.error('Tahunan watcher: filterType is tahunan but filterYear is missing:', { filterType, filterYear });
 	// 	}
 	// }
 

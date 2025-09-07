@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
 				userProfile.set(parsed.user);
 			}
 		} catch (e) {
-			console.error('Gagal mem-parsing sesi dari localStorage:', e);
+			// Silent error handling
 		}
 	}
 }
@@ -50,10 +50,6 @@ export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 
 
 		// Jika ada error saat mengambil sesi, kemungkinan besar masalah jaringan.
 		if (sessionError) {
-			console.warn(
-				'Peringatan validasi peran: Gagal mengambil sesi (kemungkinan masalah jaringan).',
-				sessionError.message
-			);
 			return 'network_error';
 		}
 
@@ -73,21 +69,15 @@ export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 
 		if (profileError) {
 			// PGRST116 berarti profil tidak ditemukan, ini adalah status tidak valid.
 			if (profileError.code === 'PGRST116') {
-				console.log('Validasi gagal: Profil tidak ditemukan untuk sesi yang ada.');
 				clearUserRole();
 				return 'invalid';
 			}
 			// Error lain kemungkinan besar adalah masalah jaringan/server.
-			console.warn(
-				'Peringatan validasi peran: Gagal mengambil profil (kemungkinan masalah jaringan).',
-				profileError.message
-			);
 			return 'network_error';
 		}
 
 		// Jika profil tidak ada, sesi tidak valid.
 		if (!profile) {
-			console.log('Validasi gagal: Profil tidak ada.');
 			clearUserRole();
 			return 'invalid';
 		}
@@ -98,10 +88,7 @@ export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 
 	} catch (error) {
 		// Menangkap error tak terduga lainnya.
 		if (error instanceof Error) {
-			console.warn(
-				'Peringatan validasi peran: Terjadi error tak terduga (kemungkinan masalah jaringan).',
-				error.message
-			);
+			// Silent error handling
 		}
 		return 'network_error';
 	}

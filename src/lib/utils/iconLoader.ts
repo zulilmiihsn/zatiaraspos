@@ -55,7 +55,6 @@ class IconLoader {
 
 			return iconPromise;
 		} catch (error) {
-			console.warn(`Failed to load icon: ${iconName}`, error);
 			throw error;
 		}
 	}

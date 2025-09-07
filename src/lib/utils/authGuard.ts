@@ -28,7 +28,6 @@ export class AuthGuard {
 			// Rate limiting check
 			const clientId = this.getClientIdentifier();
 			if (!RateLimiter.isAllowed(`auth_${clientId}`)) {
-				console.warn('Rate limit exceeded for authentication');
 				goto('/login?error=rate_limit');
 				return false;
 			}
@@ -63,7 +62,6 @@ export class AuthGuard {
 
 			return true;
 		} catch (error) {
-			console.error('Auth check failed:', error);
 			goto('/login');
 			return false;
 		}
@@ -90,7 +88,6 @@ export class AuthGuard {
 
 			return SessionSecurity.validateSession(sessionData);
 		} catch (error) {
-			console.error('Auth check failed:', error);
 			return false;
 		}
 	}
@@ -115,7 +112,6 @@ export class AuthGuard {
 
 			return true;
 		} catch (error) {
-			console.error('Role check failed:', error);
 			goto('/unauthorized');
 			return false;
 		}

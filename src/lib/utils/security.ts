@@ -3,7 +3,6 @@
  * Implements CSRF protection, XSS prevention, input sanitization, and rate limiting
  */
 
-import { browser } from '$app/environment';
 
 // Security configuration
 const SECURITY_CONFIG = {
@@ -455,8 +454,6 @@ export const securityUtils = {
 
 	logSecurityEvent: (eventType: string, data: unknown): void => {
 		// Log security events (in production, this would go to a security log)
-		if (browser && console) {
-			console.log(`[SECURITY] ${eventType}:`, data);
-		}
+		// Security logging disabled for production
 	}
 };

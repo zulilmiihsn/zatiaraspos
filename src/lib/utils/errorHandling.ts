@@ -82,11 +82,7 @@ export class ErrorHandler {
 		const timestamp = new Date().toISOString();
 		const contextStr = context ? ` [${context}]` : '';
 
-		console.error(`[${timestamp}]${contextStr} Error:`, errorMessage);
-
-		if (error instanceof Error && error.stack) {
-			console.error('Stack trace:', error.stack);
-		}
+		// Error logging disabled for production
 	}
 
 	/**

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
+import { productAnalysisService } from '$lib/services/productAnalysisService';
 
 // OpenRouter API configuration
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -152,7 +153,6 @@ Pertanyaan user: "${question}"`
 		}
 		
 		const parsed = JSON.parse(cleanContent);
-		console.log('AI 1 JSON Parse Success:', parsed);
 		return {
 			periode: {
 				start: parsed.periode?.start || parsed.start || new Date().toISOString().split('T')[0],
@@ -165,9 +165,6 @@ Pertanyaan user: "${question}"`
 			reasoning: parsed.reasoning || 'Kebutuhan data diidentifikasi berdasarkan pertanyaan user'
 		};
 	} catch (error) {
-		console.error('AI 1 JSON Parse Error:', error);
-		console.error('Raw AI 1 response:', content);
-		console.error('Cleaned content:', content.trim().replace(/^```json\s*/, '').replace(/\s*```$/, ''));
 		// Tidak ada fallback, langsung error
 		throw new Error(`AI 1 gagal mengidentifikasi kebutuhan data: ${error}`);
 	}
@@ -297,7 +294,379 @@ Pertanyaan pengguna: "${question}"`
 	return data.choices?.[0]?.message?.content || 'Maaf, tidak dapat menghasilkan jawaban.';
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+// AI 3: Transaction Analyzer
+async function analyzeTransactionText(text: string, apiKey: string, request?: Request): Promise<{
+	transactions: any[];
+	confidence: number;
+	recommendations: any[];
+}> {
+	// Fetch product data untuk analisis
+	let productData = '';
+	try {
+		// Get current branch from request headers or use default
+		const branch = request.headers.get('x-branch') || 'default';
+		
+		productData = await productAnalysisService.generateProductPromptData(branch);
+	} catch (error) {
+		productData = 'Data produk tidak tersedia saat ini. JIKA USER MENYEBUTKAN PRODUK, JANGAN berikan rekomendasi untuk penjualan produk karena tidak ada informasi harga. Minta user untuk memberikan informasi harga atau detail transaksi yang lebih spesifik.';
+	}
+
+	const systemMessage: ChatMessage = {
+		role: 'system',
+		content: `Anda adalah AI yang bertugas menganalisis cerita transaksi dari user untuk aplikasi POS.
+
+TUGAS ANDA:
+1. Identifikasi transaksi yang disebutkan dalam cerita user
+2. Kategorikan setiap transaksi (pemasukan, pengeluaran, penjualan)
+3. Ekstrak jumlah uang yang terlibat
+4. Untuk penjualan produk, gunakan data produk yang tersedia untuk menghitung harga
+5. Berikan rekomendasi tindakan
+
+KATEGORI TRANSAKSI:
+- pemasukan: Uang masuk ke kas (setoran modal, tambahan modal, dll)
+- pengeluaran: Uang keluar dari kas (belanja operasional, pengambilan pribadi, dll)
+- penjualan: Penjualan produk melalui POS (customer membeli produk)
+
+KONTEKS APLIKASI POS:
+- Aplikasi ini adalah sistem POS (Point of Sale) untuk toko/kafe
+- Ada 2 cara input transaksi: 1) POS (penjualan produk), 2) Catat Manual (pemasukan/pengeluaran)
+- Transaksi POS = penjualan produk ke customer
+- Transaksi Manual = pengelolaan kas (setor modal, ambil uang, dll)
+
+KATA KUNCI UNTUK IDENTIFIKASI:
+- PEMASUKAN (Manual): "masukkan uang", "setor uang", "modal", "tambah uang", "masuk uang", "setoran", "tambahan modal"
+- PENGELUARAN (Manual): "ambil uang", "keluar", "pengambilan", "belanja operasional", "beli bahan", "bayar tagihan"
+- PENJUALAN (POS): "customer", "pembeli", "membeli", "pesan", "order", "jual", "terjual", "laku", "ada yang beli", "catat", "catatlah", "tadi ada", "ada customer", "beli [produk]", "membeli [produk]"
+
+ATURAN PENTING:
+- "masukkan uang ke kas" = PEMASUKAN (setoran modal)
+- "ambil uang dari kas" = PENGELUARAN (pengambilan pribadi/operasional)
+- "customer membeli [produk]" = PENJUALAN (transaksi POS)
+- "ada yang pesan [produk]" = PENJUALAN (transaksi POS)
+- "terjual [produk]" = PENJUALAN (transaksi POS)
+- "tadi ada customer membeli [produk]" = PENJUALAN (transaksi POS)
+- "ada customer membeli [produk]" = PENJUALAN (transaksi POS)
+- "catat [produk]" = PENJUALAN (transaksi POS)
+- "catatlah [produk]" = PENJUALAN (transaksi POS)
+- JIKA user menyebutkan "customer" + "membeli" + nama produk = PENJUALAN
+- JIKA user menyebutkan "ada" + "membeli" + nama produk = PENJUALAN
+- JIKA user menyebutkan "catat" + nama produk = PENJUALAN
+
+ATURAN PENTING:
+- HANYA identifikasi transaksi yang JELAS disebutkan dalam cerita
+- JANGAN buat asumsi atau inferensi tambahan
+- JIKA user bilang "masukkan uang 12rb", itu HANYA 1 transaksi pemasukan 12rb
+- JANGAN duplikasi transaksi yang sama
+- UNTUK PENJUALAN: Gunakan data produk di bawah untuk menghitung harga yang tepat
+- JIKA USER MENYEBUTKAN PRODUK: Cari nama produk yang cocok di data produk (case insensitive)
+- JIKA PRODUK DITEMUKAN: Hitung total harga = harga_produk × jumlah
+- JIKA PRODUK TIDAK DITEMUKAN: Return transactions array kosong
+- JIKA TIDAK DAPAT MENGIDENTIFIKASI TRANSAKSI: Return transactions array kosong dan JANGAN berikan rekomendasi apapun
+
+CONTOH PENCARIAN PRODUK:
+- User: "membeli 5 kerupuk" → Cari "kerupuk" di data produk → Ditemukan "Kerupuk" harga 1000 → Total: 1000 × 5 = 5000
+- User: "membeli 3 Kerupuk" → Cari "Kerupuk" di data produk → Ditemukan "Kerupuk" harga 1000 → Total: 1000 × 3 = 3000
+- User: "membeli 2 nasi goreng" → Cari "nasi goreng" di data produk → Tidak ditemukan → Return transactions array kosong
+
+${productData}
+
+CONTOH ANALISIS:
+Input: "Tadi masukkan uang 2000, ambil 5000 buat beli jajan"
+Output: [
+  { type: "pemasukan", amount: 2000, description: "Setoran modal ke kas", confidence: 0.9 },
+  { type: "pengeluaran", amount: 5000, description: "Pengambilan uang untuk belanja pribadi", confidence: 0.9 }
+]
+
+Input: "Customer membeli jus mangga reguler dengan topping milo"
+Output: [
+  { type: "penjualan", amount: [harga_jus_mangga + harga_milo], description: "Penjualan jus mangga reguler + topping milo", confidence: 0.95 }
+]
+
+Input: "ada yang pesan nasi goreng"
+Output: [
+  { type: "penjualan", amount: [harga_nasi_goreng], description: "Penjualan nasi goreng", confidence: 0.95 }
+]
+
+Input: "terjual 2 jus jeruk"
+Output: [
+  { type: "penjualan", amount: [harga_jus_jeruk * 2], description: "Penjualan 2 jus jeruk", confidence: 0.95 }
+]
+
+Input: "tadi ada customer membeli 5 kerupuk, catatlah itu"
+Output: [
+  { type: "penjualan", amount: 5000, description: "Penjualan 5 kerupuk", confidence: 0.95, products: [{ name: "Kerupuk", price: 1000, quantity: 5 }] }
+]
+
+Input: "ada customer membeli 3 nasi goreng"
+Output: [
+  { type: "penjualan", amount: [harga_nasi_goreng * 3], description: "Penjualan 3 nasi goreng", confidence: 0.95 }
+]
+
+Input: "masukkan uang 10rb"
+Output: [
+  { type: "pemasukan", amount: 10000, description: "Setoran modal ke kas", confidence: 0.95 }
+]
+
+Input: "ambil uang 50rb"
+Output: [
+  { type: "pengeluaran", amount: 50000, description: "Pengambilan uang dari kas", confidence: 0.95 }
+]
+
+Input: "beli bahan baku 100rb"
+Output: [
+  { type: "pengeluaran", amount: 100000, description: "Pembelian bahan baku", confidence: 0.95 }
+]
+
+Input: "hari ini cuacanya bagus"
+Output: {
+  "transactions": [],
+  "confidence": 0.0,
+  "recommendations": []
+}
+
+Input: "apa kabar?"
+Output: {
+  "transactions": [],
+  "confidence": 0.0,
+  "recommendations": []
+}
+
+Input: "toko buka jam berapa?"
+Output: {
+  "transactions": [],
+  "confidence": 0.0,
+  "recommendations": []
+}
+
+Input: "customer membeli kerupuk 5 biji" (jika data produk tidak tersedia)
+Output: {
+  "transactions": [],
+  "confidence": 0.0,
+  "recommendations": []
+}
+
+Input: "ada yang beli jus mangga" (jika data produk tidak tersedia)
+Output: {
+  "transactions": [],
+  "confidence": 0.0,
+  "recommendations": []
+}
+
+FORMAT OUTPUT (JSON):
+{
+  "transactions": [
+    {
+      "type": "pemasukan|pengeluaran|penjualan",
+      "amount": number,
+      "description": "string",
+      "confidence": number (0-1),
+      "products": [
+        {
+          "name": "string",
+          "price": number,
+          "addOns": [
+            {
+              "name": "string",
+              "price": number
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "confidence": number (0-1),
+  "recommendations": [
+    {
+      "action": "create_transaction",
+      "title": "string",
+      "description": "string"
+    }
+  ]
+}
+
+PENTING: HANYA return JSON, JANGAN tambahkan penjelasan atau teks lain di luar JSON!
+
+PENTING:
+- Selalu gunakan Bahasa Indonesia
+- Pastikan amount adalah angka positif
+- Berikan confidence score yang realistis
+- Buat rekomendasi yang actionable
+- JANGAN duplikasi transaksi
+- UNTUK PENJUALAN: Hitung total harga berdasarkan produk + add-ons yang disebutkan
+- JIKA TIDAK ADA TRANSAKSI YANG DAPAT DIIDENTIFIKASI: Return transactions array kosong dan confidence 0.0
+- JANGAN berikan rekomendasi jika tidak ada transaksi yang teridentifikasi
+
+LANGKAH-LANGKAH UNTUK PENJUALAN PRODUK:
+1. Identifikasi nama produk yang disebutkan user
+2. Cari produk tersebut di data produk (case insensitive)
+3. Jika ditemukan: hitung total = harga_produk × jumlah
+4. Jika tidak ditemukan: return transactions array kosong
+5. Buat rekomendasi dengan amount yang sudah dihitung
+
+Teks user: "${text}"`
+	};
+
+	const response = await fetch(OPENROUTER_API_URL, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+			'HTTP-Referer': 'https://zatiaraspos.com',
+			'X-Title': 'Zatiaras POS - Transaction Analyzer'
+		},
+		body: JSON.stringify({
+			model: MODEL,
+			messages: [systemMessage],
+			max_tokens: 1000,
+			temperature: 0.3
+		})
+	});
+
+	if (!response.ok) {
+		throw new Error(`AI 3 Error: ${response.status}`);
+	}
+
+	const data = await response.json();
+	const content = data.choices?.[0]?.message?.content || '{}';
+	
+	
+	try {
+		// Clean up response - remove markdown code blocks if present
+		let cleanContent = content.trim();
+		if (cleanContent.startsWith('```json')) {
+			cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+		}
+		if (cleanContent.startsWith('```')) {
+			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+		}
+		
+		const parsed = JSON.parse(cleanContent);
+		
+		return {
+			transactions: parsed.transactions || [],
+			confidence: parsed.confidence || 0.7,
+			recommendations: parsed.recommendations || []
+		};
+	} catch (error) {
+		// Fallback: coba parse manual berdasarkan kata kunci
+		const fallbackTransactions = [];
+		
+		// Cari pola "masukkan uang X" atau "setor X"
+		const masukkanMatch = text.match(/(?:masukkan|setor|tambah|masuk)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i);
+		if (masukkanMatch) {
+			let amount = parseInt(masukkanMatch[1].replace(/[^\d]/g, ''));
+			if (masukkanMatch[1].includes('rb') || masukkanMatch[1].includes('ribu') || masukkanMatch[1].includes('k')) {
+				amount *= 1000;
+			}
+			
+			fallbackTransactions.push({
+				type: 'pemasukan',
+				amount: amount,
+				description: 'Setoran ke kas',
+				confidence: 0.8
+			});
+		}
+		
+		// Cari pola "ambil X" atau "beli X" (bukan untuk produk)
+		const ambilMatch = text.match(/(?:ambil|bayar|keluar|belanja|jajan)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i);
+		if (ambilMatch) {
+			let amount = parseInt(ambilMatch[1].replace(/[^\d]/g, ''));
+			if (ambilMatch[1].includes('rb') || ambilMatch[1].includes('ribu') || ambilMatch[1].includes('k')) {
+				amount *= 1000;
+			}
+			
+			fallbackTransactions.push({
+				type: 'pengeluaran',
+				amount: amount,
+				description: 'Pengeluaran',
+				confidence: 0.8
+			});
+		}
+		
+		// Cari pola penjualan produk
+		const penjualanMatch = text.match(/(?:customer|ada|tadi|membeli|beli|catat|catatlah).*?(\d+)\s*([a-zA-Z\s]+)/i);
+		
+		if (penjualanMatch) {
+			const quantity = parseInt(penjualanMatch[1]);
+			const productName = penjualanMatch[2].trim().toLowerCase();
+			
+			// Untuk fallback, kita tidak bisa hitung harga tanpa data produk
+			// Tapi kita bisa identifikasi sebagai penjualan
+			fallbackTransactions.push({
+				type: 'penjualan',
+				amount: 0, // Akan diisi oleh user atau sistem
+				description: `Penjualan ${quantity} ${productName}`,
+				confidence: 0.7
+			});
+		}
+		
+		
+		return {
+			transactions: fallbackTransactions,
+			confidence: 0.6,
+			recommendations: []
+		};
+	}
+}
+
+// Endpoint untuk analisis transaksi AI
+export const POST: RequestHandler = async ({ request, url }) => {
+	// Cek apakah ini request untuk analisis transaksi
+	const action = url.searchParams.get('action');
+	
+	if (action === 'analyze') {
+		return await handleTransactionAnalysis(request);
+	}
+	
+	// Default: handle regular AI chat
+	return await handleRegularChat(request);
+};
+
+// Handler untuk analisis transaksi
+async function handleTransactionAnalysis(request: Request) {
+	try {
+		const { text } = await request.json();
+
+		if (!text || typeof text !== 'string') {
+			return json({ success: false, error: 'Teks transaksi diperlukan' }, { status: 400 });
+		}
+
+		// Get API key from environment
+		const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+
+		if (!apiKey) {
+			return json(
+				{
+					success: false,
+					error: 'API key OpenRouter tidak dikonfigurasi'
+				},
+				{ status: 500 }
+			);
+		}
+
+		// Analisis transaksi menggunakan AI
+		const analysis = await analyzeTransactionText(text, apiKey, request);
+
+		return json({
+			success: true,
+			transactions: analysis.transactions,
+			confidence: analysis.confidence,
+			recommendations: analysis.recommendations
+		});
+
+	} catch (error) {
+		return json(
+			{
+				success: false,
+				error: 'Terjadi kesalahan saat menganalisis transaksi'
+			},
+			{ status: 500 }
+		);
+	}
+}
+
+// Handler untuk regular AI chat
+async function handleRegularChat(request: Request) {
 	try {
 		const { question, branch } = await request.json();
 
@@ -320,19 +689,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// AI 1: Identifikasi kebutuhan data
-		console.log('=== AI 1: DATA REQUIREMENT ANALYSIS ===');
-		console.log('Question:', question);
-		console.log('Current date (WITA):', toYMDWita(new Date()));
-		
 		const dataRequirements = await identifyDataRequirements(question, apiKey);
-		
-		console.log('=== AI 1 RESULT ===');
-		console.log('✅ Periode:', dataRequirements.periode);
-		console.log('✅ Jenis Data:', dataRequirements.jenisData);
-		console.log('✅ Prioritas:', dataRequirements.prioritas);
-		console.log('✅ Scope:', dataRequirements.scope);
-		console.log('✅ Reasoning:', dataRequirements.reasoning);
-		console.log('=== END AI 1 RESULT ===');
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
@@ -342,10 +699,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { startWita, endWita } = witaRangeToWitaQuery(dataRequirements.periode.start, dataRequirements.periode.end);
 		const startDate = startWita;
 		const endDate = endWita;
-		console.log('Query date range - start:', startDate, 'end:', endDate);
-		console.log('Original date range from AI 1 - start:', dataRequirements.periode.start, 'end:', dataRequirements.periode.end);
-		console.log('Data requirements - jenisData:', dataRequirements.jenisData, 'prioritas:', dataRequirements.prioritas, 'scope:', dataRequirements.scope);
-		console.log('Timezone conversion - WITA format');
 
 		// Konversi tanggal untuk konteks AI
 
@@ -383,7 +736,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			let hasMore = true;
 			const maxPages = 20; // Limit maksimal halaman untuk menghindari infinite loop
 			
-			console.log(`=== FETCHING ${table.toUpperCase()} WITH PAGINATION ===`);
 			
 			while (hasMore && page < maxPages) {
 				try {
@@ -396,13 +748,6 @@ export const POST: RequestHandler = async ({ request }) => {
 						.range(page * pageSize, (page + 1) * pageSize - 1)
 						.order('waktu', { ascending: true });
 					
-					// Debug query untuk halaman pertama
-					if (page === 0) {
-						console.log(`🔍 Debug query for ${table}:`);
-						console.log(`  - startDate: ${startDate}`);
-						console.log(`  - endDate: ${endDate}`);
-						console.log(`  - filters:`, filters);
-					}
 					
 					// Apply filters
 					if (filters.sumber) {
@@ -421,9 +766,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 					
 					if (error) {
-						console.error(`❌ Error fetching ${table} page ${page + 1}:`, error);
 						if (error.code === '57014' || error.message?.includes('timeout')) {
-							console.warn(`⏰ Timeout detected for ${table}, stopping pagination`);
 							break;
 						}
 						break;
@@ -431,90 +774,35 @@ export const POST: RequestHandler = async ({ request }) => {
 					
 					if (data && data.length > 0) {
 						allData = [...allData, ...data];
-						console.log(`📄 ${table} page ${page + 1}: ${data.length} records (total: ${allData.length})`);
 						
 						// Jika data kurang dari pageSize, berarti sudah habis
 						if (data.length < pageSize) {
 							hasMore = false;
-							console.log(`✅ ${table} fetch completed - no more data`);
 						} else {
 							page++;
 						}
 					} else {
 						hasMore = false;
-						console.log(`✅ ${table} fetch completed - no data found`);
 					}
 				} catch (timeoutError) {
-					console.error(`⏰ Timeout error for ${table} page ${page + 1}:`, timeoutError);
 					break;
 				}
 			}
-			
-			if (page >= maxPages) {
-				console.warn(`⚠️ ${table} reached max pages limit (${maxPages}), stopping pagination`);
-			}
-			
-			console.log(`🎯 ${table} FINAL TOTAL: ${allData.length} records`);
 			return allData;
 		}
 
-		// Debug: Cek data yang ada di database dulu
-		console.log('=== DEBUG: CHECKING EXISTING DATA ===');
-		const { data: debugData, error: debugError } = await supabase
-			.from('buku_kas')
-			.select('waktu, sumber, amount, description')
-			.order('waktu', { ascending: false })
-			.limit(10);
-		
-		if (debugError) {
-			console.error('Debug query error:', debugError);
-		} else {
-			console.log('Recent data in database:', debugData);
-			if (debugData && debugData.length > 0) {
-				console.log('Sample data dates:', debugData.map(d => d.waktu));
-			}
-		}
-		console.log('=== END DEBUG ===');
-
-		// Test query sederhana dulu tanpa filter
-		console.log('=== TESTING SIMPLE QUERY ===');
-		const { data: testData, error: testError } = await supabase
-			.from('buku_kas')
-			.select('waktu, sumber, amount, description')
-			.gte('waktu', startDate)
-			.lte('waktu', endDate)
-			.limit(5);
-		
-		console.log('Test query result:', { testData, testError });
-		console.log('Test query range:', { startDate, endDate });
-		
-		// Debug: Cek field amount vs nominal
-		if (testData && testData.length > 0) {
-			console.log('Sample data fields:', testData.map((d: any) => ({
-				waktu: d.waktu,
-				amount: d.amount,
-				nominal: d.nominal,
-				tipe: d.tipe,
-				jenis: d.jenis,
-				payment_method: d.payment_method,
-				description: d.description
-			})));
-		}
 		
 		// Ambil data untuk periode yang diminta dengan pagination
-		console.log('=== STARTING PAGINATED DATA FETCH ===');
 		const [bukuKasPos, bukuKasManual] = await Promise.all([
 			fetchAllData('buku_kas', { sumber: 'pos' }),
 			fetchAllData('buku_kas', { excludeSumber: 'pos' })
 		]);
 
 		// Ambil data transaksi_kasir dengan relasi produk untuk data POS
-		console.log('=== FETCHING TRANSAKSI_KASIR WITH PRODUCTS ===');
 		let transaksiKasirData: any[] = [];
 		if (bukuKasPos && bukuKasPos.length > 0) {
 			// Ambil buku_kas_id dari data POS
 			const bukuKasIds = bukuKasPos.map((item: any) => item.id).filter(Boolean);
-			console.log('Buku kas IDs for transaksi_kasir:', bukuKasIds.length);
 			
 			if (bukuKasIds.length > 0) {
 				try {
@@ -523,27 +811,17 @@ export const POST: RequestHandler = async ({ request }) => {
 						.select('*, produk(name)')
 						.in('buku_kas_id', bukuKasIds);
 					
-					if (errorTransaksiKasir) {
-						console.error('Error fetching transaksi_kasir:', errorTransaksiKasir);
-					} else {
+					if (!errorTransaksiKasir) {
 						transaksiKasirData = transaksiKasir || [];
-						console.log('Transaksi kasir fetched:', transaksiKasirData.length);
 					}
 				} catch (error) {
-					console.error('Error in transaksi_kasir query:', error);
+					// Silent error handling
 				}
 			}
 		}
 
-		console.log('=== DATABASE QUERY RESULTS ===');
-		console.log('📊 bukuKasPos count:', bukuKasPos?.length || 0);
-		console.log('📊 bukuKasManual count:', bukuKasManual?.length || 0);
-		console.log('📊 Total records found:', (bukuKasPos?.length || 0) + (bukuKasManual?.length || 0));
-		console.log('=== END DATABASE QUERY RESULTS ===');
-
 		// Handle case when no data found
 		if ((!bukuKasPos || bukuKasPos.length === 0) && (!bukuKasManual || bukuKasManual.length === 0)) {
-			console.warn('⚠️ No data found for the requested period');
 			return new Response(
 				JSON.stringify({
 					success: false,
@@ -588,19 +866,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
 		
-		// Debug: Cek data pemasukan
-		console.log('=== DEBUG PEMASUKAN ===');
-		console.log('Total laporan records:', laporan.length);
-		console.log('Pemasukan records:', pemasukan.length);
-		console.log('Sample pemasukan:', pemasukan.slice(0, 3).map(p => ({
-			tipe: p.tipe,
-			jenis: p.jenis,
-			nominal: p.nominal,
-			amount: p.amount,
-			payment_method: p.payment_method,
-			description: p.description
-		})));
-		
 		const totalPemasukan = pemasukan.reduce(
 			(s: number, t: any) => s + (t.nominal || 0),
 			0
@@ -609,9 +874,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
-		
-		console.log('Total pemasukan calculated:', totalPemasukan);
-		console.log('Total pengeluaran calculated:', totalPengeluaran);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
@@ -1004,17 +1266,7 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 			: 'Tidak ada data laporan tersedia.';
 
 		// AI 2: Analisis data bisnis
-		console.log('AI 2: Analyzing business data...');
-		console.log('Data summary:', {
-			pendapatan: serverReportData?.summary?.pendapatan,
-			totalTransaksi: serverReportData?.summary?.totalTransaksi,
-			dateRange: `${dataRequirements.periode.start} to ${dataRequirements.periode.end}`,
-			jenisData: dataRequirements.jenisData,
-			prioritas: dataRequirements.prioritas,
-			scope: dataRequirements.scope
-		});
 		const answer = await analyzeBusinessData(question, reportContext, rangeContext, apiKey);
-		console.log('AI 2 Result: Analysis completed');
 
 		return json({
 			success: true,
@@ -1031,7 +1283,6 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 			}
 		});
 	} catch (error) {
-		console.error('AI Chat Error:', error);
 
 		return json(
 			{

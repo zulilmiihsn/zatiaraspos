@@ -126,7 +126,7 @@ class IndexedDBCache {
 				ttl
 			});
 		} catch (error) {
-			console.error('IndexedDB set error:', error);
+			// Silent error handling
 		}
 	}
 
@@ -142,7 +142,6 @@ class IndexedDBCache {
 			}
 			return entry.data;
 		} catch (error) {
-			console.error('IndexedDB get error:', error);
 			return null;
 		}
 	}
@@ -152,7 +151,7 @@ class IndexedDBCache {
 		try {
 			await delCache(key);
 		} catch (error) {
-			console.error('IndexedDB delete error:', error);
+			// Silent error handling
 		}
 	}
 
@@ -164,7 +163,7 @@ class IndexedDBCache {
 			const { clear } = await import('idb-keyval');
 			await clear();
 		} catch (error) {
-			console.error('IndexedDB clear error:', error);
+			// Silent error handling
 		}
 	}
 }
@@ -298,7 +297,7 @@ export class SmartCache {
 				// Schedule next refresh
 				this.scheduleBackgroundRefresh(key, fetcher, ttl);
 			} catch (error) {
-				console.warn('Background refresh failed for key:', key, error);
+				// Silent error handling
 			}
 		}, CACHE_CONFIG.BACKGROUND_REFRESH);
 		this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -337,7 +336,7 @@ export class SmartCache {
 				// Schedule next refresh
 				this.scheduleBackgroundRefreshWithETag(key, fetcher, ttl, result.etag || etag);
 			} catch (error) {
-				console.warn('Background refresh with ETag failed for key:', key, error);
+				// Silent error handling
 			}
 		}, CACHE_CONFIG.BACKGROUND_REFRESH);
 		this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -352,7 +351,6 @@ export class SmartCache {
 		} else {
 			// For regex patterns, we'd need to iterate through keys
 			// This is a simplified implementation
-			console.warn('Regex pattern invalidation not fully implemented');
 		}
 	}
 

@@ -3,11 +3,16 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { getPendingTransactions } from '$lib/utils/offline';
+	import AiChatModal from './aiChatModal.svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	export let showSettings: boolean = true;
 
+	const dispatch = createEventDispatcher();
+	
 	let pendingCount = 0;
 	let showPopover = false;
+	let showAiChat = false;
 
 	onMount(() => {
 		getPendingTransactions().then((transactions: any[]) => {
@@ -31,15 +36,34 @@
 		window.addEventListener('offline', () => (isOffline = true));
 		window.addEventListener('online', () => (isOffline = false));
 	});
+
+	function openAiChat() {
+		showAiChat = true;
+	}
+
+	function closeAiChat() {
+		showAiChat = false;
+	}
+
+	function handleRecommendationsApplied(event: CustomEvent) {
+		// Dispatch event ke parent component untuk refresh data
+		dispatch('aiRecommendationsApplied', event.detail);
+	}
 </script>
 
 <div class="nav-transition z-10 flex items-center justify-between bg-white px-4 pt-4 pb-3">
 	<div class="flex items-center gap-3">
-		<img
-			class="h-[38px] w-[38px] rounded-lg bg-white object-contain p-1.5 shadow-lg shadow-pink-500/7"
-			src="/img/logo.svg"
-			alt="Logo Zatiaras"
-		/>
+		<button
+			on:click={openAiChat}
+			class="h-[38px] w-[38px] rounded-lg bg-white object-contain p-1.5 shadow-lg shadow-pink-500/7 hover:shadow-xl hover:shadow-pink-500/12 transition-all duration-150 cursor-pointer"
+			aria-label="Buka AI Assistant"
+		>
+			<img
+				src="/img/logo.svg"
+				alt="Logo Zatiaras - Klik untuk AI Assistant"
+				class="w-full h-full"
+			/>
+		</button>
 		{#if isOffline}
 			<span
 				class="animate-fade-in ml-2 flex items-center gap-1 rounded-full border border-pink-200 bg-pink-100 px-2.5 py-1.5 text-xs font-semibold text-pink-600 shadow-sm"
@@ -91,10 +115,17 @@
 			<div class="h-[38px] w-[38px]"></div>
 		{/if}
 
-		<!-- Slot untuk download -->
-		<slot name="download" />
-	</div>
+	<!-- Slot untuk download -->
+	<slot name="download" />
 </div>
+</div>
+
+<!-- AI Chat Modal -->
+<AiChatModal 
+	bind:isOpen={showAiChat} 
+	onClose={closeAiChat}
+	on:recommendationsApplied={handleRecommendationsApplied}
+/>
 
 <style>
 	@keyframes fade-in {
