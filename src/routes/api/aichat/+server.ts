@@ -407,7 +407,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		
 		// Debug: Cek field amount vs nominal
 		if (testData && testData.length > 0) {
-			console.log('Sample data fields:', testData.map(d => ({
+			console.log('Sample data fields:', testData.map((d: any) => ({
 				waktu: d.waktu,
 				amount: d.amount,
 				nominal: d.nominal,
@@ -478,11 +478,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		})));
 		
 		const totalPemasukan = pemasukan.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
+			(s: number, t: any) => s + (t.nominal || t.amount || 0),
 			0
 		);
 		const totalPengeluaran = pengeluaran.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
+			(s: number, t: any) => s + (t.nominal || t.amount || 0),
 			0
 		);
 		
@@ -520,7 +520,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				};
 			}
 			
-			const amount = item.nominal || 0;
+			const amount = item.nominal || item.amount || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
