@@ -185,14 +185,30 @@ KEMAMPUAN ANALISIS TREN:
 - Anda dapat menganalisis preferensi metode pembayaran per bulan
 - Anda dapat menghitung persentase perubahan dan tren pertumbuhan dalam periode
 - Anda dapat mengidentifikasi pola dan fluktuasi dalam periode yang diminta
+- Anda dapat menganalisis performa harian dan mengidentifikasi pola hari kerja vs weekend
+- Anda dapat menganalisis rata-rata nilai transaksi dan memberikan insight tentang customer behavior
+- Anda dapat mengidentifikasi hari terbaik dan terburuk serta memberikan rekomendasi strategis
+- Anda dapat menganalisis konsistensi performa dan memberikan insight tentang stabilitas bisnis
+- Anda dapat memberikan prediksi dan proyeksi berdasarkan tren yang teridentifikasi
 
 FORMAT JAWABAN (jika memungkinkan):
 - Ringkasan Utama (1-2 kalimat dengan konteks tanggal)
 - Analisis Tren & Perbandingan (dengan angka dan persentase)
 - Insight Kunci (bullet points dengan data pendukung)
+- Analisis Performa Harian (pola hari kerja vs weekend, konsistensi)
+- Analisis Customer Behavior (rata-rata nilai transaksi, frekuensi)
 - Rekomendasi Tindakan (langkah konkret berdasarkan tren)
+- Prediksi & Proyeksi (berdasarkan data historis)
 - Risiko/Perhatian (berdasarkan analisis historis)
 - Langkah Berikutnya (data tambahan yang diperlukan)
+
+SPESIFIKASI ANALISIS BISNIS JUS:
+- Fokus pada analisis musiman dan preferensi customer
+- Analisis performa produk berdasarkan kategori (jus, smoothie, dll)
+- Identifikasi jam-jam peak dan strategi staffing
+- Analisis konsistensi kualitas layanan berdasarkan performa harian
+- Rekomendasi pricing strategy berdasarkan analisis nilai transaksi
+- Insight tentang customer retention dan loyalty patterns
 
 Pertanyaan pengguna: "${question}"`
 	};
@@ -659,6 +675,53 @@ export const POST: RequestHandler = async ({ request }) => {
 			.slice(0, 3)
 			.map(([h, c]) => `${h}:00 (${c} trx)`);
 
+		// Analisis tren harian untuk insight lebih mendalam
+		const dailyTrend: Record<string, { count: number; revenue: number; avgTicket: number }> = {};
+		for (const t of bukuKasPos || []) {
+			const waktu = new Date(t.waktu);
+			const wita = new Date(waktu);
+			const dateKey = wita.toISOString().split('T')[0];
+			const revenue = t.amount || 0;
+			
+			if (!dailyTrend[dateKey]) {
+				dailyTrend[dateKey] = { count: 0, revenue: 0, avgTicket: 0 };
+			}
+			dailyTrend[dateKey].count += 1;
+			dailyTrend[dateKey].revenue += revenue;
+		}
+		
+		// Hitung rata-rata per transaksi
+		Object.keys(dailyTrend).forEach(date => {
+			if (dailyTrend[date].count > 0) {
+				dailyTrend[date].avgTicket = dailyTrend[date].revenue / dailyTrend[date].count;
+			}
+		});
+		
+		// Analisis performa harian
+		const dailyPerformance = Object.entries(dailyTrend)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([date, data]) => ({
+				date,
+				formattedDate: new Date(date).toLocaleDateString('id-ID', { 
+					weekday: 'long', 
+					day: 'numeric', 
+					month: 'long' 
+				}),
+				...data
+			}));
+		
+		// Hitung statistik keseluruhan
+		const totalDays = dailyPerformance.length;
+		const avgTransactionsPerDay = totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.count, 0) / totalDays : 0;
+		const avgRevenuePerDay = totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.revenue, 0) / totalDays : 0;
+		const avgTicketSize = totalPemasukan > 0 && (bukuKasPos?.length || 0) > 0 ? totalPemasukan / (bukuKasPos?.length || 1) : 0;
+		
+		// Identifikasi hari terbaik dan terburuk
+		const bestDay = dailyPerformance.reduce((best, current) => 
+			current.revenue > best.revenue ? current : best, dailyPerformance[0] || { revenue: 0 });
+		const worstDay = dailyPerformance.reduce((worst, current) => 
+			current.revenue < worst.revenue ? current : worst, dailyPerformance[0] || { revenue: 0 });
+
 		// Ambil metadata produk/kategori/tambahan
 		const [{ data: products }, { data: categories }, { data: addons }] = await Promise.all([
 			supabase.from('produk').select('id, name, price, category_id').limit(1000),
@@ -703,7 +766,27 @@ export const POST: RequestHandler = async ({ request }) => {
 			products: (products || []).map((p: any) => ({ id: p.id, name: p.name, price: p.price })),
 			categories: (categories || []).map((c: any) => ({ id: c.id, name: c.name })),
 			addons: (addons || []).map((a: any) => ({ id: a.id, name: a.name, price: a.price })),
-			produkTerlaris
+			produkTerlaris,
+			// Data analisis mendalam
+			dailyPerformance,
+			analytics: {
+				avgTransactionsPerDay: Math.round(avgTransactionsPerDay * 100) / 100,
+				avgRevenuePerDay: Math.round(avgRevenuePerDay),
+				avgTicketSize: Math.round(avgTicketSize),
+				totalDays,
+				bestDay: bestDay.revenue > 0 ? {
+					date: bestDay.formattedDate,
+					revenue: bestDay.revenue,
+					transactions: bestDay.count,
+					avgTicket: Math.round(bestDay.avgTicket)
+				} : null,
+				worstDay: worstDay.revenue > 0 ? {
+					date: worstDay.formattedDate,
+					revenue: worstDay.revenue,
+					transactions: worstDay.count,
+					avgTicket: Math.round(worstDay.avgTicket)
+				} : null
+			}
 		};
 
 		// Prepare context about the report data
@@ -780,6 +863,22 @@ Kategori (sample): ${
 
 Top Produk Terlaris:
 ${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
+
+=== ANALISIS MENDALAM ===
+Performa Harian:
+- Rata-rata transaksi per hari: ${serverReportData.analytics?.avgTransactionsPerDay || 0} trx
+- Rata-rata pendapatan per hari: Rp ${(serverReportData.analytics?.avgRevenuePerDay || 0).toLocaleString('id-ID')}
+- Rata-rata nilai per transaksi: Rp ${(serverReportData.analytics?.avgTicketSize || 0).toLocaleString('id-ID')}
+- Total hari aktif: ${serverReportData.analytics?.totalDays || 0} hari
+
+Hari Terbaik: ${serverReportData.analytics?.bestDay ? `${serverReportData.analytics.bestDay.date} - Rp ${serverReportData.analytics.bestDay.revenue.toLocaleString('id-ID')} (${serverReportData.analytics.bestDay.transactions} trx, avg Rp ${serverReportData.analytics.bestDay.avgTicket.toLocaleString('id-ID')})` : 'Tidak ada data'}
+
+Hari Terburuk: ${serverReportData.analytics?.worstDay ? `${serverReportData.analytics.worstDay.date} - Rp ${serverReportData.analytics.worstDay.revenue.toLocaleString('id-ID')} (${serverReportData.analytics.worstDay.transactions} trx, avg Rp ${serverReportData.analytics.worstDay.avgTicket.toLocaleString('id-ID')})` : 'Tidak ada data'}
+
+Detail Performa Harian:
+${(serverReportData.dailyPerformance || []).map((day: any) => 
+	`- ${day.formattedDate}: ${day.count} trx, Rp ${day.revenue.toLocaleString('id-ID')} (avg Rp ${Math.round(day.avgTicket).toLocaleString('id-ID')})`
+).join('\n') || '- (tidak ada data harian)'}
 		`
 			: 'Tidak ada data laporan tersedia.';
 
