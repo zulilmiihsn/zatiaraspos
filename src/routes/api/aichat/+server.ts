@@ -216,6 +216,12 @@ FOKUS ANALISIS BERDASARKAN KEBUTUHAN DATA:
 
 PENTING: Sesuaikan analisis Anda dengan prioritas dan scope yang ditentukan. Jika prioritas adalah "product_analysis", fokus pada analisis produk. Jika scope adalah "trend_analysis", fokus pada analisis tren dan perubahan.
 
+KHUSUS UNTUK PERTANYAAN HARGA PRODUK:
+- Jika user bertanya tentang harga produk spesifik, gunakan data di bagian "PRODUK SPESIFIK YANG DICARI"
+- Berikan jawaban langsung dan jelas tentang harga produk yang diminta
+- Jika produk tidak ditemukan, berikan daftar produk yang tersedia dengan harganya
+- Gunakan format: "Harga [nama produk] adalah Rp [harga]"
+
 PENTING - KONTEKS TANGGAL:
 - Data yang Anda terima sudah difilter berdasarkan rentang waktu yang diminta user
 - Untuk SEMUA jenis periode (X bulan terakhir, X hari terakhir, X minggu terakhir, dll), data sudah di-fetch sesuai konteks
@@ -788,12 +794,26 @@ export const POST: RequestHandler = async ({ request }) => {
 		const worstDay = dailyPerformance.reduce((worst, current) => 
 			current.revenue < worst.revenue ? current : worst, dailyPerformance[0] || { revenue: 0 });
 
-		// Ambil metadata produk/kategori/tambahan
-		const [{ data: products }, { data: categories }, { data: addons }] = await Promise.all([
-			supabase.from('produk').select('id, name, price, category_id').limit(1000),
-			supabase.from('kategori').select('id, name').limit(1000),
-			supabase.from('tambahan').select('id, name, price').limit(1000)
-		]);
+		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
+		let products: any[] = [];
+		let categories: any[] = [];
+		let addons: any[] = [];
+		
+		// Fetch data berdasarkan jenis data yang diperlukan
+		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
+			const { data: productsData } = await supabase.from('produk').select('id, name, price, category_id').limit(1000);
+			products = productsData || [];
+		}
+		
+		if (dataRequirements.jenisData.includes('kategori') || dataRequirements.jenisData.length === 0) {
+			const { data: categoriesData } = await supabase.from('kategori').select('id, name').limit(1000);
+			categories = categoriesData || [];
+		}
+		
+		if (dataRequirements.jenisData.includes('tambahan') || dataRequirements.jenisData.length === 0) {
+			const { data: addonsData } = await supabase.from('tambahan').select('id, name, price').limit(1000);
+			addons = addonsData || [];
+		}
 
 		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil
 		const productIdToSale: Record<string, { qty: number; revenue: number; name?: string }> = {};
@@ -821,6 +841,22 @@ export const POST: RequestHandler = async ({ request }) => {
 			.sort((a, b) => b.totalTerjual - a.totalTerjual)
 			.slice(0, 5);
 
+		// Cari produk spesifik jika user bertanya tentang harga
+		let specificProduct = null;
+		if (dataRequirements.prioritas === 'product_analysis' && question.toLowerCase().includes('harga')) {
+			// Cari produk yang disebutkan dalam pertanyaan
+			const productKeywords = ['alpukat', 'mangga', 'jeruk', 'apel', 'pisang', 'semangka', 'melon', 'pepaya', 'naga', 'strawberry'];
+			const foundKeyword = productKeywords.find(keyword => 
+				question.toLowerCase().includes(keyword)
+			);
+			
+			if (foundKeyword) {
+				specificProduct = products.find(p => 
+					p.name.toLowerCase().includes(foundKeyword)
+				);
+			}
+		}
+
 		// Sederhanakan konteks server
 		const serverReportData = {
 			summary,
@@ -833,6 +869,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			categories: (categories || []).map((c: any) => ({ id: c.id, name: c.name })),
 			addons: (addons || []).map((a: any) => ({ id: a.id, name: a.name, price: a.price })),
 			produkTerlaris,
+			specificProduct, // Produk spesifik yang dicari
 			// Data analisis mendalam
 			dailyPerformance,
 			analytics: {
@@ -937,6 +974,13 @@ Kategori (sample): ${
 						.map((c: any) => c.name)
 						.join(', ') || '-'
 				}
+
+${serverReportData.specificProduct ? `
+=== PRODUK SPESIFIK YANG DICARI ===
+Nama: ${serverReportData.specificProduct.name}
+Harga: Rp ${serverReportData.specificProduct.price?.toLocaleString('id-ID') || 'Tidak tersedia'}
+ID: ${serverReportData.specificProduct.id}
+` : ''}
 
 Top Produk Terlaris:
 ${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
