@@ -412,6 +412,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				amount: d.amount,
 				nominal: d.nominal,
 				tipe: d.tipe,
+				jenis: d.jenis,
+				payment_method: d.payment_method,
 				description: d.description
 			})));
 		}
@@ -461,6 +463,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Hitung data periode yang diminta
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+		
+		// Debug: Cek data pemasukan
+		console.log('=== DEBUG PEMASUKAN ===');
+		console.log('Total laporan records:', laporan.length);
+		console.log('Pemasukan records:', pemasukan.length);
+		console.log('Sample pemasukan:', pemasukan.slice(0, 3).map(p => ({
+			tipe: p.tipe,
+			jenis: p.jenis,
+			nominal: p.nominal,
+			amount: p.amount,
+			payment_method: p.payment_method,
+			description: p.description
+		})));
+		
 		const totalPemasukan = pemasukan.reduce(
 			(s: number, t: any) => s + (t.nominal || 0),
 			0
@@ -469,6 +485,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			(s: number, t: any) => s + (t.nominal || 0),
 			0
 		);
+		
+		console.log('Total pemasukan calculated:', totalPemasukan);
+		console.log('Total pengeluaran calculated:', totalPengeluaran);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
