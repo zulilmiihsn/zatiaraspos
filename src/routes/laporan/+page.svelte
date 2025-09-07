@@ -846,7 +846,6 @@
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
 			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 transition-all duration-300 {isLoadingReport ? 'blur-sm opacity-60' : 'blur-0 opacity-100'}"
-			style="pointer-events: auto;"
 		>
 			<div class="mb-3 flex w-full items-center gap-2 px-2 md:mb-6 md:gap-4 md:px-0">
 				<!-- Button Filter -->
@@ -873,12 +872,11 @@
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-200 bg-pink-50 text-pink-400'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openDatePicker}
-					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
 						class="h-5 w-5 md:h-7 md:w-7 {startDate
 							? 'text-pink-300'
-							: 'text-pink-200'} flex-shrink-0 pointer-events-none"
+							: 'text-pink-200'} flex-shrink-0"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -889,19 +887,18 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						/></svg
 					>
-					<span class="truncate pointer-events-none">{formatDate(startDate)}</span>
+					<span class="truncate">{formatDate(startDate)}</span>
 				</button>
 				<button
 					class="h-12 min-w-[140px] flex-1 rounded-xl md:h-14 {endDate
 						? 'border-pink-100 bg-white text-pink-500'
 						: 'border-pink-100 bg-pink-50 text-pink-200'} flex items-center justify-center gap-2 border px-4 font-semibold shadow-sm transition-colors hover:bg-pink-50 active:bg-pink-100 md:px-6 md:text-lg"
 					onclick={openEndDatePicker}
-					style="pointer-events: auto; cursor: pointer;"
 				>
 					<svg
 						class="h-5 w-5 md:h-7 md:w-7 {endDate
 							? 'text-pink-300'
-							: 'text-pink-200'} flex-shrink-0 pointer-events-none"
+							: 'text-pink-200'} flex-shrink-0"
 						fill="none"
 						stroke="currentColor"
 						stroke-width="2"
@@ -912,7 +909,7 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						/></svg
 					>
-					<span class="truncate pointer-events-none">{endDate ? formatDate(endDate, true) : '-'}</span>
+					<span class="truncate select-none">{endDate ? formatDate(endDate, true) : '-'}</span>
 				</button>
 			</div>
 
@@ -946,9 +943,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-								Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
-									? summary.pendapatan.toLocaleString('id-ID')
-									: '--'}
+									Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
+										? summary.pendapatan.toLocaleString('id-ID')
+										: '--'}
 								{/if}
 							</div>
 						</div>
@@ -978,9 +975,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-								Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
-									? summary.pengeluaran.toLocaleString('id-ID')
-									: '--'}
+									Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
+										? summary.pengeluaran.toLocaleString('id-ID')
+										: '--'}
 								{/if}
 							</div>
 						</div>
@@ -1010,9 +1007,9 @@
 								{#if isLoadingReport}
 									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
 								{:else}
-								Rp {summary?.saldo !== null && summary?.saldo !== undefined
-									? summary.saldo.toLocaleString('id-ID')
-									: '--'}
+									Rp {summary?.saldo !== null && summary?.saldo !== undefined
+										? summary.saldo.toLocaleString('id-ID')
+										: '--'}
 								{/if}
 							</div>
 						</div>
@@ -1712,68 +1709,24 @@
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="harian-date"
 									>Pilih Tanggal</label
 								>
-								<div class="relative">
 								<input
 									id="harian-date"
 									type="date"
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
+									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
 									bind:value={startDate}
-										style="opacity: 0; position: absolute; z-index: 2; width: 100%; height: 100%; cursor: pointer;"
-									/>
-									<button
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50 pointer-events-none"
-										style="position: relative; z-index: 1;"
-									>
-									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal'}</span>
-									<svg
-										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
-									</button>
-								</div>
+								/>
 							</div>
 						{:else if filterType === 'mingguan'}
 							<div class="mb-6">
 								<label class="mb-2 block text-sm font-medium text-gray-700" for="mingguan-date"
 									>Pilih Tanggal Awal Minggu</label
 								>
-								<div class="relative">
 								<input
 									id="mingguan-date"
 									type="date"
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none bg-white hover:bg-gray-50"
+									class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
 									bind:value={startDate}
-										style="opacity: 0; position: absolute; z-index: 2; width: 100%; height: 100%; cursor: pointer;"
-									/>
-									<button
-										class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50 pointer-events-none"
-										style="position: relative; z-index: 1;"
-									>
-									<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal minggu'}</span>
-									<svg
-										class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
-									</button>
-								</div>
+								/>
 							</div>
 						{:else if filterType === 'bulanan'}
 							<div class="mb-6">
@@ -1867,35 +1820,12 @@
 							<label class="mb-2 block text-sm font-medium text-gray-700" for="date-picker-start"
 								>Tanggal Awal</label
 							>
-							<button
+							<input
 								id="date-picker-start"
-								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-								onclick={() => {
-									// Trigger native date picker
-									const input = document.createElement('input');
-									input.type = 'date';
-									input.value = startDate;
-									input.onchange = (e) => {
-										startDate = (e.target as HTMLInputElement).value;
-									};
-									input.click();
-								}}
-							>
-								<span class="text-gray-700">{startDate ? formatDate(startDate) : 'Pilih tanggal awal'}</span>
-								<svg
-									class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-									/>
-								</svg>
-							</button>
+								type="date"
+								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
+								bind:value={startDate}
+							/>
 						</div>
 
 						<div class="flex gap-3">
@@ -1949,35 +1879,12 @@
 							<label class="mb-2 block text-sm font-medium text-gray-700" for="date-picker-end"
 								>Tanggal Akhir</label
 							>
-							<button
+							<input
 								id="date-picker-end"
-								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50"
-								onclick={() => {
-									// Trigger native date picker
-									const input = document.createElement('input');
-									input.type = 'date';
-									input.value = endDate;
-									input.onchange = (e) => {
-										endDate = (e.target as HTMLInputElement).value;
-									};
-									input.click();
-								}}
-							>
-								<span class="text-gray-700">{endDate ? formatDate(endDate, true) : 'Pilih tanggal akhir'}</span>
-								<svg
-									class="h-5 w-5 text-gray-400 flex-shrink-0 pointer-events-none"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-									/>
-								</svg>
-							</button>
+								type="date"
+								class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-base transition-colors focus:border-pink-500 focus:outline-none"
+								bind:value={endDate}
+							/>
 						</div>
 
 						<div class="flex gap-3">
