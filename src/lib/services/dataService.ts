@@ -2,7 +2,7 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
-import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
+import { formatWitaDateTime, getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange, witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import {
@@ -438,26 +438,25 @@ export class DataService {
 					endDate = dateRange;
 			}
 
-			let startUtc: string, endUtcFinal: string;
-
+			let startWita: string, endWita: string;
 
 			try {
-				// STANDAR: Gunakan fungsi timezone yang konsisten
+				// STANDAR: Gunakan WITA untuk query database
 				if (startDate === endDate) {
-					// Single date: gunakan witaToUtcRange
-					const { startUtc: startUtcTemp, endUtc: endUtcTemp } = witaToUtcRange(startDate);
-					startUtc = startUtcTemp;
-					endUtcFinal = endUtcTemp;
+					// Single date: gunakan witaRangeToWitaQuery dengan tanggal yang sama
+					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(startDate, startDate);
+					startWita = startWitaTemp;
+					endWita = endWitaTemp;
 				} else {
-					// Range date: gunakan witaRangeToUtcRange
-					const { startUtc: startUtcTemp, endUtc: endUtcTemp } = witaRangeToUtcRange(startDate, endDate);
-				startUtc = startUtcTemp;
-					endUtcFinal = endUtcTemp;
+					// Range date: gunakan witaRangeToWitaQuery
+					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(startDate, endDate);
+					startWita = startWitaTemp;
+					endWita = endWitaTemp;
 				}
 				
 			} catch (error) {
 				console.error(
-					'Error converting date range:',
+					'Error converting date range to WITA:',
 					error,
 					'startDate:',
 					startDate,
@@ -465,25 +464,24 @@ export class DataService {
 					endDate
 				);
 				// Fallback to current date if date conversion fails
-				const today = new Date().toISOString().split('T')[0];
+				const today = getTodayWita();
 				try {
-					const { startUtc: startUtcTemp, endUtc } = witaToUtcRange(today);
-					const { endUtc: endUtcFinalTemp } = witaToUtcRange(today);
-					startUtc = startUtcTemp;
-					endUtcFinal = endUtcFinalTemp;
+					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(today, today);
+					startWita = startWitaTemp;
+					endWita = endWitaTemp;
 				} catch (fallbackError) {
 					console.error('Fallback date conversion also failed:', fallbackError);
 					// Use hardcoded fallback
-					startUtc = new Date().toISOString();
-					endUtcFinal = new Date().toISOString();
+					startWita = today + 'T00:00:00+08:00';
+					endWita = today + 'T23:59:59+08:00';
 				}
 			}
 
 			// PARALLEL PAGINATION: Ambil posBukuKas secara parallel
 			const posBukuKas = await this.fetchAllDataParallel(
 				'buku_kas',
-				startUtc,  // Gunakan UTC yang sudah dikonversi
-				endUtcFinal,  // Gunakan UTC yang sudah dikonversi
+				startWita,  // Gunakan WITA
+				endWita,    // Gunakan WITA
 				{ sumber: 'pos' }
 			);
 				
@@ -535,8 +533,8 @@ export class DataService {
 			// PARALLEL PAGINATION: Ambil manualItems secara parallel
 			const manualItems = await this.fetchAllDataParallel(
 				'buku_kas',
-				startUtc,  // Gunakan UTC yang sudah dikonversi
-				endUtcFinal,  // Gunakan UTC yang sudah dikonversi
+				startWita,  // Gunakan WITA
+				endWita,    // Gunakan WITA
 				{ sumber: { neq: 'pos' } }
 			);
 
@@ -544,8 +542,8 @@ export class DataService {
 			// PARALLEL PAGINATION: Ambil semua data secara parallel
 			const allBukuKas = await this.fetchAllDataParallel(
 				'buku_kas',
-				startUtc,  // Gunakan UTC yang sudah dikonversi
-				endUtcFinal  // Gunakan UTC yang sudah dikonversi
+				startWita,  // Gunakan WITA
+				endWita     // Gunakan WITA
 			);
 			
 

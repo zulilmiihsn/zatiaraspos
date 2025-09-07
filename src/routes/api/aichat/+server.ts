@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { RequestHandler } from './$types';
-import { witaRangeToUtcRange } from '$lib/utils/dateTime';
+import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
 
 // OpenRouter API configuration
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -260,14 +260,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
 		const supabase = getSupabaseClient((branch || 'dev') as any);
 
-		// Hitung waktu UTC dari rentang WITA (approx: gunakan string Y-M-D 00:00:00/23:59:59 WITA yang dikonversi ke ISO)
-		// STANDAR: Gunakan timezone conversion yang konsisten
-		const { startUtc, endUtc } = witaRangeToUtcRange(dateRange.start, dateRange.end);
-		const startDate = startUtc;
-		const endDate = endUtc;
+		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
+		// STANDAR: Gunakan WITA untuk query database
+		const { startWita, endWita } = witaRangeToWitaQuery(dateRange.start, dateRange.end);
+		const startDate = startWita;
+		const endDate = endWita;
 		console.log('Query date range - start:', startDate, 'end:', endDate);
 		console.log('Original date range from AI 1 - start:', dateRange.start, 'end:', dateRange.end);
-		console.log('Timezone conversion - WITA to UTC');
+		console.log('Timezone conversion - WITA format');
 
 		// Konversi tanggal untuk konteks AI
 

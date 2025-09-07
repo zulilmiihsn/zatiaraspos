@@ -129,3 +129,24 @@ export function witaToUtcISO(dateStr: string, timeStr: string = '00:00:00'): str
 	const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 8, minute, second || 0));
 	return utcDate.toISOString();
 }
+
+// STANDAR: Konversi range tanggal WITA ke format WITA untuk query database
+export function witaRangeToWitaQuery(startDate: string, endDate: string): { startWita: string; endWita: string } {
+	// Input: 'YYYY-MM-DD', 'YYYY-MM-DD' (range tanggal WITA)
+	// Output: { startWita: 'YYYY-MM-DDTHH:mm:ss+08:00', endWita: 'YYYY-MM-DDTHH:mm:ss+08:00' }
+	
+	try {
+		// Start: 00:00:00 WITA tanggal pertama
+		const startWita = startDate + 'T00:00:00+08:00';
+		// End: 23:59:59 WITA tanggal terakhir
+		const endWita = endDate + 'T23:59:59+08:00';
+		
+		return {
+			startWita: startWita,
+			endWita: endWita
+		};
+	} catch (error) {
+		console.error('Error in witaRangeToWitaQuery:', error, 'startDate:', startDate, 'endDate:', endDate);
+		throw new Error(`Failed to convert date range to WITA: ${startDate} to ${endDate}`);
+	}
+}
