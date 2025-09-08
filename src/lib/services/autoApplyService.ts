@@ -100,6 +100,9 @@ export class AutoApplyService {
     // Map type ke tipe yang digunakan di database
     const tipe = data.type === 'pemasukan' ? 'in' : data.type === 'penjualan' ? 'in' : 'out';
     
+    // Generate transaction_id untuk semua transaksi AI
+    const transactionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : this.generateUUID();
+    
     const transactionData = {
       tipe: tipe,
       amount: Number(data.amount),
@@ -107,7 +110,8 @@ export class AutoApplyService {
       jenis: data.category || this.getDefaultCategory(data.type),
       sumber: data.type === 'penjualan' ? 'pos' : 'catat', // POS untuk penjualan, catat untuk manual
       waktu: new Date().toISOString(),
-      payment_method: 'tunai' // Default payment method
+      payment_method: 'tunai', // Default payment method
+      transaction_id: transactionId // Tambahkan transaction_id untuk semua transaksi AI
     };
 
 
@@ -124,36 +128,53 @@ export class AutoApplyService {
 
     // Jika ini adalah transaksi penjualan dengan produk, buat detail transaksi kasir
     if (data.type === 'penjualan' && data.products && Array.isArray(data.products)) {
-      await this.createTransactionItems(insertedData[0].id, data.products, supabase);
+      await this.createTransactionItems(insertedData[0].id, data.products, supabase, transactionId);
     }
+
+    // Trigger refresh UI segera setelah insert berhasil
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: { success: true } }));
+        // @ts-ignore
+        if (typeof window.__refreshLaporan === 'function') { await window.__refreshLaporan(); }
+        // @ts-ignore
+        if (typeof window.__refreshRiwayat === 'function') { await window.__refreshRiwayat(); }
+      } catch {}
+    }
+  }
+
+  /**
+   * Generate UUID fallback jika crypto.randomUUID tidak tersedia
+   */
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 
   /**
    * Membuat detail transaksi kasir untuk penjualan produk
    */
-  private async createTransactionItems(bukuKasId: number, products: any[], supabase: any): Promise<void> {
+  private async createTransactionItems(bukuKasId: number, products: any[], supabase: any, transactionId?: string): Promise<void> {
     
     const transactionItems = products.map((product, index) => {
       const addOns = product.addOns || [];
       const addOnsTotal = addOns.reduce((sum: number, addOn: any) => sum + (addOn.price || 0), 0);
-      const subtotal = (product.price || 0) + addOnsTotal;
+      const unitPrice = (product.price || 0) + addOnsTotal;
+      const quantity = product.quantity || 1;
       
       return {
         buku_kas_id: bukuKasId,
-        product_id: product.id || null,
-        product_name: product.name || 'Produk Custom',
-        product_price: product.price || 0,
-        quantity: 1, // Default quantity
-        add_ons: addOns.map((addOn: any) => ({
-          id: addOn.id || null,
-          name: addOn.name || '',
-          price: addOn.price || 0
-        })),
-        subtotal: subtotal,
-        created_at: new Date().toISOString()
+        produk_id: product.id || null, // Gunakan 'produk_id' bukan 'product_id'
+        qty: quantity, // Gunakan 'qty' bukan 'quantity'
+        amount: unitPrice * quantity, // Total amount untuk item ini
+        price: unitPrice, // Harga per unit
+        transaction_id: transactionId || null, // Gunakan transaction_id yang diberikan
+        custom_name: product.id ? null : (product.name || 'Produk Custom') // Nama custom jika produk_id null
       };
     });
-
 
     const { data: insertedItems, error } = await supabase
       .from('transaksi_kasir')

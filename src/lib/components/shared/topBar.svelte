@@ -43,11 +43,23 @@
 
 	function closeAiChat() {
 		showAiChat = false;
+		// Panggil refresher global di background saat modal ditutup
+		if (typeof window !== 'undefined') {
+			// @ts-ignore
+			if (typeof window.__refreshLaporan === 'function') { window.__refreshLaporan(); }
+			// @ts-ignore
+			if (typeof window.__refreshRiwayat === 'function') { window.__refreshRiwayat(); }
+		}
 	}
 
 	function handleRecommendationsApplied(event: CustomEvent) {
 		// Dispatch event ke parent component untuk refresh data
 		dispatch('aiRecommendationsApplied', event.detail);
+		// Broadcast global event agar halaman lain (mis. laporan) bisa dengar
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: event.detail }));
+		}
+		// Jangan tutup modal di sini; biarkan user yang menutup setelah proses selesai
 	}
 </script>
 

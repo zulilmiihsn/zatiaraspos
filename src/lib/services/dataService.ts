@@ -2,6 +2,8 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
+import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
+import { performanceTracker } from '$lib/utils/performanceTracker';
 import { getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange, witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';

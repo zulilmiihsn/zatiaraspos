@@ -44,7 +44,7 @@ export class ProductAnalysisService {
       if (typeof window === 'undefined') {
         // For server-side, use getSupabaseClient with the provided branch
         const { getSupabaseClient } = await import('$lib/database/supabaseClient');
-        const supabase = getSupabaseClient(branch || 'default');
+        const supabase = getSupabaseClient((branch || 'default') as any);
         
         if (!supabase) {
           throw new Error(`Supabase client not available for branch: ${branch || 'default'}`);

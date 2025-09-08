@@ -36,16 +36,15 @@
 
 	function todayRange() {
 		// Hari ini dalam zona waktu WITA
-		const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
-		const yyyy = todayWita.getFullYear();
-		const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-		const dd = String(todayWita.getDate()).padStart(2, '0');
-		return witaToUtcRange(`${yyyy}-${mm}-${dd}`);
+		const todayWita = getTodayWita(); // Sudah dalam format YYYY-MM-DD
+		return witaToUtcRange(todayWita);
 	}
 
 	async function fetchTransaksiHariIni() {
 		loading = true;
 		const { startUtc: start, endUtc: end } = todayRange();
+		
+		
 
 		try {
 			// Ambil data dari buku_kas
@@ -55,6 +54,7 @@
 				.gte('waktu', start)
 				.lte('waktu', end)
 				.order('waktu', { ascending: false });
+
 
 			transaksiHariIni = [];
 			if (data && !error) {
@@ -74,11 +74,13 @@
 				);
 			}
 
+
 			// Urutkan terbaru dulu
 			transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 			// Filter hanya nominal > 0 (support both nominal and amount fields)
 			transaksiHariIni = transaksiHariIni.filter((t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0));
+			
 
 			// Filter berdasarkan search
 			if (searchKeyword.trim()) {
@@ -110,30 +112,67 @@
 
 	async function deleteTransaksi() {
 		if (!transaksiToDelete) return;
+		
+		// Cek permission dulu
+		if (!canDeleteTransaction()) {
+			toastManager.showToastNotification('Anda tidak memiliki izin untuk menghapus transaksi', 'error');
+			return;
+		}
+		
 		loading = true;
 
 		try {
 			if (transaksiToDelete.sumber === 'catat') {
 				// Untuk transaksi manual/catat, hapus dari buku_kas saja
-				await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(storeGet(selectedBranch))
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
+				
+				if (error) {
+					throw error;
+				}
 			} else if (transaksiToDelete.sumber === 'pos') {
 				// Untuk transaksi POS, hapus detail items dulu, lalu hapus total pembayaran
 				const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
 
 				// Hapus detail transaksi dari transaksi_kasir
-				await getSupabaseClient(storeGet(selectedBranch))
+				const { error: kasirError } = await getSupabaseClient(storeGet(selectedBranch))
 					.from('transaksi_kasir')
 					.delete()
 					.eq('transaction_id', transactionId);
+				
+				if (kasirError) {
+					// Jangan throw error karena mungkin tidak ada items
+				}
 
-				// Hapus total pembayaran dari buku_kas
-				await getSupabaseClient(storeGet(selectedBranch))
+				// Hapus total pembayaran dari buku_kas - coba dengan ID langsung dulu
+				const { error: bukuError } = await getSupabaseClient(storeGet(selectedBranch))
 					.from('buku_kas')
 					.delete()
-					.eq('transaction_id', transactionId);
+					.eq('id', transaksiToDelete.id);
+				
+				if (bukuError) {
+					// Coba dengan transaction_id sebagai fallback
+					const { error: bukuError2 } = await getSupabaseClient(storeGet(selectedBranch))
+						.from('buku_kas')
+						.delete()
+						.eq('transaction_id', transactionId);
+					
+					if (bukuError2) {
+						throw bukuError2;
+					}
+				}
+			} else {
+				// Fallback: hapus berdasarkan ID langsung
+				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+					.from('buku_kas')
+					.delete()
+					.eq('id', transaksiToDelete.id);
+				
+				if (error) {
+					throw error;
+				}
 			}
 
 			showDeleteModal = false;
@@ -144,7 +183,7 @@
 			}, 3000);
 		} catch (error) {
 			ErrorHandler.logError(error, 'deleteTransaksi');
-			toastManager.showToastNotification('Gagal menghapus transaksi', 'error');
+			toastManager.showToastNotification(`Gagal menghapus transaksi: ${error.message || 'Unknown error'}`, 'error');
 		} finally {
 			await fetchTransaksiHariIni();
 			loading = false;
@@ -190,6 +229,13 @@
 		})();
 	});
 
+	// Cek role sebelum delete
+	function canDeleteTransaction() {
+		const currentRole = storeGet(userRole);
+		return currentRole === 'pemilik';
+	}
+
+	let aiHandler: any;
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
@@ -197,12 +243,25 @@
 		await fetchTransaksiHariIni();
 		Trash = (await import('lucide-svelte/icons/trash')).default;
 		// pollingInterval = setInterval(fetchTransaksiHariIni, 5000); // HAPUS polling otomatis
+		// Dengarkan event global agar riwayat auto-refresh ketika rekomendasi AI diterapkan
+		aiHandler = async () => { await fetchTransaksiHariIni(); };
+		if (typeof window !== 'undefined') {
+			window.addEventListener('ai-recommendations-applied', aiHandler as any);
+			// Ekspor refresher global untuk dipanggil langsung
+			// @ts-ignore
+			window.__refreshRiwayat = async () => { await fetchTransaksiHariIni(); };
+		}
 	});
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.remove('hide-nav');
 		}
 		// clearInterval(pollingInterval); // HAPUS polling otomatis
+		if (typeof window !== 'undefined' && aiHandler) {
+			window.removeEventListener('ai-recommendations-applied', aiHandler as any);
+			// @ts-ignore
+			delete window.__refreshRiwayat;
+		}
 	});
 </script>
 
@@ -338,16 +397,18 @@
 							<div class="text-base font-bold text-pink-500">
 								Rp {trx.nominal?.toLocaleString('id-ID')}
 							</div>
-							<button
-								class="rounded-xl bg-red-50 p-2 text-red-600 shadow-md transition-colors hover:bg-red-100"
-								onclick={(e) => {
-									e.stopPropagation();
-									confirmDeleteTransaksi(trx);
-								}}
-								title="Hapus transaksi"
-							>
-								<svelte:component this={Trash} class="h-5 w-5" />
-							</button>
+							{#if canDeleteTransaction()}
+								<button
+									class="rounded-xl bg-red-50 p-2 text-red-600 shadow-md transition-colors hover:bg-red-100"
+									onclick={(e) => {
+										e.stopPropagation();
+										confirmDeleteTransaksi(trx);
+									}}
+									title="Hapus transaksi"
+								>
+									<svelte:component this={Trash} class="h-5 w-5" />
+								</button>
+							{/if}
 						</div>
 					</div>
 				{/each}

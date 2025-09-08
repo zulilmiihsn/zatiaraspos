@@ -14,6 +14,7 @@
   let isLoading = false;
   let currentAnalysis: TransactionAnalysis | null = null;
   let showRecommendations = false;
+  let appliedSinceOpen = false;
 
   const aiAnalysisService = AiAnalysisService.getInstance();
   const autoApplyService = AutoApplyService.getInstance();
@@ -95,7 +96,7 @@
     if (!currentAnalysis || !currentAnalysis.recommendations.length) return;
 
     isLoading = true;
-    showRecommendations = false;
+    // Tahan rekomendasi terlihat sampai selesai; jangan sembunyikan dulu agar UX jelas proses sedang berlangsung
 
     try {
       const result = await autoApplyService.applyRecommendations(currentAnalysis.recommendations);
@@ -110,11 +111,25 @@
       };
 
       messages = [...messages, resultMessage];
-      currentAnalysis = null;
-      showRecommendations = false;
+      // Jika sukses, barulah kosongkan analisis dan rekomendasi
+      if (result.success) {
+        currentAnalysis = null;
+        showRecommendations = false;
+        appliedSinceOpen = true;
+      }
 
       // Dispatch event untuk refresh data di parent
       dispatch('recommendationsApplied', { result });
+
+      // Broadcast global event agar halaman lain bisa dengar (laporan/riwayat)
+      if (result.success && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: result }));
+        // Panggil API refresher global bila tersedia, agar update benar-benar segera
+        // @ts-ignore
+        if (typeof window.__refreshLaporan === 'function') { await window.__refreshLaporan(); }
+        // @ts-ignore
+        if (typeof window.__refreshRiwayat === 'function') { await window.__refreshRiwayat(); }
+      }
 
     } catch (error) {
       const errorMessage: AiChatMessage = {
@@ -138,26 +153,38 @@
 
   function closeModal() {
     // Reset chat state saat modal ditutup
+    if (appliedSinceOpen && typeof window !== 'undefined') {
+      // Pastikan broadcast sekali lagi saat ditutup jika sebelumnya berhasil menerapkan
+      window.dispatchEvent(new CustomEvent('ai-recommendations-applied'));
+      // Trigger refresh di background saat modal ditutup
+      // @ts-ignore
+      if (typeof window.__refreshLaporan === 'function') { window.__refreshLaporan(); }
+      // @ts-ignore
+      if (typeof window.__refreshRiwayat === 'function') { window.__refreshRiwayat(); }
+    }
     messages = [];
     currentAnalysis = null;
     showRecommendations = false;
     currentMessage = '';
     isLoading = false;
+    appliedSinceOpen = false;
     onClose();
   }
 </script>
 
 {#if isOpen}
-  <div class="modal-overlay fixed inset-0 z-[99999] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" 
+  <div class="modal-overlay fixed inset-0 z-[99999] flex items-center justify-center bg-black/30 backdrop-blur-sm px-2 py-2 sm:px-4 sm:py-4" 
        on:click={closeModal}
        on:keydown={(e) => e.key === 'Escape' && closeModal()}
        role="dialog"
        aria-modal="true"
        tabindex="-1">
     
-    <div class="modal-slideup bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col mx-4"
+    <div class="modal-slideup bg-white rounded-2xl shadow-2xl w-full max-w-[500px] md:max-w-[720px] h-[600px] flex flex-col mx-auto sm:mx-auto"
          on:click|stopPropagation
-         role="document"
+         on:keydown={(e) => e.key === 'Escape' && closeModal()}
+         role="dialog"
+         aria-modal="true"
          tabindex="-1">
       
       <!-- Header -->

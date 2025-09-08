@@ -306,15 +306,39 @@
 			loadLaporanData();
 		};
 
+		// Dengarkan event global dari Topbar ketika rekomendasi AI diterapkan
+		const handleAiRecommendationsApplied = async () => {
+			try {
+				// Pastikan cache laporan ter-invalidate agar fetch berikutnya tidak menggunakan data lama
+				await dataService.invalidateCacheOnChange('buku_kas');
+			} catch {}
+			await loadLaporanData();
+		};
+
+		// Ekspor refresher global agar komponen lain bisa memicu refresh langsung
+		if (typeof window !== 'undefined') {
+			// @ts-ignore
+			window.__refreshLaporan = async () => {
+				try { await dataService.invalidateCacheOnChange('buku_kas'); } catch {}
+				await loadLaporanData();
+			};
+		}
+
 		document.addEventListener('visibilitychange', handleVisibilityChange);
 		window.addEventListener('focus', handleFocus);
 		window.addEventListener('popstate', handleNavigation);
+		window.addEventListener('ai-recommendations-applied', handleAiRecommendationsApplied as any);
 
 		// Cleanup function untuk event listener
 		return () => {
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('focus', handleFocus);
 			window.removeEventListener('popstate', handleNavigation);
+			window.removeEventListener('ai-recommendations-applied', handleAiRecommendationsApplied as any);
+			if (typeof window !== 'undefined') {
+				// @ts-ignore
+				delete window.__refreshLaporan;
+			}
 		};
 	});
 
@@ -1906,7 +1930,7 @@
 <!-- AI Response Modal -->
 {#if showAiModal}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-2 py-2 sm:px-4 sm:py-4"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
 		role="dialog"
@@ -1914,7 +1938,7 @@
 		tabindex="-1"
 	>
 		<div
-			class="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+			class="max-h-[80vh] w-full max-w-[500px] md:max-w-[720px] mx-auto overflow-hidden rounded-2xl bg-white shadow-2xl"
 			transition:slide={{ duration: 300, easing: cubicOut }}
 		>
 			<!-- Modal Header -->
