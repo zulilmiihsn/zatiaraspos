@@ -13,7 +13,6 @@ interface ChatMessage {
 	content: string;
 }
 
-
 // Util: format YYYY-MM-DD dalam zona WITA
 function toYMDWita(date: Date): string {
 	const d = new Date(date);
@@ -23,9 +22,11 @@ function toYMDWita(date: Date): string {
 	return `${yyyy}-${mm}-${dd}`;
 }
 
-
 // AI 1: Data Requirement Analyzer
-async function identifyDataRequirements(question: string, apiKey: string): Promise<{
+async function identifyDataRequirements(
+	question: string,
+	apiKey: string
+): Promise<{
 	periode: {
 		start: string;
 		end: string;
@@ -39,7 +40,7 @@ async function identifyDataRequirements(question: string, apiKey: string): Promi
 	// Hitung tanggal saat ini dalam WITA
 	const now = new Date();
 	const todayWita = toYMDWita(now);
-	
+
 	const systemMessage: ChatMessage = {
 		role: 'system',
 		content: `Anda adalah AI yang bertugas mengidentifikasi kebutuhan data dari pertanyaan user untuk analisis laporan bisnis.
@@ -141,7 +142,7 @@ Pertanyaan user: "${question}"`
 
 	const data = await response.json();
 	const content = data.choices?.[0]?.message?.content || '{}';
-	
+
 	try {
 		// Clean up response - remove markdown code blocks if present
 		let cleanContent = content.trim();
@@ -151,7 +152,7 @@ Pertanyaan user: "${question}"`
 		if (cleanContent.startsWith('```')) {
 			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
 		}
-		
+
 		const parsed = JSON.parse(cleanContent);
 		return {
 			periode: {
@@ -172,8 +173,8 @@ Pertanyaan user: "${question}"`
 
 // AI 2: Business Analyst
 async function analyzeBusinessData(
-	question: string, 
-	reportData: any, 
+	question: string,
+	reportData: any,
 	dateRange: any,
 	apiKey: string
 ): Promise<string> {
@@ -295,7 +296,11 @@ Pertanyaan pengguna: "${question}"`
 }
 
 // AI 3: Transaction Analyzer
-async function analyzeTransactionText(text: string, apiKey: string, request?: Request): Promise<{
+async function analyzeTransactionText(
+	text: string,
+	apiKey: string,
+	request?: Request
+): Promise<{
 	transactions: any[];
 	confidence: number;
 	recommendations: any[];
@@ -305,10 +310,11 @@ async function analyzeTransactionText(text: string, apiKey: string, request?: Re
 	try {
 		// Get current branch from request headers or use default
 		const branch = request?.headers.get('x-branch') || 'default';
-		
+
 		productData = await productAnalysisService.generateProductPromptData(branch);
 	} catch (error) {
-		productData = 'Data produk tidak tersedia saat ini. JIKA USER MENYEBUTKAN PRODUK, JANGAN berikan rekomendasi untuk penjualan produk karena tidak ada informasi harga. Minta user untuk memberikan informasi harga atau detail transaksi yang lebih spesifik.';
+		productData =
+			'Data produk tidak tersedia saat ini. JIKA USER MENYEBUTKAN PRODUK, JANGAN berikan rekomendasi untuk penjualan produk karena tidak ada informasi harga. Minta user untuk memberikan informasi harga atau detail transaksi yang lebih spesifik.';
 	}
 
 	const systemMessage: ChatMessage = {
@@ -664,8 +670,7 @@ Teks user: "${text}"`
 
 	const data = await response.json();
 	const content = data.choices?.[0]?.message?.content || '{}';
-	
-	
+
 	try {
 		// Clean up response - remove markdown code blocks if present
 		let cleanContent = content.trim();
@@ -675,9 +680,9 @@ Teks user: "${text}"`
 		if (cleanContent.startsWith('```')) {
 			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
 		}
-		
+
 		const parsed = JSON.parse(cleanContent);
-		
+
 		return {
 			transactions: parsed.transactions || [],
 			confidence: parsed.confidence || 0.7,
@@ -686,15 +691,21 @@ Teks user: "${text}"`
 	} catch (error) {
 		// Fallback: coba parse manual berdasarkan kata kunci
 		const fallbackTransactions = [];
-		
+
 		// Cari pola "masukkan uang X" atau "setor X"
-		const masukkanMatch = text.match(/(?:masukkan|setor|tambah|masuk)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i);
+		const masukkanMatch = text.match(
+			/(?:masukkan|setor|tambah|masuk)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i
+		);
 		if (masukkanMatch) {
 			let amount = parseInt(masukkanMatch[1].replace(/[^\d]/g, ''));
-			if (masukkanMatch[1].includes('rb') || masukkanMatch[1].includes('ribu') || masukkanMatch[1].includes('k')) {
+			if (
+				masukkanMatch[1].includes('rb') ||
+				masukkanMatch[1].includes('ribu') ||
+				masukkanMatch[1].includes('k')
+			) {
 				amount *= 1000;
 			}
-			
+
 			fallbackTransactions.push({
 				type: 'pemasukan',
 				amount: amount,
@@ -702,15 +713,21 @@ Teks user: "${text}"`
 				confidence: 0.8
 			});
 		}
-		
+
 		// Cari pola "ambil X" atau "beli X" (bukan untuk produk)
-		const ambilMatch = text.match(/(?:ambil|bayar|keluar|belanja|jajan)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i);
+		const ambilMatch = text.match(
+			/(?:ambil|bayar|keluar|belanja|jajan)\s*(?:uang\s*)?(\d+(?:rb|ribu|k|000)?)/i
+		);
 		if (ambilMatch) {
 			let amount = parseInt(ambilMatch[1].replace(/[^\d]/g, ''));
-			if (ambilMatch[1].includes('rb') || ambilMatch[1].includes('ribu') || ambilMatch[1].includes('k')) {
+			if (
+				ambilMatch[1].includes('rb') ||
+				ambilMatch[1].includes('ribu') ||
+				ambilMatch[1].includes('k')
+			) {
 				amount *= 1000;
 			}
-			
+
 			fallbackTransactions.push({
 				type: 'pengeluaran',
 				amount: amount,
@@ -718,14 +735,16 @@ Teks user: "${text}"`
 				confidence: 0.8
 			});
 		}
-		
+
 		// Cari pola penjualan produk
-		const penjualanMatch = text.match(/(?:customer|ada|tadi|membeli|beli|catat|catatlah).*?(\d+)\s*([a-zA-Z\s]+)/i);
-		
+		const penjualanMatch = text.match(
+			/(?:customer|ada|tadi|membeli|beli|catat|catatlah).*?(\d+)\s*([a-zA-Z\s]+)/i
+		);
+
 		if (penjualanMatch) {
 			const quantity = parseInt(penjualanMatch[1]);
 			const productName = penjualanMatch[2].trim().toLowerCase();
-			
+
 			// Untuk fallback, kita tidak bisa hitung harga tanpa data produk
 			// Tapi kita bisa identifikasi sebagai penjualan
 			fallbackTransactions.push({
@@ -735,8 +754,7 @@ Teks user: "${text}"`
 				confidence: 0.7
 			});
 		}
-		
-		
+
 		return {
 			transactions: fallbackTransactions,
 			confidence: 0.6,
@@ -749,11 +767,11 @@ Teks user: "${text}"`
 export const POST: RequestHandler = async ({ request, url }) => {
 	// Cek apakah ini request untuk analisis transaksi
 	const action = url.searchParams.get('action');
-	
+
 	if (action === 'analyze') {
 		return await handleTransactionAnalysis(request);
 	}
-	
+
 	// Default: handle regular AI chat
 	return await handleRegularChat(request);
 };
@@ -789,7 +807,6 @@ async function handleTransactionAnalysis(request: Request) {
 			confidence: analysis.confidence,
 			recommendations: analysis.recommendations
 		});
-
 	} catch (error) {
 		return json(
 			{
@@ -832,7 +849,10 @@ async function handleRegularChat(request: Request) {
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database
-		const { startWita, endWita } = witaRangeToWitaQuery(dataRequirements.periode.start, dataRequirements.periode.end);
+		const { startWita, endWita } = witaRangeToWitaQuery(
+			dataRequirements.periode.start,
+			dataRequirements.periode.end
+		);
 		const startDate = startWita;
 		const endDate = endWita;
 
@@ -841,11 +861,11 @@ async function handleRegularChat(request: Request) {
 		// Konversi tanggal untuk konteks AI
 		const formatDateForAI = (dateStr: string) => {
 			const date = new Date(dateStr);
-			return date.toLocaleDateString('id-ID', { 
-				weekday: 'long', 
-				year: 'numeric', 
-				month: 'long', 
-				day: 'numeric' 
+			return date.toLocaleDateString('id-ID', {
+				weekday: 'long',
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric'
 			});
 		};
 
@@ -871,8 +891,7 @@ async function handleRegularChat(request: Request) {
 			const pageSize = 500; // Reduce page size untuk menghindari timeout
 			let hasMore = true;
 			const maxPages = 20; // Limit maksimal halaman untuk menghindari infinite loop
-			
-			
+
 			while (hasMore && page < maxPages) {
 				try {
 					// Add timeout wrapper - gunakan query yang lebih sederhana dulu
@@ -883,8 +902,7 @@ async function handleRegularChat(request: Request) {
 						.lte('waktu', endDate)
 						.range(page * pageSize, (page + 1) * pageSize - 1)
 						.order('waktu', { ascending: true });
-					
-					
+
 					// Apply filters
 					if (filters.sumber) {
 						queryPromise.eq('sumber', filters.sumber);
@@ -893,24 +911,24 @@ async function handleRegularChat(request: Request) {
 						queryPromise.neq('sumber', filters.excludeSumber);
 					}
 					// Note: Branch filtering is handled by getSupabaseClient(branch), not by column
-					
+
 					// Add timeout (30 seconds)
-					const timeoutPromise = new Promise((_, reject) => 
+					const timeoutPromise = new Promise((_, reject) =>
 						setTimeout(() => reject(new Error('Query timeout')), 30000)
 					);
-					
-					const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
-					
+
+					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as any;
+
 					if (error) {
 						if (error.code === '57014' || error.message?.includes('timeout')) {
 							break;
 						}
 						break;
 					}
-					
+
 					if (data && data.length > 0) {
 						allData = [...allData, ...data];
-						
+
 						// Jika data kurang dari pageSize, berarti sudah habis
 						if (data.length < pageSize) {
 							hasMore = false;
@@ -927,7 +945,6 @@ async function handleRegularChat(request: Request) {
 			return allData;
 		}
 
-		
 		// Ambil data untuk periode yang diminta dengan pagination
 		const [bukuKasPos, bukuKasManual] = await Promise.all([
 			fetchAllData('buku_kas', { sumber: 'pos' }),
@@ -939,14 +956,14 @@ async function handleRegularChat(request: Request) {
 		if (bukuKasPos && bukuKasPos.length > 0) {
 			// Ambil buku_kas_id dari data POS
 			const bukuKasIds = bukuKasPos.map((item: any) => item.id).filter(Boolean);
-			
+
 			if (bukuKasIds.length > 0) {
 				try {
 					const { data: transaksiKasir, error: errorTransaksiKasir } = await supabase
 						.from('transaksi_kasir')
 						.select('*, produk(name)')
 						.in('buku_kas_id', bukuKasIds);
-					
+
 					if (!errorTransaksiKasir) {
 						transaksiKasirData = transaksiKasir || [];
 					}
@@ -957,7 +974,10 @@ async function handleRegularChat(request: Request) {
 		}
 
 		// Handle case when no data found
-		if ((!bukuKasPos || bukuKasPos.length === 0) && (!bukuKasManual || bukuKasManual.length === 0)) {
+		if (
+			(!bukuKasPos || bukuKasPos.length === 0) &&
+			(!bukuKasManual || bukuKasManual.length === 0)
+		) {
 			return new Response(
 				JSON.stringify({
 					success: false,
@@ -968,7 +988,8 @@ async function handleRegularChat(request: Request) {
 						prioritas: dataRequirements.prioritas,
 						scope: dataRequirements.scope
 					},
-					suggestion: 'Coba gunakan periode yang lebih pendek atau periksa apakah ada data transaksi dalam rentang waktu tersebut'
+					suggestion:
+						'Coba gunakan periode yang lebih pendek atau periksa apakah ada data transaksi dalam rentang waktu tersebut'
 				}),
 				{
 					headers: { 'Content-Type': 'application/json' },
@@ -979,77 +1000,74 @@ async function handleRegularChat(request: Request) {
 
 		// Data periode yang diminta - gunakan logika yang sama dengan DataService
 		const laporan: any[] = [];
-		
+
 		// 1. Tambahkan data POS dari buku_kas (sumber='pos')
 		(bukuKasPos || []).forEach((item: any) => {
 			laporan.push({
 				...item,
 				sumber: 'pos',
-				nominal: item.amount || 0  // Map amount ke nominal seperti DataService
+				nominal: item.amount || 0 // Map amount ke nominal seperti DataService
 			});
 		});
-		
+
 		// 2. Tambahkan data manual/catat
 		(bukuKasManual || []).forEach((item: any) => {
 			laporan.push({
 				...item,
 				sumber: item.sumber || 'catat',
-				nominal: item.amount || 0  // Map amount ke nominal seperti DataService
+				nominal: item.amount || 0 // Map amount ke nominal seperti DataService
 			});
 		});
 
 		// Hitung data periode yang diminta
 		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
-		
-		const totalPemasukan = pemasukan.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
-			0
-		);
-		const totalPengeluaran = pengeluaran.reduce(
-			(s: number, t: any) => s + (t.nominal || 0),
-			0
-		);
+
+		const totalPemasukan = pemasukan.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
+		const totalPengeluaran = pengeluaran.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
 
-
 		// Hitung data per bulan untuk periode yang diminta (untuk analisis detail)
-		const requestedMonthlyData: Record<string, { 
-			pemasukan: number; 
-			pengeluaran: number; 
-			laba: number; 
-			transaksi: number;
-			produkTerlaris: Record<string, { qty: number; revenue: number; name: string }>;
-			paymentMethods: Record<string, { jumlah: number; nominal: number }>;
-		}> = {};
-		
+		const requestedMonthlyData: Record<
+			string,
+			{
+				pemasukan: number;
+				pengeluaran: number;
+				laba: number;
+				transaksi: number;
+				produkTerlaris: Record<string, { qty: number; revenue: number; name: string }>;
+				paymentMethods: Record<string, { jumlah: number; nominal: number }>;
+			}
+		> = {};
+
 		// Proses data periode yang diminta per bulan
 		for (const item of laporan) {
 			const date = new Date(item.waktu);
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 			const monthName = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-			
+
 			if (!requestedMonthlyData[monthKey]) {
-				requestedMonthlyData[monthKey] = { 
-					pemasukan: 0, 
-					pengeluaran: 0, 
-					laba: 0, 
+				requestedMonthlyData[monthKey] = {
+					pemasukan: 0,
+					pengeluaran: 0,
+					laba: 0,
 					transaksi: 0,
 					produkTerlaris: {},
 					paymentMethods: {}
 				};
 			}
-			
+
 			const amount = item.nominal || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
 				requestedMonthlyData[monthKey].pengeluaran += amount;
 			}
-			requestedMonthlyData[monthKey].laba = requestedMonthlyData[monthKey].pemasukan - requestedMonthlyData[monthKey].pengeluaran;
-			
+			requestedMonthlyData[monthKey].laba =
+				requestedMonthlyData[monthKey].pemasukan - requestedMonthlyData[monthKey].pengeluaran;
+
 			if (item.sumber === 'pos' && item.transaction_id) {
 				requestedMonthlyData[monthKey].transaksi += 1;
 			}
@@ -1069,17 +1087,22 @@ async function handleRegularChat(request: Request) {
 		for (const item of transaksiKasirData || []) {
 			const date = new Date(item.created_at || item.waktu);
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-			
+
 			if (requestedMonthlyData[monthKey]) {
 				const pid = (item as any)?.produk_id;
 				if (!pid) continue;
 				const qty = Number((item as any)?.qty || 0) || 0;
 				const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
 				const revenue = unit * (qty || 1);
-				const productName = (item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
-				
+				const productName =
+					(item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+
 				if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
-					requestedMonthlyData[monthKey].produkTerlaris[pid] = { qty: 0, revenue: 0, name: productName };
+					requestedMonthlyData[monthKey].produkTerlaris[pid] = {
+						qty: 0,
+						revenue: 0,
+						name: productName
+					};
 				}
 				requestedMonthlyData[monthKey].produkTerlaris[pid].qty += qty || 0;
 				requestedMonthlyData[monthKey].produkTerlaris[pid].revenue += revenue;
@@ -1093,10 +1116,15 @@ async function handleRegularChat(request: Request) {
 				const date = new Date(monthKey + '-01');
 				const monthName = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 				const topProducts = Object.entries(data.produkTerlaris)
-					.map(([pid, prod]) => ({ id: pid, nama: prod.name, totalTerjual: prod.qty, totalPendapatan: prod.revenue }))
+					.map(([pid, prod]) => ({
+						id: pid,
+						nama: prod.name,
+						totalTerjual: prod.qty,
+						totalPendapatan: prod.revenue
+					}))
 					.sort((a, b) => b.totalTerjual - a.totalTerjual)
 					.slice(0, 3);
-				
+
 				return {
 					month: monthKey,
 					monthName,
@@ -1152,64 +1180,88 @@ async function handleRegularChat(request: Request) {
 			const wita = new Date(waktu);
 			const dateKey = wita.toISOString().split('T')[0];
 			const revenue = t.amount || 0;
-			
+
 			if (!dailyTrend[dateKey]) {
 				dailyTrend[dateKey] = { count: 0, revenue: 0, avgTicket: 0 };
 			}
 			dailyTrend[dateKey].count += 1;
 			dailyTrend[dateKey].revenue += revenue;
 		}
-		
+
 		// Hitung rata-rata per transaksi
-		Object.keys(dailyTrend).forEach(date => {
+		Object.keys(dailyTrend).forEach((date) => {
 			if (dailyTrend[date].count > 0) {
 				dailyTrend[date].avgTicket = dailyTrend[date].revenue / dailyTrend[date].count;
 			}
 		});
-		
+
 		// Analisis performa harian
 		const dailyPerformance = Object.entries(dailyTrend)
 			.sort(([a], [b]) => a.localeCompare(b))
 			.map(([date, data]) => ({
 				date,
-				formattedDate: new Date(date).toLocaleDateString('id-ID', { 
-					weekday: 'long', 
-					day: 'numeric', 
-					month: 'long' 
+				formattedDate: new Date(date).toLocaleDateString('id-ID', {
+					weekday: 'long',
+					day: 'numeric',
+					month: 'long'
 				}),
 				...data
 			}));
-		
+
 		// Hitung statistik keseluruhan
 		const totalDays = dailyPerformance.length;
-		const avgTransactionsPerDay = totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.count, 0) / totalDays : 0;
-		const avgRevenuePerDay = totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.revenue, 0) / totalDays : 0;
-		const avgTicketSize = totalPemasukan > 0 && (bukuKasPos?.length || 0) > 0 ? totalPemasukan / (bukuKasPos?.length || 1) : 0;
-		
+		const avgTransactionsPerDay =
+			totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.count, 0) / totalDays : 0;
+		const avgRevenuePerDay =
+			totalDays > 0 ? dailyPerformance.reduce((sum, day) => sum + day.revenue, 0) / totalDays : 0;
+		const avgTicketSize =
+			totalPemasukan > 0 && (bukuKasPos?.length || 0) > 0
+				? totalPemasukan / (bukuKasPos?.length || 1)
+				: 0;
+
 		// Identifikasi hari terbaik dan terburuk
-		const bestDay = dailyPerformance.reduce((best, current) => 
-			current.revenue > best.revenue ? current : best, dailyPerformance[0] || { revenue: 0 });
-		const worstDay = dailyPerformance.reduce((worst, current) => 
-			current.revenue < worst.revenue ? current : worst, dailyPerformance[0] || { revenue: 0 });
+		const bestDay = dailyPerformance.reduce(
+			(best, current) => (current.revenue > best.revenue ? current : best),
+			dailyPerformance[0] || { revenue: 0 }
+		);
+		const worstDay = dailyPerformance.reduce(
+			(worst, current) => (current.revenue < worst.revenue ? current : worst),
+			dailyPerformance[0] || { revenue: 0 }
+		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
 		let products: any[] = [];
 		let categories: any[] = [];
 		let addons: any[] = [];
-		
+
 		// Fetch data berdasarkan jenis data yang diperlukan
 		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
-			const { data: productsData } = await supabase.from('produk').select('id, name, price, category_id').limit(1000);
+			const { data: productsData } = await supabase
+				.from('produk')
+				.select('id, name, price, category_id')
+				.limit(1000);
 			products = productsData || [];
 		}
-		
-		if (dataRequirements.jenisData.includes('kategori') || dataRequirements.jenisData.length === 0) {
-			const { data: categoriesData } = await supabase.from('kategori').select('id, name').limit(1000);
+
+		if (
+			dataRequirements.jenisData.includes('kategori') ||
+			dataRequirements.jenisData.length === 0
+		) {
+			const { data: categoriesData } = await supabase
+				.from('kategori')
+				.select('id, name')
+				.limit(1000);
 			categories = categoriesData || [];
 		}
-		
-		if (dataRequirements.jenisData.includes('tambahan') || dataRequirements.jenisData.length === 0) {
-			const { data: addonsData } = await supabase.from('tambahan').select('id, name, price').limit(1000);
+
+		if (
+			dataRequirements.jenisData.includes('tambahan') ||
+			dataRequirements.jenisData.length === 0
+		) {
+			const { data: addonsData } = await supabase
+				.from('tambahan')
+				.select('id, name, price')
+				.limit(1000);
 			addons = addonsData || [];
 		}
 
@@ -1241,17 +1293,29 @@ async function handleRegularChat(request: Request) {
 
 		// Cari produk spesifik jika user bertanya tentang harga
 		let specificProduct = null;
-		if (dataRequirements.prioritas === 'product_analysis' && question.toLowerCase().includes('harga')) {
+		if (
+			dataRequirements.prioritas === 'product_analysis' &&
+			question.toLowerCase().includes('harga')
+		) {
 			// Cari produk yang disebutkan dalam pertanyaan
-			const productKeywords = ['alpukat', 'mangga', 'jeruk', 'apel', 'pisang', 'semangka', 'melon', 'pepaya', 'naga', 'strawberry'];
-			const foundKeyword = productKeywords.find(keyword => 
+			const productKeywords = [
+				'alpukat',
+				'mangga',
+				'jeruk',
+				'apel',
+				'pisang',
+				'semangka',
+				'melon',
+				'pepaya',
+				'naga',
+				'strawberry'
+			];
+			const foundKeyword = productKeywords.find((keyword) =>
 				question.toLowerCase().includes(keyword)
 			);
-			
+
 			if (foundKeyword) {
-				specificProduct = products.find(p => 
-					p.name.toLowerCase().includes(foundKeyword)
-				);
+				specificProduct = products.find((p) => p.name.toLowerCase().includes(foundKeyword));
 			}
 		}
 
@@ -1275,18 +1339,24 @@ async function handleRegularChat(request: Request) {
 				avgRevenuePerDay: Math.round(avgRevenuePerDay),
 				avgTicketSize: Math.round(avgTicketSize),
 				totalDays,
-				bestDay: bestDay.revenue > 0 ? {
-					date: bestDay.formattedDate,
-					revenue: bestDay.revenue,
-					transactions: bestDay.count,
-					avgTicket: Math.round(bestDay.avgTicket)
-				} : null,
-				worstDay: worstDay.revenue > 0 ? {
-					date: worstDay.formattedDate,
-					revenue: worstDay.revenue,
-					transactions: worstDay.count,
-					avgTicket: Math.round(worstDay.avgTicket)
-				} : null
+				bestDay:
+					bestDay.revenue > 0
+						? {
+								date: bestDay.formattedDate,
+								revenue: bestDay.revenue,
+								transactions: bestDay.count,
+								avgTicket: Math.round(bestDay.avgTicket)
+							}
+						: null,
+				worstDay:
+					worstDay.revenue > 0
+						? {
+								date: worstDay.formattedDate,
+								revenue: worstDay.revenue,
+								transactions: worstDay.count,
+								avgTicket: Math.round(worstDay.avgTicket)
+							}
+						: null
 			},
 			// Data requirements untuk konteks AI
 			dataRequirements: {
@@ -1322,32 +1392,40 @@ Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
 PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "2 bulan terakhir", maka data di atas adalah data untuk 2 bulan terakhir. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh. ANALISIS data yang tersedia, jangan katakan tidak ada data.
 
 === DATA PER BULAN UNTUK PERIODE YANG DIMINTA ===
-${(serverReportData.summary?.requestedMonthlyData || []).map((month: any) => `
+${
+	(serverReportData.summary?.requestedMonthlyData || [])
+		.map(
+			(month: any) => `
 Bulan ${month.monthName} (${month.month}):
 - Pendapatan: Rp ${month.pemasukan.toLocaleString('id-ID')}
 - Pengeluaran: Rp ${month.pengeluaran.toLocaleString('id-ID')}
 - Laba: Rp ${month.laba.toLocaleString('id-ID')}
 - Total Transaksi: ${month.transaksi}
-- Metode Pembayaran: ${Object.entries(month.paymentMethods).map(([method, data]: any) => {
-	const methodLabels: Record<string, string> = {
-		'tunai': 'Tunai (Cash)',
-		'qris': 'QRIS (Digital Payment)',
-		'lainnya': 'Lainnya'
-	};
-	const label = methodLabels[method] || method;
-	return `${label}: ${data.jumlah} trx (Rp ${data.nominal.toLocaleString('id-ID')})`;
-}).join(', ')}
+- Metode Pembayaran: ${Object.entries(month.paymentMethods)
+				.map(([method, data]: any) => {
+					const methodLabels: Record<string, string> = {
+						tunai: 'Tunai (Cash)',
+						qris: 'QRIS (Digital Payment)',
+						lainnya: 'Lainnya'
+					};
+					const label = methodLabels[method] || method;
+					return `${label}: ${data.jumlah} trx (Rp ${data.nominal.toLocaleString('id-ID')})`;
+				})
+				.join(', ')}
 - Top 3 Produk Terlaris: ${month.topProducts.map((p: any) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
-`).join('\n') || '- (tidak ada data per bulan)'}
+`
+		)
+		.join('\n') || '- (tidak ada data per bulan)'
+}
 
 === RINCIAN PEMBAYARAN ===
 ${
 	Object.entries(serverReportData.pembayaran || {})
 		.map(([k, v]: any) => {
 			const methodLabels: Record<string, string> = {
-				'tunai': 'Tunai (Cash)',
-				'qris': 'QRIS (Digital Payment)',
-				'lainnya': 'Lainnya'
+				tunai: 'Tunai (Cash)',
+				qris: 'QRIS (Digital Payment)',
+				lainnya: 'Lainnya'
 			};
 			const label = methodLabels[k] || k;
 			return `- ${label}: ${v.jumlah} trx, Rp ${v.nominal.toLocaleString('id-ID')}`;
@@ -1373,12 +1451,16 @@ Kategori (sample): ${
 						.join(', ') || '-'
 				}
 
-${serverReportData.specificProduct ? `
+${
+	serverReportData.specificProduct
+		? `
 === PRODUK SPESIFIK YANG DICARI ===
 Nama: ${serverReportData.specificProduct.name}
 Harga: Rp ${serverReportData.specificProduct.price?.toLocaleString('id-ID') || 'Tidak tersedia'}
 ID: ${serverReportData.specificProduct.id}
-` : ''}
+`
+		: ''
+}
 
 Top Produk Terlaris:
 ${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
@@ -1395,9 +1477,14 @@ Hari Terbaik: ${serverReportData.analytics?.bestDay ? `${serverReportData.analyt
 Hari Terburuk: ${serverReportData.analytics?.worstDay ? `${serverReportData.analytics.worstDay.date} - Rp ${serverReportData.analytics.worstDay.revenue.toLocaleString('id-ID')} (${serverReportData.analytics.worstDay.transactions} trx, avg Rp ${serverReportData.analytics.worstDay.avgTicket.toLocaleString('id-ID')})` : 'Tidak ada data'}
 
 Detail Performa Harian:
-${(serverReportData.dailyPerformance || []).map((day: any) => 
-	`- ${day.formattedDate}: ${day.count} trx, Rp ${day.revenue.toLocaleString('id-ID')} (avg Rp ${Math.round(day.avgTicket).toLocaleString('id-ID')})`
-).join('\n') || '- (tidak ada data harian)'}
+${
+	(serverReportData.dailyPerformance || [])
+		.map(
+			(day: any) =>
+				`- ${day.formattedDate}: ${day.count} trx, Rp ${day.revenue.toLocaleString('id-ID')} (avg Rp ${Math.round(day.avgTicket).toLocaleString('id-ID')})`
+		)
+		.join('\n') || '- (tidak ada data harian)'
+}
 		`
 			: 'Tidak ada data laporan tersedia.';
 
@@ -1419,7 +1506,6 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 			}
 		});
 	} catch (error) {
-
 		return json(
 			{
 				success: false,
@@ -1428,4 +1514,4 @@ ${(serverReportData.dailyPerformance || []).map((day: any) =>
 			{ status: 500 }
 		);
 	}
-};
+}

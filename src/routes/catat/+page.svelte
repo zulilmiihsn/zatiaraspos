@@ -15,7 +15,13 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { auth } from '$lib/auth/auth';
 	import { goto } from '$app/navigation';
-	import { formatWitaDateTime, witaToUtcRange, witaToUtcISO, getTodayWita, getNowWita } from '$lib/utils/dateTime';
+	import {
+		formatWitaDateTime,
+		witaToUtcRange,
+		witaToUtcISO,
+		getTodayWita,
+		getNowWita
+	} from '$lib/utils/dateTime';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
@@ -23,6 +29,7 @@
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import { dataService } from '$lib/services/dataService';
 
 	// Touch handling variables
 	let touchStartX = 0;
@@ -106,6 +113,10 @@
 	}
 
 	onMount(async () => {
+		// Preload ikon Catat (non-blocking)
+		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
+			loadRouteIcons('catat');
+		});
 		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 		// Hapus query role dari Supabase, gunakan store
 		// const { data: { session } } = await supabase.auth.getSession();
@@ -194,10 +205,8 @@
 				return;
 			}
 			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
-			import('$lib/services/dataService').then(async ({ dataService }) => {
-				await dataService.invalidateCacheOnChange('buku_kas');
-				await dataService.invalidateCacheOnChange('transaksi_kasir');
-			});
+			await dataService.invalidateCacheOnChange('buku_kas');
+			await dataService.invalidateCacheOnChange('transaksi_kasir');
 		} else {
 			// Offline mode: simpan transaksi ke pending
 			addPendingTransaction(trx);

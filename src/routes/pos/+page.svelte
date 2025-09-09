@@ -67,6 +67,10 @@
 	let isInitialLoad = true; // Add flag to prevent double fetching
 
 	onMount(async () => {
+		// Preload ikon POS untuk percepat transisi dan render ikon inti
+		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
+			loadRouteIcons('pos');
+		});
 		// Load data dengan smart caching
 		await loadPOSData();
 

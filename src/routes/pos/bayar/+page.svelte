@@ -17,6 +17,7 @@
 	import { memoize } from '$lib/utils/performance';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { dataService } from '$lib/services/dataService';
 
 	let cart: any[] = [];
 	let customerName = '';
@@ -368,13 +369,11 @@
 				}
 			}
 			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
-			import('$lib/services/dataService').then(async ({ dataService }) => {
-				await dataService.invalidateCacheOnChange('buku_kas');
-				await dataService.invalidateCacheOnChange('transaksi_kasir');
-				if (typeof window !== 'undefined' && (window as any).refreshDashboardData) {
-					await (window as any).refreshDashboardData();
-				}
-			});
+			await dataService.invalidateCacheOnChange('buku_kas');
+			await dataService.invalidateCacheOnChange('transaksi_kasir');
+			if (typeof window !== 'undefined' && (window as any).refreshDashboardData) {
+				await (window as any).refreshDashboardData();
+			}
 		} else {
 			// Offline mode: simpan summary dan detail ke pending
 			addPendingTransaction({ bukuKas: insert, transaksiKasir: transaksiKasirInserts });
@@ -451,11 +450,11 @@
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
 		html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${totalHarga.toLocaleString('id-ID')}</b></td></tr>`;
 		const methodLabels: Record<string, string> = {
-			'tunai': 'Tunai',
-			'qris': 'QRIS',
-			'transfer': 'Transfer',
+			tunai: 'Tunai',
+			qris: 'QRIS',
+			transfer: 'Transfer',
 			'e-wallet': 'E-Wallet',
-			'card': 'Kartu'
+			card: 'Kartu'
 		};
 		html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
 		if (paymentMethod === 'tunai') {
@@ -759,7 +758,8 @@
 			</div>
 			<div class="mb-1 text-center text-2xl font-bold text-green-600">Transaksi Berhasil!</div>
 			<div class="mb-2 text-center text-gray-700">
-				Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br />
+				Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br
+				/>
 				{#if customerName.trim()}
 					<span class="font-semibold text-pink-500">{customerName.trim()}</span><br />
 				{/if}

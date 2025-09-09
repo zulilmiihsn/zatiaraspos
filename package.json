@@ -65,6 +65,7 @@
 		"js-base64": "^3.7.7",
 		"lucide-svelte": "^0.535.0",
 		"pako": "^2.1.0",
-		"uuid": "^11.1.0"
+		"uuid": "^11.1.0",
+		"workbox-window": "^7.3.0"
 	}
 }

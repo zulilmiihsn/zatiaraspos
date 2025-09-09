@@ -71,6 +71,14 @@
 	let isInitialLoad = true; // Add flag to prevent double fetching
 
 	onMount(async () => {
+		// Preload ikon untuk halaman beranda agar ikon metrik muncul cepat
+		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
+			// non-blocking
+			loadRouteIcons('dashboard');
+			// anticipatory preload ke rute yang sering dituju berikutnya
+			setTimeout(() => loadRouteIcons('pos'), 0);
+			setTimeout(() => loadRouteIcons('laporan'), 0);
+		});
 		const icons = await Promise.all([
 			import('lucide-svelte/icons/wallet'),
 			import('lucide-svelte/icons/shopping-bag'),
@@ -1145,7 +1153,6 @@
 		<!-- BottomNav hanya muncul di mobile -->
 	</div>
 </div>
-
 
 <style>
 	.modal-slideup {

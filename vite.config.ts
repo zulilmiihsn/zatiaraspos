@@ -6,33 +6,10 @@ export default defineConfig({
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({
-			registerType: 'autoUpdate',
+			registerType: 'prompt',
+			injectRegister: 'auto',
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif}'],
-				runtimeCaching: [
-					{
-						urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-						handler: 'CacheFirst',
-						options: {
-							cacheName: 'google-fonts-cache',
-							expiration: {
-								maxEntries: 10,
-								maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-							}
-						}
-					},
-					{
-						urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-						handler: 'NetworkFirst',
-						options: {
-							cacheName: 'supabase-cache',
-							expiration: {
-								maxEntries: 100,
-								maxAgeSeconds: 60 * 60 * 24 // 1 day
-							}
-						}
-					}
-				]
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif}']
 			},
 			includeAssets: ['favicon.svg', '180x180.png', '192x192.png', '144x144.png', '512x512.png'],
 			manifest: {

@@ -4,7 +4,13 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
 import { performanceTracker } from '$lib/utils/performanceTracker';
-import { getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange, witaRangeToWitaQuery } from '$lib/utils/dateTime';
+import {
+	getTodayWita,
+	getNowWita,
+	witaToUtcRange,
+	witaRangeToUtcRange,
+	witaRangeToWitaQuery
+} from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
 import {
@@ -13,7 +19,6 @@ import {
 	clearPendingTransactions
 } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
-
 
 // Fungsi cache harian untuk rata-rata transaksi/hari
 async function getAvgTransaksiHarian(supabase: any): Promise<number> {
@@ -25,7 +30,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	}
 	// Hitung ulang
 	const hariLabels = [];
-		const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
+	const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
 	for (let i = 6; i >= 0; i--) {
 		const d = new Date(todayWita);
 		d.setDate(todayWita.getDate() - i);
@@ -209,9 +214,7 @@ export class DataService {
 		return smartCache.get(
 			`${CACHE_KEYS.BEST_SELLERS}_${branch}`,
 			async () => {
-				const todayWita = new Date(
-					getNowWita()
-				);
+				const todayWita = new Date(getNowWita());
 				const yyyy = todayWita.getFullYear();
 				const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
 				const dd = String(todayWita.getDate()).padStart(2, '0');
@@ -291,9 +294,7 @@ export class DataService {
 		return smartCache.get(
 			`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`,
 			async () => {
-				const todayWita = new Date(
-					getNowWita()
-				);
+				const todayWita = new Date(getNowWita());
 				const weeklyIncome = [];
 				let weeklyMax = 1;
 
@@ -386,253 +387,259 @@ export class DataService {
 	async getReportData(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
 		// SMART CACHING: Cache per date range dengan strategi yang lebih pintar
 		const cacheKey = this.generateSmartCacheKey(type, dateRange);
-		
+
 		// Check cache first dengan TTL yang berbeda per type
 		const cacheOptions = this.getCacheOptionsForType(type);
-		
-		return smartCache.get(cacheKey, async () => {
-			// Generate ETag based on date range and type
-			const etagValue = `${type}_${dateRange}_${Date.now()}`;
 
-			let startDate: string, endDate: string;
+		return smartCache.get(
+			cacheKey,
+			async () => {
+				// Generate ETag based on date range and type
+				const etagValue = `${type}_${dateRange}_${Date.now()}`;
 
-			switch (type) {
-				case 'daily':
-					// Handle both single date and date range
-					if (dateRange.includes('_')) {
-						const [start, end] = dateRange.split('_');
-						startDate = start;
-						endDate = end;
-					} else {
+				let startDate: string, endDate: string;
+
+				switch (type) {
+					case 'daily':
+						// Handle both single date and date range
+						if (dateRange.includes('_')) {
+							const [start, end] = dateRange.split('_');
+							startDate = start;
+							endDate = end;
+						} else {
+							startDate = dateRange;
+							endDate = dateRange;
+						}
+						break;
+					case 'weekly':
+						// Calculate week range
+						const date = new Date(dateRange);
+						const startOfWeek = new Date(date);
+						startOfWeek.setDate(date.getDate() - date.getDay());
+						const endOfWeek = new Date(startOfWeek);
+						endOfWeek.setDate(startOfWeek.getDate() + 6);
+						startDate = startOfWeek.toISOString().split('T')[0];
+						endDate = endOfWeek.toISOString().split('T')[0];
+						break;
+					case 'monthly':
+						startDate = `${dateRange}-01`;
+						const lastDay = new Date(
+							parseInt(dateRange.split('-')[0]),
+							parseInt(dateRange.split('-')[1]),
+							0
+						);
+						endDate = lastDay.toISOString().split('T')[0];
+						break;
+					case 'yearly':
+						startDate = `${dateRange}-01-01`;
+						endDate = `${dateRange}-12-31`;
+						break;
+					default:
 						startDate = dateRange;
 						endDate = dateRange;
-					}
-					break;
-				case 'weekly':
-					// Calculate week range
-					const date = new Date(dateRange);
-					const startOfWeek = new Date(date);
-					startOfWeek.setDate(date.getDate() - date.getDay());
-					const endOfWeek = new Date(startOfWeek);
-					endOfWeek.setDate(startOfWeek.getDate() + 6);
-					startDate = startOfWeek.toISOString().split('T')[0];
-					endDate = endOfWeek.toISOString().split('T')[0];
-					break;
-				case 'monthly':
-					startDate = `${dateRange}-01`;
-					const lastDay = new Date(
-						parseInt(dateRange.split('-')[0]),
-						parseInt(dateRange.split('-')[1]),
-						0
-					);
-					endDate = lastDay.toISOString().split('T')[0];
-					break;
-				case 'yearly':
-					startDate = `${dateRange}-01-01`;
-					endDate = `${dateRange}-12-31`;
-					break;
-				default:
-					startDate = dateRange;
-					endDate = dateRange;
-			}
-
-			let startWita: string, endWita: string;
-
-			try {
-				// STANDAR: Gunakan WITA untuk query database
-				if (startDate === endDate) {
-					// Single date: gunakan witaRangeToWitaQuery dengan tanggal yang sama
-					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(startDate, startDate);
-					startWita = startWitaTemp;
-					endWita = endWitaTemp;
-				} else {
-					// Range date: gunakan witaRangeToWitaQuery
-					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(startDate, endDate);
-					startWita = startWitaTemp;
-					endWita = endWitaTemp;
 				}
-				
-			} catch (error) {
-				// Fallback to current date if date conversion fails
-				const today = getTodayWita();
+
+				let startWita: string, endWita: string;
+
 				try {
-					const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(today, today);
-					startWita = startWitaTemp;
-					endWita = endWitaTemp;
-				} catch (fallbackError) {
-					// Use hardcoded fallback
-					startWita = today + 'T00:00:00+08:00';
-					endWita = today + 'T23:59:59+08:00';
-				}
-			}
-
-			// PARALLEL PAGINATION: Ambil posBukuKas secara parallel
-			const posBukuKas = await this.fetchAllDataParallel(
-				'buku_kas',
-				startWita,  // Gunakan WITA
-				endWita,    // Gunakan WITA
-				{ sumber: 'pos' }
-			);
-				
-
-			// Ambil detail transaksi kasir untuk POS yang sudah difilter
-			let posItems = [];
-			if (posBukuKas && posBukuKas.length > 0) {
-				// Gunakan buku_kas_id untuk relasi yang benar
-				const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
-				
-				// Batasi query jika terlalu banyak buku_kas_id
-				let transaksiKasir, errorTransaksiKasir;
-				if (bukuKasIds.length > 1000) {
-					// Gunakan query berdasarkan created_at range sebagai alternatif
-					const { data: transaksiKasirAlt, error: errorTransaksiKasirAlt } = await this.supabase
-						.from('transaksi_kasir')
-						.select('*, produk(name)')
-						.gte('created_at', startDate + 'T00:00:00')
-						.lte('created_at', endDate + 'T23:59:59');
-					
-					transaksiKasir = transaksiKasirAlt;
-					errorTransaksiKasir = errorTransaksiKasirAlt;
-				} else {
-					const { data: transaksiKasirData, error: errorTransaksiKasirData } = await this.supabase
-						.from('transaksi_kasir')
-						.select('*, produk(name)')
-						.in('buku_kas_id', bukuKasIds);
-					
-					transaksiKasir = transaksiKasirData;
-					errorTransaksiKasir = errorTransaksiKasirData;
+					// STANDAR: Gunakan WITA untuk query database
+					if (startDate === endDate) {
+						// Single date: gunakan witaRangeToWitaQuery dengan tanggal yang sama
+						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
+							startDate,
+							startDate
+						);
+						startWita = startWitaTemp;
+						endWita = endWitaTemp;
+					} else {
+						// Range date: gunakan witaRangeToWitaQuery
+						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
+							startDate,
+							endDate
+						);
+						startWita = startWitaTemp;
+						endWita = endWitaTemp;
+					}
+				} catch (error) {
+					// Fallback to current date if date conversion fails
+					const today = getTodayWita();
+					try {
+						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
+							today,
+							today
+						);
+						startWita = startWitaTemp;
+						endWita = endWitaTemp;
+					} catch (fallbackError) {
+						// Use hardcoded fallback
+						startWita = today + 'T00:00:00+08:00';
+						endWita = today + 'T23:59:59+08:00';
+					}
 				}
 
+				// PARALLEL PAGINATION: Ambil posBukuKas secara parallel
+				const posBukuKas = await this.fetchAllDataParallel(
+					'buku_kas',
+					startWita, // Gunakan WITA
+					endWita, // Gunakan WITA
+					{ sumber: 'pos' }
+				);
 
-				if (!errorTransaksiKasir && transaksiKasir) {
-					// Gabungkan data buku_kas dengan transaksi_kasir menggunakan buku_kas_id
-					posItems = transaksiKasir.map((tk: any) => {
-						const bukuKas = posBukuKas.find((bk: any) => bk.id === tk.buku_kas_id);
-						return {
-							...tk,
-							buku_kas: bukuKas
-						};
-					}).filter((item: any) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
-					
-				} else {
-					posItems = [];
+				// Ambil detail transaksi kasir untuk POS yang sudah difilter
+				let posItems = [];
+				if (posBukuKas && posBukuKas.length > 0) {
+					// Gunakan buku_kas_id untuk relasi yang benar
+					const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
+
+					// Batasi query jika terlalu banyak buku_kas_id
+					let transaksiKasir, errorTransaksiKasir;
+					if (bukuKasIds.length > 1000) {
+						// Gunakan query berdasarkan created_at range sebagai alternatif
+						const { data: transaksiKasirAlt, error: errorTransaksiKasirAlt } = await this.supabase
+							.from('transaksi_kasir')
+							.select('*, produk(name)')
+							.gte('created_at', startDate + 'T00:00:00')
+							.lte('created_at', endDate + 'T23:59:59');
+
+						transaksiKasir = transaksiKasirAlt;
+						errorTransaksiKasir = errorTransaksiKasirAlt;
+					} else {
+						const { data: transaksiKasirData, error: errorTransaksiKasirData } = await this.supabase
+							.from('transaksi_kasir')
+							.select('*, produk(name)')
+							.in('buku_kas_id', bukuKasIds);
+
+						transaksiKasir = transaksiKasirData;
+						errorTransaksiKasir = errorTransaksiKasirData;
+					}
+
+					if (!errorTransaksiKasir && transaksiKasir) {
+						// Gabungkan data buku_kas dengan transaksi_kasir menggunakan buku_kas_id
+						posItems = transaksiKasir
+							.map((tk: any) => {
+								const bukuKas = posBukuKas.find((bk: any) => bk.id === tk.buku_kas_id);
+								return {
+									...tk,
+									buku_kas: bukuKas
+								};
+							})
+							.filter((item: any) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
+					} else {
+						posItems = [];
+					}
 				}
-			}
 
-			// PARALLEL PAGINATION: Ambil manualItems secara parallel
-			const manualItems = await this.fetchAllDataParallel(
-				'buku_kas',
-				startWita,  // Gunakan WITA
-				endWita,    // Gunakan WITA
-				{ sumber: { neq: 'pos' } }
-			);
+				// PARALLEL PAGINATION: Ambil manualItems secara parallel
+				const manualItems = await this.fetchAllDataParallel(
+					'buku_kas',
+					startWita, // Gunakan WITA
+					endWita, // Gunakan WITA
+					{ sumber: { neq: 'pos' } }
+				);
 
+				// PARALLEL PAGINATION: Ambil semua data secara parallel
+				const allBukuKas = await this.fetchAllDataParallel(
+					'buku_kas',
+					startWita, // Gunakan WITA
+					endWita // Gunakan WITA
+				);
 
-			// PARALLEL PAGINATION: Ambil semua data secara parallel
-			const allBukuKas = await this.fetchAllDataParallel(
-				'buku_kas',
-				startWita,  // Gunakan WITA
-				endWita     // Gunakan WITA
-			);
-			
+				// Error handling sudah ditangani dalam loop pagination
 
+				// Gunakan data yang lebih lengkap untuk laporan
+				const laporan: any[] = [];
 
-
-			// Error handling sudah ditangani dalam loop pagination
-
-			// Gunakan data yang lebih lengkap untuk laporan
-			const laporan: any[] = [];
-			
-			// Tambahkan data POS dari transaksi_kasir
-			posItems.forEach((item: any) => {
-				laporan.push({
-					...item,
-					sumber: 'pos',
-					payment_method: item.buku_kas?.payment_method,
-					waktu: item.buku_kas?.waktu,
-					jenis: item.buku_kas?.jenis,
-					tipe: item.buku_kas?.tipe,
-					description: item.produk?.name || item.custom_name || 'Item Custom',
-					nominal: item.amount || 0
+				// Tambahkan data POS dari transaksi_kasir
+				posItems.forEach((item: any) => {
+					laporan.push({
+						...item,
+						sumber: 'pos',
+						payment_method: item.buku_kas?.payment_method,
+						waktu: item.buku_kas?.waktu,
+						jenis: item.buku_kas?.jenis,
+						tipe: item.buku_kas?.tipe,
+						description: item.produk?.name || item.custom_name || 'Item Custom',
+						nominal: item.amount || 0
+					});
 				});
-			});
-			
-			// Tambahkan data manual/catat
-			(manualItems || []).forEach((item: any) => {
-				laporan.push({
-					...item,
-					sumber: item.sumber || 'catat',
-					payment_method: item.payment_method,
-					waktu: item.waktu,
-					jenis: item.jenis,
-					tipe: item.tipe,
-					description: item.description,
-					nominal: item.amount || 0
+
+				// Tambahkan data manual/catat
+				(manualItems || []).forEach((item: any) => {
+					laporan.push({
+						...item,
+						sumber: item.sumber || 'catat',
+						payment_method: item.payment_method,
+						waktu: item.waktu,
+						jenis: item.jenis,
+						tipe: item.tipe,
+						description: item.description,
+						nominal: item.amount || 0
+					});
 				});
-			});
-			
-			// Jika masih kurang data, gunakan data buku_kas yang belum terhitung
-			// HINDARI DUPLIKASI: Jangan hitung manualItems yang sudah dihitung
-			const usedBukuKasIds = new Set(posItems.map((item: any) => item.buku_kas?.id).filter(Boolean));
-			const usedManualIds = new Set(manualItems.map((item: any) => item.id).filter(Boolean));
-			const remainingBukuKas = (allBukuKas || []).filter((item: any) => 
-				!usedBukuKasIds.has(item.id) && !usedManualIds.has(item.id)
-			);
-			
-			
-			remainingBukuKas.forEach((item: any) => {
-				laporan.push({
-					...item,
-					sumber: item.sumber || 'lainnya',
-					payment_method: item.payment_method,
-					waktu: item.waktu,
-					jenis: item.jenis,
-					tipe: item.tipe,
-					description: item.description || 'Transaksi Lainnya',
-					nominal: item.amount || 0
+
+				// Jika masih kurang data, gunakan data buku_kas yang belum terhitung
+				// HINDARI DUPLIKASI: Jangan hitung manualItems yang sudah dihitung
+				const usedBukuKasIds = new Set(
+					posItems.map((item: any) => item.buku_kas?.id).filter(Boolean)
+				);
+				const usedManualIds = new Set(manualItems.map((item: any) => item.id).filter(Boolean));
+				const remainingBukuKas = (allBukuKas || []).filter(
+					(item: any) => !usedBukuKasIds.has(item.id) && !usedManualIds.has(item.id)
+				);
+
+				remainingBukuKas.forEach((item: any) => {
+					laporan.push({
+						...item,
+						sumber: item.sumber || 'lainnya',
+						payment_method: item.payment_method,
+						waktu: item.waktu,
+						jenis: item.jenis,
+						tipe: item.tipe,
+						description: item.description || 'Transaksi Lainnya',
+						nominal: item.amount || 0
+					});
 				});
-			});
 
+				// Pemasukan/pengeluaran per jenis
+				const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
+				const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
 
-			// Pemasukan/pengeluaran per jenis
-			const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
-			const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+				// Hitung total pemasukan dan pengeluaran
+				const totalPemasukan = pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0);
+				const totalPengeluaran = pengeluaran.reduce(
+					(sum: number, t: any) => sum + (t.nominal || 0),
+					0
+				);
 
-			// Hitung total pemasukan dan pengeluaran
-			const totalPemasukan = pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0);
-			const totalPengeluaran = pengeluaran.reduce(
-				(sum: number, t: any) => sum + (t.nominal || 0),
-				0
-			);
+				// Hitung Laba (Rugi) Kotor
+				const labaKotor = totalPemasukan - totalPengeluaran;
 
-			// Hitung Laba (Rugi) Kotor
-			const labaKotor = totalPemasukan - totalPengeluaran;
+				// Hitung Pajak Penghasilan (0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0)
+				const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 
-			// Hitung Pajak Penghasilan (0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0)
-			const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
+				// Hitung Laba (Rugi) Bersih
+				const labaBersih = labaKotor - pajak;
 
-			// Hitung Laba (Rugi) Bersih
-			const labaBersih = labaKotor - pajak;
+				const reportData = {
+					summary: {
+						pendapatan: totalPemasukan,
+						pengeluaran: totalPengeluaran,
+						saldo: totalPemasukan - totalPengeluaran,
+						labaKotor,
+						pajak,
+						labaBersih
+					},
+					pemasukanUsaha: pemasukan.filter((t: any) => t.jenis === 'pendapatan_usaha'),
+					pemasukanLain: pemasukan.filter((t: any) => t.jenis === 'lainnya'),
+					bebanUsaha: pengeluaran.filter((t: any) => t.jenis === 'beban_usaha'),
+					bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
+					transactions: laporan
+				};
 
-
-			const reportData = {
-				summary: {
-					pendapatan: totalPemasukan,
-					pengeluaran: totalPengeluaran,
-					saldo: totalPemasukan - totalPengeluaran,
-					labaKotor,
-					pajak,
-					labaBersih
-				},
-				pemasukanUsaha: pemasukan.filter((t: any) => t.jenis === 'pendapatan_usaha'),
-				pemasukanLain: pemasukan.filter((t: any) => t.jenis === 'lainnya'),
-				bebanUsaha: pengeluaran.filter((t: any) => t.jenis === 'beban_usaha'),
-				bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
-				transactions: laporan
-			};
-
-			return { data: reportData, etag: etagValue };
-		}, cacheOptions);
+				return { data: reportData, etag: etagValue };
+			},
+			cacheOptions
+		);
 	}
 
 	// Real-time data subscription
@@ -675,9 +682,7 @@ export class DataService {
 	// SMART CACHE INVALIDATION: Invalidate semua report caches
 	async invalidateAllReportCaches() {
 		const reportTypes = ['daily', 'weekly', 'monthly', 'yearly'];
-		const invalidationPromises = reportTypes.map(type => 
-			this.invalidateReportCache(type)
-		);
+		const invalidationPromises = reportTypes.map((type) => this.invalidateReportCache(type));
 		await Promise.allSettled(invalidationPromises);
 	}
 
@@ -698,9 +703,9 @@ export class DataService {
 
 	// PARALLEL PAGINATION: Fetch all data using parallel queries
 	async fetchAllDataParallel(
-		table: string, 
-		startTime: string, 
-		endTime: string, 
+		table: string,
+		startTime: string,
+		endTime: string,
 		additionalFilters: any = {}
 	): Promise<any[]> {
 		try {
@@ -712,7 +717,7 @@ export class DataService {
 				.lte('waktu', endTime);
 
 			// Apply additional filters
-			Object.keys(additionalFilters).forEach(key => {
+			Object.keys(additionalFilters).forEach((key) => {
 				const filter = additionalFilters[key];
 				if (key === 'cabang') {
 					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
@@ -726,7 +731,7 @@ export class DataService {
 			});
 
 			const { count, error: countError } = await query;
-			
+
 			if (countError) {
 				return [];
 			}
@@ -738,19 +743,26 @@ export class DataService {
 			// Calculate number of batches needed
 			const batchSize = 1000;
 			const totalBatches = Math.ceil(count / batchSize);
-			
+
 			// Create parallel queries for all batches
 			const batchPromises = [];
-			
+
 			for (let i = 0; i < totalBatches; i++) {
 				const offset = i * batchSize;
-				const promise = this.fetchBatch(table, startTime, endTime, offset, batchSize, additionalFilters);
+				const promise = this.fetchBatch(
+					table,
+					startTime,
+					endTime,
+					offset,
+					batchSize,
+					additionalFilters
+				);
 				batchPromises.push(promise);
 			}
 
 			// Execute all queries in parallel
 			const batchResults = await Promise.all(batchPromises);
-			
+
 			// Combine all results
 			const allData = [];
 			for (const batchData of batchResults) {
@@ -767,11 +779,11 @@ export class DataService {
 
 	// Helper function to fetch a single batch
 	private async fetchBatch(
-		table: string, 
-		startTime: string, 
-		endTime: string, 
-		offset: number, 
-		limit: number, 
+		table: string,
+		startTime: string,
+		endTime: string,
+		offset: number,
+		limit: number,
 		additionalFilters: any = {}
 	): Promise<any[]> {
 		try {
@@ -784,7 +796,7 @@ export class DataService {
 				.order('waktu', { ascending: true });
 
 			// Apply additional filters
-			Object.keys(additionalFilters).forEach(key => {
+			Object.keys(additionalFilters).forEach((key) => {
 				const filter = additionalFilters[key];
 				if (key === 'cabang') {
 					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
@@ -798,7 +810,7 @@ export class DataService {
 			});
 
 			const { data, error } = await query;
-			
+
 			if (error) {
 				return [];
 			}
@@ -903,18 +915,24 @@ export class DataService {
 			// Hari ini
 			{ type: 'daily', range: today.toISOString().split('T')[0] },
 			// Kemarin
-			{ type: 'daily', range: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
+			{
+				type: 'daily',
+				range: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+			},
 			// Minggu ini
 			{ type: 'weekly', range: today.toISOString().split('T')[0] },
 			// Bulan ini
-			{ type: 'monthly', range: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}` },
+			{
+				type: 'monthly',
+				range: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+			},
 			// Tahun ini
 			{ type: 'yearly', range: today.getFullYear().toString() }
 		];
 
 		// Preload secara parallel
-		const preloadPromises = commonRanges.map(({ type, range }) => 
-			this.getReportData(range, type as any).catch(error => {
+		const preloadPromises = commonRanges.map(({ type, range }) =>
+			this.getReportData(range, type as any).catch((error) => {
 				return null;
 			})
 		);

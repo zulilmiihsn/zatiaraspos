@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { loadRouteIcons } from '$lib/utils/iconLoader';
 	import { auth } from '$lib/auth/auth';
 	import { securityUtils } from '$lib/utils/security';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
@@ -92,6 +93,8 @@
 	}
 
 	onMount(async () => {
+		// Mulai preload ikon untuk seluruh route pengaturan (non-blocking)
+		loadRouteIcons('pengaturan');
 		try {
 			// Hapus query profile dari Supabase, gunakan store
 			// const { data: { session } } = await supabase.auth.getSession();

@@ -9,7 +9,7 @@
 	export let showSettings: boolean = true;
 
 	const dispatch = createEventDispatcher();
-	
+
 	let pendingCount = 0;
 	let showPopover = false;
 	let showAiChat = false;
@@ -45,10 +45,12 @@
 		showAiChat = false;
 		// Panggil refresher global di background saat modal ditutup
 		if (typeof window !== 'undefined') {
-			// @ts-ignore
-			if (typeof window.__refreshLaporan === 'function') { window.__refreshLaporan(); }
-			// @ts-ignore
-			if (typeof window.__refreshRiwayat === 'function') { window.__refreshRiwayat(); }
+			if (typeof (window as any).__refreshLaporan === 'function') {
+				(window as any).__refreshLaporan();
+			}
+			if (typeof (window as any).__refreshRiwayat === 'function') {
+				(window as any).__refreshRiwayat();
+			}
 		}
 	}
 
@@ -67,13 +69,13 @@
 	<div class="flex items-center gap-3">
 		<button
 			on:click={openAiChat}
-			class="h-[38px] w-[38px] rounded-lg bg-white object-contain p-1.5 shadow-lg shadow-pink-500/7 hover:shadow-xl hover:shadow-pink-500/12 transition-all duration-150 cursor-pointer"
+			class="h-[38px] w-[38px] cursor-pointer rounded-lg bg-white object-contain p-1.5 shadow-lg shadow-pink-500/7 transition-all duration-150 hover:shadow-xl hover:shadow-pink-500/12"
 			aria-label="Buka AI Assistant"
 		>
 			<img
 				src="/img/logo.svg"
 				alt="Logo Zatiaras - Klik untuk AI Assistant"
-				class="w-full h-full"
+				class="h-full w-full"
 			/>
 		</button>
 		{#if isOffline}
@@ -127,14 +129,14 @@
 			<div class="h-[38px] w-[38px]"></div>
 		{/if}
 
-	<!-- Slot untuk download -->
-	<slot name="download" />
-</div>
+		<!-- Slot untuk download -->
+		<slot name="download" />
+	</div>
 </div>
 
 <!-- AI Chat Modal -->
-<AiChatModal 
-	bind:isOpen={showAiChat} 
+<AiChatModal
+	bind:isOpen={showAiChat}
 	onClose={closeAiChat}
 	on:recommendationsApplied={handleRecommendationsApplied}
 />

@@ -43,8 +43,6 @@
 	async function fetchTransaksiHariIni() {
 		loading = true;
 		const { startUtc: start, endUtc: end } = todayRange();
-		
-		
 
 		try {
 			// Ambil data dari buku_kas
@@ -54,7 +52,6 @@
 				.gte('waktu', start)
 				.lte('waktu', end)
 				.order('waktu', { ascending: false });
-
 
 			transaksiHariIni = [];
 			if (data && !error) {
@@ -74,13 +71,13 @@
 				);
 			}
 
-
 			// Urutkan terbaru dulu
 			transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 			// Filter hanya nominal > 0 (support both nominal and amount fields)
-			transaksiHariIni = transaksiHariIni.filter((t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0));
-			
+			transaksiHariIni = transaksiHariIni.filter(
+				(t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0)
+			);
 
 			// Filter berdasarkan search
 			if (searchKeyword.trim()) {
@@ -112,13 +109,16 @@
 
 	async function deleteTransaksi() {
 		if (!transaksiToDelete) return;
-		
+
 		// Cek permission dulu
 		if (!canDeleteTransaction()) {
-			toastManager.showToastNotification('Anda tidak memiliki izin untuk menghapus transaksi', 'error');
+			toastManager.showToastNotification(
+				'Anda tidak memiliki izin untuk menghapus transaksi',
+				'error'
+			);
 			return;
 		}
-		
+
 		loading = true;
 
 		try {
@@ -128,7 +128,7 @@
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
-				
+
 				if (error) {
 					throw error;
 				}
@@ -141,7 +141,7 @@
 					.from('transaksi_kasir')
 					.delete()
 					.eq('transaction_id', transactionId);
-				
+
 				if (kasirError) {
 					// Jangan throw error karena mungkin tidak ada items
 				}
@@ -151,14 +151,14 @@
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
-				
+
 				if (bukuError) {
 					// Coba dengan transaction_id sebagai fallback
 					const { error: bukuError2 } = await getSupabaseClient(storeGet(selectedBranch))
 						.from('buku_kas')
 						.delete()
 						.eq('transaction_id', transactionId);
-					
+
 					if (bukuError2) {
 						throw bukuError2;
 					}
@@ -169,7 +169,7 @@
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
-				
+
 				if (error) {
 					throw error;
 				}
@@ -182,8 +182,9 @@
 				toastManager.hideToast();
 			}, 3000);
 		} catch (error) {
-			ErrorHandler.logError(error, 'deleteTransaksi');
-			toastManager.showToastNotification(`Gagal menghapus transaksi: ${error.message || 'Unknown error'}`, 'error');
+			ErrorHandler.logError(error as any, 'deleteTransaksi');
+			const message = (error as any)?.message || 'Unknown error';
+			toastManager.showToastNotification(`Gagal menghapus transaksi: ${message}`, 'error');
 		} finally {
 			await fetchTransaksiHariIni();
 			loading = false;
@@ -244,12 +245,15 @@
 		Trash = (await import('lucide-svelte/icons/trash')).default;
 		// pollingInterval = setInterval(fetchTransaksiHariIni, 5000); // HAPUS polling otomatis
 		// Dengarkan event global agar riwayat auto-refresh ketika rekomendasi AI diterapkan
-		aiHandler = async () => { await fetchTransaksiHariIni(); };
+		aiHandler = async () => {
+			await fetchTransaksiHariIni();
+		};
 		if (typeof window !== 'undefined') {
 			window.addEventListener('ai-recommendations-applied', aiHandler as any);
 			// Ekspor refresher global untuk dipanggil langsung
-			// @ts-ignore
-			window.__refreshRiwayat = async () => { await fetchTransaksiHariIni(); };
+			(window as any).__refreshRiwayat = async () => {
+				await fetchTransaksiHariIni();
+			};
 		}
 	});
 	onDestroy(() => {
@@ -259,8 +263,7 @@
 		// clearInterval(pollingInterval); // HAPUS polling otomatis
 		if (typeof window !== 'undefined' && aiHandler) {
 			window.removeEventListener('ai-recommendations-applied', aiHandler as any);
-			// @ts-ignore
-			delete window.__refreshRiwayat;
+			delete (window as any).__refreshRiwayat;
 		}
 	});
 </script>

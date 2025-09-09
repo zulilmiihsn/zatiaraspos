@@ -3,7 +3,6 @@
  * Implements CSRF protection, XSS prevention, input sanitization, and rate limiting
  */
 
-
 // Security configuration
 const SECURITY_CONFIG = {
 	CSRF_TOKEN_LENGTH: 32,

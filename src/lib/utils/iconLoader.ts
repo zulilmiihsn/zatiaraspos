@@ -96,11 +96,44 @@ export const iconLoader = IconLoader.getInstance();
 
 // Route-specific icon mappings for better code splitting
 export const ROUTE_ICONS = {
-	dashboard: ['home', 'trending-up', 'users', 'dollar-sign'],
-	pos: ['shopping-cart', 'credit-card', 'receipt', 'calculator'],
-	laporan: ['bar-chart-3', 'pie-chart', 'file-text', 'download'],
-	catat: ['edit-3', 'plus-circle', 'minus-circle', 'save'],
-	pengaturan: ['settings', 'user', 'shield', 'printer']
+	// Sesuaikan dengan ikon nyata yang dipakai per halaman
+	dashboard: ['wallet', 'shopping-bag', 'coins', 'users', 'clock', 'trending-up'],
+	pos: [
+		// Ikon inti POS (antisipasi)
+		'shopping-cart',
+		'credit-card',
+		'receipt',
+		'calculator'
+	],
+	laporan: ['wallet', 'arrow-down-circle', 'arrow-up-circle', 'filter'],
+	catat: [
+		// Saat ini banyak pakai SVG inline; siapkan ikon umum jika nanti dipakai
+		'edit-3',
+		'plus-circle',
+		'minus-circle',
+		'save'
+	],
+	// Preload ikon umum untuk halaman pengaturan dan subroutes-nya
+	pengaturan: [
+		'settings',
+		'user',
+		'shield',
+		'printer',
+		// Ikon yang digunakan di halaman pengaturan utama
+		'log-out',
+		'palette',
+		'database',
+		'help-circle',
+		'bell',
+		'download',
+		'crown',
+		'credit-card',
+		'arrow-left',
+		// Ikon yang digunakan di halaman pemilik dan subroutes
+		'utensils',
+		'refresh-cw',
+		'trash'
+	]
 };
 
 /**

@@ -52,7 +52,7 @@ export function getNowWita(): string {
 export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: string } {
 	// Input: 'YYYY-MM-DD' (tanggal WITA)
 	// Output: { startUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ', endUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ' }
-	
+
 	// Validasi input
 	if (!dateStr || typeof dateStr !== 'string') {
 		throw new Error('Invalid date string');
@@ -62,7 +62,7 @@ export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: str
 		throw new Error('Invalid date format. Expected YYYY-MM-DD');
 	}
 	const [year, month, day] = parts.map(Number);
-	
+
 	// Validasi nilai tanggal
 	if (isNaN(year) || isNaN(month) || isNaN(day)) {
 		throw new Error('Invalid date values');
@@ -76,13 +76,13 @@ export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: str
 	if (day < 1 || day > 31) {
 		throw new Error('Day out of valid range');
 	}
-	
+
 	try {
 		// Start: 00:00:00 WITA = 16:00:00 UTC hari sebelumnya
 		const startUtc = new Date(Date.UTC(year, month - 1, day - 1, 16, 0, 0));
 		// End: 23:59:59.999 WITA = 15:59:59.999 UTC hari berikutnya
 		const endUtc = new Date(Date.UTC(year, month - 1, day, 15, 59, 59, 999));
-		
+
 		return {
 			startUtc: startUtc.toISOString(),
 			endUtc: endUtc.toISOString()
@@ -93,16 +93,19 @@ export function witaToUtcRange(dateStr: string): { startUtc: string; endUtc: str
 }
 
 // STANDAR: Konversi range tanggal WITA ke UTC range untuk query database
-export function witaRangeToUtcRange(startDate: string, endDate: string): { startUtc: string; endUtc: string } {
+export function witaRangeToUtcRange(
+	startDate: string,
+	endDate: string
+): { startUtc: string; endUtc: string } {
 	// Input: 'YYYY-MM-DD', 'YYYY-MM-DD' (range tanggal WITA)
 	// Output: { startUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ', endUtc: 'YYYY-MM-DDTHH:mm:ss.sssZ' }
-	
+
 	try {
 		// Start: 00:00:00 WITA tanggal pertama
 		const startDateObj = new Date(startDate + 'T00:00:00+08:00');
 		// End: 23:59:59.999 WITA tanggal terakhir
 		const endDateObj = new Date(endDate + 'T23:59:59.999+08:00');
-		
+
 		return {
 			startUtc: startDateObj.toISOString(),
 			endUtc: endDateObj.toISOString()
@@ -111,7 +114,6 @@ export function witaRangeToUtcRange(startDate: string, endDate: string): { start
 		throw new Error(`Failed to convert date range: ${startDate} to ${endDate}`);
 	}
 }
-
 
 // Format UTC ke string waktu WITA untuk tampilan
 export function formatWitaDateTime(dateStr: string | Date, opts?: Intl.DateTimeFormatOptions) {
@@ -129,16 +131,19 @@ export function witaToUtcISO(dateStr: string, timeStr: string = '00:00:00'): str
 }
 
 // STANDAR: Konversi range tanggal WITA ke format WITA untuk query database
-export function witaRangeToWitaQuery(startDate: string, endDate: string): { startWita: string; endWita: string } {
+export function witaRangeToWitaQuery(
+	startDate: string,
+	endDate: string
+): { startWita: string; endWita: string } {
 	// Input: 'YYYY-MM-DD', 'YYYY-MM-DD' (range tanggal WITA)
 	// Output: { startWita: 'YYYY-MM-DDTHH:mm:ss+08:00', endWita: 'YYYY-MM-DDTHH:mm:ss+08:00' }
-	
+
 	try {
 		// Start: 00:00:00 WITA tanggal pertama
 		const startWita = startDate + 'T00:00:00+08:00';
 		// End: 23:59:59 WITA tanggal terakhir
 		const endWita = endDate + 'T23:59:59+08:00';
-		
+
 		return {
 			startWita: startWita,
 			endWita: endWita

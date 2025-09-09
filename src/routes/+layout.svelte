@@ -20,6 +20,10 @@
 	import { securitySettings } from '$lib/stores/securitySettings';
 	import { requireAuth } from '$lib/utils/authGuard';
 
+	// PWA Update Notification
+	let showUpdateNotification = false;
+	let updateAvailable = false;
+
 	let hasPrefetched = false;
 	let isOffline = !navigator.onLine;
 	let pendingCount = 0;
@@ -67,9 +71,31 @@
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		// Cek auth sebelum lanjut
 		if (!requireAuth()) return;
+
+		// Setup PWA update notification (only in production)
+		if ('serviceWorker' in navigator && import.meta.env.PROD) {
+			try {
+				const { Workbox } = await import('workbox-window');
+				const wb = new Workbox('/sw.js');
+				
+				wb.addEventListener('waiting', () => {
+					updateAvailable = true;
+					showUpdateNotification = true;
+				});
+
+				wb.addEventListener('controlling', () => {
+					// Update applied, reload page
+					window.location.reload();
+				});
+
+				await wb.register();
+			} catch (error) {
+				console.log('PWA registration failed:', error);
+			}
+		}
 
 		isOffline = !navigator.onLine;
 		updatePending();
@@ -155,6 +181,23 @@
 			goto('/login');
 		}
 	}
+
+	// PWA Update handlers
+	async function applyUpdate() {
+		if ('serviceWorker' in navigator && import.meta.env.PROD) {
+			try {
+				const { Workbox } = await import('workbox-window');
+				const wb = new Workbox('/sw.js');
+				await wb.messageSkipWaiting();
+			} catch (error) {
+				console.log('Failed to apply update:', error);
+			}
+		}
+	}
+
+	function dismissUpdate() {
+		showUpdateNotification = false;
+	}
 	// --- Akhir Logika ---
 </script>
 
@@ -171,6 +214,40 @@
 		class="animate-fade-in fixed top-16 left-1/2 z-50 -translate-x-1/2 transform rounded-xl bg-green-500 px-6 py-3 text-center text-white shadow-lg"
 	>
 		Transaksi offline berhasil dikirim ke server!
+	</div>
+{/if}
+
+<!-- PWA Update Notification -->
+{#if showUpdateNotification}
+	<div
+		class="animate-fade-in fixed top-16 left-1/2 z-50 -translate-x-1/2 transform rounded-xl bg-blue-500 px-6 py-4 text-center text-white shadow-lg"
+	>
+		<div class="mb-2">
+			<svg class="mx-auto h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+				/>
+			</svg>
+		</div>
+		<p class="mb-3 font-semibold">Update Tersedia!</p>
+		<p class="mb-4 text-sm opacity-90">Aplikasi akan diperbarui untuk performa yang lebih baik.</p>
+		<div class="flex gap-2">
+			<button
+				on:click={applyUpdate}
+				class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-blue-500 transition-colors hover:bg-blue-50"
+			>
+				Update Sekarang
+			</button>
+			<button
+				on:click={dismissUpdate}
+				class="rounded-lg border border-white/30 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+			>
+				Nanti
+			</button>
+		</div>
 	</div>
 {/if}
 

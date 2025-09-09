@@ -4,7 +4,12 @@
 	import { slide, fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
-	import { getTodayWita, getNowWita, witaToUtcRange, witaRangeToUtcRange } from '$lib/utils/dateTime';
+	import {
+		getTodayWita,
+		getNowWita,
+		witaToUtcRange,
+		witaRangeToUtcRange
+	} from '$lib/utils/dateTime';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import { memoize } from '$lib/utils/performance';
@@ -152,7 +157,7 @@
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
-			
+
 			// LOADING PROGRESS: 40% - Fetch data
 			loadingProgress = 40;
 			loadingMessage = 'Mengambil data...';
@@ -181,7 +186,6 @@
 			// LOADING PROGRESS: 100% - Complete
 			loadingProgress = 100;
 			loadingMessage = 'Selesai!';
-
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			toastManager.showToastNotification('Gagal memuat data laporan', 'error');
@@ -231,6 +235,10 @@
 	}
 
 	onMount(() => {
+		// Preload ikon Laporan untuk percepat render ikon header dan ringkasan
+		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
+			loadRouteIcons('laporan');
+		});
 		Promise.all([
 			import('lucide-svelte/icons/wallet'),
 			import('lucide-svelte/icons/arrow-down-circle'),
@@ -246,17 +254,15 @@
 		// Set default values untuk filter - gunakan WITA langsung
 		filterDate = getTodayWita();
 		// filterMonth dan filterYear sudah diinisialisasi di deklarasi awal, tidak perlu diinisialisasi ulang
-		
 
 		// Set default startDate dan endDate untuk filter harian
 		startDate = getLocalDateStringWITA();
 		endDate = startDate;
-		
 
 		// Removed fetchPin() and locked_pages check
 		initializePageData().then(() => {
 			// SMART CACHING: Preload common date ranges untuk performa yang lebih baik
-			dataService.preloadCommonDateRanges().catch(error => {
+			dataService.preloadCommonDateRanges().catch((error) => {
 				// Silent error handling
 			});
 
@@ -317,9 +323,10 @@
 
 		// Ekspor refresher global agar komponen lain bisa memicu refresh langsung
 		if (typeof window !== 'undefined') {
-			// @ts-ignore
-			window.__refreshLaporan = async () => {
-				try { await dataService.invalidateCacheOnChange('buku_kas'); } catch {}
+			(window as any).__refreshLaporan = async () => {
+				try {
+					await dataService.invalidateCacheOnChange('buku_kas');
+				} catch {}
 				await loadLaporanData();
 			};
 		}
@@ -334,10 +341,12 @@
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('focus', handleFocus);
 			window.removeEventListener('popstate', handleNavigation);
-			window.removeEventListener('ai-recommendations-applied', handleAiRecommendationsApplied as any);
+			window.removeEventListener(
+				'ai-recommendations-applied',
+				handleAiRecommendationsApplied as any
+			);
 			if (typeof window !== 'undefined') {
-				// @ts-ignore
-				delete window.__refreshLaporan;
+				delete (window as any).__refreshLaporan;
 			}
 		};
 	});
@@ -378,19 +387,15 @@
 	let showFilter = false;
 	let showDatePicker = false;
 	let showEndDatePicker = false;
-	
+
 	// LOADING STATES: Untuk better UX
 	let isLoadingReport = false;
 	let loadingProgress = 0;
 	let loadingMessage = 'Memuat data...';
 	let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = 'harian';
-	
+
 	let filterDate = getLocalDateStringWITA();
-	let filterMonth = (
-		new Date(getNowWita()).getMonth() + 1
-	)
-		.toString()
-		.padStart(2, '0');
+	let filterMonth = (new Date(getNowWita()).getMonth() + 1).toString().padStart(2, '0');
 	let filterYear = new Date(getNowWita()).getFullYear().toString();
 	let startDate = getLocalDateStringWITA();
 	let endDate = getLocalDateStringWITA();
@@ -576,7 +581,7 @@
 						// Gunakan timezone WITA untuk konsistensi
 						const first = new Date(y, m, 1);
 						const last = new Date(y, m + 1, 0);
-						
+
 						// Format tanggal dengan padding nol
 						const formatDate = (date: Date) => {
 							const year = date.getFullYear();
@@ -584,13 +589,12 @@
 							const day = String(date.getDate()).padStart(2, '0');
 							return `${year}-${month}-${day}`;
 						};
-						
+
 						const result = {
 							startDate: formatDate(first),
 							endDate: formatDate(last)
 						};
-						
-						
+
 						return result;
 					}
 					break;
@@ -736,7 +740,7 @@
 			day: 'numeric',
 			month: 'long',
 			year: 'numeric',
-			timeZone: 'Asia/Makassar'  // Pastikan menggunakan WITA
+			timeZone: 'Asia/Makassar' // Pastikan menggunakan WITA
 		});
 	}
 
@@ -767,7 +771,6 @@
 		// Setup realtime subscriptions setelah filter berubah
 		setupRealtimeSubscriptions();
 	}
-
 
 	// State untuk item yang sedang diperpanjang (expanded)
 	let expandedItems = new Set();
@@ -829,30 +832,36 @@
 	>
 		<!-- LOADING BLUR: Elegant loading dengan blur effect -->
 		{#if isLoadingReport}
-			<div class="fixed inset-0 z-40 pointer-events-none">
+			<div class="pointer-events-none fixed inset-0 z-40">
 				<!-- Loading indicator di tengah tanpa background overlay -->
 				<div class="absolute inset-0 flex items-center justify-center">
-					<div class="bg-white/95 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/30">
+					<div
+						class="rounded-2xl border border-white/30 bg-white/95 p-6 shadow-2xl backdrop-blur-lg"
+					>
 						<div class="text-center">
 							<!-- Elegant Spinner -->
-							<div class="flex justify-center mb-4">
+							<div class="mb-4 flex justify-center">
 								<div class="relative">
-									<div class="animate-spin rounded-full h-10 w-10 border-3 border-pink-100 border-t-pink-500"></div>
-									<div class="absolute inset-0 animate-ping rounded-full h-10 w-10 border-3 border-pink-200 opacity-20"></div>
+									<div
+										class="h-10 w-10 animate-spin rounded-full border-3 border-pink-100 border-t-pink-500"
+									></div>
+									<div
+										class="absolute inset-0 h-10 w-10 animate-ping rounded-full border-3 border-pink-200 opacity-20"
+									></div>
 								</div>
 							</div>
-							
+
 							<!-- Progress Bar -->
-							<div class="w-48 bg-gray-100 rounded-full h-1.5 mb-3">
-								<div 
-									class="bg-gradient-to-r from-pink-400 to-pink-600 h-1.5 rounded-full transition-all duration-500 ease-out"
+							<div class="mb-3 h-1.5 w-48 rounded-full bg-gray-100">
+								<div
+									class="h-1.5 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 transition-all duration-500 ease-out"
 									style="width: {loadingProgress}%"
 								></div>
 							</div>
-							
+
 							<!-- Loading Message -->
-							<p class="text-gray-700 font-medium text-sm">{loadingMessage}</p>
-							<p class="text-xs text-gray-500 mt-1">{loadingProgress}%</p>
+							<p class="text-sm font-medium text-gray-700">{loadingMessage}</p>
+							<p class="mt-1 text-xs text-gray-500">{loadingProgress}%</p>
 						</div>
 					</div>
 				</div>
@@ -861,7 +870,9 @@
 
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
-			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 transition-all duration-300 {isLoadingReport ? 'blur-sm opacity-60' : 'blur-0 opacity-100'}"
+			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 transition-all duration-300 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 {isLoadingReport
+				? 'opacity-60 blur-sm'
+				: 'blur-0 opacity-100'}"
 		>
 			<div class="mb-3 flex w-full items-center gap-2 px-2 md:mb-6 md:gap-4 md:px-0">
 				<!-- Button Filter -->
@@ -957,7 +968,7 @@
 							</div>
 							<div class="text-xl font-bold text-green-900 md:text-center md:text-2xl lg:text-lg">
 								{#if isLoadingReport}
-									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+									<div class="h-6 w-24 animate-pulse rounded bg-gray-200"></div>
 								{:else}
 									Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
 										? summary.pendapatan.toLocaleString('id-ID')
@@ -989,7 +1000,7 @@
 							</div>
 							<div class="text-xl font-bold text-red-900 md:text-center md:text-2xl lg:text-lg">
 								{#if isLoadingReport}
-									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+									<div class="h-6 w-24 animate-pulse rounded bg-gray-200"></div>
 								{:else}
 									Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
 										? summary.pengeluaran.toLocaleString('id-ID')
@@ -1021,7 +1032,7 @@
 							</div>
 							<div class="text-xl font-bold text-cyan-900 md:text-center md:text-2xl lg:text-lg">
 								{#if isLoadingReport}
-									<div class="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+									<div class="h-6 w-24 animate-pulse rounded bg-gray-200"></div>
 								{:else}
 									Rp {summary?.saldo !== null && summary?.saldo !== undefined
 										? summary.saldo.toLocaleString('id-ID')
@@ -1118,32 +1129,32 @@
 												Tidak ada data
 											</li>
 										{/if}
-									{#if isLoadingReport}
-										{#each Array(3) as _}
-											<li class="flex justify-between text-sm text-gray-600 md:text-base">
-												<div class="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-												<div class="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-											</li>
-										{/each}
-									{:else}
-										{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
-											<li class="flex justify-between text-sm text-gray-600 md:text-base">
-												<span
-													class="{expandedItems.has(grouped.name)
-														? ''
-														: 'max-w-[60%] truncate'} cursor-pointer"
-													title={grouped.name}
-													onclick={() => toggleExpand(grouped.name)}
-													onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
-													role="button"
-													tabindex="0">{grouped.name}</span
-												>
-												<span class="font-bold whitespace-nowrap text-gray-700"
-													>Rp {grouped.total.toLocaleString('id-ID')}</span
-												>
-											</li>
-										{/each}
-									{/if}
+										{#if isLoadingReport}
+											{#each Array(3) as _}
+												<li class="flex justify-between text-sm text-gray-600 md:text-base">
+													<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
+													<div class="h-4 w-20 animate-pulse rounded bg-gray-200"></div>
+												</li>
+											{/each}
+										{:else}
+											{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
+												<li class="flex justify-between text-sm text-gray-600 md:text-base">
+													<span
+														class="{expandedItems.has(grouped.name)
+															? ''
+															: 'max-w-[60%] truncate'} cursor-pointer"
+														title={grouped.name}
+														onclick={() => toggleExpand(grouped.name)}
+														onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+														role="button"
+														tabindex="0">{grouped.name}</span
+													>
+													<span class="font-bold whitespace-nowrap text-gray-700"
+														>Rp {grouped.total.toLocaleString('id-ID')}</span
+													>
+												</li>
+											{/each}
+										{/if}
 									</ul>
 									<div
 										class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm"
@@ -1930,7 +1941,7 @@
 <!-- AI Response Modal -->
 {#if showAiModal}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-2 py-2 sm:px-4 sm:py-4"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-2 py-2 backdrop-blur-sm sm:px-4 sm:py-4"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
 		role="dialog"
@@ -1938,7 +1949,7 @@
 		tabindex="-1"
 	>
 		<div
-			class="max-h-[80vh] w-full max-w-[500px] md:max-w-[720px] mx-auto overflow-hidden rounded-2xl bg-white shadow-2xl"
+			class="mx-auto max-h-[80vh] w-full max-w-[500px] overflow-hidden rounded-2xl bg-white shadow-2xl md:max-w-[720px]"
 			transition:slide={{ duration: 300, easing: cubicOut }}
 		>
 			<!-- Modal Header -->
@@ -1967,7 +1978,7 @@
 			<!-- Modal Content -->
 			<div class="max-h-[60vh] overflow-y-auto p-3 md:p-4">
 				{#if isAiLoading}
-					<div class="flex items-center justify-center py-8 px-4">
+					<div class="flex items-center justify-center px-4 py-8">
 						<div class="flex flex-col items-center gap-3 text-center">
 							<svg class="h-8 w-8 animate-spin text-pink-500" fill="none" viewBox="0 0 24 24">
 								<circle
@@ -1984,7 +1995,7 @@
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								></path>
 							</svg>
-							<span class="font-medium text-gray-600 text-sm md:text-base max-w-xs mx-auto"
+							<span class="mx-auto max-w-xs text-sm font-medium text-gray-600 md:text-base"
 								>Asisten AI sedang memproses pertanyaan Anda...</span
 							>
 						</div>

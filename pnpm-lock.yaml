@@ -35,6 +35,9 @@ importers:
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
+      workbox-window:
+        specifier: ^7.3.0
+        version: 7.3.0
     devDependencies:
       '@eslint/compat':
         specifier: ^1.2.5

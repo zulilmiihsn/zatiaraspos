@@ -4,309 +4,312 @@ import { selectedBranch } from '$lib/stores/selectedBranch';
 import { get as storeGet } from 'svelte/store';
 
 export class AutoApplyService {
-  private static instance: AutoApplyService;
-  
-  public static getInstance(): AutoApplyService {
-    if (!AutoApplyService.instance) {
-      AutoApplyService.instance = new AutoApplyService();
-    }
-    return AutoApplyService.instance;
-  }
+	private static instance: AutoApplyService;
 
-  /**
-   * Menerapkan rekomendasi AI secara otomatis
-   */
-  async applyRecommendations(recommendations: AiRecommendation[]): Promise<AutoApplyResult> {
-    const result: AutoApplyResult = {
-      success: true,
-      appliedRecommendations: [],
-      errors: [],
-      message: ''
-    };
+	public static getInstance(): AutoApplyService {
+		if (!AutoApplyService.instance) {
+			AutoApplyService.instance = new AutoApplyService();
+		}
+		return AutoApplyService.instance;
+	}
 
-    try {
-      // Validasi untuk mencegah duplikasi
-      const uniqueRecommendations = this.deduplicateRecommendations(recommendations);
-      
-      for (const recommendation of uniqueRecommendations) {
-        try {
-          await this.applySingleRecommendation(recommendation);
-          result.appliedRecommendations.push(recommendation.id);
-        } catch (error) {
-          result.errors.push(`Gagal menerapkan ${recommendation.title}: ${error}`);
-        }
-      }
+	/**
+	 * Menerapkan rekomendasi AI secara otomatis
+	 */
+	async applyRecommendations(recommendations: AiRecommendation[]): Promise<AutoApplyResult> {
+		const result: AutoApplyResult = {
+			success: true,
+			appliedRecommendations: [],
+			errors: [],
+			message: ''
+		};
 
-      if (result.appliedRecommendations.length > 0) {
-        result.message = `Berhasil menerapkan ${result.appliedRecommendations.length} rekomendasi. Transaksi telah tercatat di laporan dan riwayat.`;
-      }
+		try {
+			// Validasi untuk mencegah duplikasi
+			const uniqueRecommendations = this.deduplicateRecommendations(recommendations);
 
-      if (result.errors.length > 0) {
-        result.success = false;
-        result.message += `. ${result.errors.length} rekomendasi gagal diterapkan.`;
-      }
+			for (const recommendation of uniqueRecommendations) {
+				try {
+					await this.applySingleRecommendation(recommendation);
+					result.appliedRecommendations.push(recommendation.id);
+				} catch (error) {
+					result.errors.push(`Gagal menerapkan ${recommendation.title}: ${error}`);
+				}
+			}
 
-    } catch (error) {
-      result.success = false;
-      result.message = 'Terjadi kesalahan saat menerapkan rekomendasi';
-      result.errors.push(error instanceof Error ? error.message : String(error));
-    }
+			if (result.appliedRecommendations.length > 0) {
+				result.message = `Berhasil menerapkan ${result.appliedRecommendations.length} rekomendasi. Transaksi telah tercatat di laporan dan riwayat.`;
+			}
 
-    return result;
-  }
+			if (result.errors.length > 0) {
+				result.success = false;
+				result.message += `. ${result.errors.length} rekomendasi gagal diterapkan.`;
+			}
+		} catch (error) {
+			result.success = false;
+			result.message = 'Terjadi kesalahan saat menerapkan rekomendasi';
+			result.errors.push(error instanceof Error ? error.message : String(error));
+		}
 
-  /**
-   * Menerapkan satu rekomendasi
-   */
-  private async applySingleRecommendation(recommendation: AiRecommendation): Promise<void> {
+		return result;
+	}
 
-    switch (recommendation.action) {
-      case 'create_transaction':
-        await this.createTransaction(recommendation.data);
-        break;
-      case 'update_transaction':
-        await this.updateTransaction(recommendation.data);
-        break;
-      case 'create_category':
-        await this.createCategory(recommendation.data);
-        break;
-      default:
-        throw new Error(`Action tidak didukung: ${recommendation.action}`);
-    }
+	/**
+	 * Menerapkan satu rekomendasi
+	 */
+	private async applySingleRecommendation(recommendation: AiRecommendation): Promise<void> {
+		switch (recommendation.action) {
+			case 'create_transaction':
+				await this.createTransaction(recommendation.data);
+				break;
+			case 'update_transaction':
+				await this.updateTransaction(recommendation.data);
+				break;
+			case 'create_category':
+				await this.createCategory(recommendation.data);
+				break;
+			default:
+				throw new Error(`Action tidak didukung: ${recommendation.action}`);
+		}
+	}
 
-  }
+	/**
+	 * Membuat transaksi baru
+	 */
+	private async createTransaction(data: any): Promise<void> {
+		// Validasi data yang diperlukan
+		if (!data.type) {
+			throw new Error('Type transaksi tidak valid');
+		}
 
-  /**
-   * Membuat transaksi baru
-   */
-  private async createTransaction(data: any): Promise<void> {
-    
-    // Validasi data yang diperlukan
-    if (!data.type) {
-      throw new Error('Type transaksi tidak valid');
-    }
-    
-    if (!data.amount || data.amount <= 0) {
-      throw new Error('Amount transaksi tidak valid atau kosong');
-    }
-    
-    if (!data.description || data.description.trim() === '') {
-      throw new Error('Description transaksi tidak valid atau kosong');
-    }
-    
-    const branch = storeGet(selectedBranch);
-    const supabase = getSupabaseClient(branch as any);
-    
-    // Map type ke tipe yang digunakan di database
-    const tipe = data.type === 'pemasukan' ? 'in' : data.type === 'penjualan' ? 'in' : 'out';
-    
-    // Generate transaction_id untuk semua transaksi AI
-    const transactionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : this.generateUUID();
-    
-    const transactionData = {
-      tipe: tipe,
-      amount: Number(data.amount),
-      description: String(data.description).trim(),
-      jenis: data.category || this.getDefaultCategory(data.type),
-      sumber: data.type === 'penjualan' ? 'pos' : 'catat', // POS untuk penjualan, catat untuk manual
-      waktu: new Date().toISOString(),
-      payment_method: 'tunai', // Default payment method
-      transaction_id: transactionId // Tambahkan transaction_id untuk semua transaksi AI
-    };
+		if (!data.amount || data.amount <= 0) {
+			throw new Error('Amount transaksi tidak valid atau kosong');
+		}
 
+		if (!data.description || data.description.trim() === '') {
+			throw new Error('Description transaksi tidak valid atau kosong');
+		}
 
-    // Simpan ke database melalui supabase
-    const { data: insertedData, error } = await supabase
-      .from('buku_kas')
-      .insert(transactionData)
-      .select();
+		const branch = storeGet(selectedBranch);
+		const supabase = getSupabaseClient(branch as any);
 
-    if (error) {
-      throw new Error(`Gagal menyimpan transaksi: ${error.message}`);
-    }
+		// Map type ke tipe yang digunakan di database
+		const tipe = data.type === 'pemasukan' ? 'in' : data.type === 'penjualan' ? 'in' : 'out';
 
+		// Generate transaction_id untuk semua transaksi AI
+		const transactionId =
+			typeof crypto !== 'undefined' && crypto.randomUUID
+				? crypto.randomUUID()
+				: this.generateUUID();
 
-    // Jika ini adalah transaksi penjualan dengan produk, buat detail transaksi kasir
-    if (data.type === 'penjualan' && data.products && Array.isArray(data.products)) {
-      await this.createTransactionItems(insertedData[0].id, data.products, supabase, transactionId);
-    }
+		const transactionData = {
+			tipe: tipe,
+			amount: Number(data.amount),
+			description: String(data.description).trim(),
+			jenis: data.category || this.getDefaultCategory(data.type),
+			sumber: data.type === 'penjualan' ? 'pos' : 'catat', // POS untuk penjualan, catat untuk manual
+			waktu: new Date().toISOString(),
+			payment_method: 'tunai', // Default payment method
+			transaction_id: transactionId // Tambahkan transaction_id untuk semua transaksi AI
+		};
 
-    // Trigger refresh UI segera setelah insert berhasil
-    if (typeof window !== 'undefined') {
-      try {
-        window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: { success: true } }));
-        // @ts-ignore
-        if (typeof window.__refreshLaporan === 'function') { await window.__refreshLaporan(); }
-        // @ts-ignore
-        if (typeof window.__refreshRiwayat === 'function') { await window.__refreshRiwayat(); }
-      } catch {}
-    }
-  }
+		// Simpan ke database melalui supabase
+		const { data: insertedData, error } = await supabase
+			.from('buku_kas')
+			.insert(transactionData)
+			.select();
 
-  /**
-   * Generate UUID fallback jika crypto.randomUUID tidak tersedia
-   */
-  private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
+		if (error) {
+			throw new Error(`Gagal menyimpan transaksi: ${error.message}`);
+		}
 
-  /**
-   * Membuat detail transaksi kasir untuk penjualan produk
-   */
-  private async createTransactionItems(bukuKasId: number, products: any[], supabase: any, transactionId?: string): Promise<void> {
-    
-    const transactionItems = products.map((product, index) => {
-      const addOns = product.addOns || [];
-      const addOnsTotal = addOns.reduce((sum: number, addOn: any) => sum + (addOn.price || 0), 0);
-      const unitPrice = (product.price || 0) + addOnsTotal;
-      const quantity = product.quantity || 1;
-      
-      return {
-        buku_kas_id: bukuKasId,
-        produk_id: product.id || null, // Gunakan 'produk_id' bukan 'product_id'
-        qty: quantity, // Gunakan 'qty' bukan 'quantity'
-        amount: unitPrice * quantity, // Total amount untuk item ini
-        price: unitPrice, // Harga per unit
-        transaction_id: transactionId || null, // Gunakan transaction_id yang diberikan
-        custom_name: product.id ? null : (product.name || 'Produk Custom') // Nama custom jika produk_id null
-      };
-    });
+		// Jika ini adalah transaksi penjualan dengan produk, buat detail transaksi kasir
+		if (data.type === 'penjualan' && data.products && Array.isArray(data.products)) {
+			await this.createTransactionItems(insertedData[0].id, data.products, supabase, transactionId);
+		}
 
-    const { data: insertedItems, error } = await supabase
-      .from('transaksi_kasir')
-      .insert(transactionItems)
-      .select();
+		// Trigger refresh UI segera setelah insert berhasil
+		if (typeof window !== 'undefined') {
+			try {
+				window.dispatchEvent(
+					new CustomEvent('ai-recommendations-applied', { detail: { success: true } })
+				);
+				if (typeof (window as any).__refreshLaporan === 'function') {
+					await (window as any).__refreshLaporan();
+				}
+				if (typeof (window as any).__refreshRiwayat === 'function') {
+					await (window as any).__refreshRiwayat();
+				}
+			} catch {}
+		}
+	}
 
-    if (error) {
-      // Jangan throw error karena transaksi utama sudah berhasil
-    }
-  }
+	/**
+	 * Generate UUID fallback jika crypto.randomUUID tidak tersedia
+	 */
+	private generateUUID(): string {
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+			const r = (Math.random() * 16) | 0;
+			const v = c === 'x' ? r : (r & 0x3) | 0x8;
+			return v.toString(16);
+		});
+	}
 
-  /**
-   * Update transaksi yang sudah ada
-   */
-  private async updateTransaction(data: any): Promise<void> {
-    if (!data.id) {
-      throw new Error('ID transaksi diperlukan untuk update');
-    }
+	/**
+	 * Membuat detail transaksi kasir untuk penjualan produk
+	 */
+	private async createTransactionItems(
+		bukuKasId: number,
+		products: any[],
+		supabase: any,
+		transactionId?: string
+	): Promise<void> {
+		const transactionItems = products.map((product, index) => {
+			const addOns = product.addOns || [];
+			const addOnsTotal = addOns.reduce((sum: number, addOn: any) => sum + (addOn.price || 0), 0);
+			const unitPrice = (product.price || 0) + addOnsTotal;
+			const quantity = product.quantity || 1;
 
-    const branch = storeGet(selectedBranch);
-    const supabase = getSupabaseClient(branch as any);
-    
-    const tipe = data.type === 'pemasukan' ? 'in' : 'out';
-    
-    const updateData = {
-      tipe: tipe,
-      amount: data.amount,
-      description: data.description,
-      jenis: data.category
-    };
+			return {
+				buku_kas_id: bukuKasId,
+				produk_id: product.id || null, // Gunakan 'produk_id' bukan 'product_id'
+				qty: quantity, // Gunakan 'qty' bukan 'quantity'
+				amount: unitPrice * quantity, // Total amount untuk item ini
+				price: unitPrice, // Harga per unit
+				transaction_id: transactionId || null, // Gunakan transaction_id yang diberikan
+				custom_name: product.id ? null : product.name || 'Produk Custom' // Nama custom jika produk_id null
+			};
+		});
 
-    const { error } = await supabase
-      .from('buku_kas')
-      .update(updateData)
-      .eq('id', data.id);
+		const { data: insertedItems, error } = await supabase
+			.from('transaksi_kasir')
+			.insert(transactionItems)
+			.select();
 
-    if (error) {
-      throw new Error(`Gagal mengupdate transaksi: ${error.message}`);
-    }
-  }
+		if (error) {
+			// Jangan throw error karena transaksi utama sudah berhasil
+		}
+	}
 
-  /**
-   * Membuat kategori baru
-   */
-  private async createCategory(data: any): Promise<void> {
-    const branch = storeGet(selectedBranch);
-    const supabase = getSupabaseClient(branch as any);
-    
-    const categoryData = {
-      name: data.name,
-      description: data.description
-    };
+	/**
+	 * Update transaksi yang sudah ada
+	 */
+	private async updateTransaction(data: any): Promise<void> {
+		if (!data.id) {
+			throw new Error('ID transaksi diperlukan untuk update');
+		}
 
-    const { error } = await supabase
-      .from('kategori')
-      .insert(categoryData);
+		const branch = storeGet(selectedBranch);
+		const supabase = getSupabaseClient(branch as any);
 
-    if (error) {
-      throw new Error(`Gagal membuat kategori: ${error.message}`);
-    }
-  }
+		const tipe = data.type === 'pemasukan' ? 'in' : 'out';
 
-  /**
-   * Get default category berdasarkan type
-   */
-  private getDefaultCategory(type: string): string {
-    const defaultCategories: { [key: string]: string } = {
-      'pemasukan': 'pendapatan_usaha', // Sesuaikan dengan kategori di laporan
-      'pengeluaran': 'beban_usaha',    // Sesuaikan dengan kategori di laporan
-      'penjualan': 'pendapatan_usaha'  // Penjualan masuk ke pendapatan usaha
-    };
+		const updateData = {
+			tipe: tipe,
+			amount: data.amount,
+			description: data.description,
+			jenis: data.category
+		};
 
-    return defaultCategories[type] || 'lainnya';
-  }
+		const { error } = await supabase.from('buku_kas').update(updateData).eq('id', data.id);
 
-  /**
-   * Validasi rekomendasi sebelum diterapkan
-   */
-  validateRecommendations(recommendations: AiRecommendation[]): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
+		if (error) {
+			throw new Error(`Gagal mengupdate transaksi: ${error.message}`);
+		}
+	}
 
-    recommendations.forEach((rec, index) => {
-      if (!rec.id) {
-        errors.push(`Rekomendasi ${index + 1}: ID tidak valid`);
-      }
+	/**
+	 * Membuat kategori baru
+	 */
+	private async createCategory(data: any): Promise<void> {
+		const branch = storeGet(selectedBranch);
+		const supabase = getSupabaseClient(branch as any);
 
-      if (!rec.action) {
-        errors.push(`Rekomendasi ${index + 1}: Action tidak valid`);
-      }
+		const categoryData = {
+			name: data.name,
+			description: data.description
+		};
 
-      if (!rec.data) {
-        errors.push(`Rekomendasi ${index + 1}: Data tidak valid`);
-      }
+		const { error } = await supabase.from('kategori').insert(categoryData);
 
-      if (rec.action === 'create_transaction') {
-        if (!rec.data.type || !rec.data.amount) {
-          errors.push(`Rekomendasi ${index + 1}: Data transaksi tidak lengkap`);
-        }
-      }
-    });
+		if (error) {
+			throw new Error(`Gagal membuat kategori: ${error.message}`);
+		}
+	}
 
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
+	/**
+	 * Get default category berdasarkan type
+	 */
+	private getDefaultCategory(type: string): string {
+		const defaultCategories: { [key: string]: string } = {
+			pemasukan: 'pendapatan_usaha', // Sesuaikan dengan kategori di laporan
+			pengeluaran: 'beban_usaha', // Sesuaikan dengan kategori di laporan
+			penjualan: 'pendapatan_usaha' // Penjualan masuk ke pendapatan usaha
+		};
 
-  /**
-   * Deduplikasi rekomendasi untuk mencegah duplikasi transaksi
-   */
-  private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
-    const seen = new Set<string>();
-    const unique: AiRecommendation[] = [];
-    
-    for (const rec of recommendations) {
-      // Buat key unik berdasarkan action, amount, dan description
-      const key = `${rec.action}_${rec.data?.amount}_${rec.data?.type}_${rec.data?.description}`;
-      
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(rec);
-      }
-    }
-    
-    return unique;
-  }
+		return defaultCategories[type] || 'lainnya';
+	}
 
-  /**
-   * Rollback perubahan jika ada error
-   */
-  async rollbackChanges(appliedRecommendations: string[]): Promise<void> {
-    // Implementasi rollback jika diperlukan
-    // TODO: Implement rollback logic
-  }
+	/**
+	 * Validasi rekomendasi sebelum diterapkan
+	 */
+	validateRecommendations(recommendations: AiRecommendation[]): {
+		valid: boolean;
+		errors: string[];
+	} {
+		const errors: string[] = [];
+
+		recommendations.forEach((rec, index) => {
+			if (!rec.id) {
+				errors.push(`Rekomendasi ${index + 1}: ID tidak valid`);
+			}
+
+			if (!rec.action) {
+				errors.push(`Rekomendasi ${index + 1}: Action tidak valid`);
+			}
+
+			if (!rec.data) {
+				errors.push(`Rekomendasi ${index + 1}: Data tidak valid`);
+			}
+
+			if (rec.action === 'create_transaction') {
+				if (!rec.data.type || !rec.data.amount) {
+					errors.push(`Rekomendasi ${index + 1}: Data transaksi tidak lengkap`);
+				}
+			}
+		});
+
+		return {
+			valid: errors.length === 0,
+			errors
+		};
+	}
+
+	/**
+	 * Deduplikasi rekomendasi untuk mencegah duplikasi transaksi
+	 */
+	private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
+		const seen = new Set<string>();
+		const unique: AiRecommendation[] = [];
+
+		for (const rec of recommendations) {
+			// Buat key unik berdasarkan action, amount, dan description
+			const key = `${rec.action}_${rec.data?.amount}_${rec.data?.type}_${rec.data?.description}`;
+
+			if (!seen.has(key)) {
+				seen.add(key);
+				unique.push(rec);
+			}
+		}
+
+		return unique;
+	}
+
+	/**
+	 * Rollback perubahan jika ada error
+	 */
+	async rollbackChanges(appliedRecommendations: string[]): Promise<void> {
+		// Implementasi rollback jika diperlukan
+		// TODO: Implement rollback logic
+	}
 }
