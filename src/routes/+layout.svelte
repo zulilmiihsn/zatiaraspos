@@ -378,7 +378,7 @@
 <svelte:head>
 	<meta
 		name="viewport"
-		content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+		content="width=device-width, initial-scale=1, maximum-scale=5, minimum-scale=1"
 	/>
 	<title>ZatiarasPOS</title>
 </svelte:head>
@@ -394,5 +394,31 @@
 	}
 	.animate-fade-in {
 		animation: fade-in 0.4s ease;
+	}
+	
+	/* Prevent unwanted zoom while maintaining accessibility */
+	:global(html) {
+		touch-action: manipulation;
+		-webkit-text-size-adjust: 100%;
+		-ms-text-size-adjust: 100%;
+	}
+	
+	:global(body) {
+		touch-action: manipulation;
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+	}
+	
+	/* Allow text selection in input fields */
+	:global(input, textarea, [contenteditable]) {
+		-webkit-user-select: text;
+		-khtml-user-select: text;
+		-moz-user-select: text;
+		-ms-user-select: text;
+		user-select: text;
 	}
 </style>
