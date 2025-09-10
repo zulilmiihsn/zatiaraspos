@@ -1,4 +1,4 @@
-# 🍹 Zatiaras POS
+# 🍹 ZatiarasPOS
 
 **Zatiaras POS** adalah aplikasi Point of Sale (POS) modern yang dirancang khusus untuk bisnis retailnya Zatiaras dengan fitur multi-branch yang powerful.
 
