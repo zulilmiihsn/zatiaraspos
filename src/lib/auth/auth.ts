@@ -139,10 +139,7 @@ export async function loginWithUsername(
 	const result = await res.json();
 	if (!result.success) throw new Error(result.message || 'Login gagal');
 
-	// Set user role dan profile ke store (hanya sekali saat login)
-	setUserRole(result.user.role, result.user);
-
-	// Jika peran adalah 'kasir', ambil pengaturan keamanan
+	// Jika peran adalah 'kasir', ambil pengaturan keamanan TERLEBIH DAHULU
 	if (result.user.role === 'kasir') {
 		try {
 			const { data, error } = await getSupabaseClient(branch)
@@ -169,6 +166,9 @@ export async function loginWithUsername(
 	} else {
 		clearSecuritySettings(); // Clear settings for non-kasir roles
 	}
+
+	// Set user role dan profile ke store SETELAH security settings
+	setUserRole(result.user.role, result.user);
 
 	// Tidak perlu reset/fetch cache apapun
 

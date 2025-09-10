@@ -164,14 +164,6 @@
 		const currentSecuritySettings = $securitySettings;
 		const currentPath = $page.url.pathname;
 
-		// Debug logging
-		console.log('PIN Modal Debug:', {
-			currentUserRole,
-			currentSecuritySettings,
-			currentPath,
-			pinUnlockedForCurrentPage
-		});
-
 		// Reset pinUnlockedForCurrentPage jika path berubah
 		if (currentPath !== lastPath) {
 			pinUnlockedForCurrentPage = false;
@@ -191,13 +183,10 @@
 				);
 			});
 
-		console.log('isCurrentPageLocked:', isCurrentPageLocked);
-
 		// Tentukan apakah modal PIN harus ditampilkan
 		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
 			showPinModal = true;
 			currentPin = currentSecuritySettings?.pin || '1234'; // Gunakan PIN dari settings atau fallback
-			console.log('Showing PIN modal with PIN:', currentPin);
 		} else {
 			showPinModal = false;
 		}
