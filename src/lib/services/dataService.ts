@@ -1005,34 +1005,41 @@ export async function syncPendingTransactions() {
 	const pendings = await getPendingTransactions();
 	if (!pendings.length) return;
 	for (const trx of pendings) {
-		try {
-			let bukuKasId = null;
-			if (trx.bukuKas) {
-				// Insert ke buku_kas
-				await dataService.supabaseClient.from('buku_kas').insert(trx.bukuKas);
-				// Ambil id row yang baru berdasarkan transaction_id
-				const { data: lastBukuKas } = await dataService.supabaseClient
-					.from('buku_kas')
-					.select('id')
-					.eq('transaction_id', trx.bukuKas.transaction_id)
-					.order('waktu', { ascending: false })
-					.limit(1)
-					.maybeSingle();
-				bukuKasId = lastBukuKas?.id || null;
-			} else {
-				await dataService.supabaseClient.from('buku_kas').insert(trx);
+		let attempt = 0;
+		const maxAttempts = 3;
+		const baseDelay = 800;
+		while (attempt < maxAttempts) {
+			try {
+				let bukuKasId = null;
+				if (trx.bukuKas) {
+					await dataService.supabaseClient.from('buku_kas').insert(trx.bukuKas);
+					const { data: lastBukuKas } = await dataService.supabaseClient
+						.from('buku_kas')
+						.select('id')
+						.eq('transaction_id', trx.bukuKas.transaction_id)
+						.order('waktu', { ascending: false })
+						.limit(1)
+						.maybeSingle();
+					bukuKasId = lastBukuKas?.id || null;
+				} else {
+					await dataService.supabaseClient.from('buku_kas').insert(trx);
+				}
+				if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
+					const transaksiKasirWithId = trx.transaksiKasir.map((item: any) => ({
+						...item,
+						buku_kas_id: bukuKasId
+					}));
+					await dataService.supabaseClient.from('transaksi_kasir').insert(transaksiKasirWithId);
+				}
+				break; // sukses
+			} catch (e) {
+				attempt++;
+				if (attempt >= maxAttempts) {
+					// Gagal permanen pada item ini, lanjutkan item berikutnya
+					break;
+				}
+				await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt - 1)));
 			}
-			if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
-				// Update semua transaksiKasir dengan buku_kas_id
-				const transaksiKasirWithId = trx.transaksiKasir.map((item: any) => ({
-					...item,
-					buku_kas_id: bukuKasId
-				}));
-				await dataService.supabaseClient.from('transaksi_kasir').insert(transaksiKasirWithId);
-			}
-		} catch (e) {
-			// Jika gagal, stop sync (biar tidak hilang)
-			return;
 		}
 	}
 	await clearPendingTransactions();

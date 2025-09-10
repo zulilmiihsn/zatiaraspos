@@ -9,7 +9,23 @@ export default defineConfig({
 			registerType: 'prompt',
 			injectRegister: 'auto',
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif}']
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,woff2,woff}'],
+				runtimeCaching: [
+					{
+						urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif)$/,
+						handler: 'StaleWhileRevalidate',
+						options: {
+							expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 14 }
+						}
+					},
+					{
+						urlPattern: /\.(?:woff2?|ttf|otf)$/,
+						handler: 'StaleWhileRevalidate',
+						options: {
+							expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 }
+						}
+					}
+				]
 			},
 			includeAssets: ['favicon.svg', '180x180.png', '192x192.png', '144x144.png', '512x512.png'],
 			manifest: {
