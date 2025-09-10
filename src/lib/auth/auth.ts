@@ -142,28 +142,32 @@ export async function loginWithUsername(
 	// Set user role dan profile ke store (hanya sekali saat login)
 	setUserRole(result.user.role, result.user);
 
-	// Ambil pengaturan keamanan untuk semua role
-	try {
-		const { data, error } = await getSupabaseClient(branch)
-			.from('pengaturan')
-			.select('pin, locked_pages')
-			.eq('id', 1)
-			.single();
-		if (!error && data) {
-			setSecuritySettings({ pin: data.pin, lockedPages: data.locked_pages });
-		} else {
-			// Fallback atau set default jika tidak ada pengaturan
+	// Jika peran adalah 'kasir', ambil pengaturan keamanan
+	if (result.user.role === 'kasir') {
+		try {
+			const { data, error } = await getSupabaseClient(branch)
+				.from('pengaturan')
+				.select('pin, locked_pages')
+				.eq('id', 1)
+				.single();
+			if (!error && data) {
+				setSecuritySettings({ pin: data.pin, lockedPages: data.locked_pages });
+			} else {
+				// Fallback atau set default jika tidak ada pengaturan
+				setSecuritySettings({
+					pin: '1234',
+					lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
+				});
+			}
+		} catch (e) {
+			console.error('Error fetching security settings:', e);
 			setSecuritySettings({
 				pin: '1234',
 				lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
-			});
+			}); // Fallback
 		}
-	} catch (e) {
-		console.error('Error fetching security settings:', e);
-		setSecuritySettings({
-			pin: '1234',
-			lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
-		}); // Fallback
+	} else {
+		clearSecuritySettings(); // Clear settings for non-kasir roles
 	}
 
 	// Tidak perlu reset/fetch cache apapun

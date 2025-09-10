@@ -143,24 +143,39 @@
 	let showPinModal = false;
 	let currentPin = '1234'; // Default fallback PIN
 	let pinUnlockedForCurrentPage = false; // Flag untuk menandai PIN sudah dibuka untuk halaman saat ini
+	let lastPath = '';
 
+	// Helper: map nama halaman ke path sebenarnya
+	function mapLockedNameToPath(name: string): string {
+		if (!name) return '';
+		const lowered = name.toLowerCase();
+		if (lowered === 'beranda' || lowered === 'home') return '/';
+		return `/${lowered}`;
+	}
+
+	// Reset pinUnlockedForCurrentPage jika navigasi ke halaman baru
+	$: if ($navigating) {
+		pinUnlockedForCurrentPage = false;
+	}
+
+	// Reactive statement untuk menangani PIN modal
 	$: {
 		const currentUserRole = $userRole;
 		const currentSecuritySettings = $securitySettings;
 		const currentPath = $page.url.pathname;
 
-		// Reset pinUnlockedForCurrentPage jika navigasi ke halaman baru
-		if ($navigating) {
+		// Debug logging
+		console.log('PIN Modal Debug:', {
+			currentUserRole,
+			currentSecuritySettings,
+			currentPath,
+			pinUnlockedForCurrentPage
+		});
+
+		// Reset pinUnlockedForCurrentPage jika path berubah
+		if (currentPath !== lastPath) {
 			pinUnlockedForCurrentPage = false;
-		}
-
-
-		// Helper: map nama halaman ke path sebenarnya
-		function mapLockedNameToPath(name: string): string {
-			if (!name) return '';
-			const lowered = name.toLowerCase();
-			if (lowered === 'beranda' || lowered === 'home') return '/';
-			return `/${lowered}`;
+			lastPath = currentPath;
 		}
 
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
@@ -176,11 +191,13 @@
 				);
 			});
 
+		console.log('isCurrentPageLocked:', isCurrentPageLocked);
+
 		// Tentukan apakah modal PIN harus ditampilkan
-		// Semua role yang mengakses halaman terkunci harus memasukkan PIN
-		if (isCurrentPageLocked && !pinUnlockedForCurrentPage) {
+		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
 			showPinModal = true;
 			currentPin = currentSecuritySettings?.pin || '1234'; // Gunakan PIN dari settings atau fallback
+			console.log('Showing PIN modal with PIN:', currentPin);
 		} else {
 			showPinModal = false;
 		}
