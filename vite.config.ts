@@ -115,6 +115,14 @@ export default defineConfig({
 		}
 		// Tree shaking is enabled by default in Vite
 	},
+	css: {
+		postcss: {
+			plugins: [
+				require('@tailwindcss/postcss'),
+				require('autoprefixer')
+			]
+		}
+	},
 	optimizeDeps: {
 		include: ['svelte', '@sveltejs/kit', '@supabase/supabase-js'],
 		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os', 'lucide-svelte']
