@@ -4,7 +4,14 @@ import bcrypt from 'bcryptjs';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const { usernameLama, usernameBaru, passwordLama, passwordBaru, branch } = await request.json();
+		const {
+			usernameLama,
+			usernameBaru,
+			passwordLama,
+			passwordBaru,
+			branch,
+			targetRole
+		} = await request.json();
 		if (!usernameLama || !usernameBaru || !passwordLama || !passwordBaru || !branch) {
 			return new Response(JSON.stringify({ success: false, message: 'Semua field wajib diisi.' }), {
 				status: 400
@@ -12,11 +19,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		const supabase = getSupabaseClient(branch);
 		// Ambil user dari tabel profil
-		const { data: user, error } = await supabase
-			.from('profil')
-			.select('id, username, password')
-			.eq('username', usernameLama)
-			.single();
+		let query = supabase.from('profil').select('id, username, password, role').eq('username', usernameLama);
+		if (targetRole) {
+			query = query.eq('role', targetRole);
+		}
+		const { data: user, error } = await query.single();
 		if (error || !user) {
 			return new Response(
 				JSON.stringify({ success: false, message: 'Username lama tidak ditemukan.' }),

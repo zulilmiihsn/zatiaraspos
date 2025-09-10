@@ -270,7 +270,7 @@
 		// Gunakan WITA timezone yang konsisten
 		const nowWita = getNowWita();
 		const waktu = witaToUtcISO(nowWita.split('T')[0], nowWita.split('T')[1]);
-		const payment = paymentMethod;
+		const payment = paymentMethod === 'qris' ? 'non-tunai' : paymentMethod;
 		// Generate transaction_id sekali per transaksi
 		const transactionId =
 			typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : uuidv4();

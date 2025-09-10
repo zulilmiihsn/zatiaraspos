@@ -19,6 +19,14 @@
 	let confirmPassword = '';
 	let userPassError = '';
 
+	// State untuk Kasir
+	let kasirOldUsername = '';
+	let kasirNewUsername = '';
+	let kasirOldPassword = '';
+	let kasirNewPassword = '';
+	let kasirConfirmPassword = '';
+	let kasirUserPassError = '';
+
 	let oldPin = '';
 	let newPin = '';
 	let confirmPin = '';
@@ -95,6 +103,60 @@
 			confirmPassword = '';
 		} catch (err) {
 			userPassError = 'Terjadi error pada server.';
+		}
+	}
+
+	async function handleChangeUserPassKasir(e: Event) {
+		e.preventDefault();
+		kasirUserPassError = '';
+		if (
+			!kasirOldUsername ||
+			!kasirNewUsername ||
+			!kasirOldPassword ||
+			!kasirNewPassword ||
+			!kasirConfirmPassword
+		) {
+			kasirUserPassError = 'Semua field wajib diisi.';
+			return;
+		}
+		if (kasirNewPassword !== kasirConfirmPassword) {
+			kasirUserPassError = 'Konfirmasi password tidak cocok.';
+			return;
+		}
+		if (kasirOldUsername === kasirNewUsername) {
+			kasirUserPassError = 'Username baru tidak boleh sama dengan username lama.';
+			return;
+		}
+		try {
+			const branch = storeGet(selectedBranch);
+			const res = await fetch('/api/gantikeamanan', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					usernameLama: kasirOldUsername,
+					usernameBaru: kasirNewUsername,
+					passwordLama: kasirOldPassword,
+					passwordBaru: kasirNewPassword,
+					branch,
+					targetRole: 'kasir'
+				})
+			});
+			const data = await res.json();
+			if (!data.success) {
+				kasirUserPassError = data.message || 'Gagal update username/password kasir.';
+				return;
+			}
+			kasirUserPassError = '';
+			notifModalMsg = 'Perubahan username/password kasir berhasil disimpan.';
+			notifModalType = 'success';
+			showNotifModal = true;
+			kasirOldUsername = '';
+			kasirNewUsername = '';
+			kasirOldPassword = '';
+			kasirNewPassword = '';
+			kasirConfirmPassword = '';
+		} catch (err) {
+			kasirUserPassError = 'Terjadi error pada server.';
 		}
 	}
 
@@ -297,13 +359,92 @@
 						>
 					</form>
 				{:else}
-					<div class="py-8 text-center lg:flex lg:flex-1 lg:flex-col lg:justify-center">
-						<Shield class="mx-auto mb-4 h-16 w-16 text-blue-300" />
-						<h3 class="mb-2 text-lg font-bold text-blue-600">Fitur Kasir</h3>
-						<p class="text-sm text-gray-500">
-							Fitur ganti username & password kasir akan segera hadir.
-						</p>
-					</div>
+					<h3 class="mb-1 flex items-center gap-2 text-lg font-bold text-blue-600">
+						<Shield class="h-5 w-5" /> Ganti Username & Password Kasir
+					</h3>
+					<p class="mb-4 text-sm text-gray-500">
+						Ubah kredensial akun kasir yang tersimpan di tabel profil (role kasir).
+					</p>
+					<form
+						class="flex flex-col gap-4 lg:flex lg:flex-1 lg:flex-col"
+						onsubmit={handleChangeUserPassKasir}
+						autocomplete="off"
+					>
+						<div class="lg:flex lg:flex-1 lg:flex-col lg:justify-start">
+							<div>
+								<label for="kasir-old-username" class="mb-1 block text-sm font-medium text-gray-700"
+									>Username Lama</label
+								>
+								<input
+									id="kasir-old-username"
+									type="text"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+									placeholder="Username Lama Kasir"
+									bind:value={kasirOldUsername}
+									required
+								/>
+							</div>
+							<div>
+								<label for="kasir-new-username" class="mb-1 block text-sm font-medium text-gray-700"
+									>Username Baru</label
+								>
+								<input
+									id="kasir-new-username"
+									type="text"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+									placeholder="Username Baru Kasir"
+									bind:value={kasirNewUsername}
+									required
+								/>
+							</div>
+							<div>
+								<label for="kasir-old-password" class="mb-1 block text-sm font-medium text-gray-700"
+									>Password Lama</label
+								>
+								<input
+									id="kasir-old-password"
+									type="password"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+									placeholder="Password Lama Kasir"
+									bind:value={kasirOldPassword}
+									required
+								/>
+							</div>
+							<div>
+								<label for="kasir-new-password" class="mb-1 block text-sm font-medium text-gray-700"
+									>Password Baru</label
+								>
+								<input
+									id="kasir-new-password"
+									type="password"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+									placeholder="Password Baru Kasir"
+									bind:value={kasirNewPassword}
+									required
+								/>
+							</div>
+							<div>
+								<label for="kasir-confirm-password" class="mb-1 block text-sm font-medium text-gray-700"
+									>Konfirmasi Password Baru</label
+								>
+								<input
+									id="kasir-confirm-password"
+									type="password"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+									placeholder="Konfirmasi Password Baru Kasir"
+									bind:value={kasirConfirmPassword}
+									required
+								/>
+							</div>
+							{#if kasirUserPassError}
+								<div class="mt-1 text-center text-xs text-blue-600">{kasirUserPassError}</div>
+							{/if}
+						</div>
+						<button
+							class="mt-2 w-full rounded-xl bg-blue-500 py-3 font-bold text-white shadow-lg transition-colors duration-200 hover:bg-blue-600 active:bg-blue-700 lg:mt-auto"
+							type="submit">Simpan Perubahan Kasir</button
+						>
+					</form>
 				{/if}
 			</div>
 			<!-- Card: Ganti PIN -->

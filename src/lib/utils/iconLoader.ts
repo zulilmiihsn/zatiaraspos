@@ -7,6 +7,9 @@ interface IconCache {
 	[key: string]: Promise<any>;
 }
 
+// Registrasi modul ikon (gunakan path absolut dari root proyek ke node_modules)
+const ICON_MODULES = import.meta.glob('/node_modules/lucide-svelte/icons/*.svelte');
+
 class IconLoader {
 	private static instance: IconLoader;
 	private cache: IconCache = {};
@@ -37,10 +40,14 @@ class IconLoader {
 		}
 
 		try {
-			// Dynamic import with caching
-			const iconPromise = import(`lucide-svelte/icons/${iconName}`).then(
-				(module) => module.default
-			);
+			// Gunakan import.meta.glob agar Vite bisa melakukan code-splitting dengan benar
+			const iconPath = `/node_modules/lucide-svelte/icons/${iconName}.svelte`;
+			const iconLoader = (ICON_MODULES as Record<string, () => Promise<any>>)[iconPath];
+			if (!iconLoader) {
+				throw new Error(`Icon tidak ditemukan: ${iconName}`);
+			}
+
+			const iconPromise = iconLoader().then((module) => module.default);
 			this.cache[iconName] = iconPromise;
 
 			// Mark as loaded when resolved

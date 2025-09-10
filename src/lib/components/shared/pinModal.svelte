@@ -14,26 +14,33 @@
 	let pinInput = '';
 	let pinError = '';
 	let errorTimeout: number;
+	let isShaking = false;
 
 	function handlePinInput(num: number) {
 		if (pinInput.length < 4) {
 			pinInput += num.toString();
 
 			if (pinInput.length === 4) {
-				if (pinInput === pin) {
-					dispatch('success', { pin: pinInput });
-					show = false;
-					pinInput = '';
-					pinError = '';
-				} else {
-					pinError = 'PIN salah!';
-					pinInput = '';
-					if (errorTimeout) clearTimeout(errorTimeout);
-					errorTimeout = setTimeout(() => {
+				// Tunda verifikasi sebentar agar dot ke-4 sempat ter-render
+				const entered = pinInput;
+				setTimeout(() => {
+					if (entered === pin) {
+						dispatch('success', { pin: entered });
+						show = false;
+						pinInput = '';
 						pinError = '';
-					}, 2000) as any;
-					dispatch('error', { message: 'PIN salah!' });
-				}
+					} else {
+						pinError = 'PIN salah!';
+						isShaking = true;
+						pinInput = '';
+						if (errorTimeout) clearTimeout(errorTimeout);
+						errorTimeout = setTimeout(() => {
+							pinError = '';
+							isShaking = false;
+						}, 2000) as any;
+						dispatch('error', { message: 'PIN salah!' });
+					}
+				}, 120);
 			}
 		}
 	}
@@ -58,11 +65,11 @@
 	>
 		<div class="flex h-full w-full flex-col items-center justify-center p-4">
 			<div
-				class="w-full max-w-sm rounded-3xl border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-xl"
+				class="w-full max-w-sm rounded-3xl border border-white/30 bg-white/20 p-6 md:p-8 shadow-2xl backdrop-blur-xl"
 			>
-				<div class="mb-6 text-center">
+				<div class="mb-4 text-center">
 					<div
-						class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg"
+						class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg"
 					>
 						<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
@@ -78,7 +85,7 @@
 				</div>
 
 				<!-- PIN Display -->
-				<div class="mb-6 flex justify-center gap-2">
+				<div class="mb-2 flex justify-center gap-2 {isShaking ? 'animate-shake' : ''}">
 					{#each Array(4) as _, i}
 						<div
 							class="h-4 w-4 rounded-full {pinInput.length > i
@@ -87,9 +94,13 @@
 						></div>
 					{/each}
 				</div>
+				<!-- Reserve space for error to avoid layout shift -->
+				<div class="mb-2 h-5 text-center text-sm font-semibold text-white/90 {pinError ? 'visible opacity-100' : 'invisible opacity-0'}" aria-live="polite">
+					{pinError}
+				</div>
 
 				<!-- Numpad -->
-				<div class="mb-4 grid grid-cols-3 justify-items-center gap-3">
+				<div class="mb-3 grid grid-cols-3 justify-items-center gap-3">
 					{#each [1, 2, 3, 4, 5, 6, 7, 8, 9] as num}
 						<button
 							type="button"
@@ -116,4 +127,15 @@
 
 <style>
 	/* Animasi slideUp telah dihapus */
+	@keyframes shake {
+		0% { transform: translateX(0); }
+		20% { transform: translateX(-6px); }
+		40% { transform: translateX(6px); }
+		60% { transform: translateX(-4px); }
+		80% { transform: translateX(4px); }
+		100% { transform: translateX(0); }
+	}
+	.animate-shake {
+		animation: shake 320ms ease-in-out;
+	}
 </style>

@@ -581,6 +581,7 @@
 		openAddOnModal(product);
 	}
 	function handleShowCustomItemModal(): void {
+		qty = 1; // Reset quantity agar tidak mewarisi dari modal produk sebelumnya
 		showCustomItemModal = true;
 	}
 	function handleImgErrorId(id: string | number): void {
@@ -857,7 +858,7 @@
 								>
 								<input
 									id="custom-nama"
-									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-semibold text-gray-800 outline-none focus:border-transparent focus:ring-2 focus:ring-pink-500"
+									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-semibold text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
 									type="text"
 									bind:value={customItemName}
 									required
@@ -876,7 +877,7 @@
 									>
 									<input
 										id="custom-harga"
-										class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base font-semibold text-gray-800 outline-none focus:border-transparent focus:ring-2 focus:ring-pink-500"
+										class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base font-semibold text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
 										type="text"
 										inputmode="numeric"
 										pattern="[0-9]*"
@@ -896,7 +897,7 @@
 								>
 								<textarea
 									id="custom-catatan"
-									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-normal text-gray-800 outline-none focus:border-transparent focus:ring-2 focus:ring-pink-500"
+									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-normal text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
 									bind:value={customItemNote}
 									maxlength="100"
 									rows="2"
@@ -1195,5 +1196,19 @@
 		50% {
 			opacity: 0.4;
 		}
+	}
+
+	/* Hilangkan tombol spinner up/down di input number (Chrome, Edge, Safari) */
+	input[type='number']::-webkit-outer-spin-button,
+	input[type='number']::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		appearance: none;
+		margin: 0;
+	}
+
+	/* Hilangkan spinner di Firefox */
+	input[type='number'] {
+		-moz-appearance: textfield;
+		appearance: textfield;
 	}
 </style>

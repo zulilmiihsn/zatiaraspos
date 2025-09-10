@@ -12,6 +12,8 @@
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
+	import PinModal from '$lib/components/shared/pinModal.svelte';
+	import { securitySettings } from '$lib/stores/securitySettings';
 
 	let dashboardData: {
 		omzet: number;
@@ -256,26 +258,7 @@
 		{ label: 'Laporan', path: '/laporan' }
 	];
 
-	const stats = [
-		{
-			icon: TrendingUp,
-			label: 'Rata-rata Transaksi/Hari',
-			value: 'Rp 37.000',
-			color: '#ff5fa2'
-		},
-		{
-			icon: Users,
-			label: 'Pelanggan Unik Hari Ini',
-			value: '19',
-			color: '#e94e8f'
-		},
-		{
-			icon: Clock,
-			label: 'Jam Paling Ramai',
-			value: '15.00–16.00',
-			color: '#ffb86c'
-		}
-	];
+	// Removed 'stats' array
 
 	let imageError: Record<number, boolean> = {};
 
@@ -327,17 +310,20 @@
 
 	let showTokoModal = false;
 	let isBukaToko = true; // true: buka toko, false: tutup toko
-	let modalAwalInput = '';
-	let pinInputToko = '';
-	let pinErrorToko = '';
-	let tokoAktifLocal = false;
-	let sesiAktif: {
+// Verifikasi PIN untuk aksi kasir (buka/tutup)
+let showActionPinModal = false;
+let actionPin = '1234';
+let modalAwalInput = '';
+let pinInputToko = '';
+let pinErrorToko = '';
+let tokoAktifLocal = false;
+let sesiAktif: {
 		id: string;
 		opening_cash: number;
 		opening_time: string;
 		is_active: boolean;
 	} | null = null;
-	let ringkasanTutup: {
+let ringkasanTutup: {
 		modalAwal: number;
 		totalPenjualan: number;
 		pemasukanTunai: number;
@@ -383,9 +369,10 @@
 	});
 
 	function handleOpenTokoModal() {
-		// Untuk kasir, tampilkan modal PIN dulu sebelum modal Buka Toko
+		// Jika kasir, wajib verifikasi PIN dahulu (PIN dari pengaturan/securitySettings)
 		if (currentUserRole === 'kasir') {
-			// Simpan callback untuk buka toko setelah PIN benar
+			const settingsVal: any = storeGet(securitySettings);
+			actionPin = (settingsVal && settingsVal.pin) || '1234';
 			pendingAction = () => {
 				cekSesiToko().then(() => {
 					isBukaToko = !tokoAktifLocal;
@@ -396,10 +383,10 @@
 					if (!isBukaToko) hitungRingkasanTutup();
 				});
 			};
-			// Removed showPinModal = true; as it's handled by layout
+			showActionPinModal = true;
 			return;
 		}
-		// Untuk non-kasir, langsung buka modal
+		// Non-kasir langsung buka modal
 		cekSesiToko().then(() => {
 			isBukaToko = !tokoAktifLocal;
 			showTokoModal = true;
@@ -410,8 +397,19 @@
 		});
 	}
 
-	// Tambahkan state untuk pending action setelah PIN benar
+	// Pending action setelah PIN benar
 	let pendingAction: (() => void) | null = null;
+
+function handleActionPinSuccess() {
+	showActionPinModal = false;
+	if (pendingAction) pendingAction();
+	pendingAction = null;
+}
+
+function handleActionPinClose() {
+	showActionPinModal = false;
+	pendingAction = null;
+}
 
 	async function handleBukaToko() {
 		const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
@@ -664,6 +662,17 @@
 	duration={2000}
 	position="top"
 />
+
+{#if showActionPinModal}
+	<PinModal
+		show={showActionPinModal}
+		pin={actionPin}
+		title="Verifikasi Aksi"
+		subtitle="Masukkan PIN untuk melanjutkan"
+		on:success={handleActionPinSuccess}
+		on:close={handleActionPinClose}
+	/>
+{/if}
 
 <!-- Modal Buka/Tutup Toko -->
 {#if showTokoModal}

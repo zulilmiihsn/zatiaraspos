@@ -23,7 +23,8 @@ import { get as idbGet, set as idbSet } from 'idb-keyval';
 // Fungsi cache harian untuk rata-rata transaksi/hari
 async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	const todayStr = getTodayWita();
-	const cacheKey = `avg_transaksi_${todayStr}`;
+	const branch = storeGet(selectedBranch) || 'default';
+	const cacheKey = `avg_transaksi_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
 		return cached.value;
@@ -76,7 +77,8 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 // Fungsi cache harian untuk jam paling ramai
 async function getJamRamaiHarian(supabase: any): Promise<string> {
 	const todayStr = getTodayWita();
-	const cacheKey = `jam_ramai_${todayStr}`;
+	const branch = storeGet(selectedBranch) || 'default';
+	const cacheKey = `jam_ramai_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
 		return cached.value;
@@ -190,6 +192,15 @@ export class DataService {
 		const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
 		const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
+		// Profit riil sederhana (tanpa HPP): pemasukan - pengeluaran di hari ini
+		const pemasukan = (kas || [])
+			.filter((t: any) => t.tipe === 'in')
+			.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+		const pengeluaran = (kas || [])
+			.filter((t: any) => t.tipe === 'out')
+			.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+		const profit = pemasukan - pengeluaran;
+
 		// Ambil avgTransaksi dan jamRamai dari cache harian
 		const avgTransaksi = await getAvgTransaksiHarian(this.supabase);
 		const jamRamai = await getJamRamaiHarian(this.supabase);
@@ -198,7 +209,7 @@ export class DataService {
 			itemTerjual,
 			jumlahTransaksi,
 			omzet,
-			profit: omzet * 0.3, // Dummy profit calculation
+			profit,
 			totalItem: itemTerjual,
 			avgTransaksi,
 			jamRamai,

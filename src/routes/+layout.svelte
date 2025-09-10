@@ -145,14 +145,25 @@
 			pinUnlockedForCurrentPage = false;
 		}
 
+
+		// Helper: map nama halaman ke path sebenarnya
+		function mapLockedNameToPath(name: string): string {
+			if (!name) return '';
+			const lowered = name.toLowerCase();
+			if (lowered === 'beranda' || lowered === 'home') return '/';
+			return `/${lowered}`;
+		}
+
 		// Cek apakah halaman saat ini termasuk dalam daftar halaman yang terkunci
 		const isCurrentPageLocked =
 			currentSecuritySettings?.lockedPages &&
 			currentSecuritySettings.lockedPages.some((lockedPageName) => {
-				const fullLockedPath = `/${lockedPageName}`; // Tambahkan awalan '/'
+				const fullLockedPath = mapLockedNameToPath(lockedPageName);
+				if (!fullLockedPath) return false;
+				if (fullLockedPath === '/') return currentPath === '/';
 				return (
 					currentPath === fullLockedPath ||
-					(currentPath.startsWith(fullLockedPath + '/') && fullLockedPath !== '/')
+					currentPath.startsWith(fullLockedPath + '/')
 				);
 			});
 
