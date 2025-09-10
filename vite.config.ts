@@ -38,6 +38,36 @@ export default defineConfig({
 				orientation: 'portrait',
 				scope: '/',
 				start_url: '/',
+				screenshots: [
+					{
+						src: 'screenshots/app-1080x1920-01.png',
+						sizes: '1080x1920',
+						type: 'image/png',
+						form_factor: 'narrow',
+						label: 'Dashboard'
+					},
+					{
+						src: 'screenshots/app-1080x1920-02.png',
+						sizes: '1080x1920',
+						type: 'image/png',
+						form_factor: 'narrow',
+						label: 'Kasir / POS'
+					},
+					{
+						src: 'screenshots/app-1080x1920-03.png',
+						sizes: '1080x1920',
+						type: 'image/png',
+						form_factor: 'narrow',
+						label: 'Laporan'
+					},
+					{
+						src: 'screenshots/app-1080x1920-04.png',
+						sizes: '1080x1920',
+						type: 'image/png',
+						form_factor: 'narrow',
+						label: 'Pengaturan'
+					}
+				],
 				icons: [
 					{
 						src: 'img/192x192.png',
