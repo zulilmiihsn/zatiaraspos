@@ -1,10 +1,10 @@
 # 🍹 Zatiaras POS
 
-**Zatiaras POS** adalah aplikasi Point of Sale (POS) modern yang dirancang khusus untuk bisnis retail dan restoran dengan fitur multi-branch yang powerful.
+**Zatiaras POS** adalah aplikasi Point of Sale (POS) modern yang dirancang khusus untuk bisnis retailnya Zatiaras dengan fitur multi-branch yang powerful.
 
 ## ✨ Tentang Aplikasi
 
-Zatiaras POS adalah solusi lengkap untuk mengelola operasional bisnis Anda dengan interface yang user-friendly dan fitur yang komprehensif. Aplikasi ini dibangun dengan teknologi modern untuk memberikan pengalaman terbaik bagi kasir, manajer, dan pemilik bisnis.
+ZatiarasPOS dibuat untuk menjadi solusi lengkap untuk mengelola operasional usaha Zatiaras dengan interface yang user-friendly dan fitur yang komprehensif. Aplikasi ini dibangun dengan teknologi modern untuk memberikan pengalaman terbaik bagi kasir, manajer, dan pemilik bisnis.
 
 ## 🎯 Fitur Utama
 
@@ -97,4 +97,4 @@ Zatiaras POS hadir untuk mengubah cara bisnis retail dan restoran mengelola oper
 
 ---
 
-_Dibuat dengan ❤️ untuk kemudahan bisnis Anda_
+_Dibuat dengan ❤️ untuk Zatiaras
