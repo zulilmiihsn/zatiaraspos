@@ -15,6 +15,7 @@ export default defineConfig({
 						urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif)$/,
 						handler: 'StaleWhileRevalidate',
 						options: {
+							cacheName: 'images-cache',
 							expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 14 }
 						}
 					},
@@ -22,6 +23,7 @@ export default defineConfig({
 						urlPattern: /\.(?:woff2?|ttf|otf)$/,
 						handler: 'StaleWhileRevalidate',
 						options: {
+							cacheName: 'fonts-cache',
 							expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 }
 						}
 					}
