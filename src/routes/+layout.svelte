@@ -99,14 +99,23 @@
 
 		isOffline = !navigator.onLine;
 		updatePending();
-		prefetchAllData();
+		// Tunda prefetch berat ke idle agar tidak menambah critical path
+		if ('requestIdleCallback' in window) {
+			(window as any).requestIdleCallback(() => prefetchAllData());
+		} else {
+			setTimeout(() => prefetchAllData(), 500);
+		}
 		window.addEventListener('offline', () => {
 			isOffline = true;
 		});
 		window.addEventListener('online', () => {
 			isOffline = false;
 			updatePending();
-			prefetchAllData();
+			if ('requestIdleCallback' in window) {
+				(window as any).requestIdleCallback(() => prefetchAllData());
+			} else {
+				setTimeout(() => prefetchAllData(), 500);
+			}
 		});
 		window.addEventListener('storage', () => {
 			updatePending();

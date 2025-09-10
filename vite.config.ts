@@ -53,8 +53,7 @@ export default defineConfig({
 			output: {
 				manualChunks: {
 					// Vendor chunks
-					'vendor-svelte': ['svelte', '@sveltejs/kit'],
-					'vendor-ui': ['lucide-svelte']
+					'vendor-svelte': ['svelte', '@sveltejs/kit']
 				}
 			}
 		},
@@ -71,8 +70,8 @@ export default defineConfig({
 		// Tree shaking is enabled by default in Vite
 	},
 	optimizeDeps: {
-		include: ['svelte', '@sveltejs/kit', 'lucide-svelte', '@supabase/supabase-js'],
-		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os']
+		include: ['svelte', '@sveltejs/kit', '@supabase/supabase-js'],
+		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os', 'lucide-svelte']
 	},
 	server: {
 		fs: {
