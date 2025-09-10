@@ -177,7 +177,8 @@
 			});
 
 		// Tentukan apakah modal PIN harus ditampilkan
-		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
+		// Semua role yang mengakses halaman terkunci harus memasukkan PIN
+		if (isCurrentPageLocked && !pinUnlockedForCurrentPage) {
 			showPinModal = true;
 			currentPin = currentSecuritySettings?.pin || '1234'; // Gunakan PIN dari settings atau fallback
 		} else {
