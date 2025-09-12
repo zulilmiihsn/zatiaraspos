@@ -1079,7 +1079,7 @@ function handleActionPinClose() {
 							<div class="text-xl font-bold text-pink-400 md:text-2xl lg:text-3xl">
 								{avgTransaksi ?? '--'}
 							</div>
-							<div class="mt-1 text-xs text-gray-500 md:text-sm">Rata-rata transaksi/hari</div>
+							<div class="mt-1 text-xs text-gray-500 md:text-sm">Rata-rata transaksi</div>
 						</div>
 						<div
 							class="flex flex-col items-center rounded-xl bg-white p-3 shadow md:rounded-2xl md:border md:border-pink-100 md:p-6 md:shadow-none"

@@ -27,7 +27,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	const cacheKey = `avg_transaksi_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
-		return cached.value;
+		return cached.value; // Cache 24 jam
 	}
 	// Hitung ulang
 	const hariLabels = [];
@@ -74,23 +74,31 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	return avgTransaksi;
 }
 
-// Fungsi cache harian untuk jam paling ramai
-async function getJamRamaiHarian(supabase: any): Promise<string> {
+// Fungsi cache mingguan untuk jam paling ramai (7 hari terakhir)
+async function getJamRamaiMingguan(supabase: any): Promise<string> {
 	const todayStr = getTodayWita();
 	const branch = storeGet(selectedBranch) || 'default';
-	const cacheKey = `jam_ramai_${branch}_${todayStr}`;
+	const cacheKey = `jam_ramai_mingguan_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
-		return cached.value;
+		return cached.value; // Cache 24 jam untuk konsistensi dengan rata-rata transaksi
 	}
-	// Hitung ulang
-	const { startUtc, endUtc } = witaToUtcRange(todayStr);
+	
+	// Hitung ulang - ambil data 7 hari terakhir
+	const today = new Date();
+	const sevenDaysAgo = new Date(today);
+	sevenDaysAgo.setDate(today.getDate() - 6); // 7 hari termasuk hari ini
+	
+	const startUtc = sevenDaysAgo.toISOString();
+	const endUtc = today.toISOString();
+	
 	const { data: kas, error } = await supabase
 		.from('buku_kas')
 		.select('waktu')
 		.gte('waktu', startUtc)
 		.lte('waktu', endUtc)
 		.eq('sumber', 'pos');
+	
 	const jamCount: { [key: string]: number } = {};
 	if (!error && kas) {
 		for (const t of kas) {
@@ -100,6 +108,7 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
 			jamCount[jam] = (jamCount[jam] || 0) + 1;
 		}
 	}
+	
 	let peakHour = '';
 	let maxCount = 0;
 	for (const [jam, count] of Object.entries(jamCount)) {
@@ -108,11 +117,13 @@ async function getJamRamaiHarian(supabase: any): Promise<string> {
 			peakHour = jam;
 		}
 	}
+	
 	let jamRamai = '';
 	if (peakHour !== '') {
 		const jamInt = parseInt(peakHour, 10);
 		jamRamai = `${jamInt.toString().padStart(2, '0')}.00–${(jamInt + 1).toString().padStart(2, '0')}.00`;
 	}
+	
 	await setCache(cacheKey, { value: jamRamai, timestamp: Date.now() });
 	return jamRamai;
 }
@@ -201,9 +212,9 @@ export class DataService {
 			.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 		const profit = pemasukan - pengeluaran;
 
-		// Ambil avgTransaksi dan jamRamai dari cache harian
+		// Ambil avgTransaksi dan jamRamai dari cache mingguan
 		const avgTransaksi = await getAvgTransaksiHarian(this.supabase);
-		const jamRamai = await getJamRamaiHarian(this.supabase);
+		const jamRamai = await getJamRamaiMingguan(this.supabase);
 
 		return {
 			itemTerjual,
