@@ -29,5 +29,49 @@
       "sizes": "144x144",
       "type": "image/png"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/beranda.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Dashboard utama dengan statistik penjualan"
+    },
+    {
+      "src": "screenshots/kasir.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Interface kasir untuk transaksi penjualan"
+    },
+    {
+      "src": "screenshots/laporan.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Halaman laporan dan analisis data"
+    },
+    {
+      "src": "screenshots/pengaturan.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Menu pengaturan aplikasi"
+    },
+    {
+      "src": "screenshots/loginpage.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Halaman login dan autentikasi"
+    },
+    {
+      "src": "screenshots/asistenai.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Fitur asisten AI untuk analisis bisnis"
+    }
   ]
 } 
