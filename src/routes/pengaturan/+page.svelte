@@ -72,7 +72,8 @@
 		Settings: any,
 		Bell: any,
 		Download: any,
-		Printer: any;
+		Printer: any,
+		History: any;
 
 	function showNotif(message: string) {
 		notificationMessage = message;
@@ -175,6 +176,7 @@
 			Bell = (await import('lucide-svelte/icons/bell')).default;
 			Download = (await import('lucide-svelte/icons/download')).default;
 			Printer = (await import('lucide-svelte/icons/printer')).default;
+			History = (await import('lucide-svelte/icons/history')).default;
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadPengaturanPage');
 			// toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
@@ -552,6 +554,31 @@
 						Atur tampilan dan informasi draft struk
 					</div>
 				</button>
+				{#if currentUserRole === 'kasir'}
+					<!-- Box Riwayat Transaksi (Kasir - Read Only) -->
+					<button
+						class="flex aspect-square min-h-[110px] flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-4 shadow focus:outline-none md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
+						onclick={() => goto('/pengaturan/kasir/riwayat')}
+					>
+						{#if History}
+							<svelte:component this={History} class="mb-2 h-8 w-8 text-green-600" />
+						{:else}
+							<div class="mb-2 flex h-8 w-8 items-center justify-center">
+								<span
+									class="block h-6 w-6 rounded-lg bg-gradient-to-br from-green-200 to-blue-200"
+								></span>
+							</div>
+						{/if}
+						<div class="mb-1 text-lg font-bold text-green-700 md:mb-1 md:text-base">Riwayat</div>
+						<span
+							class="mb-2 inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 md:mb-2 md:px-3 md:py-1 md:text-base"
+							>Lihat</span
+						>
+						<div class="text-center text-xs text-gray-500 md:mt-1 md:mb-0 md:text-base">
+							Lihat riwayat transaksi hari ini
+						</div>
+					</button>
+				{/if}
 			{/if}
 		</div>
 
