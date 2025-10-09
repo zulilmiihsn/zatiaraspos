@@ -845,7 +845,7 @@ async function handleRegularChat(request: Request) {
 		const dataRequirements = await identifyDataRequirements(question, apiKey);
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
-		const supabase = getSupabaseClient((branch || 'dev') as any);
+		const supabase = getSupabaseClient((branch || 'Balikpapan') as any);
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database

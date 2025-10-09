@@ -128,7 +128,7 @@ function generateDummyToken(user: any): string {
 export async function loginWithUsername(
 	username: string,
 	password: string,
-	branch: 'samarinda' | 'berau' | 'dev'
+	branch: 'samarinda' | 'berau' | 'Balikpapan'
 ) {
 	// Kirim ke endpoint API custom untuk verifikasi login
 	const res = await fetch('/api/veriflogin', {
