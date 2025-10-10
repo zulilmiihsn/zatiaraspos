@@ -759,17 +759,17 @@
 									role="button"
 									aria-label="Tambah {p.name} ke keranjang"
 								>
-									<div class="flex min-w-0 flex-1 flex-col">
-										<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
-										<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
-											>{getKategoriNameById(p.kategori_id)}</span
-										>
-									</div>
-									<div class="flex items-center gap-2">
-										<span class="text-base font-bold whitespace-nowrap text-pink-500"
-											>Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span
-										>
-									</div>
+								<div class="flex min-w-0 flex-1 flex-col">
+									<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
+									<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
+										>{getKategoriNameById(p.kategori_id)}</span
+									>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="text-base font-bold whitespace-nowrap text-pink-500"
+										>Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span
+									>
+								</div>
 								</div>
 							{/each}
 						{/if}

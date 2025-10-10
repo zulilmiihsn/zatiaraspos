@@ -8,8 +8,8 @@ function initializeClients() {
 		// Create clients with unique storage keys to prevent conflicts
 		supabaseClients = {
 			samarinda: createClient(
-				import.meta.env.VITE_SUPABASE_URL_SAMARINDA,
-				import.meta.env.VITE_SUPABASE_ANON_KEY_SAMARINDA,
+				import.meta.env.VITE_SUPABASE_URL_SAMARINDA || '',
+				import.meta.env.VITE_SUPABASE_ANON_KEY_SAMARINDA || '',
 				{
 					auth: {
 						storageKey: 'zatiaras-samarinda'
@@ -17,8 +17,8 @@ function initializeClients() {
 				}
 			),
 			berau: createClient(
-				import.meta.env.VITE_SUPABASE_URL_BERAU,
-				import.meta.env.VITE_SUPABASE_ANON_KEY_BERAU,
+				import.meta.env.VITE_SUPABASE_URL_BERAU || '',
+				import.meta.env.VITE_SUPABASE_ANON_KEY_BERAU || '',
 				{
 					auth: {
 						storageKey: 'zatiaras-berau'
@@ -26,8 +26,8 @@ function initializeClients() {
 				}
 			),
 			Balikpapan: createClient(
-				import.meta.env.VITE_SUPABASE_URL_BALIKPAPAN,
-				import.meta.env.VITE_SUPABASE_ANON_KEY_BALIKPAPAN,
+				import.meta.env.VITE_SUPABASE_URL_BALIKPAPAN || '',
+				import.meta.env.VITE_SUPABASE_ANON_KEY_BALIKPAPAN || '',
 				{
 					auth: {
 						storageKey: 'zatiaras-balikpapan'
