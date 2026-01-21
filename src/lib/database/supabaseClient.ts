@@ -25,7 +25,7 @@ function initializeClients() {
 					}
 				}
 			),
-			Balikpapan: createClient(
+			balikpapan: createClient(
 				import.meta.env.VITE_SUPABASE_URL_BALIKPAPAN || 'https://placeholder.supabase.co',
 				import.meta.env.VITE_SUPABASE_ANON_KEY_BALIKPAPAN || 'placeholder',
 				{
@@ -42,13 +42,22 @@ function initializeClients() {
 						storageKey: 'zatiaras-samarinda2'
 					}
 				}
+			),
+			balikpapan2: createClient(
+				import.meta.env.VITE_SUPABASE_URL_BALIKPAPAN2 || 'https://placeholder.supabase.co',
+				import.meta.env.VITE_SUPABASE_ANON_KEY_BALIKPAPAN2 || 'placeholder',
+				{
+					auth: {
+						storageKey: 'zatiaras-balikpapan2'
+					}
+				}
 			)
 		};
 	}
 	return supabaseClients;
 }
 
-export function getSupabaseClient(branch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2'): SupabaseClient {
+export function getSupabaseClient(branch: 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2'): SupabaseClient {
 	const clients = initializeClients();
 	return clients[branch];
 }

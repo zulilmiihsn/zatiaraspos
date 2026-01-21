@@ -20,7 +20,7 @@
 	let usernameError = '';
 	let passwordError = '';
 
-	let branch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' = 'samarinda';
+	let branch: 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2' = 'samarinda';
 	$: selectedBranch.set(branch);
 
 	// Validate form
@@ -346,8 +346,9 @@
 		>
 			<option value="samarinda">Samarinda</option>
 			<option value="berau">Berau</option>
-			<option value="Balikpapan">Balikpapan</option>
+			<option value="balikpapan">Balikpapan</option>
 			<option value="samarinda2">Samarinda 2</option>
+			<option value="balikpapan2">Balikpapan 2</option>
 		</select>
 	</div>
 </div>

@@ -64,7 +64,7 @@ export class OptimizedDataService {
 	 */
 	private initializeConnectionPool(): void {
 		// Pre-initialize connections for known branches
-		const branches = ['default', 'Balikpapan', 'samarinda', 'berau']; // Add your branches
+		const branches = ['default', 'balikpapan', 'samarinda', 'berau', 'samarinda2', 'balikpapan2']; // Add your branches
 
 		branches.forEach((branch) => {
 			this.connectionPool[branch] = getSupabaseClient(branch as any);

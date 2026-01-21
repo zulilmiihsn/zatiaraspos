@@ -1,13 +1,16 @@
 import { writable } from 'svelte/store';
 
-let initialBranch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' = 'samarinda';
+let initialBranch: 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2' = 'samarinda';
 if (typeof window !== 'undefined') {
-	const saved = localStorage.getItem('selectedBranch'); // Changed to localStorage
-	if (saved === 'berau' || saved === 'samarinda' || saved === 'Balikpapan' || saved === 'samarinda2') {
+	let saved = localStorage.getItem('selectedBranch'); // Changed to localStorage
+	// Migration legacy value
+	if (saved === 'Balikpapan') saved = 'balikpapan';
+
+	if (saved === 'berau' || saved === 'samarinda' || saved === 'balikpapan' || saved === 'samarinda2' || saved === 'balikpapan2') {
 		initialBranch = saved;
 	}
 }
-export const selectedBranch = writable<'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2'>(initialBranch);
+export const selectedBranch = writable<'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2'>(initialBranch);
 
 if (typeof window !== 'undefined') {
 	selectedBranch.subscribe((val) => localStorage.setItem('selectedBranch', val)); // Changed to localStorage
