@@ -36,7 +36,7 @@
 	let editEkstraId: any = null;
 	let menuForm = writable({
 		name: '',
-		kategori_id: '',
+		kategori_id: null as string | null,
 		tipe: 'minuman',
 		price: '',
 		ekstra_ids: [] as any[],
@@ -257,7 +257,7 @@
 			editMenuId = null;
 			$menuForm = {
 				name: '',
-				kategori_id: '',
+				kategori_id: null,
 				tipe: 'minuman',
 				price: '',
 				ekstra_ids: [],
@@ -271,7 +271,7 @@
 		editMenuId = null;
 		$menuForm = {
 			name: '',
-			kategori_id: '',
+			kategori_id: null,
 			tipe: 'minuman',
 			price: '',
 			ekstra_ids: [],
@@ -292,8 +292,8 @@
 			showNotifModal = true;
 			return;
 		}
-		if (!$menuForm.kategori_id || $menuForm.kategori_id.trim() === '') {
-			$menuForm = { ...$menuForm, kategori_id: '' };
+		if (!$menuForm.kategori_id || $menuForm.kategori_id.toString().trim() === '') {
+			$menuForm = { ...$menuForm, kategori_id: null };
 		}
 		let imageUrl = $menuForm.gambar;
 		if (imageUrl && imageUrl.startsWith('data:image/')) {
@@ -1580,7 +1580,7 @@
 									kat.id
 										? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
-									onclick={() => setMenuKategori($menuForm.kategori_id === kat.id ? '' : kat.id)}
+									onclick={() => setMenuKategori($menuForm.kategori_id === kat.id ? null : kat.id)}
 								>
 									{kat.name}
 								</button>

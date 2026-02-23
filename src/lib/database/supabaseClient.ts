@@ -25,7 +25,7 @@ function initializeClients() {
 					}
 				}
 			),
-			balikpapan: createClient(
+			Balikpapan: createClient(
 				import.meta.env.VITE_SUPABASE_URL_BALIKPAPAN || 'https://placeholder.supabase.co',
 				import.meta.env.VITE_SUPABASE_ANON_KEY_BALIKPAPAN || 'placeholder',
 				{
@@ -57,7 +57,9 @@ function initializeClients() {
 	return supabaseClients;
 }
 
-export function getSupabaseClient(branch: 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2'): SupabaseClient {
+export function getSupabaseClient(
+	branch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2'
+): SupabaseClient {
 	const clients = initializeClients();
 	return clients[branch];
 }
