@@ -15,13 +15,14 @@
 	import CreditCard from 'lucide-svelte/icons/credit-card';
 	import User from 'lucide-svelte/icons/user';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import PwaInstallDialog from '$lib/components/shared/pwaInstallDialog.svelte';
+	// Web component will be loaded dynamically in onMount
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { browser } from '$app/environment';
 
-	// PWA Installation
-	let showPwaInstallDialog = false;
+	// PWA Installation - Web Component
+	let pwaElement: any = null;
+	let isPwaLibraryLoaded = false;
 
 	// Type definitions
 	interface PengaturanData {
@@ -139,6 +140,30 @@
 				});
 			}
 
+			// Load PWA Install Web Component (SSR-safe)
+			if (browser) {
+				try {
+					await import('@khmyznikov/pwa-install');
+					isPwaLibraryLoaded = true;
+					
+					// Force custom styling after library loads
+					setTimeout(() => {
+						const pwaInstall = document.querySelector('pwa-install');
+						if (pwaInstall && pwaInstall.shadowRoot) {
+							const style = document.createElement('style');
+							style.textContent = `
+								.header, [part="header"], div[class*="header"] {
+									background-color: #FFB6C1 !important;
+								}
+							`;
+							pwaInstall.shadowRoot.appendChild(style);
+						}
+					}, 500);
+				} catch (error) {
+					console.error('Failed to load PWA install library:', error);
+				}
+			}
+
 			// Removed locked_pages check for kasir role
 
 			// Set loading selesai
@@ -225,7 +250,14 @@
 	}
 
 	function handleInstallPWA() {
-		showPwaInstallDialog = true;
+		if (browser && isPwaLibraryLoaded) {
+			// Get the web component element
+			const pwaInstall = document.querySelector('pwa-install') as any;
+			if (pwaInstall) {
+				// Show the install dialog
+				pwaInstall.showDialog(true);
+			}
+		}
 	}
 
 	const settingsSections = [
@@ -623,8 +655,29 @@
 		</div>
 	{/if}
 
-	<!-- PWA Install Dialog -->
-	<PwaInstallDialog bind:show={showPwaInstallDialog} onClose={() => (showPwaInstallDialog = false)} />
+	<!-- PWA Install Web Component (SSR-safe) -->
+	{#if browser && isPwaLibraryLoaded}
+		<pwa-install
+			manifest-url="/manifest.webmanifest"
+			name="Zatiaras POS"
+			description="Install aplikasi ini untuk akses lebih cepat dan pengalaman lebih baik"
+			icon="/img/192x192.png"
+			manual-apple="true"
+			manual-chrome="true"
+			disable-install-description="false"
+		></pwa-install>
+	{/if}
+
+	<!-- Custom styling for PWA install dialog -->
+	<style>
+		:global(pwa-install) {
+			--pwa-install-dialog-header-color: #FFB6C1 !important;
+			--header-color: #FFB6C1 !important;
+		}
+		:global(pwa-install::part(header)) {
+			background-color: #FFB6C1 !important;
+		}
+	</style>
 
 	{#if showNotification}
 		<div
