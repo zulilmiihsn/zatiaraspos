@@ -14,10 +14,11 @@
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
 	import { memoize } from '$lib/utils/performance';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
+	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
-	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { ErrorHandler, getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 
 	// Lazy load icons with proper typing
 	let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
@@ -29,6 +30,37 @@
 	let userProfileData: any = null;
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
+	let laporanRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let laporanRefreshInFlight = false;
+	let lastLaporanRefreshAt = 0;
+	let lastAppliedReportFingerprint = '';
+
+	function computeReportFingerprint(reportData: any): string {
+		const summaryData = reportData?.summary || {};
+		const transactions = reportData?.transactions || [];
+		const txLength = Array.isArray(transactions) ? transactions.length : 0;
+
+		let totalNominal = 0;
+		let latestTs = '';
+
+		for (const tx of transactions) {
+			totalNominal += Number(tx?.nominal ?? tx?.amount ?? 0) || 0;
+			const ts = String(tx?.waktu || tx?.created_at || '');
+			if (ts > latestTs) latestTs = ts;
+		}
+
+		return [
+			Number(summaryData?.pendapatan || 0),
+			Number(summaryData?.pengeluaran || 0),
+			Number(summaryData?.saldo || 0),
+			Number(summaryData?.labaKotor || 0),
+			Number(summaryData?.pajak || 0),
+			Number(summaryData?.labaBersih || 0),
+			txLength,
+			totalNominal,
+			latestTs
+		].join('|');
+	}
 
 	// AI Chat state
 	let aiQuestion = '';
@@ -119,7 +151,8 @@
 			if (result.success) {
 				aiAnswer = result.answer;
 			} else {
-				aiAnswer = `Error: ${result.error || 'Terjadi kesalahan saat memproses pertanyaan.'}`;
+				reportApiFailure(result, response.status, '/api/aichat');
+				aiAnswer = `Error: ${getApiErrorMessage(result, response.status, 'Terjadi kesalahan saat memproses pertanyaan.')}`;
 			}
 		} catch (error) {
 			aiAnswer =
@@ -136,13 +169,39 @@
 		isAiLoading = false;
 	}
 
+	async function scheduleLaporanRefresh(delayMs = 220, force = false) {
+		if (!force && Date.now() - lastLaporanRefreshAt < 400) {
+			return;
+		}
+
+		if (laporanRefreshTimer) {
+			clearTimeout(laporanRefreshTimer);
+		}
+
+		laporanRefreshTimer = setTimeout(async () => {
+			laporanRefreshTimer = null;
+			if (laporanRefreshInFlight) return;
+
+			laporanRefreshInFlight = true;
+			try {
+				await loadLaporanData({ silent: true });
+				lastLaporanRefreshAt = Date.now();
+			} finally {
+				laporanRefreshInFlight = false;
+			}
+		}, delayMs);
+	}
+
 	// Tambahkan deklarasi function loadLaporanData
-	async function loadLaporanData() {
+	async function loadLaporanData(options: { silent?: boolean } = {}) {
+		const silent = options.silent === true;
 		try {
-			// LOADING STATE: Mulai loading
-			isLoadingReport = true;
-			loadingProgress = 0;
-			loadingMessage = 'Memuat data...';
+			if (!silent) {
+				// LOADING STATE: Mulai loading
+				isLoadingReport = true;
+				loadingProgress = 0;
+				loadingMessage = 'Memuat data...';
+			}
 
 			// Pastikan startDate dan endDate sudah ada
 			if (!startDate || !endDate) {
@@ -150,25 +209,43 @@
 				endDate = endDate || startDate;
 			}
 
-			// LOADING PROGRESS: 20% - Prepare data
-			loadingProgress = 20;
-			loadingMessage = 'Menyiapkan...';
+			if (!silent) {
+				// LOADING PROGRESS: 20% - Prepare data
+				loadingProgress = 20;
+				loadingMessage = 'Menyiapkan...';
+			}
 			// Tidak perlu clear cache untuk setiap load
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
 
-			// LOADING PROGRESS: 40% - Fetch data
-			loadingProgress = 40;
-			loadingMessage = 'Mengambil data...';
+			if (!silent) {
+				// LOADING PROGRESS: 40% - Fetch data
+				loadingProgress = 40;
+				loadingMessage = 'Mengambil data...';
+			}
 			const reportData = await dataService.getReportData(dateRange, 'daily');
 
-			// LOADING PROGRESS: 70% - Process data
-			loadingProgress = 70;
-			loadingMessage = 'Memproses...';
+			if (!silent) {
+				// LOADING PROGRESS: 70% - Process data
+				loadingProgress = 70;
+				loadingMessage = 'Memproses...';
+			}
 
 			// Apply report data with null checks - data ada di reportData.data
 			const reportDataContent = (reportData as any)?.data || reportData;
+			const nextFingerprint = computeReportFingerprint(reportDataContent);
+
+			if (nextFingerprint === lastAppliedReportFingerprint) {
+				await reportCacheMetrics('laporan');
+				if (!silent) {
+					loadingProgress = 100;
+					loadingMessage = 'Selesai!';
+				}
+				return;
+			}
+
+			lastAppliedReportFingerprint = nextFingerprint;
 			summary = reportDataContent?.summary || {
 				pendapatan: 0,
 				pengeluaran: 0,
@@ -182,20 +259,27 @@
 			bebanUsaha = reportDataContent?.bebanUsaha || [];
 			bebanLain = reportDataContent?.bebanLain || [];
 			laporan = reportDataContent?.transactions || [];
+			await reportCacheMetrics('laporan');
 
-			// LOADING PROGRESS: 100% - Complete
-			loadingProgress = 100;
-			loadingMessage = 'Selesai!';
+			if (!silent) {
+				// LOADING PROGRESS: 100% - Complete
+				loadingProgress = 100;
+				loadingMessage = 'Selesai!';
+			}
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
-			toastManager.showToastNotification('Gagal memuat data laporan', 'error');
+			if (!silent) {
+				toastManager.showToastNotification('Gagal memuat data laporan', 'error');
+			}
 		} finally {
-			// LOADING STATE: Selesai loading
-			setTimeout(() => {
-				isLoadingReport = false;
-				loadingProgress = 0;
-				loadingMessage = 'Memuat data...';
-			}, 300); // Delay lebih pendek untuk smooth transition
+			if (!silent) {
+				// LOADING STATE: Selesai loading
+				setTimeout(() => {
+					isLoadingReport = false;
+					loadingProgress = 0;
+					loadingMessage = 'Memuat data...';
+				}, 300); // Delay lebih pendek untuk smooth transition
+			}
 		}
 	}
 
@@ -206,14 +290,12 @@
 
 		// Subscribe to buku_kas changes
 		realtimeManager.subscribe('buku_kas', async (payload) => {
-			// Reload data when buku_kas changes
-			await loadLaporanData();
+			await scheduleLaporanRefresh(220);
 		});
 
 		// Subscribe to transaksi_kasir changes
 		realtimeManager.subscribe('transaksi_kasir', async (payload) => {
-			// Reload data when transaksi_kasir changes
-			await loadLaporanData();
+			await scheduleLaporanRefresh(220);
 		});
 	}
 
@@ -292,24 +374,24 @@
 				isInitialLoad = false;
 				return;
 			}
-			loadLaporanData();
+			void scheduleLaporanRefresh(120, true);
 		});
 
 		// Tambahkan event listener untuk visibility change (saat kembali ke tab)
 		const handleVisibilityChange = () => {
 			if (!document.hidden) {
-				loadLaporanData();
+				void scheduleLaporanRefresh(100, true);
 			}
 		};
 
 		// Tambahkan event listener untuk focus (saat kembali ke tab)
 		const handleFocus = () => {
-			loadLaporanData();
+			void scheduleLaporanRefresh(100, true);
 		};
 
 		// Tambahkan event listener untuk navigation (saat user navigasi ke halaman ini)
 		const handleNavigation = () => {
-			loadLaporanData();
+			void scheduleLaporanRefresh(100, true);
 		};
 
 		// Dengarkan event global dari Topbar ketika rekomendasi AI diterapkan
@@ -318,7 +400,7 @@
 				// Pastikan cache laporan ter-invalidate agar fetch berikutnya tidak menggunakan data lama
 				await dataService.invalidateCacheOnChange('buku_kas');
 			} catch {}
-			await loadLaporanData();
+			await scheduleLaporanRefresh(80, true);
 		};
 
 		// Ekspor refresher global agar komponen lain bisa memicu refresh langsung
@@ -327,7 +409,7 @@
 				try {
 					await dataService.invalidateCacheOnChange('buku_kas');
 				} catch {}
-				await loadLaporanData();
+				await scheduleLaporanRefresh(80, true);
 			};
 		}
 
@@ -354,6 +436,10 @@
 	onDestroy(() => {
 		// Unsubscribe dari realtime
 		realtimeManager.unsubscribeAll();
+		if (laporanRefreshTimer) {
+			clearTimeout(laporanRefreshTimer);
+			laporanRefreshTimer = null;
+		}
 
 		// Unsubscribe dari branch changes
 		if (unsubscribeBranch) unsubscribeBranch();

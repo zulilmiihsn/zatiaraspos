@@ -4,7 +4,6 @@
 	import { loginWithUsername } from '$lib/auth/auth';
 	import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
-	import { DotLottieSvelte } from '@lottiefiles/dotlottie-svelte';
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import { get } from 'svelte/store';
 	import { isAuthenticated } from '$lib/utils/authGuard';
@@ -99,8 +98,21 @@
 	}
 
 	onMount(async () => {
+		const params = new URLSearchParams(window.location.search);
+		const reason = params.get('reason');
+		const reasonMessages: Record<string, string> = {
+			rate_limit: 'Terlalu banyak permintaan. Silakan tunggu sebentar lalu coba lagi.',
+			session_expired: 'Sesi login Anda berakhir. Silakan login kembali.',
+			unauthorized: 'Silakan login untuk melanjutkan.',
+			csrf_invalid: 'Sesi keamanan berakhir. Silakan coba login kembali.'
+		};
+
+		if (reason && reasonMessages[reason]) {
+			errorMessage = reasonMessages[reason];
+		}
+
 		// Jika sudah login, redirect ke dashboard
-		if (isAuthenticated()) {
+		if (await isAuthenticated()) {
 			goto('/');
 			return;
 		}
@@ -153,27 +165,19 @@
 				</div>
 			{/if}
 
-			<!-- Preload Lottie Animation (hidden) -->
-			<div style="display:none">
-				<DotLottieSvelte
-					src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
-					loop={false}
-					autoplay
-				/>
-			</div>
-
-			<!-- Floating Lottie Success Notification -->
+			<!-- Floating Success Notification with Checkmark Animation -->
 			{#if showLottieSuccess}
 				<div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
 					<div
-						class="animate-fadeInUp flex flex-col items-center rounded-2xl border border-pink-200 bg-white/80 px-8 py-6 shadow-2xl"
+						class="animate-fadeInUp flex flex-col items-center rounded-2xl border border-pink-200 bg-white/95 px-8 py-6 shadow-2xl backdrop-blur-sm"
 					>
-						<DotLottieSvelte
-							src="https://lottie.host/5f0b1da8-edb0-4f37-a685-4d45c9eca62d/h8rS33014U.lottie"
-							loop={false}
-							autoplay
-						/>
-						<div class="mt-2 text-lg font-bold text-pink-500">Login Berhasil!</div>
+						<div class="checkmark-circle">
+							<svg class="checkmark" viewBox="0 0 52 52">
+								<circle class="checkmark-circle-path" cx="26" cy="26" r="25" fill="none"/>
+								<path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+							</svg>
+						</div>
+						<div class="mt-4 text-lg font-bold text-pink-500">Login Berhasil!</div>
 					</div>
 				</div>
 			{/if}
@@ -366,5 +370,70 @@
 	}
 	.animate-fadeInUp {
 		animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* Checkmark Animation */
+	.checkmark-circle {
+		width: 90px;
+		height: 90px;
+		position: relative;
+	}
+	
+	.checkmark {
+		width: 90px;
+		height: 90px;
+		border-radius: 50%;
+		display: block;
+		stroke-width: 3;
+		stroke: #ec4899;
+		stroke-miterlimit: 10;
+		box-shadow: inset 0 0 0 #ec4899;
+		animation: fillCircle 0.4s ease-in-out 0.4s forwards, scaleCircle 0.3s ease-in-out 0.9s both;
+	}
+	
+	.checkmark-circle-path {
+		stroke-dasharray: 166;
+		stroke-dashoffset: 166;
+		stroke-width: 3;
+		stroke-miterlimit: 10;
+		stroke: #ec4899;
+		fill: #fce7f3;
+		animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+	}
+	
+	.checkmark-check {
+		transform-origin: 50% 50%;
+		stroke-dasharray: 48;
+		stroke-dashoffset: 48;
+		stroke: #ec4899;
+		stroke-width: 3;
+		animation: strokeCheck 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+	}
+	
+	@keyframes strokeCircle {
+		100% {
+			stroke-dashoffset: 0;
+		}
+	}
+	
+	@keyframes strokeCheck {
+		100% {
+			stroke-dashoffset: 0;
+		}
+	}
+	
+	@keyframes fillCircle {
+		100% {
+			box-shadow: inset 0 0 0 60px #fce7f3;
+		}
+	}
+	
+	@keyframes scaleCircle {
+		0%, 100% {
+			transform: none;
+		}
+		50% {
+			transform: scale3d(1.1, 1.1, 1);
+		}
 	}
 </style>

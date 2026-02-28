@@ -10,6 +10,7 @@
 	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
+	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
@@ -68,6 +69,9 @@
 	let isLoadingBestSellers = true;
 	let errorBestSellers = '';
 	let isLoadingDashboard = true;
+	let dashboardRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let dashboardRefreshInFlight = false;
+	let lastDashboardPayloadFingerprint = '';
 
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
@@ -144,13 +148,8 @@
 			bestSellers = [];
 			isLoadingDashboard = true;
 			isLoadingBestSellers = true;
-			// Invalidate cache dashboard metriks (semua cabang)
-			await dataService.forceRefresh('dashboard_stats_samarinda');
-			await dataService.forceRefresh('dashboard_stats_berau');
-			await dataService.forceRefresh('best_sellers_samarinda');
-			await dataService.forceRefresh('best_sellers_berau');
-			await dataService.forceRefresh('weekly_income_samarinda');
-			await dataService.forceRefresh('weekly_income_berau');
+			// Invalidate cache dashboard metriks untuk semua cabang
+			await dataService.invalidateDashboardCaches();
 			// Fetch ulang data
 			await loadDashboardData();
 		});
@@ -160,8 +159,34 @@
 	onDestroy(() => {
 		if (unsubscribeBranch) unsubscribeBranch();
 		realtimeManager.unsubscribeAll();
+		if (dashboardRefreshTimer) {
+			clearTimeout(dashboardRefreshTimer);
+			dashboardRefreshTimer = null;
+		}
 		// window.refreshDashboardData cleanup removed
 	});
+
+	function scheduleDashboardRealtimeRefresh(delayMs = 220) {
+		if (dashboardRefreshTimer) {
+			clearTimeout(dashboardRefreshTimer);
+		}
+
+		dashboardRefreshTimer = setTimeout(async () => {
+			dashboardRefreshTimer = null;
+			if (dashboardRefreshInFlight) return;
+
+			dashboardRefreshInFlight = true;
+			try {
+				const dashboardStats = await dataService.getDashboardStats();
+				const nextBestSellers = await dataService.getBestSellers();
+				const weeklyData = await dataService.getWeeklyIncome();
+				applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
+				await reportCacheMetrics('dashboard');
+			} finally {
+				dashboardRefreshInFlight = false;
+			}
+		}, delayMs);
+	}
 
 	// Load dashboard data dengan smart caching
 	async function loadDashboardData() {
@@ -170,17 +195,16 @@
 
 			// Load dashboard stats dengan cache
 			const dashboardStats = await dataService.getDashboardStats();
-			applyDashboardData(dashboardStats);
 
 			// Load best sellers dengan cache
 			isLoadingBestSellers = true;
-			bestSellers = await dataService.getBestSellers();
+			const nextBestSellers = await dataService.getBestSellers();
 			isLoadingBestSellers = false;
 
 			// Load weekly income dengan cache
 			const weeklyData = await dataService.getWeeklyIncome();
-			weeklyIncome = weeklyData.weeklyIncome;
-			weeklyMax = weeklyData.weeklyMax;
+			applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
+			await reportCacheMetrics('dashboard');
 		} catch (error) {
 			errorBestSellers = 'Gagal memuat data dashboard';
 		} finally {
@@ -193,29 +217,40 @@
 	function setupRealtimeSubscriptions() {
 		// Subscribe to buku_kas changes for real-time dashboard updates
 		realtimeManager.subscribe('buku_kas', async (payload) => {
-			// Refresh dashboard data in background
-			const dashboardStats = await dataService.getDashboardStats();
-			applyDashboardData(dashboardStats);
-
-			// Refresh best sellers in background
-			bestSellers = await dataService.getBestSellers();
-
-			// Refresh weekly income in background
-			const weeklyData = await dataService.getWeeklyIncome();
-			weeklyIncome = weeklyData.weeklyIncome;
-			weeklyMax = weeklyData.weeklyMax;
+			scheduleDashboardRealtimeRefresh();
 		});
 
 		// Subscribe to transaksi_kasir changes
 		realtimeManager.subscribe('transaksi_kasir', async (payload) => {
-			// Refresh best sellers in background
-			bestSellers = await dataService.getBestSellers();
-
-			// Refresh weekly income in background
-			const weeklyData = await dataService.getWeeklyIncome();
-			weeklyIncome = weeklyData.weeklyIncome;
-			weeklyMax = weeklyData.weeklyMax;
+			scheduleDashboardRealtimeRefresh();
 		});
+	}
+
+	function computeDashboardPayloadFingerprint(
+		data: any,
+		nextBestSellers: { name: string; image?: string; total_qty: number }[],
+		weeklyData: { weeklyIncome: number[]; weeklyMax: number }
+	): string {
+		const weekly = Array.isArray(weeklyData?.weeklyIncome) ? weeklyData.weeklyIncome : [];
+		const sellers = Array.isArray(nextBestSellers) ? nextBestSellers : [];
+		const sellersSignature = sellers
+			.map((item) => `${item?.name || ''}:${Number(item?.total_qty || 0)}`)
+			.join(',');
+
+		return [
+			Number(data?.omzet || 0),
+			Number(data?.jumlahTransaksi || 0),
+			Number(data?.profit || 0),
+			Number(data?.itemTerjual || 0),
+			Number(data?.totalItem || 0),
+			Number(data?.avgTransaksi || 0),
+			String(data?.jamRamai || ''),
+			weekly.length,
+			weekly.reduce((sum, value) => sum + Number(value || 0), 0),
+			Number(weeklyData?.weeklyMax || 1),
+			sellers.length,
+			sellersSignature
+		].join('|');
 	}
 
 	function applyDashboardData(data: any) {
@@ -227,9 +262,23 @@
 		totalItem = data.totalItem;
 		avgTransaksi = data.avgTransaksi;
 		jamRamai = data.jamRamai;
-		weeklyIncome = data.weeklyIncome || [];
-		weeklyMax = data.weeklyMax || 1;
-		bestSellers = data.bestSellers || [];
+	}
+
+	function applyDashboardPayload(
+		data: any,
+		nextBestSellers: { name: string; image?: string; total_qty: number }[],
+		weeklyData: { weeklyIncome: number[]; weeklyMax: number }
+	) {
+		const nextFingerprint = computeDashboardPayloadFingerprint(data, nextBestSellers, weeklyData);
+		if (nextFingerprint === lastDashboardPayloadFingerprint) {
+			return;
+		}
+
+		lastDashboardPayloadFingerprint = nextFingerprint;
+		applyDashboardData(data);
+		bestSellers = nextBestSellers || [];
+		weeklyIncome = weeklyData?.weeklyIncome || [];
+		weeklyMax = weeklyData?.weeklyMax || 1;
 	}
 
 	// Manual refresh function (for testing)

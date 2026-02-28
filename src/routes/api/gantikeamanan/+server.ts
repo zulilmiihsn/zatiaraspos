@@ -1,9 +1,61 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { getSupabaseClient, isValidBranch } from '$lib/database/supabaseClient';
 import bcrypt from 'bcryptjs';
 
-export const POST: RequestHandler = async ({ request }) => {
+const SECURITY_WINDOW_MS = 15 * 60 * 1000;
+const SECURITY_MAX_ATTEMPTS = 3;
+const securityAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(identifier: string): boolean {
+	const now = Date.now();
+	const current = securityAttempts.get(identifier);
+
+	if (!current || now > current.resetAt) {
+		securityAttempts.set(identifier, { count: 1, resetAt: now + SECURITY_WINDOW_MS });
+		return false;
+	}
+
+	if (current.count >= SECURITY_MAX_ATTEMPTS) {
+		return true;
+	}
+
+	current.count += 1;
+	return false;
+}
+
+function isStrongPassword(password: string): boolean {
+	if (password.length < 8) return false;
+	if (!/[A-Z]/.test(password)) return false;
+	if (!/[a-z]/.test(password)) return false;
+	if (!/\d/.test(password)) return false;
+
+	const lowered = password.toLowerCase();
+	const commonPasswords = ['password', '123456', 'admin123', 'kasir123'];
+	return !commonPasswords.some((item) => lowered.includes(item));
+}
+
+export const POST: RequestHandler = async ({ request, getClientAddress, locals }) => {
 	try {
+		const requesterRole = locals.authSession?.role;
+		if (requesterRole !== 'pemilik' && requesterRole !== 'admin') {
+			return new Response(JSON.stringify({ success: false, code: 'FORBIDDEN', message: 'Forbidden' }), {
+				status: 403
+			});
+		}
+
+		const clientIp = getClientAddress();
+		if (isRateLimited(clientIp)) {
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'RATE_LIMITED',
+					message: 'Terlalu banyak percobaan. Coba lagi nanti.',
+					retryAfterSeconds: Math.ceil(SECURITY_WINDOW_MS / 1000)
+				}),
+				{ status: 429 }
+			);
+		}
+
 		const {
 			usernameLama,
 			usernameBaru,
@@ -13,10 +65,29 @@ export const POST: RequestHandler = async ({ request }) => {
 			targetRole
 		} = await request.json();
 		if (!usernameLama || !usernameBaru || !passwordLama || !passwordBaru || !branch) {
-			return new Response(JSON.stringify({ success: false, message: 'Semua field wajib diisi.' }), {
+			return new Response(JSON.stringify({ success: false, code: 'VALIDATION_ERROR', message: 'Semua field wajib diisi.' }), {
 				status: 400
 			});
 		}
+
+		if (!isValidBranch(branch)) {
+			return new Response(JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid.' }), {
+				status: 400
+			});
+		}
+
+		if (!isStrongPassword(passwordBaru)) {
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'WEAK_PASSWORD',
+					message:
+						'Password baru harus minimal 8 karakter dan mengandung huruf besar, huruf kecil, dan angka.'
+				}),
+				{ status: 400 }
+			);
+		}
+
 		const supabase = getSupabaseClient(branch);
 		// Ambil user dari tabel profil
 		let query = supabase.from('profil').select('id, username, password, role').eq('username', usernameLama);
@@ -26,14 +97,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { data: user, error } = await query.single();
 		if (error || !user) {
 			return new Response(
-				JSON.stringify({ success: false, message: 'Username lama tidak ditemukan.' }),
+				JSON.stringify({ success: false, code: 'NOT_FOUND', message: 'Username lama tidak ditemukan.' }),
 				{ status: 404 }
 			);
 		}
 		// Verifikasi password lama
 		const match = await bcrypt.compare(passwordLama, user.password);
 		if (!match) {
-			return new Response(JSON.stringify({ success: false, message: 'Password lama salah.' }), {
+			return new Response(JSON.stringify({ success: false, code: 'INVALID_CREDENTIALS', message: 'Password lama salah.' }), {
 				status: 401
 			});
 		}
@@ -46,16 +117,19 @@ export const POST: RequestHandler = async ({ request }) => {
 			.eq('id', user.id);
 		if (updateError) {
 			return new Response(
-				JSON.stringify({ success: false, message: 'Gagal update username/password.' }),
+				JSON.stringify({ success: false, code: 'UPDATE_FAILED', message: 'Gagal update username/password.' }),
 				{ status: 500 }
 			);
 		}
+
+		securityAttempts.delete(clientIp);
+
 		return new Response(
 			JSON.stringify({ success: true, message: 'Username dan password berhasil diubah.' }),
 			{ status: 200 }
 		);
 	} catch (e) {
-		return new Response(JSON.stringify({ success: false, message: 'Terjadi error pada server.' }), {
+		return new Response(JSON.stringify({ success: false, code: 'SERVER_ERROR', message: 'Terjadi error pada server.' }), {
 			status: 500
 		});
 	}

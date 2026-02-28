@@ -1,5 +1,19 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+export const VALID_BRANCHES = [
+	'samarinda',
+	'berau',
+	'Balikpapan',
+	'samarinda2',
+	'balikpapan2'
+] as const;
+
+export type BranchKey = (typeof VALID_BRANCHES)[number];
+
+export function isValidBranch(branch: unknown): branch is BranchKey {
+	return typeof branch === 'string' && VALID_BRANCHES.includes(branch as BranchKey);
+}
+
 // Global singleton to prevent multiple instances
 let supabaseClients: Record<string, SupabaseClient> | null = null;
 
@@ -58,7 +72,7 @@ function initializeClients() {
 }
 
 export function getSupabaseClient(
-	branch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2'
+	branch: BranchKey
 ): SupabaseClient {
 	const clients = initializeClients();
 	return clients[branch];

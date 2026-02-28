@@ -17,7 +17,7 @@
 	import { dataService } from '$lib/services/dataService';
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
-	import { securitySettings } from '$lib/stores/securitySettings';
+	import { securitySettings, setSecuritySettings } from '$lib/stores/securitySettings';
 	import { requireAuth } from '$lib/utils/authGuard';
 
 	// PWA Update Notification
@@ -39,32 +39,22 @@
 		try {
 			const today = new Date();
 			const dateStrings = [];
-			for (let i = 0; i < 30; i++) {
+			for (let i = 0; i < 7; i++) {
 				const d = new Date(today);
 				d.setDate(today.getDate() - i);
 				dateStrings.push(d.toISOString().slice(0, 10));
 			}
+			const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 			await Promise.all([
-				// Beranda, POS, POS/bayar, Catat
+				// Critical path untuk dashboard + POS
 				dataService.getProducts(),
 				dataService.getCategories(),
 				dataService.getAddOns(),
 				dataService.getBestSellers(),
 				dataService.getWeeklyIncome(),
-				// Laporan: prefetch laporan harian/mingguan/bulanan untuk 30 hari ke belakang
+				// Laporan: prefetch terbatas untuk menjaga startup tetap ringan
 				...dateStrings.map((date) => dataService.getReportData(date, 'daily')),
-				...dateStrings.map((date) => dataService.getReportData(date.slice(0, 7), 'weekly')),
-				...dateStrings.map((date) => dataService.getReportData(date.slice(0, 7), 'monthly')),
-				// Pengaturan, printer, pemilik, dsb.
-				dataService.supabaseClient?.from?.('pengaturan')?.select?.('*'),
-				// Manajemen menu, riwayat, dsb.
-				dataService.supabaseClient?.from?.('produk')?.select?.('*'),
-				dataService.supabaseClient?.from?.('kategori')?.select?.('*'),
-				dataService.supabaseClient?.from?.('tambahan')?.select?.('*'),
-				dataService.supabaseClient?.from?.('transaksi_kasir')?.select?.('*'),
-				dataService.supabaseClient?.from?.('buku_kas')?.select?.('*'),
-				// User profile (login)
-				dataService.supabaseClient?.from?.('profil')?.select?.('*')
+				dataService.getReportData(currentMonth, 'monthly')
 			]);
 		} catch (e) {
 			// Ignore prefetch error
@@ -73,7 +63,7 @@
 
 	onMount(async () => {
 		// Cek auth sebelum lanjut
-		if (!requireAuth()) return;
+		if (!(await requireAuth())) return;
 
 		// Setup PWA update notification (only in production)
 		if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -141,9 +131,34 @@
 
 	// --- Logika PinModal Global ---
 	let showPinModal = false;
-	let currentPin = '1234'; // Default fallback PIN
+	let currentPin = '';
 	let pinUnlockedForCurrentPage = false; // Flag untuk menandai PIN sudah dibuka untuk halaman saat ini
 	let lastPath = '';
+	let isLoadingSecuritySettings = false;
+
+	async function loadKasirSecuritySettings() {
+		if (isLoadingSecuritySettings) return;
+		isLoadingSecuritySettings = true;
+
+		try {
+			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+				.from('pengaturan')
+				.select('pin, locked_pages')
+				.eq('id', 1)
+				.single();
+
+			if (!error && data) {
+				setSecuritySettings({
+					pin: data.pin || null,
+					lockedPages: data.locked_pages || []
+				});
+			}
+		} catch {
+			// no-op
+		} finally {
+			isLoadingSecuritySettings = false;
+		}
+	}
 
 	// Helper: map nama halaman ke path sebenarnya
 	function mapLockedNameToPath(name: string): string {
@@ -163,6 +178,10 @@
 		const currentUserRole = $userRole;
 		const currentSecuritySettings = $securitySettings;
 		const currentPath = $page.url.pathname;
+
+		if (currentUserRole === 'kasir' && (!currentSecuritySettings || !currentSecuritySettings.pin)) {
+			void loadKasirSecuritySettings();
+		}
 
 		// Reset pinUnlockedForCurrentPage jika path berubah
 		if (currentPath !== lastPath) {
@@ -184,9 +203,14 @@
 			});
 
 		// Tentukan apakah modal PIN harus ditampilkan
-		if (currentUserRole === 'kasir' && isCurrentPageLocked && !pinUnlockedForCurrentPage) {
+		if (
+			currentUserRole === 'kasir' &&
+			isCurrentPageLocked &&
+			!pinUnlockedForCurrentPage &&
+			Boolean(currentSecuritySettings?.pin)
+		) {
 			showPinModal = true;
-			currentPin = currentSecuritySettings?.pin || '1234'; // Gunakan PIN dari settings atau fallback
+			currentPin = currentSecuritySettings?.pin || '';
 		} else {
 			showPinModal = false;
 		}

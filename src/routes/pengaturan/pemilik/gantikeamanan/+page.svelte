@@ -10,6 +10,8 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Shield from 'lucide-svelte/icons/shield';
 	import User from 'lucide-svelte/icons/user';
+	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
+	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 
 	let currentUserRole = '';
 	let oldUsername = '';
@@ -76,7 +78,7 @@
 		}
 		try {
 			const branch = storeGet(selectedBranch);
-			const res = await fetch('/api/gantikeamanan', {
+			const res = await fetchWithCsrfRetry('/api/gantikeamanan', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -88,8 +90,9 @@
 				})
 			});
 			const data = await res.json();
-			if (!data.success) {
-				userPassError = data.message || 'Gagal update username/password.';
+			if (!res.ok || !data.success) {
+				reportApiFailure(data, res.status, '/api/gantikeamanan');
+				userPassError = getApiErrorMessage(data, res.status, 'Gagal update username/password.');
 				return;
 			}
 			userPassError = '';
@@ -129,7 +132,7 @@
 		}
 		try {
 			const branch = storeGet(selectedBranch);
-			const res = await fetch('/api/gantikeamanan', {
+			const res = await fetchWithCsrfRetry('/api/gantikeamanan', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -142,8 +145,9 @@
 				})
 			});
 			const data = await res.json();
-			if (!data.success) {
-				kasirUserPassError = data.message || 'Gagal update username/password kasir.';
+			if (!res.ok || !data.success) {
+				reportApiFailure(data, res.status, '/api/gantikeamanan');
+				kasirUserPassError = getApiErrorMessage(data, res.status, 'Gagal update username/password kasir.');
 				return;
 			}
 			kasirUserPassError = '';

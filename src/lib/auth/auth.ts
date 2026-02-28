@@ -2,7 +2,10 @@ import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { setUserRole, clearUserRole } from '$lib/stores/userRole';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
+import type { BranchKey } from '$lib/database/supabaseClient';
 import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings';
+import { clearCsrfTokenCache, fetchWithCsrfRetry } from '$lib/utils/csrf';
+import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 
 // Session store
 export const session = writable<{
@@ -31,39 +34,6 @@ if (typeof window !== 'undefined') {
 
 // Authentication functions
 export const auth = {
-	// Login dengan dummy credentials
-	async login(
-		username: string,
-		password: string
-	): Promise<{ success: boolean; message: string; user?: any }> {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 500));
-
-		// Dummy credentials - in production this would be validated against backend
-		const dummyCredentials = {
-			admin: { username: 'admin', password: 'admin123', role: 'admin' },
-			kasir: { username: 'kasir', password: 'kasir123', role: 'kasir' }
-		};
-
-		const user = Object.values(dummyCredentials).find(
-			(cred: any) => cred.username === username && cred.password === password
-		);
-
-		if (user) {
-			const token = generateDummyToken(user);
-			const sessionData = {
-				isAuthenticated: true,
-				user: { ...user, password: undefined }, // Don't store password
-				token
-			};
-
-			session.set(sessionData);
-			return { success: true, message: 'Login berhasil', user: sessionData.user };
-		}
-
-		return { success: false, message: 'Username atau password salah' };
-	},
-
 	// Check if user is authenticated
 	isAuthenticated(): boolean {
 		const currentSession = get(session) as any;
@@ -82,14 +52,19 @@ export const auth = {
 		return (user as any)?.role === role;
 	},
 
-	// Validate token (dummy validation)
-	validateToken(token: string): boolean {
-		// Dummy token validation - in production this would validate against backend
-		return Boolean(token && token.length > 10);
-	},
-
 	// Logout function
-	logout() {
+	async logout() {
+		if (browser) {
+			try {
+				await fetchWithCsrfRetry('/api/logout', {
+					method: 'POST',
+					headers: {}
+				});
+			} catch {
+				// no-op
+			}
+		}
+
 		// Clear session store
 		session.set({
 			isAuthenticated: false,
@@ -106,38 +81,25 @@ export const auth = {
 		// Clear user role and profile
 		clearUserRole();
 		clearSecuritySettings();
+		clearCsrfTokenCache();
 	}
 };
-
-// Generate dummy JWT-like token
-function generateDummyToken(user: any): string {
-	const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-	const payload = btoa(
-		JSON.stringify({
-			sub: user.username,
-			role: user.role,
-			iat: Date.now(),
-			exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-		})
-	);
-	const signature = btoa('dummy-signature-' + Math.random().toString(36));
-
-	return `${header}.${payload}.${signature}`;
-}
 
 export async function loginWithUsername(
 	username: string,
 	password: string,
-	branch: 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2'
+	branch: BranchKey
 ) {
-	// Kirim ke endpoint API custom untuk verifikasi login
-	const res = await fetch('/api/veriflogin', {
+	const res = await fetchWithCsrfRetry('/api/veriflogin', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ username, password, branch })
 	});
-	const result = await res.json();
-	if (!result.success) throw new Error(result.message || 'Login gagal');
+	const result = await res.json().catch(() => ({}));
+	if (!res.ok || !result.success) {
+		reportApiFailure(result, res.status, '/api/veriflogin');
+		throw new Error(getApiErrorMessage(result, res.status, 'Login gagal'));
+	}
 
 	// Jika peran adalah 'kasir', ambil pengaturan keamanan TERLEBIH DAHULU
 	if (result.user.role === 'kasir') {
@@ -189,25 +151,23 @@ export async function loginWithUsername(
 	return result.user;
 }
 
-export async function getUserRole(userId: string) {
-	// Removed supabase reference - use dataService instead
-	// const { data, error } = await supabase
-	//   .from('profil')
-	//     .select('role')
-	//     .eq('id', userId)
-	//     .single();
-	// if (error) throw error;
-	// return data.role;
-	return 'admin'; // Fallback for now
-}
-
 export async function logout() {
-	// Supabase client is not directly used here, so it's commented out.
-	// If you have a global supabase client, ensure it's imported and used correctly.
-	// await supabase.auth.signOut();
+	if (browser) {
+		try {
+			await fetchWithCsrfRetry('/api/logout', {
+				method: 'POST',
+				headers: {}
+			});
+		} catch {
+			// no-op
+		}
+	}
+
 	// Clear user role dari store saat logout
 	clearUserRole();
 	session.set({ isAuthenticated: false, user: null, token: null });
 	localStorage.removeItem('zatiaras_session'); // Changed to localStorage
+	localStorage.removeItem('selectedBranch');
 	clearSecuritySettings(); // Clear security settings on logout
+	clearCsrfTokenCache();
 }

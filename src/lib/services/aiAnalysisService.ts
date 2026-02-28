@@ -1,6 +1,7 @@
 import type { TransactionAnalysis, DetectedTransaction, AiRecommendation } from '$lib/types/ai';
 import { get } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
+import { getApiErrorMessageFromResponse, reportApiFailureFromResponse } from '$lib/utils/errorHandling';
 
 export class AiAnalysisService {
 	private static instance: AiAnalysisService;
@@ -31,7 +32,10 @@ export class AiAnalysisService {
 			});
 
 			if (!response.ok) {
-				throw new Error('Gagal menganalisis transaksi');
+				await reportApiFailureFromResponse(response, '/api/aichat?action=analyze');
+				throw new Error(
+					await getApiErrorMessageFromResponse(response, 'Gagal menganalisis transaksi')
+				);
 			}
 
 			const data = await response.json();

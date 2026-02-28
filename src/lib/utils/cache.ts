@@ -79,6 +79,10 @@ class MemoryCache {
 		this.cache.clear();
 	}
 
+	getSize(): number {
+		return this.cache.size;
+	}
+
 	private cleanup(): void {
 		const now = Date.now();
 		for (const [key, entry] of this.cache.entries()) {
@@ -174,6 +178,13 @@ export class SmartCache {
 	private indexedDBCache: IndexedDBCache;
 	private backgroundRefreshMap = new Map<string, number>();
 	private etagMap = new Map<string, string>();
+	private keyRegistry = new Set<string>();
+	private stats = {
+		memoryHits: 0,
+		indexedDBHits: 0,
+		networkFetches: 0,
+		requests: 0
+	};
 
 	constructor() {
 		this.memoryCache = new MemoryCache();
@@ -192,11 +203,13 @@ export class SmartCache {
 		} = {}
 	): Promise<T> {
 		const { ttl, backgroundRefresh = true, etag, forceRefresh = false } = options;
+		this.stats.requests += 1;
 
 		// Check memory cache first (fastest)
 		if (!forceRefresh) {
 			const memoryData = this.memoryCache.get<T>(key);
 			if (memoryData !== null) {
+				this.stats.memoryHits += 1;
 				// Trigger background refresh if enabled
 				if (backgroundRefresh) {
 					this.scheduleBackgroundRefresh(key, fetcher, ttl);
@@ -209,6 +222,7 @@ export class SmartCache {
 		if (!forceRefresh) {
 			const indexedDBData = await this.indexedDBCache.get<T>(key);
 			if (indexedDBData !== null) {
+				this.stats.indexedDBHits += 1;
 				// Store in memory cache for faster access
 				this.memoryCache.set(key, indexedDBData, ttl);
 
@@ -222,11 +236,13 @@ export class SmartCache {
 		}
 
 		// Fetch fresh data
+		this.stats.networkFetches += 1;
 		const freshData = await fetcher();
 
 		// Store in both caches
 		this.memoryCache.set(key, freshData, ttl);
 		await this.indexedDBCache.set(key, freshData, ttl);
+		this.keyRegistry.add(key);
 
 		// Update ETag if provided
 		if (etag) {
@@ -248,11 +264,17 @@ export class SmartCache {
 	): Promise<T> {
 		const { ttl, backgroundRefresh = true, forceRefresh = false } = options;
 		const currentETag = this.etagMap.get(key);
+		this.stats.requests += 1;
 
 		// Check if we have cached data and ETag
 		if (!forceRefresh && currentETag) {
 			const cachedData = this.memoryCache.get<T>(key) || (await this.indexedDBCache.get<T>(key));
 			if (cachedData !== null) {
+				if (this.memoryCache.has(key)) {
+					this.stats.memoryHits += 1;
+				} else {
+					this.stats.indexedDBHits += 1;
+				}
 				// Trigger background refresh with ETag
 				if (backgroundRefresh) {
 					this.scheduleBackgroundRefreshWithETag(key, fetcher, ttl, currentETag);
@@ -262,11 +284,13 @@ export class SmartCache {
 		}
 
 		// Fetch fresh data with ETag
+		this.stats.networkFetches += 1;
 		const result = await fetcher(currentETag);
 
 		// Store data and ETag
 		this.memoryCache.set(key, result.data, ttl);
 		await this.indexedDBCache.set(key, result.data, ttl);
+		this.keyRegistry.add(key);
 
 		if (result.etag) {
 			this.etagMap.set(key, result.etag);
@@ -277,9 +301,9 @@ export class SmartCache {
 
 	// Background refresh scheduling
 	private scheduleBackgroundRefresh<T>(key: string, fetcher: () => Promise<T>, ttl?: number): void {
-		// Clear existing refresh interval
+		// Already scheduled, skip to avoid refresh storms
 		if (this.backgroundRefreshMap.has(key)) {
-			clearTimeout(this.backgroundRefreshMap.get(key)!);
+			return;
 		}
 
 		// Jangan schedule refresh jika offline
@@ -293,11 +317,11 @@ export class SmartCache {
 				const freshData = await fetcher();
 				this.memoryCache.set(key, freshData, ttl);
 				await this.indexedDBCache.set(key, freshData, ttl);
-
-				// Schedule next refresh
-				this.scheduleBackgroundRefresh(key, fetcher, ttl);
+				this.keyRegistry.add(key);
 			} catch (error) {
 				// Silent error handling
+			} finally {
+				this.backgroundRefreshMap.delete(key);
 			}
 		}, CACHE_CONFIG.BACKGROUND_REFRESH);
 		this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -311,7 +335,7 @@ export class SmartCache {
 		etag?: string
 	): void {
 		if (this.backgroundRefreshMap.has(key)) {
-			clearTimeout(this.backgroundRefreshMap.get(key)!);
+			return;
 		}
 
 		// Jangan schedule refresh jika offline
@@ -327,16 +351,17 @@ export class SmartCache {
 				if (result.etag !== etag) {
 					this.memoryCache.set(key, result.data, ttl);
 					await this.indexedDBCache.set(key, result.data, ttl);
+					this.keyRegistry.add(key);
 
 					if (result.etag) {
 						this.etagMap.set(key, result.etag);
 					}
 				}
 
-				// Schedule next refresh
-				this.scheduleBackgroundRefreshWithETag(key, fetcher, ttl, result.etag || etag);
 			} catch (error) {
 				// Silent error handling
+			} finally {
+				this.backgroundRefreshMap.delete(key);
 			}
 		}, CACHE_CONFIG.BACKGROUND_REFRESH);
 		this.backgroundRefreshMap.set(key, Number(refreshId));
@@ -344,14 +369,36 @@ export class SmartCache {
 
 	// Invalidate cache entries
 	async invalidate(pattern: string | RegExp): Promise<void> {
-		// Clear memory cache entries matching pattern
+		const keysToDelete: string[] = [];
+
 		if (typeof pattern === 'string') {
-			this.memoryCache.delete(pattern);
-			await this.indexedDBCache.delete(pattern);
+			if (pattern.includes('*')) {
+				const prefix = pattern.replace('*', '');
+				for (const key of this.keyRegistry) {
+					if (key.startsWith(prefix)) {
+						keysToDelete.push(key);
+					}
+				}
+			} else {
+				keysToDelete.push(pattern);
+			}
 		} else {
-			// For regex patterns, we'd need to iterate through keys
-			// This is a simplified implementation
+			for (const key of this.keyRegistry) {
+				if (pattern.test(key)) {
+					keysToDelete.push(key);
+				}
+			}
 		}
+
+		await Promise.all(
+			keysToDelete.map(async (key) => {
+				this.memoryCache.delete(key);
+				await this.indexedDBCache.delete(key);
+				this.backgroundRefreshMap.delete(key);
+				this.etagMap.delete(key);
+				this.keyRegistry.delete(key);
+			})
+		);
 	}
 
 	// Clear all caches
@@ -369,20 +416,41 @@ export class SmartCache {
 
 		// Clear ETags
 		this.etagMap.clear();
+		this.keyRegistry.clear();
 	}
 
 	// Get cache statistics
 	getStats(): {
 		memorySize: number;
+		registeredKeys: number;
 		backgroundRefreshCount: number;
 		etagCount: number;
+		memoryHits: number;
+		indexedDBHits: number;
+		networkFetches: number;
+		requests: number;
+		hitRate: number;
 	} {
-		// Tidak akses property private di luar class
+		const hitCount = this.stats.memoryHits + this.stats.indexedDBHits;
+		const hitRate = this.stats.requests > 0 ? hitCount / this.stats.requests : 0;
 		return {
-			memorySize: 0,
+			memorySize: this.memoryCache.getSize(),
+			registeredKeys: this.keyRegistry.size,
 			backgroundRefreshCount: this.backgroundRefreshMap.size,
-			etagCount: this.etagMap.size
+			etagCount: this.etagMap.size,
+			memoryHits: this.stats.memoryHits,
+			indexedDBHits: this.stats.indexedDBHits,
+			networkFetches: this.stats.networkFetches,
+			requests: this.stats.requests,
+			hitRate
 		};
+	}
+
+	resetStats(): void {
+		this.stats.memoryHits = 0;
+		this.stats.indexedDBHits = 0;
+		this.stats.networkFetches = 0;
+		this.stats.requests = 0;
 	}
 
 	// Destroy cache instance

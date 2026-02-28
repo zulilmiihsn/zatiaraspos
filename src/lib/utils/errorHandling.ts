@@ -1,4 +1,20 @@
 import type { AppError, ValidationError, ApiError } from '$lib/types';
+import { securityUtils } from '$lib/utils/security';
+
+type ApiErrorPayload = {
+	success?: boolean;
+	code?: string;
+	message?: string;
+	error?: string;
+	retryAfterSeconds?: number;
+};
+
+type NormalizedApiError = {
+	status: number;
+	code?: string;
+	message: string;
+	retryAfterSeconds?: number;
+};
 
 /**
  * Standardized error handling utilities
@@ -124,6 +140,120 @@ export class ErrorHandler {
 
 		return userFriendlyMessages[message] || message;
 	}
+}
+
+function formatRetryMessage(baseMessage: string, retryAfterSeconds?: number): string {
+	if (!retryAfterSeconds || retryAfterSeconds <= 0) {
+		return baseMessage;
+	}
+
+	return `${baseMessage} Coba lagi dalam ${retryAfterSeconds} detik.`;
+}
+
+function toUserMessage(normalized: NormalizedApiError): string {
+	const { status, code, message, retryAfterSeconds } = normalized;
+
+	if (code === 'INVALID_CREDENTIALS') {
+		return 'Username atau password salah.';
+	}
+
+	if (code === 'CSRF_INVALID') {
+		return 'Sesi keamanan berakhir. Silakan coba lagi.';
+	}
+
+	if (code === 'UNAUTHORIZED' || status === 401) {
+		return 'Sesi login berakhir. Silakan login ulang.';
+	}
+
+	if (code === 'FORBIDDEN' || status === 403) {
+		return 'Anda tidak memiliki akses untuk tindakan ini.';
+	}
+
+	if (code === 'RATE_LIMITED' || status === 429) {
+		return formatRetryMessage('Terlalu banyak percobaan.', retryAfterSeconds);
+	}
+
+	if (code === 'SERVICE_UNAVAILABLE') {
+		return 'Layanan sedang tidak tersedia. Silakan coba lagi nanti.';
+	}
+
+	if (message?.trim()) {
+		return message;
+	}
+
+	if (status >= 500) {
+		return 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
+	}
+
+	return 'Permintaan tidak dapat diproses.';
+}
+
+export function normalizeApiErrorPayload(
+	payload: ApiErrorPayload | null | undefined,
+	status: number,
+	fallbackMessage: string
+): NormalizedApiError {
+	const retryAfterSeconds =
+		typeof payload?.retryAfterSeconds === 'number' ? payload.retryAfterSeconds : undefined;
+
+	return {
+		status,
+		code: payload?.code,
+		message: payload?.message || payload?.error || fallbackMessage,
+		retryAfterSeconds
+	};
+}
+
+export function getApiErrorMessage(
+	payload: ApiErrorPayload | null | undefined,
+	status: number,
+	fallbackMessage: string
+): string {
+	return toUserMessage(normalizeApiErrorPayload(payload, status, fallbackMessage));
+}
+
+export async function getApiErrorMessageFromResponse(
+	response: Response,
+	fallbackMessage: string
+): Promise<string> {
+	let payload: ApiErrorPayload | null = null;
+	try {
+		payload = await response.clone().json();
+	} catch {
+		payload = null;
+	}
+
+	return getApiErrorMessage(payload, response.status, fallbackMessage);
+}
+
+export function reportApiFailure(
+	payload: ApiErrorPayload | null | undefined,
+	status: number,
+	endpoint: string
+): void {
+	const normalized = normalizeApiErrorPayload(payload, status, 'API request failed');
+
+	securityUtils.logSecurityEvent('api_request_failed', {
+		endpoint,
+		status: normalized.status,
+		code: normalized.code,
+		retryAfterSeconds: normalized.retryAfterSeconds,
+		message: normalized.message
+	});
+}
+
+export async function reportApiFailureFromResponse(
+	response: Response,
+	endpoint: string
+): Promise<void> {
+	let payload: ApiErrorPayload | null = null;
+	try {
+		payload = await response.clone().json();
+	} catch {
+		payload = null;
+	}
+
+	reportApiFailure(payload, response.status, endpoint);
 }
 
 /**

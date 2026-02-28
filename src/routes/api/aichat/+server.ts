@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { env } from '$env/dynamic/private';
+import { getSupabaseClient, isValidBranch } from '$lib/database/supabaseClient';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { productAnalysisService } from '$lib/services/productAnalysisService';
@@ -7,6 +8,26 @@ import { productAnalysisService } from '$lib/services/productAnalysisService';
 // OpenRouter API configuration
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'deepseek/deepseek-chat';
+const AI_WINDOW_MS = 15 * 60 * 1000;
+const AI_MAX_REQUESTS = 30;
+const aiRequests = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(identifier: string): boolean {
+	const now = Date.now();
+	const current = aiRequests.get(identifier);
+
+	if (!current || now > current.resetAt) {
+		aiRequests.set(identifier, { count: 1, resetAt: now + AI_WINDOW_MS });
+		return false;
+	}
+
+	if (current.count >= AI_MAX_REQUESTS) {
+		return true;
+	}
+
+	current.count += 1;
+	return false;
+}
 
 interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
@@ -764,7 +785,20 @@ Teks user: "${text}"`
 }
 
 // Endpoint untuk analisis transaksi AI
-export const POST: RequestHandler = async ({ request, url }) => {
+export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
+	const clientIp = getClientAddress();
+	if (isRateLimited(clientIp)) {
+		return json(
+			{
+				success: false,
+				error: 'Terlalu banyak request. Coba lagi beberapa menit lagi.',
+				code: 'RATE_LIMITED',
+				retryAfterSeconds: Math.ceil(AI_WINDOW_MS / 1000)
+			},
+			{ status: 429 }
+		);
+	}
+
 	// Cek apakah ini request untuk analisis transaksi
 	const action = url.searchParams.get('action');
 
@@ -782,17 +816,18 @@ async function handleTransactionAnalysis(request: Request) {
 		const { text } = await request.json();
 
 		if (!text || typeof text !== 'string') {
-			return json({ success: false, error: 'Teks transaksi diperlukan' }, { status: 400 });
+			return json({ success: false, error: 'Teks transaksi diperlukan', code: 'VALIDATION_ERROR' }, { status: 400 });
 		}
 
 		// Get API key from environment
-		const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+		const apiKey = env.OPENROUTER_API_KEY;
 
 		if (!apiKey) {
 			return json(
 				{
 					success: false,
-					error: 'API key OpenRouter tidak dikonfigurasi'
+					error: 'API key OpenRouter tidak dikonfigurasi',
+					code: 'SERVICE_UNAVAILABLE'
 				},
 				{ status: 500 }
 			);
@@ -811,7 +846,8 @@ async function handleTransactionAnalysis(request: Request) {
 		return json(
 			{
 				success: false,
-				error: 'Terjadi kesalahan saat menganalisis transaksi'
+				error: 'Terjadi kesalahan saat menganalisis transaksi',
+				code: 'SERVER_ERROR'
 			},
 			{ status: 500 }
 		);
@@ -824,28 +860,38 @@ async function handleRegularChat(request: Request) {
 		const { question, branch } = await request.json();
 
 		if (!question || typeof question !== 'string') {
-			return json({ success: false, error: 'Pertanyaan diperlukan' }, { status: 400 });
+			return json({ success: false, error: 'Pertanyaan diperlukan', code: 'VALIDATION_ERROR' }, { status: 400 });
 		}
 
 		// Get API key from environment
-		const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+		const apiKey = env.OPENROUTER_API_KEY;
 
 		if (!apiKey) {
 			return json(
 				{
 					success: false,
 					error:
-						'API key OpenRouter tidak dikonfigurasi. Silakan tambahkan VITE_OPENROUTER_API_KEY di file .env'
+						'API key OpenRouter tidak dikonfigurasi. Silakan tambahkan OPENROUTER_API_KEY di file .env',
+					code: 'SERVICE_UNAVAILABLE'
 				},
 				{ status: 500 }
 			);
+		}
+
+		if (question.length > 2000) {
+			return json({ success: false, error: 'Pertanyaan terlalu panjang', code: 'VALIDATION_ERROR' }, { status: 400 });
+		}
+
+		const requestedBranch = branch || 'Balikpapan';
+		if (!isValidBranch(requestedBranch)) {
+			return json({ success: false, error: 'Branch tidak valid', code: 'INVALID_BRANCH' }, { status: 400 });
 		}
 
 		// AI 1: Identifikasi kebutuhan data
 		const dataRequirements = await identifyDataRequirements(question, apiKey);
 
 		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
-		const supabase = getSupabaseClient((branch || 'Balikpapan') as any);
+		const supabase = getSupabaseClient(requestedBranch);
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database
@@ -981,6 +1027,7 @@ async function handleRegularChat(request: Request) {
 			return new Response(
 				JSON.stringify({
 					success: false,
+					code: 'NO_DATA',
 					error: 'Tidak ada data ditemukan untuk periode yang diminta',
 					dateRange: `${dataRequirements.periode.start} hingga ${dataRequirements.periode.end}`,
 					dataRequirements: {
@@ -1509,7 +1556,8 @@ ${
 		return json(
 			{
 				success: false,
-				error: 'Terjadi kesalahan saat memproses pertanyaan. Silakan coba lagi.'
+				error: 'Terjadi kesalahan saat memproses pertanyaan. Silakan coba lagi.',
+				code: 'SERVER_ERROR'
 			},
 			{ status: 500 }
 		);

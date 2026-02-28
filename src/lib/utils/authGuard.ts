@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { SessionSecurity, LoginSecurity, RateLimiter } from './security';
+import { LoginSecurity, RateLimiter } from './security';
 
 /**
  * Enhanced auth guard dengan security features
@@ -19,44 +19,47 @@ export class AuthGuard {
 	}
 
 	/**
+	 * Fetch session payload from server
+	 */
+	private async fetchSessionPayload(): Promise<any | null> {
+		const response = await fetch('/api/session', {
+			method: 'GET',
+			credentials: 'include'
+		});
+
+		if (!response.ok) {
+			return null;
+		}
+
+		return response.json();
+	}
+
+	/**
 	 * Check authentication dengan security validation
 	 */
-	requireAuth(): boolean {
+	async requireAuth(): Promise<boolean> {
 		if (typeof window === 'undefined') return true;
 
 		try {
 			// Rate limiting check
 			const clientId = this.getClientIdentifier();
 			if (!RateLimiter.isAllowed(`auth_${clientId}`)) {
-				goto('/login?error=rate_limit');
+				goto('/login?reason=rate_limit');
 				return false;
 			}
 
-			const session = localStorage.getItem('zatiaras_session');
-			const branch = localStorage.getItem('selectedBranch');
-
-			if (!session || !branch) {
+			const payload = await this.fetchSessionPayload();
+			if (!payload) {
 				this.recordFailedAuth(clientId);
 				goto('/login');
 				return false;
 			}
 
-			// Validate session data
-			let sessionData;
-			try {
-				sessionData = JSON.parse(session);
-			} catch {
-				this.recordFailedAuth(clientId);
-				goto('/login');
-				return false;
-			}
-
-			// Validate session data structure
-			if (!sessionData.isAuthenticated || !sessionData.user) {
+			if (!payload?.authenticated || !payload?.user) {
 				this.recordFailedAuth(clientId);
 				localStorage.removeItem('zatiaras_session');
 				localStorage.removeItem('selectedBranch');
-				goto('/login?error=session_expired');
+				goto('/login?reason=session_expired');
 				return false;
 			}
 
@@ -70,23 +73,13 @@ export class AuthGuard {
 	/**
 	 * Check if user is authenticated
 	 */
-	isAuthenticated(): boolean {
+	async isAuthenticated(): Promise<boolean> {
 		if (typeof window === 'undefined') return false;
 
 		try {
-			const session = localStorage.getItem('zatiaras_session');
-			const branch = localStorage.getItem('selectedBranch');
-
-			if (!session || !branch) return false;
-
-			let sessionData;
-			try {
-				sessionData = JSON.parse(session);
-			} catch {
-				return false;
-			}
-
-			return SessionSecurity.validateSession(sessionData);
+			const payload = await this.fetchSessionPayload();
+			if (!payload) return false;
+			return Boolean(payload?.authenticated && payload?.user);
 		} catch (error) {
 			return false;
 		}
@@ -95,15 +88,35 @@ export class AuthGuard {
 	/**
 	 * Check role-based access
 	 */
-	requireRole(requiredRole: string): boolean {
-		if (!this.requireAuth()) return false;
+	async requireRole(requiredRole: string): Promise<boolean> {
+		if (typeof window === 'undefined') return true;
 
 		try {
-			const session = localStorage.getItem('zatiaras_session');
-			if (!session) return false;
+			const clientId = this.getClientIdentifier();
+			if (!RateLimiter.isAllowed(`auth_${clientId}`)) {
+				goto('/login?reason=rate_limit');
+				return false;
+			}
 
-			const sessionData = JSON.parse(session);
-			const userRole = sessionData.user?.role || 'kasir';
+			const payload = await this.fetchSessionPayload();
+			if (!payload?.authenticated || !payload?.user) {
+				this.recordFailedAuth(clientId);
+				localStorage.removeItem('zatiaras_session');
+				localStorage.removeItem('selectedBranch');
+				goto('/login?reason=session_expired');
+				return false;
+			}
+
+			if (!payload) {
+				goto('/unauthorized');
+				return false;
+			}
+
+			const userRole = payload?.user?.role;
+			if (typeof userRole !== 'string') {
+				goto('/unauthorized');
+				return false;
+			}
 
 			if (userRole !== requiredRole && userRole !== 'admin') {
 				goto('/unauthorized');
@@ -120,14 +133,14 @@ export class AuthGuard {
 	/**
 	 * Check admin access
 	 */
-	requireAdmin(): boolean {
+	async requireAdmin(): Promise<boolean> {
 		return this.requireRole('admin');
 	}
 
 	/**
 	 * Check kasir access
 	 */
-	requireKasir(): boolean {
+	async requireKasir(): Promise<boolean> {
 		return this.requireRole('kasir');
 	}
 
@@ -180,10 +193,10 @@ export class AuthGuard {
 export const authGuard = AuthGuard.getInstance();
 
 // Legacy function exports for backward compatibility
-export function requireAuth(): boolean {
+export async function requireAuth(): Promise<boolean> {
 	return authGuard.requireAuth();
 }
 
-export function isAuthenticated(): boolean {
+export async function isAuthenticated(): Promise<boolean> {
 	return authGuard.isAuthenticated();
 }

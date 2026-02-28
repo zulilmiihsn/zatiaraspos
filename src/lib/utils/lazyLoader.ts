@@ -292,7 +292,7 @@ export const lazyModules = {
 	advancedCache: () => lazyLoadModule(() => import('$lib/utils/advancedCache'), 'advancedCache'),
 
 	performanceMonitor: () =>
-		lazyLoadModule(() => import('$lib/utils/performanceMonitor'), 'performanceMonitor')
+		lazyLoadModule(() => import('$lib/utils/performanceTracker'), 'performanceMonitor')
 };
 
 /**

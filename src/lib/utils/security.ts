@@ -452,7 +452,34 @@ export const securityUtils = {
 	},
 
 	logSecurityEvent: (eventType: string, data: unknown): void => {
-		// Log security events (in production, this would go to a security log)
-		// Security logging disabled for production
+		if (typeof window === 'undefined') {
+			return;
+		}
+
+		const payload = JSON.stringify({
+			eventType,
+			data,
+			timestamp: Date.now()
+		});
+
+		try {
+			if (navigator.sendBeacon) {
+				const blob = new Blob([payload], { type: 'application/json' });
+				navigator.sendBeacon('/api/security-events', blob);
+				return;
+			}
+
+			void fetch('/api/security-events', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: payload,
+				keepalive: true,
+				credentials: 'include'
+			});
+		} catch {
+			// no-op
+		}
 	}
 };

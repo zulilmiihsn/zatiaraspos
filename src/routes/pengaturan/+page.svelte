@@ -15,8 +15,13 @@
 	import CreditCard from 'lucide-svelte/icons/credit-card';
 	import User from 'lucide-svelte/icons/user';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import PwaInstallDialog from '$lib/components/shared/pwaInstallDialog.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { browser } from '$app/environment';
+
+	// PWA Installation
+	let showPwaInstallDialog = false;
 
 	// Type definitions
 	interface PengaturanData {
@@ -36,14 +41,10 @@
 	// Subscribe ke store
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 	let showLogoutModal = false;
-	let deferredPrompt: any = null;
-	let canInstallPWA = false;
 	let currentPage = 'security';
 
 	// Removed showPinModal, pin, errorTimeout, isClosing
 	let showPwaInstalledToast = false;
-	let pwaStatus = '';
-	let showPwaManualToast = false;
 	let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
 
 	let showNotification = false;
@@ -130,33 +131,10 @@
 
 			isProfileLoaded = true;
 
-			// Setup PWA detection
+			// PWA installed event
 			if (typeof window !== 'undefined') {
-				const ua = window.navigator.userAgent.toLowerCase();
-				const isIOS = /iphone|ipad|ipod/.test(ua);
-				const isInStandaloneMode = 'standalone' in window.navigator && window.navigator.standalone;
-				if (isIOS && !isInStandaloneMode) {
-					pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen"';
-					canInstallPWA = false;
-				} else if ('serviceWorker' in navigator) {
-					window.addEventListener('beforeinstallprompt', (e) => {
-						e.preventDefault();
-						deferredPrompt = e;
-						canInstallPWA = true;
-						pwaStatus = '';
-					});
-					if (window.matchMedia('(display-mode: standalone)').matches) {
-						pwaStatus = 'PWA sudah terpasang';
-						canInstallPWA = false;
-					}
-				} else {
-					pwaStatus = 'Browser tidak mendukung PWA';
-					canInstallPWA = false;
-				}
 				window.addEventListener('appinstalled', () => {
 					showPwaInstalledToast = true;
-					canInstallPWA = false;
-					pwaStatus = 'PWA sudah terpasang';
 					setTimeout(() => (showPwaInstalledToast = false), 4000);
 				});
 			}
@@ -247,33 +225,7 @@
 	}
 
 	function handleInstallPWA() {
-		if (deferredPrompt) {
-			deferredPrompt.prompt();
-			deferredPrompt.userChoice.then((choiceResult: any) => {
-				if (choiceResult.outcome === 'accepted') {
-					showPwaInstalledToast = true;
-					setTimeout(() => (showPwaInstalledToast = false), 4000);
-				} else {
-					showPwaManualToast = true;
-					pwaStatus = 'Pemasangan aplikasi dibatalkan.';
-					setTimeout(() => (showPwaManualToast = false), 4000);
-				}
-				deferredPrompt = null;
-				canInstallPWA = false;
-				pwaStatus = 'PWA sudah terpasang';
-			});
-		} else {
-			// Tampilkan instruksi manual
-			const ua = window.navigator.userAgent.toLowerCase();
-			const isIOS = /iphone|ipad|ipod/.test(ua);
-			if (isIOS) {
-				pwaStatus = 'Untuk install, buka menu Share lalu pilih "Add to Home Screen".';
-			} else {
-				pwaStatus = 'Silakan install melalui menu browser (ikon titik tiga > Install App).';
-			}
-			showPwaManualToast = true;
-			setTimeout(() => (showPwaManualToast = false), 4000);
-		}
+		showPwaInstallDialog = true;
 	}
 
 	const settingsSections = [
@@ -671,24 +623,8 @@
 		</div>
 	{/if}
 
-	<!-- Modal instruksi install PWA -->
-	{#if showPwaManualToast}
-		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-			<div class="animate-slideUpModal mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-				<div class="flex flex-col items-center">
-					{#if Settings}
-						<svelte:component this={Settings} class="mb-2 h-8 w-8 text-pink-500" />
-					{/if}
-					<h3 class="mb-2 text-lg font-bold text-pink-600">Cara Install Aplikasi</h3>
-					<p class="mb-4 text-center text-sm text-gray-600">{pwaStatus}</p>
-					<button
-						class="mt-2 w-full rounded-xl bg-pink-500 py-3 font-bold text-white"
-						onclick={() => (showPwaManualToast = false)}>Tutup</button
-					>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<!-- PWA Install Dialog -->
+	<PwaInstallDialog bind:show={showPwaInstallDialog} onClose={() => (showPwaInstallDialog = false)} />
 
 	{#if showNotification}
 		<div
@@ -700,6 +636,7 @@
 			{notificationMessage}
 		</div>
 	{/if}
+
 </div>
 
 <!-- App Info -->

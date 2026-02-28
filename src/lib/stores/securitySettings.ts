@@ -10,7 +10,13 @@ interface SecuritySettings {
 const initialValue = browser ? (() => {
 	try {
 		const saved = localStorage.getItem('zatiaras_security_settings');
-		return saved ? JSON.parse(saved) : null;
+		if (!saved) return null;
+
+		const parsed = JSON.parse(saved);
+		return {
+			pin: null,
+			lockedPages: Array.isArray(parsed?.lockedPages) ? parsed.lockedPages : null
+		} as SecuritySettings;
 	} catch (e) {
 		console.error('Error parsing security settings from localStorage:', e);
 		return null;
@@ -24,7 +30,12 @@ export function setSecuritySettings(settings: SecuritySettings) {
 	// Persist to localStorage
 	if (browser) {
 		try {
-			localStorage.setItem('zatiaras_security_settings', JSON.stringify(settings));
+			localStorage.setItem(
+				'zatiaras_security_settings',
+				JSON.stringify({
+					lockedPages: settings.lockedPages
+				})
+			);
 		} catch (e) {
 			console.error('Error saving security settings to localStorage:', e);
 		}

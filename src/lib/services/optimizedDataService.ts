@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseClient } from '$lib/database/supabaseClient';
+import { VALID_BRANCHES, isValidBranch, type BranchKey } from '$lib/database/supabaseClient';
 import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { get as storeGet } from 'svelte/store';
@@ -24,7 +25,7 @@ interface BatchQuery {
 }
 
 interface ConnectionPool {
-	[branch: string]: any;
+	[branch: string]: ReturnType<typeof getSupabaseClient>;
 }
 
 interface QueryStats {
@@ -63,22 +64,20 @@ export class OptimizedDataService {
 	 * Initialize connection pool for all branches
 	 */
 	private initializeConnectionPool(): void {
-		// Pre-initialize connections for known branches
-		const branches = ['default', 'balikpapan', 'samarinda', 'berau', 'samarinda2', 'balikpapan2']; // Add your branches
-
-		branches.forEach((branch) => {
-			this.connectionPool[branch] = getSupabaseClient(branch as any);
+		VALID_BRANCHES.forEach((branch) => {
+			this.connectionPool[branch] = getSupabaseClient(branch);
 		});
 	}
 
 	/**
 	 * Get optimized connection for branch
 	 */
-	private getConnection(branch?: string): any {
-		const branchKey = branch || storeGet(selectedBranch) || 'default';
+	private getConnection(branch?: string): ReturnType<typeof getSupabaseClient> {
+		const currentBranch = branch || storeGet(selectedBranch);
+		const branchKey: BranchKey = isValidBranch(currentBranch) ? currentBranch : 'Balikpapan';
 
 		if (!this.connectionPool[branchKey]) {
-			this.connectionPool[branchKey] = getSupabaseClient(branchKey as any);
+			this.connectionPool[branchKey] = getSupabaseClient(branchKey);
 		}
 
 		return this.connectionPool[branchKey];

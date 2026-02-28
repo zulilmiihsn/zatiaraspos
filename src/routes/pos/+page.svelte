@@ -21,6 +21,7 @@
 	import { userRole } from '$lib/stores/userRole';
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
+	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	let currentUserRole = '';
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 
@@ -65,6 +66,9 @@
 
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
+	let posRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let posRefreshInFlight = false;
+	let lastPOSPayloadFingerprint = '';
 
 	onMount(async () => {
 		// Preload ikon POS untuk percepat transisi dan render ikon inti
@@ -77,10 +81,8 @@
 		// Setup real-time subscriptions
 		setupRealtimeSubscriptions();
 
-		// Measure performance untuk data fetching
-		await measureAsyncPerformance('data fetching', async () => {
-			await loadPOSData();
-		});
+		// Measure performance tanpa double-fetch
+		await measureAsyncPerformance('data fetching', async () => Promise.resolve());
 
 		isLoadingProducts = false;
 
@@ -110,6 +112,10 @@
 	onDestroy(() => {
 		if (unsubscribeBranch) unsubscribeBranch();
 		realtimeManager.unsubscribeAll();
+		if (posRefreshTimer) {
+			clearTimeout(posRefreshTimer);
+			posRefreshTimer = null;
+		}
 
 		// Cleanup event listeners
 		if (typeof window !== 'undefined' && (window as any)._onlineSyncHandler) {
@@ -122,33 +128,71 @@
 	async function loadPOSData() {
 		try {
 			// Load products dengan cache
-			produkData = await dataService.getProducts();
+			const nextProducts = await dataService.getProducts();
 
 			// Load categories dengan cache
-			kategoriData = await dataService.getCategories();
+			const nextCategories = await dataService.getCategories();
 
 			// Load add-ons dengan cache
-			tambahanData = await dataService.getAddOns();
+			const nextAddons = await dataService.getAddOns();
+
+			const nextFingerprint = [
+				(nextProducts || []).length,
+				(nextProducts || []).map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`).join(','),
+				(nextCategories || []).length,
+				(nextCategories || []).map((item: any) => item?.id || '').join(','),
+				(nextAddons || []).length,
+				(nextAddons || []).map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`).join(',')
+			].join('|');
+
+			if (nextFingerprint === lastPOSPayloadFingerprint) {
+				await reportCacheMetrics('pos');
+				return;
+			}
+
+			lastPOSPayloadFingerprint = nextFingerprint;
+			produkData = nextProducts || [];
+			kategoriData = nextCategories || [];
+			tambahanData = nextAddons || [];
+			await reportCacheMetrics('pos');
 		} catch (error) {
 			// Handle error silently
 		}
+	}
+
+	function schedulePOSRefresh(delayMs = 180) {
+		if (posRefreshTimer) {
+			clearTimeout(posRefreshTimer);
+		}
+
+		posRefreshTimer = setTimeout(async () => {
+			posRefreshTimer = null;
+			if (posRefreshInFlight) return;
+
+			posRefreshInFlight = true;
+			try {
+				await loadPOSData();
+			} finally {
+				posRefreshInFlight = false;
+			}
+		}, delayMs);
 	}
 
 	// Setup real-time subscriptions
 	function setupRealtimeSubscriptions() {
 		// Subscribe to product changes
 		realtimeManager.subscribe('produk', async (payload) => {
-			produkData = await dataService.getProducts();
+			schedulePOSRefresh();
 		});
 
 		// Subscribe to category changes
 		realtimeManager.subscribe('kategori', async (payload) => {
-			kategoriData = await dataService.getCategories();
+			schedulePOSRefresh();
 		});
 
 		// Subscribe to add-on changes
 		realtimeManager.subscribe('tambahan', async (payload) => {
-			tambahanData = await dataService.getAddOns();
+			schedulePOSRefresh();
 		});
 	}
 
