@@ -206,17 +206,21 @@
 
 	async function updatePaymentMethod(newMethod: any) {
 		if (!selectedTransaksi) return;
+		const currentMethod = selectedTransaksi.payment_method;
+		const dbMethod = newMethod === 'qris' ? 'non-tunai' : newMethod;
+		if (currentMethod === dbMethod) return;
 		loading = true;
 		try {
-			await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(storeGet(selectedBranch))
 				.from('buku_kas')
-				.update({ payment_method: newMethod })
+				.update({ payment_method: dbMethod })
 				.eq('id', selectedTransaksi.id);
+			if (error) throw error;
+			selectedTransaksi = { ...selectedTransaksi, payment_method: dbMethod };
 			toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
 			setTimeout(() => {
 				toastManager.hideToast();
 			}, 2000);
-			showDetailModal = false;
 			await fetchTransaksiHariIni();
 		} catch (e) {
 			ErrorHandler.logError(e, 'updatePaymentMethod');
@@ -612,8 +616,13 @@
 						style="user-select:none;"
 					>
 						<span class="truncate"
-							>{paymentOptions.find((opt) => opt.value === selectedTransaksi.payment_method)
-								?.label || 'Pilih'}</span
+							>{paymentOptions.find(
+								(opt) =>
+									opt.value ===
+									(selectedTransaksi.payment_method === 'non-tunai'
+										? 'qris'
+										: selectedTransaksi.payment_method)
+							)?.label || 'Pilih'}</span
 						>
 						<svg
 							class="ml-2 h-4 w-4 text-pink-400"
@@ -626,7 +635,9 @@
 					</button>
 					<DropdownSheet
 						open={showDropdownPayment}
-						value={selectedTransaksi.payment_method}
+						value={selectedTransaksi.payment_method === 'non-tunai'
+							? 'qris'
+							: selectedTransaksi.payment_method}
 						options={paymentOptions}
 						on:close={() => (showDropdownPayment = false)}
 						on:select={(e) => {
