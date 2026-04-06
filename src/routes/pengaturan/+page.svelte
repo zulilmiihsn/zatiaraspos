@@ -538,8 +538,32 @@
 						Atur tampilan dan informasi draft struk
 					</div>
 				</button>
+				<!-- Box Riwayat Transaksi -->
+				<button
+					class="flex aspect-square min-h-[110px] flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-4 shadow focus:outline-none md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
+					onclick={() => goto('/pengaturan/riwayat')}
+				>
+					{#if History}
+						<svelte:component this={History} class="mb-2 h-8 w-8 text-emerald-500" />
+					{:else}
+						<div class="mb-2 flex h-8 w-8 items-center justify-center">
+							<span
+								class="block h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-500"
+							></span>
+						</div>
+					{/if}
+					<div class="mb-1 text-lg font-bold text-emerald-700 md:mb-1 md:text-base">Riwayat</div>
+					<span
+						class="mb-2 inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 md:mb-2 md:px-3 md:py-1 md:text-base"
+						>Hari Ini</span
+					>
+					<div class="text-center text-xs text-gray-500 md:mt-1 md:mb-0 md:text-base">
+						Lihat riwayat transaksi hari ini
+					</div>
+				</button>
 
 			{/if}
+
 		</div>
 
 		<!-- Logout Section -->
