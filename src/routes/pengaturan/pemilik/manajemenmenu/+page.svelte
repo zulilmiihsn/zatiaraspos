@@ -113,11 +113,11 @@
 		(menus: Product[], kategoriList: Category[]) =>
 			kategoriList.map((kat: Category) => ({
 				...kat,
-				count: menus.filter((m: Product) => (m as any).kategori_id === kat.id).length
+				count: menus.filter((m: Product) => m.kategori_id === kat.id).length
 			})),
 		(menus: Product[], kategoriList: Category[]) => {
-			const menuKategoriMap = menus.map((m: any) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
-			const kategoriIds = kategoriList.map((k: any) => k.id).join(',');
+			const menuKategoriMap = menus.map((m: Product) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+			const kategoriIds = kategoriList.map((k: Category) => k.id).join(',');
 			return `${menuKategoriMap}-${kategoriIds}`;
 		}
 	);
@@ -156,8 +156,9 @@
 				.order('created_at', { ascending: false });
 			if (error) throw error;
 			menus = data || [];
-		} catch (error: any) {
-			notifModalMsg = 'Gagal mengambil data menu: ' + (error?.message || 'Unknown error');
+		} catch (error) {
+			const e = error as Error;
+			notifModalMsg = 'Gagal mengambil data menu: ' + (e?.message || 'Unknown error');
 			notifModalType = 'error';
 			showNotifModal = true;
 		}
@@ -173,8 +174,9 @@
 				.order('created_at', { ascending: false });
 			if (error) throw error;
 			kategoriList = data || [];
-		} catch (error: any) {
-			notifModalMsg = 'Gagal mengambil data kategori: ' + (error?.message || 'Unknown error');
+		} catch (error) {
+			const e = error as Error;
+			notifModalMsg = 'Gagal mengambil data kategori: ' + (e?.message || 'Unknown error');
 			notifModalType = 'error';
 			showNotifModal = true;
 		}
@@ -189,9 +191,10 @@
 				.select('*')
 				.order('created_at', { ascending: false });
 			if (error) throw error;
-			ekstraList = (data || []).map((e: any) => ({ ...e, harga: e.price }));
-		} catch (error: any) {
-			notifModalMsg = 'Gagal mengambil data ekstra: ' + (error?.message || 'Unknown error');
+			ekstraList = (data || []).map((e: AddOn) => ({ ...e, harga: e.price }));
+		} catch (error) {
+			const e = error as Error;
+			notifModalMsg = 'Gagal mengambil data ekstra: ' + (e?.message || 'Unknown error');
 			notifModalType = 'error';
 			showNotifModal = true;
 		}
@@ -248,7 +251,7 @@
 			// Format harga untuk display jika ada
 			const formattedPrice = menu.price ? menu.price.toLocaleString('id-ID') : '';
 			menuForm.name = menu.name;
-			menuForm.kategori_id = (menu as any).kategori_id;
+			menuForm.kategori_id = menu.kategori_id as number;
 			menuForm.tipe = menu.tipe;
 			menuForm.price = formattedPrice;
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
