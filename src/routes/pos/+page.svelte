@@ -4,6 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { get } from 'svelte/store';
+	import type { ReceiptSettings } from '$lib/types/laporan';
+	import type { TokoSession } from '$lib/types/store';
 	import { validateNumber, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
 	import { fly, fade } from 'svelte/transition';
@@ -26,12 +28,7 @@
 	userRole.subscribe((val) => (currentUserRole = val || ''));
 
 	import { browser } from '$app/environment';
-	let sesiAktif: {
-		id: string;
-		opening_cash: number;
-		opening_time: string;
-		is_active: boolean;
-	} | null = null;
+	let sesiAktif: TokoSession | null = null;
 	async function cekSesiTokoAktif(): Promise<void> {
 		const { data } = await dataService.supabaseClient
 			.from('sesi_toko')
@@ -50,17 +47,39 @@
 		}
 	});
 
-	let produkData: {
+	interface PosProduct {
 		id: string;
 		name: string;
 		price: number;
 		harga: number;
 		tipe: string;
 		image?: string;
+		gambar?: string;
 		ekstra_ids?: string[];
-	}[] = [];
-	let kategoriData: { id: string; name: string }[] = [];
-	let tambahanData: { id: string; name: string; price: number; harga: number }[] = [];
+		kategori_id?: string;
+	}
+	interface PosCategory {
+		id: string;
+		name: string;
+	}
+	interface PosAddOn {
+		id: string;
+		name: string;
+		price: number;
+		harga: number;
+	}
+	interface PosCartItem {
+		product: PosProduct;
+		qty: number;
+		addOns: PosAddOn[];
+		sugar: string;
+		ice: string;
+		note: string;
+	}
+
+	let produkData: PosProduct[] = [];
+	let kategoriData: PosCategory[] = [];
+	let tambahanData: PosAddOn[] = [];
 
 	let isLoadingProducts = true;
 
@@ -257,11 +276,11 @@
 	let selectedCategory = 'all';
 
 	// Produk mock dengan kategori
-	let products: unknown[] = [];
+	let products: PosProduct[] = [];
 	$: products = produkData;
 
 	// Topping mock tanpa emoji/icon
-	let addOns: unknown[] = [];
+	let addOns: PosAddOn[] = [];
 	$: addOns = tambahanData;
 
 	// Jenis gula dan es
@@ -277,15 +296,7 @@
 	];
 
 	let showModal = false;
-	let selectedProduct: {
-		id: string;
-		name: string;
-		price: number;
-		harga: number;
-		tipe: string;
-		image?: string;
-		ekstra_ids?: string[];
-	} | null = null;
+	let selectedProduct: PosProduct | null = null;
 	let selectedAddOns: string[] = [];
 	let selectedSugar = 'normal';
 	let selectedIce = 'normal';
@@ -293,7 +304,7 @@
 	let selectedNote = '';
 
 	// Keranjang sementara
-	let cart: Array<any> = [];
+	let cart: PosCartItem[] = [];
 
 	// Untuk track error gambar per produk (pakai string key)
 	let imageError: Record<string, boolean> = {};
@@ -318,13 +329,11 @@
 
 	// Memoized filtered products dengan optimasi
 	const memoizedFilter = memoize(
-		(products: any[], categories: any[], selectedCategory: string, search: string) => {
+		(products: PosProduct[], categories: PosCategory[], selectedCategory: string, search: string) => {
 			let filtered = products;
-			// Filter berdasarkan search
 			if (search) {
 				filtered = fuzzySearch(search, products);
 			}
-			// Filter berdasarkan kategori
 			if (selectedCategory !== 'all') {
 				filtered = filtered.filter((p) => p.kategori_id === selectedCategory);
 			}
@@ -348,7 +357,7 @@
 		cart = cart.filter((_, i) => i !== idx);
 	}
 
-	function openAddOnModal(product: any): void {
+	function openAddOnModal(product: PosProduct): void {
 		showCartModal = false;
 		selectedProduct = product;
 		selectedAddOns = [];
@@ -409,16 +418,16 @@
 		}
 
 		// Optimized cart item check dengan memoization
-		const addOnsSelected = addOns.filter((a: any) => selectedAddOns.includes(a.id));
+		const addOnsSelected = addOns.filter((a: PosAddOn) => selectedAddOns.includes(a.id));
 		const addOnsKey = addOnsSelected
-			.map((a: any) => a.id)
+			.map((a: PosAddOn) => a.id)
 			.sort()
 			.join(',');
 		const itemKey = `${selectedProduct?.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
 
-		const existingIdx = cart.findIndex((item: any) => {
+		const existingIdx = cart.findIndex((item: PosCartItem) => {
 			const itemAddOnsKey = (item.addOns || [])
-				.map((a: any) => a.id)
+				.map((a: PosAddOn) => a.id)
 				.sort()
 				.join(',');
 			const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
@@ -430,7 +439,7 @@
 			cart = cart.map((item, idx) =>
 				idx === existingIdx ? { ...item, qty: item.qty + qty } : item
 			);
-		} else {
+		} else if (selectedProduct) {
 			// Jika belum ada, tambahkan item baru
 			cart = [
 				...cart,
@@ -527,7 +536,7 @@
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
 
-	let categories: unknown[] = [];
+	let categories: PosCategory[] = [];
 	$: categories = kategoriData;
 
 	let skeletonCount = 9;
@@ -610,8 +619,8 @@
 	// Helper untuk ambil nama kategori dari kategori_id
 	function getKategoriNameById(id: string | number): string {
 		if (!id) return '';
-		const kat = categories?.find((k: any) => k.id === id);
-		return (kat as any)?.name || '';
+		const kat = categories?.find((k) => String(k.id) === String(id));
+		return kat?.name || '';
 	}
 
 	// Sinkronisasi cart ke localStorage setiap kali cart berubah
@@ -623,13 +632,13 @@
 		selectedCategory = 'all';
 	}
 	function handleSelectCategory(id: string | number): void {
-		selectedCategory = id as any;
+		selectedCategory = String(id);
 	}
-	function handleOpenAddOnModal(product: any): void {
+	function handleOpenAddOnModal(product: PosProduct): void {
 		openAddOnModal(product);
 	}
 	function handleShowCustomItemModal(): void {
-		qty = 1; // Reset quantity agar tidak mewarisi dari modal produk sebelumnya
+		qty = 1;
 		showCustomItemModal = true;
 	}
 	function handleImgErrorId(id: string | number): void {
@@ -645,7 +654,7 @@
 	function handleRemoveCartItem(idx: number): void {
 		removeCartItem(idx);
 	}
-	function handleKeydownOpenAddOnModal(product: any, e: KeyboardEvent): void {
+	function handleKeydownOpenAddOnModal(product: PosProduct, e: KeyboardEvent): void {
 		if (e.key === 'Enter') openAddOnModal(product);
 	}
 </script>
@@ -748,11 +757,11 @@
 				{#each categories ?? [] as c}
 					<button
 						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-lg border px-4 py-2 text-base font-medium transition-colors duration-150 {selectedCategory ===
-						(c as any).id
+						String(c.id)
 							? 'border-pink-500 bg-pink-500 text-white'
 							: 'border-pink-500 bg-white text-pink-500'}"
 						type="button"
-						onclick={() => handleSelectCategory((c as any).id)}>{(c as any).name}</button
+						onclick={() => handleSelectCategory(c.id)}>{c.name}</button
 					>
 				{/each}
 				<!-- Button Custom Item di paling kanan -->
@@ -810,7 +819,7 @@
 									<div class="flex min-w-0 flex-1 flex-col">
 										<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
 										<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
-											>{getKategoriNameById(p.kategori_id)}</span
+											>{getKategoriNameById(p.kategori_id || '')}</span
 										>
 									</div>
 									<div class="flex items-center gap-2">
@@ -873,7 +882,7 @@
 											{p.name}
 										</h3>
 										<span class="min-h-[18px] truncate text-xs text-gray-400 md:text-sm"
-											>{getKategoriNameById(p.kategori_id)}</span
+											>{getKategoriNameById(p.kategori_id || '')}</span
 										>
 										<div class="text-base font-bold text-pink-500 md:mt-1 md:text-xl">
 											Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}
@@ -1041,7 +1050,7 @@
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
-											? item.addOns.map((a: any) => a.name).join(', ')
+											? item.addOns.map((a) => a.name).join(', ')
 											: '',
 										item.note ? `${item.note}` : '',
 										item.product.tipe === 'minuman' && item.sugar !== 'normal'
@@ -1138,24 +1147,24 @@
 						</div>
 					{/if}
 					<div class="mt-4 mb-2 text-base font-semibold text-gray-800">Ekstra</div>
-					{#if selectedProduct && selectedProduct.ekstra_ids && selectedProduct.ekstra_ids.length > 0 && addOns.filter( (a: any) => selectedProduct?.ekstra_ids?.includes(a.id) ).length > 0}
+					{#if selectedProduct && selectedProduct.ekstra_ids && selectedProduct.ekstra_ids.length > 0 && addOns.filter( (a) => selectedProduct?.ekstra_ids?.includes(a.id) ).length > 0}
 						<div class="mb-6 grid grid-cols-2 gap-3">
-							{#each addOns.filter((a: any) => selectedProduct?.ekstra_ids?.includes(a.id)) as a}
+							{#each addOns.filter((a) => selectedProduct?.ekstra_ids?.includes(a.id)) as a}
 								<button
 									class="flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border py-1.5 text-center text-base font-medium whitespace-normal transition-colors duration-150 {selectedAddOns.includes(
-										(a as any).id
+										a.id
 									)
 										? 'border-pink-500 bg-pink-500 text-white'
 										: 'border-pink-500 bg-white text-pink-500'}"
 									type="button"
-									onclick={() => toggleAddOn((a as any).id)}
+									onclick={() => toggleAddOn(a.id)}
 								>
-									<span class="w-full truncate">{(a as any).name}</span>
+									<span class="w-full truncate">{a.name}</span>
 									<span
-										class="mt-0 text-sm font-semibold {selectedAddOns.includes((a as any).id)
+										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
 											: 'text-pink-500'}"
-										>+Rp {Number((a as any).price ?? (a as any).harga ?? 0).toLocaleString(
+										>+Rp {Number(a.price ?? a.harga ?? 0).toLocaleString(
 											'id-ID'
 										)}</span
 									>
