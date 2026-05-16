@@ -14,6 +14,7 @@ export interface Product {
 	price: number;
 	harga?: number; // Alternative price field
 	category_id: number;
+	kategori_id?: number; // Indonesian field name from DB
 	tipe: 'minuman' | 'makanan' | 'snack';
 	gambar?: string;
 	deskripsi?: string;

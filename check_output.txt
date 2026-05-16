@@ -1,0 +1,1352 @@
+﻿
+> zatiaraspos@2.0.0 check D:\kulyeah\project\zatiaraspos
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+
+====================================
+Loading svelte-check in workspace: d:\kulyeah\project\zatiaraspos
+Getting Svelte diagnostics...
+
+node.exe : Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+At C:\Users\Administrator\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Browserslist: b...ld. Please run::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\+page.svelte[39m:623:11
+[31mError[39m: Identifier 'getTodayWita' has already been declared
+https://svelte.dev/e/js_parse_error (svelte)
+[36m	// Fungsi untuk mendapatkan tanggal hari ini WITA (tanpa jam)
+	function [35m[36mgetTodayWita() {
+		// Ambil waktu sekarang di Asia/Makassar (WITA)
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\+page.svelte[39m:322:21
+[31mError[39m: Cannot find name 'getTodayWITA'. Did you mean 'todayWITA'? (ts)
+[36m		const hari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+		const todayWITA = [35mgetTodayWITA[36m();
+		let labels = [];
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\+page.svelte[39m:445:31
+[31mError[39m: Argument of type 'Date' is not assignable to parameter of type 'string'. (ts)
+[36m			opening_cash: modalAwalRaw,
+			opening_time: witaToUtcISO([35mgetTodayWita()[36m, getNowWita().split('T')[1]),
+			is_active: true
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\+page.svelte[39m:490:32
+[31mError[39m: Argument of type 'Date' is not assignable to parameter of type 'string'. (ts)
+[36m			.update({
+				closing_time: witaToUtcISO([35mgetTodayWita()[36m, getNowWita().split('T')[1]),
+				is_active: false
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\catat\+page.svelte[39m:589:20
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m
+<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\catat\+page.svelte[39m:590:1
+[33mWarn[39m: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+[36m<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[35m<div
+	class="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-white"
+	ontouchstart={handleTouchStart}
+	ontouchmove={handleTouchMove}
+	ontouchend={handleTouchEnd}
+	onclick={handleGlobalClick}
+	onkeydown={(e) => e.key === 'Escape' && handleGlobalClick(e)}
+	onkeypress={(e) => e.key === 'Enter' && handleGlobalClick(e)}
+	role="main"
+	aria-label="Halaman catat pemasukan pengeluaran"
+	tabindex="-1"
+>
+	<main
+		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto"
+		style="scrollbar-width:none;-ms-overflow-style:none;"
+	>
+		<div class="px-2 pt-4 pb-4 md:pt-8 lg:pt-10">
+			<div
+				class="mx-auto w-full max-w-md px-2 pb-2 md:mx-auto md:max-w-lg md:px-0 md:pb-4 lg:mx-auto lg:max-w-2xl"
+			>
+				<div
+					class="relative mb-5 flex overflow-hidden rounded-full border border-pink-100 bg-gray-50 shadow-sm md:mx-auto md:max-w-lg"
+				>
+					<!-- Indicator Slide -->
+					<div
+						class="absolute top-0 left-0 z-0 h-full w-1/2 rounded-full border border-pink-200 bg-white shadow transition-transform duration-200 ease-out"
+						style="transform: translateX({mode === 'pengeluaran' ? '100%' : '0'});"
+					></div>
+					<button
+						class="z-10 h-14 min-h-0 flex-1 rounded-full text-sm font-semibold transition-all duration-200 focus:outline-none md:h-16 {mode ===
+						'pemasukan'
+							? 'text-pink-500'
+							: 'text-gray-400'} md:text-lg"
+						type="button"
+						aria-current={mode === 'pemasukan' ? 'page' : undefined}
+						onclick={handleSetPemasukan}
+					>
+						Catat Pemasukan
+					</button>
+					<button
+						class="z-10 h-14 min-h-0 flex-1 rounded-full text-sm font-semibold transition-all duration-200 focus:outline-none md:h-16 {mode ===
+						'pengeluaran'
+							? 'text-pink-500'
+							: 'text-gray-400'} md:text-lg"
+						type="button"
+						aria-current={mode === 'pengeluaran' ? 'page' : undefined}
+						onclick={handleSetPengeluaran}
+					>
+						Catat Pengeluaran
+					</button>
+				</div>
+				<form
+					class="flex flex-col gap-4 px-1 md:rounded-2xl md:border md:border-pink-100 md:bg-white md:p-8 md:shadow {jenis ===
+					'lainnya'
+						? 'pb-18'
+						: 'pb-14'} md:gap-6"
+					onsubmit={handleSubmit}
+					autocomplete="off"
+					id="catat-form"
+				>
+					<div class="flex flex-col gap-4 sm:flex-row sm:gap-4 md:gap-6">
+						<div class="flex-1">
+							<label
+								class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+								for="tanggal-input">Tanggal</label
+							>
+							<input
+								id="tanggal-input"
+								type="date"
+								class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+								bind:value={date}
+								min="2020-01-01"
+								max="2100-12-31"
+								required
+							/>
+						</div>
+						<div class="flex-1">
+							<label
+								class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+								for="waktu-input">Waktu</label
+							>
+							<input
+								id="waktu-input"
+								type="time"
+								class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+								bind:value={time}
+								required
+							/>
+						</div>
+					</div>
+					<div>
+						<label
+							class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+							for="nominal-input">Nominal</label
+						>
+						<input
+							id="nominal-input"
+							type="text"
+							inputmode="numeric"
+							class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+							value={nominal}
+							oninput={handleNominalInput}
+							required
+							placeholder="Masukkan nominal"
+							autocomplete="off"
+						/>
+						<div
+							class="mt-2 mb-1 grid w-full grid-cols-3 gap-2 md:flex md:w-auto md:grid-cols-none md:flex-wrap md:justify-center md:gap-3"
+						>
+							<button
+								type="button"
+								class="w-full rounded-lg bg-pink-100 py-2 text-base font-semibold text-pink-500 shadow-sm active:bg-pink-200 md:w-auto md:px-6 md:py-3 md:text-lg md:whitespace-nowrap"
+								onclick={handleSetTemplateNominal(5000)}>Rp 5.000</button
+							>
+							<button
+								type="button"
+								class="w-full rounded-lg bg-pink-100 py-2 text-base font-semibold text-pink-500 shadow-sm active:bg-pink-200 md:w-auto md:px-6 md:py-3 md:text-lg md:whitespace-nowrap"
+								onclick={handleSetTemplateNominal(10000)}>Rp 10.000</button
+							>
+							<button
+								type="button"
+								class="w-full rounded-lg bg-pink-100 py-2 text-base font-semibold text-pink-500 shadow-sm active:bg-pink-200 md:w-auto md:px-6 md:py-3 md:text-lg md:whitespace-nowrap"
+								onclick={handleSetTemplateNominal(20000)}>Rp 20.000</button
+							>
+							<button
+								type="button"
+								class="w-full rounded-lg bg-pink-100 py-2 text-base font-semibold text-pink-500 shadow-sm active:bg-pink-200 md:w-auto md:px-6 md:py-3 md:text-lg md:whitespace-nowrap"
+								onclick={handleSetTemplateNominal(50000)}>Rp 50.000</button
+							>
+							<button
+								type="button"
+								class="w-full rounded-lg bg-pink-100 py-2 text-base font-semibold text-pink-500 shadow-sm active:bg-pink-200 md:w-auto md:px-6 md:py-3 md:text-lg md:whitespace-nowrap"
+								onclick={handleSetTemplateNominal(100000)}>Rp 100.000</button
+							>
+						</div>
+					</div>
+					<div>
+						<label
+							class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+							for="jenis-dropdown">Jenis {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label
+						>
+						<button
+							type="button"
+							id="jenis-dropdown"
+							class="mb-1 flex w-full cursor-pointer items-center rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+							onclick={() => (showDropdown = true)}
+							onkeydown={(e) => e.key === 'Enter' && (showDropdown = true)}
+							style="user-select:none;"
+						>
+							<span class="truncate">{getJenisLabel(jenis)}</span>
+						</button>
+						<DropdownSheet
+							open={showDropdown}
+							value={jenis}
+							options={mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran}
+							on:close={() => (showDropdown = false)}
+							on:select={(e) => {
+								jenis = e.detail;
+								showDropdown = false;
+							}}
+						/>
+					</div>
+					{#if jenis === 'lainnya'}
+						<div>
+							<label
+								class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+								for="nama-jenis-input">Nama Jenis</label
+							>
+							<input
+								id="nama-jenis-input"
+								type="text"
+								class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+								bind:value={namaJenis}
+								required
+								placeholder="Masukkan nama jenis"
+							/>
+						</div>
+					{/if}
+					<div>
+						<label
+							class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
+							for="nama-input">Nama {mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label
+						>
+						<input
+							id="nama-input"
+							type="text"
+							class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 md:py-3 md:text-lg"
+							bind:value={nama}
+							required
+						/>
+					</div>
+
+					<!-- Toggle Laci Kasir -->
+					<div>
+						<label
+							class="mb-2 block text-sm font-medium text-pink-500 md:text-base"
+							for="laci-kasir-toggle">Laci Kasir</label
+						>
+						<div
+							class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 md:p-4"
+						>
+							<div class="flex items-center gap-3 md:gap-4">
+								<div
+									class="flex h-8 w-8 items-center justify-center rounded-full md:h-10 md:w-10 {paymentMethod ===
+									'tunai'
+										? 'bg-green-500 text-white'
+										: 'bg-gray-300 text-gray-600'}"
+								>
+									<svg
+										class="h-4 w-4 md:h-5 md:w-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+										></path>
+									</svg>
+								</div>
+								<div>
+									<div class="text-sm font-medium text-gray-800 md:text-base">
+										Uang {mode === 'pemasukan' ? 'Masuk' : 'Keluar'} Laci
+									</div>
+									<div class="text-xs text-gray-500 md:text-sm">
+										{paymentMethod === 'tunai'
+											? 'Ya, dari laci kasir'
+											: 'Tidak, bukan dari laci kasir'}
+									</div>
+								</div>
+							</div>
+							<button
+								id="laci-kasir-toggle"
+								type="button"
+								class="relative h-6 w-12 rounded-full transition-colors duration-300 md:h-7 md:w-14 {paymentMethod ===
+								'tunai'
+									? 'bg-green-500'
+									: 'bg-gray-300'}"
+								onclick={() => (paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai')}
+								onkeydown={(e) =>
+									e.key === 'Enter' &&
+									(paymentMethod = paymentMethod === 'tunai' ? 'non-tunai' : 'tunai')}
+								aria-label="Toggle laci kasir"
+							>
+								<div
+									class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 md:h-6 md:w-6 {paymentMethod ===
+									'tunai'
+										? 'translate-x-6 md:translate-x-7'
+										: 'translate-x-0'}"
+								></div>
+							</button>
+						</div>
+					</div>
+					{#if error}
+						<div class="mt-1 text-center text-sm text-pink-600 md:text-base">{error}</div>
+					{/if}
+				</form>
+			</div>
+		</div>
+	</main>
+	<!-- Button Simpan -->
+	<div class="fixed right-0 bottom-[56px] left-0 z-30 px-4 pt-2 pb-3">
+		<div class="mx-auto max-w-md md:mx-auto md:max-w-lg">
+			<button
+				type="submit"
+				form="catat-form"
+				class="mt-1 w-full rounded-xl border-none bg-pink-500 py-4 text-lg font-bold text-white shadow-lg shadow-pink-500/10 transition-all duration-300 hover:bg-pink-600 active:bg-pink-700"
+			>
+				Simpan
+			</button>
+		</div>
+	</div>
+</div>[36m
+
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:865:4
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m		>
+			[35m<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />[36m
+		</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:915:4
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m		>
+			[35m<svelte:component this={Plus} class="h-8 w-8" />[36m
+		</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:923:4
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m		>
+			[35m<svelte:component this={Plus} class="h-8 w-8" />[36m
+		</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:931:4
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m		>
+			[35m<svelte:component this={Plus} class="h-8 w-8" />[36m
+		</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1089:13
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m											>
+												[35m<svelte:component this={Trash} class="h-4 w-4 text-red-600 md:h-5 md:w-5" />[36m
+											</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1157:13
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m											>
+												[35m<svelte:component this={Trash} class="h-4 w-4 text-red-600" />[36m
+											</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1243:13
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m											>
+												[35m<svelte:component this={Trash} class="h-5 w-5 text-red-600" />[36m
+											</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1329:13
+[33mWarn[39m: `<svelte:component>` is deprecated in runes mode ΓÇö components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated (svelte)
+[36m											>
+												[35m<svelte:component this={Trash} class="h-5 w-5 text-red-600" />[36m
+											</button>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1345:22
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+		<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1344:22
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m	{#if showMenuForm}
+		<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1356:23
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+			<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1355:23
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		>
+			<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1357:4
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal mx-4 flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<!-- Header -->
+				<div class="flex-shrink-0 border-b border-gray-100 bg-white px-6 py-4">
+					<h2 class="text-center text-xl font-bold text-gray-800">
+						{editMenuId ? 'Edit Menu' : 'Tambah Menu Baru'}
+					</h2>
+				</div>
+
+				<!-- Scrollable Form Content -->
+				<form
+					id="menu-form"
+					class="flex flex-1 flex-col gap-6 overflow-y-auto p-6"
+					onsubmit={saveMenu}
+					autocomplete="off"
+				>
+					<!-- Preview Gambar Menu -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-image" class="text-sm font-semibold text-gray-700">Gambar Menu</label>
+						<div class="w-full">
+							<button
+								type="button"
+								class="group relative w-full cursor-pointer"
+								onclick={() => fileInputEl?.click()}
+							>
+								{#if menuForm.gambar}
+									<div class="relative w-full">
+										<img
+											src={menuForm.gambar}
+											alt="Preview Menu"
+											class="aspect-square w-full rounded-xl border-2 border-gray-200 object-cover shadow-sm"
+										/>
+										<!-- Floating Delete Button -->
+										<div
+											class="absolute top-2 right-2 z-10 cursor-pointer rounded-full bg-red-500 p-2 text-white shadow-lg transition-all duration-200 hover:bg-red-600"
+											role="button"
+											tabindex="0"
+											aria-label="Hapus gambar"
+											onclick={(e) => {
+												e.stopPropagation();
+												removeImage();
+											}}
+											onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+											onkeypress={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+										>
+											<svg
+												class="h-4 w-4"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												/>
+											</svg>
+										</div>
+										<div
+											class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-all duration-200 group-hover:opacity-100"
+										>
+											<div class="text-center">
+												<svg
+													class="mx-auto mb-2 h-8 w-8 text-white"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+													/>
+												</svg>
+												<span class="text-sm font-medium text-white">Klik untuk Ubah Gambar</span>
+											</div>
+										</div>
+									</div>
+								{:else}
+									<div
+										class="flex aspect-square w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition-all duration-200 group-hover:border-pink-300 group-hover:bg-gray-100"
+									>
+										<div class="text-center">
+											<svg
+												class="mx-auto mb-3 h-12 w-12 text-gray-400"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+												/>
+											</svg>
+											<span class="text-base font-medium text-gray-500"
+												>Klik untuk Upload Gambar</span
+											>
+											<p class="mt-1 text-xs text-gray-400">PNG, JPG, atau GIF (Max. 5MB)</p>
+										</div>
+									</div>
+								{/if}
+							</button>
+						</div>
+						<input
+							type="file"
+							accept="image/*"
+							class="hidden"
+							bind:this={fileInputEl}
+							onchange={handleFileChange}
+						/>
+					</div>
+
+					<!-- Nama Menu -->
+					<div class="flex flex-col gap-2">
+						<label for="menu-name" class="text-sm font-semibold text-gray-700">Nama Menu</label>
+						<input
+							type="text"
+							id="menu-name"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
+							bind:value={menuForm.name}
+							required
+							placeholder="Contoh: Es Teh Manis"
+						/>
+					</div>
+
+					<!-- Harga -->
+					<div class="flex flex-col gap-2">
+						<label for="menu-price" class="text-sm font-semibold text-gray-700">Harga</label>
+						<div class="relative">
+							<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
+								>Rp</span
+							>
+							<input
+								type="text"
+								id="menu-price"
+								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
+								bind:value={menuForm.price}
+								oninput={formatRupiahInput}
+								required
+								placeholder="0"
+							/>
+						</div>
+					</div>
+
+					<!-- Tipe Menu -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-type" class="text-sm font-semibold text-gray-700">Tipe Menu</label>
+						<div class="flex gap-3">
+							<button
+								type="button"
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
+								'minuman'
+									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+								onclick={() => setMenuType('minuman')}
+							>
+								<div class="flex items-center justify-center gap-2">
+									<span class="text-base">≡ƒÑñ</span>
+									<span class="text-sm">Minuman</span>
+								</div>
+							</button>
+							<button
+								type="button"
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
+								'makanan'
+									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+								onclick={() => setMenuType('makanan')}
+							>
+								<div class="flex items-center justify-center gap-2">
+									<span class="text-base">≡ƒì╜∩╕Å</span>
+									<span class="text-sm">Makanan</span>
+								</div>
+							</button>
+						</div>
+					</div>
+
+					<!-- Kategori -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-kategori" class="text-sm font-semibold text-gray-700">Kategori</label>
+						<div class="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
+							{#each kategoriList as kat}
+								<button
+									type="button"
+									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {menuForm.kategori_id ===
+									kat.id
+										? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+									onclick={() => setMenuKategori(menuForm.kategori_id === kat.id ? null : kat.id)}
+								>
+									{kat.name}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Tambahan -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-tambahan" class="text-sm font-semibold text-gray-700">Tambahan</label>
+						<div class="grid grid-cols-2 gap-3">
+							{#each ekstraList as ekstra}
+								<button
+									type="button"
+									class="rounded-xl border-2 p-3 text-left transition-all duration-200 {menuForm.ekstra_ids.includes(
+										ekstra.id
+									)
+										? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-100'
+										: 'border-gray-200 bg-white hover:border-pink-300 hover:bg-pink-50'}"
+									onclick={() => toggleEkstra(ekstra.id)}
+								>
+									<div class="mb-0.5 text-sm font-medium text-gray-800">{ekstra.name}</div>
+									<div class="text-xs font-semibold text-pink-600">
+										+Rp {ekstra.harga?.toLocaleString('id-ID')}
+									</div>
+								</button>
+							{/each}
+						</div>
+					</div>
+				</form>
+
+				<!-- Fixed Action Buttons -->
+				<div class="flex flex-shrink-0 gap-3 border-t border-gray-100 bg-white p-6">
+					<button
+						type="submit"
+						form="menu-form"
+						class="flex-1 rounded-xl bg-pink-500 py-3 font-semibold text-white shadow-lg shadow-pink-200 transition-all duration-200 hover:bg-pink-600 active:bg-pink-700"
+					>
+						{editMenuId ? 'Update Menu' : 'Simpan Menu'}
+					</button>
+					<button
+						type="button"
+						class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+						onclick={closeMenuForm}
+					>
+						Batal
+					</button>
+				</div>
+			</div>[36m
+		</div>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1357:4
+[33mWarn[39m: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal mx-4 flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<!-- Header -->
+				<div class="flex-shrink-0 border-b border-gray-100 bg-white px-6 py-4">
+					<h2 class="text-center text-xl font-bold text-gray-800">
+						{editMenuId ? 'Edit Menu' : 'Tambah Menu Baru'}
+					</h2>
+				</div>
+
+				<!-- Scrollable Form Content -->
+				<form
+					id="menu-form"
+					class="flex flex-1 flex-col gap-6 overflow-y-auto p-6"
+					onsubmit={saveMenu}
+					autocomplete="off"
+				>
+					<!-- Preview Gambar Menu -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-image" class="text-sm font-semibold text-gray-700">Gambar Menu</label>
+						<div class="w-full">
+							<button
+								type="button"
+								class="group relative w-full cursor-pointer"
+								onclick={() => fileInputEl?.click()}
+							>
+								{#if menuForm.gambar}
+									<div class="relative w-full">
+										<img
+											src={menuForm.gambar}
+											alt="Preview Menu"
+											class="aspect-square w-full rounded-xl border-2 border-gray-200 object-cover shadow-sm"
+										/>
+										<!-- Floating Delete Button -->
+										<div
+											class="absolute top-2 right-2 z-10 cursor-pointer rounded-full bg-red-500 p-2 text-white shadow-lg transition-all duration-200 hover:bg-red-600"
+											role="button"
+											tabindex="0"
+											aria-label="Hapus gambar"
+											onclick={(e) => {
+												e.stopPropagation();
+												removeImage();
+											}}
+											onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+											onkeypress={(e) => e.key === 'Enter' && (e.stopPropagation(), removeImage())}
+										>
+											<svg
+												class="h-4 w-4"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												/>
+											</svg>
+										</div>
+										<div
+											class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-all duration-200 group-hover:opacity-100"
+										>
+											<div class="text-center">
+												<svg
+													class="mx-auto mb-2 h-8 w-8 text-white"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+													/>
+												</svg>
+												<span class="text-sm font-medium text-white">Klik untuk Ubah Gambar</span>
+											</div>
+										</div>
+									</div>
+								{:else}
+									<div
+										class="flex aspect-square w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition-all duration-200 group-hover:border-pink-300 group-hover:bg-gray-100"
+									>
+										<div class="text-center">
+											<svg
+												class="mx-auto mb-3 h-12 w-12 text-gray-400"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+												/>
+											</svg>
+											<span class="text-base font-medium text-gray-500"
+												>Klik untuk Upload Gambar</span
+											>
+											<p class="mt-1 text-xs text-gray-400">PNG, JPG, atau GIF (Max. 5MB)</p>
+										</div>
+									</div>
+								{/if}
+							</button>
+						</div>
+						<input
+							type="file"
+							accept="image/*"
+							class="hidden"
+							bind:this={fileInputEl}
+							onchange={handleFileChange}
+						/>
+					</div>
+
+					<!-- Nama Menu -->
+					<div class="flex flex-col gap-2">
+						<label for="menu-name" class="text-sm font-semibold text-gray-700">Nama Menu</label>
+						<input
+							type="text"
+							id="menu-name"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
+							bind:value={menuForm.name}
+							required
+							placeholder="Contoh: Es Teh Manis"
+						/>
+					</div>
+
+					<!-- Harga -->
+					<div class="flex flex-col gap-2">
+						<label for="menu-price" class="text-sm font-semibold text-gray-700">Harga</label>
+						<div class="relative">
+							<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
+								>Rp</span
+							>
+							<input
+								type="text"
+								id="menu-price"
+								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
+								bind:value={menuForm.price}
+								oninput={formatRupiahInput}
+								required
+								placeholder="0"
+							/>
+						</div>
+					</div>
+
+					<!-- Tipe Menu -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-type" class="text-sm font-semibold text-gray-700">Tipe Menu</label>
+						<div class="flex gap-3">
+							<button
+								type="button"
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
+								'minuman'
+									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+								onclick={() => setMenuType('minuman')}
+							>
+								<div class="flex items-center justify-center gap-2">
+									<span class="text-base">≡ƒÑñ</span>
+									<span class="text-sm">Minuman</span>
+								</div>
+							</button>
+							<button
+								type="button"
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
+								'makanan'
+									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+								onclick={() => setMenuType('makanan')}
+							>
+								<div class="flex items-center justify-center gap-2">
+									<span class="text-base">≡ƒì╜∩╕Å</span>
+									<span class="text-sm">Makanan</span>
+								</div>
+							</button>
+						</div>
+					</div>
+
+					<!-- Kategori -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-kategori" class="text-sm font-semibold text-gray-700">Kategori</label>
+						<div class="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
+							{#each kategoriList as kat}
+								<button
+									type="button"
+									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {menuForm.kategori_id ===
+									kat.id
+										? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
+										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
+									onclick={() => setMenuKategori(menuForm.kategori_id === kat.id ? null : kat.id)}
+								>
+									{kat.name}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Tambahan -->
+					<div class="flex flex-col gap-3">
+						<label for="menu-tambahan" class="text-sm font-semibold text-gray-700">Tambahan</label>
+						<div class="grid grid-cols-2 gap-3">
+							{#each ekstraList as ekstra}
+								<button
+									type="button"
+									class="rounded-xl border-2 p-3 text-left transition-all duration-200 {menuForm.ekstra_ids.includes(
+										ekstra.id
+									)
+										? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-100'
+										: 'border-gray-200 bg-white hover:border-pink-300 hover:bg-pink-50'}"
+									onclick={() => toggleEkstra(ekstra.id)}
+								>
+									<div class="mb-0.5 text-sm font-medium text-gray-800">{ekstra.name}</div>
+									<div class="text-xs font-semibold text-pink-600">
+										+Rp {ekstra.harga?.toLocaleString('id-ID')}
+									</div>
+								</button>
+							{/each}
+						</div>
+					</div>
+				</form>
+
+				<!-- Fixed Action Buttons -->
+				<div class="flex flex-shrink-0 gap-3 border-t border-gray-100 bg-white p-6">
+					<button
+						type="submit"
+						form="menu-form"
+						class="flex-1 rounded-xl bg-pink-500 py-3 font-semibold text-white shadow-lg shadow-pink-200 transition-all duration-200 hover:bg-pink-600 active:bg-pink-700"
+					>
+						{editMenuId ? 'Update Menu' : 'Simpan Menu'}
+					</button>
+					<button
+						type="button"
+						class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+						onclick={closeMenuForm}
+					>
+						Batal
+					</button>
+				</div>
+			</div>[36m
+		</div>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1608:22
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+		<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1607:22
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m	{#if showKategoriDetailModal}
+		<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1619:23
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+			<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1618:23
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		>
+			<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1620:4
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<!-- Header -->
+				<div class="flex-shrink-0 border-b border-gray-100 p-6">
+					<h2 class="text-center text-xl font-bold text-gray-800">
+						{kategoriDetail ? 'Edit Kategori' : 'Tambah Kategori'}
+					</h2>
+				</div>
+
+				<!-- Content -->
+				<div class="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+					<form
+						id="kategori-form"
+						class="flex flex-col gap-6"
+						onsubmit={saveKategoriDetail}
+						autocomplete="off"
+					>
+						<!-- Nama Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="kategori-name" class="mb-1 text-sm font-semibold text-gray-700"
+								>Nama Kategori</label
+							>
+							<input
+								type="text"
+								id="kategori-name"
+								class="w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-base placeholder-gray-400 shadow-sm transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+								bind:value={kategoriDetailName}
+								required
+								placeholder="Masukkan nama kategori"
+							/>
+						</div>
+
+						<!-- Menu dalam Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="menu-dalam-kategori" class="mb-1 text-sm font-semibold text-gray-700"
+								>Menu dalam Kategori</label
+							>
+							<div class="flex min-h-[48px] flex-wrap gap-2">
+								{#if selectedMenuIds.length > 0}
+									{#each menus.filter( (menu) => selectedMenuIds.includes(menu.id) ) as menu (menu.id)}
+										<button
+											type="button"
+											class="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 font-medium text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:outline-none"
+											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+											title={menu.name}
+											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
+											in:fly={{ y: 16, duration: 180 }}
+											out:fly={{ y: 16, duration: 180 }}
+										>
+											{menu.name}
+										</button>
+									{/each}
+								{:else}
+									<span class="text-sm text-gray-400 italic">Belum ada menu dalam kategori ini</span
+									>
+								{/if}
+							</div>
+						</div>
+
+						<!-- Menu non Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="menu-non-kategori" class="mb-1 text-sm font-semibold text-gray-700"
+								>Menu non Kategori</label
+							>
+							<div class="flex min-h-[48px] flex-wrap gap-2">
+								{#if unselectedMenuIds.length > 0}
+									{#each menus.filter( (menu) => unselectedMenuIds.includes(menu.id) ) as menu (menu.id)}
+										<button
+											type="button"
+											class="inline-flex items-center rounded-full border border-blue-200 bg-white px-4 py-2 font-medium text-blue-500 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus:ring-2 focus:ring-blue-100 focus:outline-none"
+											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+											title={menu.name}
+											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
+											in:fly={{ y: 16, duration: 180 }}
+											out:fly={{ y: 16, duration: 180 }}
+										>
+											{menu.name}
+										</button>
+									{/each}
+								{:else}
+									<span class="text-sm text-gray-400 italic">Semua menu sudah masuk kategori</span>
+								{/if}
+							</div>
+						</div>
+					</form>
+				</div>
+
+				<!-- Fixed Action Buttons -->
+				<div class="flex flex-shrink-0 gap-3 border-t border-gray-100 bg-white p-6">
+					<button
+						type="submit"
+						form="kategori-form"
+						class="flex-1 rounded-xl bg-blue-500 py-3 font-semibold text-white shadow-lg shadow-blue-200 transition-all duration-200 hover:bg-blue-600 active:bg-blue-700"
+					>
+						{kategoriDetail ? 'Update Kategori' : 'Simpan Kategori'}
+					</button>
+					<button
+						type="button"
+						class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+						onclick={closeKategoriDetailModal}
+					>
+						Batal
+					</button>
+				</div>
+			</div>[36m
+		</div>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1620:4
+[33mWarn[39m: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<!-- Header -->
+				<div class="flex-shrink-0 border-b border-gray-100 p-6">
+					<h2 class="text-center text-xl font-bold text-gray-800">
+						{kategoriDetail ? 'Edit Kategori' : 'Tambah Kategori'}
+					</h2>
+				</div>
+
+				<!-- Content -->
+				<div class="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+					<form
+						id="kategori-form"
+						class="flex flex-col gap-6"
+						onsubmit={saveKategoriDetail}
+						autocomplete="off"
+					>
+						<!-- Nama Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="kategori-name" class="mb-1 text-sm font-semibold text-gray-700"
+								>Nama Kategori</label
+							>
+							<input
+								type="text"
+								id="kategori-name"
+								class="w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-base placeholder-gray-400 shadow-sm transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+								bind:value={kategoriDetailName}
+								required
+								placeholder="Masukkan nama kategori"
+							/>
+						</div>
+
+						<!-- Menu dalam Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="menu-dalam-kategori" class="mb-1 text-sm font-semibold text-gray-700"
+								>Menu dalam Kategori</label
+							>
+							<div class="flex min-h-[48px] flex-wrap gap-2">
+								{#if selectedMenuIds.length > 0}
+									{#each menus.filter( (menu) => selectedMenuIds.includes(menu.id) ) as menu (menu.id)}
+										<button
+											type="button"
+											class="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 font-medium text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:outline-none"
+											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+											title={menu.name}
+											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
+											in:fly={{ y: 16, duration: 180 }}
+											out:fly={{ y: 16, duration: 180 }}
+										>
+											{menu.name}
+										</button>
+									{/each}
+								{:else}
+									<span class="text-sm text-gray-400 italic">Belum ada menu dalam kategori ini</span
+									>
+								{/if}
+							</div>
+						</div>
+
+						<!-- Menu non Kategori -->
+						<div class="flex flex-col gap-2">
+							<label for="menu-non-kategori" class="mb-1 text-sm font-semibold text-gray-700"
+								>Menu non Kategori</label
+							>
+							<div class="flex min-h-[48px] flex-wrap gap-2">
+								{#if unselectedMenuIds.length > 0}
+									{#each menus.filter( (menu) => unselectedMenuIds.includes(menu.id) ) as menu (menu.id)}
+										<button
+											type="button"
+											class="inline-flex items-center rounded-full border border-blue-200 bg-white px-4 py-2 font-medium text-blue-500 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus:ring-2 focus:ring-blue-100 focus:outline-none"
+											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+											title={menu.name}
+											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
+											in:fly={{ y: 16, duration: 180 }}
+											out:fly={{ y: 16, duration: 180 }}
+										>
+											{menu.name}
+										</button>
+									{/each}
+								{:else}
+									<span class="text-sm text-gray-400 italic">Semua menu sudah masuk kategori</span>
+								{/if}
+							</div>
+						</div>
+					</form>
+				</div>
+
+				<!-- Fixed Action Buttons -->
+				<div class="flex flex-shrink-0 gap-3 border-t border-gray-100 bg-white p-6">
+					<button
+						type="submit"
+						form="kategori-form"
+						class="flex-1 rounded-xl bg-blue-500 py-3 font-semibold text-white shadow-lg shadow-blue-200 transition-all duration-200 hover:bg-blue-600 active:bg-blue-700"
+					>
+						{kategoriDetail ? 'Update Kategori' : 'Simpan Kategori'}
+					</button>
+					<button
+						type="button"
+						class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+						onclick={closeKategoriDetailModal}
+					>
+						Batal
+					</button>
+				</div>
+			</div>[36m
+		</div>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1734:22
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+		<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1733:22
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m	{#if showEkstraForm}
+		<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1751:23
+[33mWarn[39m: `a11y-no-noninteractive-element-interactions` is no longer valid ΓÇö please use `a11y_no_noninteractive_element_interactions` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<!-- svelte-ignore [35ma11y-no-noninteractive-element-interactions[36m -->
+			<div
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1750:23
+[33mWarn[39m: `a11y-click-events-have-key-events` is no longer valid ΓÇö please use `a11y_click_events_have_key_events` instead
+https://svelte.dev/e/legacy_code (svelte)
+[36m		>
+			<!-- svelte-ignore [35ma11y-click-events-have-key-events[36m -->
+			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1752:4
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h2 class="mb-4 text-center text-lg font-bold text-gray-800">
+					{editEkstraId ? 'Edit Tambahan' : 'Tambah Tambahan'}
+				</h2>
+				<form class="flex flex-col gap-4" onsubmit={saveEkstra} autocomplete="off">
+					<div class="flex flex-col gap-2">
+						<label for="ekstra-name" class="font-semibold text-gray-700">Nama Tambahan</label>
+						<input
+							type="text"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
+							bind:value={ekstraForm.name}
+							required
+							placeholder="Contoh: Es Teh Manis"
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<label for="ekstra-harga" class="font-semibold text-gray-700">Harga Tambahan</label>
+						<div class="relative">
+							<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
+								>Rp</span
+							>
+							<input
+								type="text"
+								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
+								bind:value={ekstraForm.harga}
+								required
+								placeholder="0"
+							/>
+						</div>
+					</div>
+					<div class="mt-4 flex gap-2">
+						<button
+							type="submit"
+							class="flex-1 rounded-xl bg-green-500 py-3 font-semibold text-white shadow-lg shadow-green-200 transition-all duration-200 hover:bg-green-600 active:bg-green-700"
+							>Simpan</button
+						>
+						<button
+							type="button"
+							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+							onclick={() => {
+								showEkstraForm = false;
+								ekstraForm = { name: '', harga: '' };
+								editEkstraId = null;
+							}}>Batal</button
+						>
+					</div>
+				</form>
+			</div>[36m
+		</div>
+[39m
+
+d:\kulyeah\project\zatiaraspos\[32msrc\routes\pengaturan\pemilik\manajemenmenu\+page.svelte[39m:1752:4
+[33mWarn[39m: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+[36m			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+			[35m<div
+				class="animate-slideUpModal relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h2 class="mb-4 text-center text-lg font-bold text-gray-800">
+					{editEkstraId ? 'Edit Tambahan' : 'Tambah Tambahan'}
+				</h2>
+				<form class="flex flex-col gap-4" onsubmit={saveEkstra} autocomplete="off">
+					<div class="flex flex-col gap-2">
+						<label for="ekstra-name" class="font-semibold text-gray-700">Nama Tambahan</label>
+						<input
+							type="text"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
+							bind:value={ekstraForm.name}
+							required
+							placeholder="Contoh: Es Teh Manis"
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<label for="ekstra-harga" class="font-semibold text-gray-700">Harga Tambahan</label>
+						<div class="relative">
+							<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
+								>Rp</span
+							>
+							<input
+								type="text"
+								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
+								bind:value={ekstraForm.harga}
+								required
+								placeholder="0"
+							/>
+						</div>
+					</div>
+					<div class="mt-4 flex gap-2">
+						<button
+							type="submit"
+							class="flex-1 rounded-xl bg-green-500 py-3 font-semibold text-white shadow-lg shadow-green-200 transition-all duration-200 hover:bg-green-600 active:bg-green-700"
+							>Simpan</button
+						>
+						<button
+							type="button"
+							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
+							onclick={() => {
+								showEkstraForm = false;
+								ekstraForm = { name: '', harga: '' };
+								editEkstraId = null;
+							}}>Batal</button
+						>
+					</div>
+				</form>
+			</div>[36m
+		</div>
+[39m
+
+====================================
+[31msvelte-check found 4 errors and 28 warnings in 3 files
+[39mΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

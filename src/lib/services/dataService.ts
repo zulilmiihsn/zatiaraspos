@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '$lib/database/supabaseClient';
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
@@ -18,7 +19,7 @@ import {
 } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
-async function getCachedPosKas7Hari(supabase: any) {
+async function getCachedPosKas7Hari(supabase: SupabaseClient) {
 	const todayStr = getTodayWita();
 	const branch = storeGet(selectedBranch) || 'default';
 	const cacheKey = `pos_kas_7hari_${branch}_${todayStr}`;
@@ -59,7 +60,7 @@ async function getCachedPosKas7Hari(supabase: any) {
 }
 
 // Fungsi cache harian untuk rata-rata transaksi/hari
-async function getAvgTransaksiHarian(supabase: any): Promise<number> {
+async function getAvgTransaksiHarian(supabase: SupabaseClient): Promise<number> {
 	const todayStr = getTodayWita();
 	const branch = storeGet(selectedBranch) || 'default';
 	const cacheKey = `avg_transaksi_${branch}_${todayStr}`;
@@ -81,9 +82,9 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 	const kas7 = await getCachedPosKas7Hari(supabase);
 	let avgTransaksi = 0;
 	if (kas7) {
-		const transaksiPerHari: { [key: string]: Set<any> } = {};
+		const transaksiPerHari: { [key: string]: Set<string> } = {};
 		for (const tanggal of hariLabels) {
-			transaksiPerHari[tanggal] = new Set<any>();
+			transaksiPerHari[tanggal] = new Set<string>();
 		}
 		for (const t of kas7) {
 			const waktu = new Date(t.waktu);
@@ -95,7 +96,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 				transaksiPerHari[tanggal].add(t.transaction_id);
 			}
 		}
-		const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<any>[]).reduce(
+		const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<string>[]).reduce(
 			(sum, set) => sum + set.size,
 			0
 		);
@@ -106,7 +107,7 @@ async function getAvgTransaksiHarian(supabase: any): Promise<number> {
 }
 
 // Fungsi cache mingguan untuk jam paling ramai (7 hari terakhir)
-async function getJamRamaiMingguan(supabase: any): Promise<string> {
+async function getJamRamaiMingguan(supabase: SupabaseClient): Promise<string> {
 	const todayStr = getTodayWita();
 	const branch = storeGet(selectedBranch) || 'default';
 	const cacheKey = `jam_ramai_mingguan_${branch}_${todayStr}`;
@@ -150,7 +151,7 @@ async function getJamRamaiMingguan(supabase: any): Promise<string> {
 // Data service untuk fetching dengan smart caching
 export class DataService {
 	private static instance: DataService;
-	private supabase: any;
+	private supabase: SupabaseClient;
 	private isInitialLoad = true; // Add flag to prevent double fetching
 
 	constructor() {
@@ -223,20 +224,20 @@ export class DataService {
 					};
 				}
 
-				const itemTerjual = kasir?.reduce((sum: number, t: any) => sum + (t.qty || 1), 0) || 0;
+				const itemTerjual = kasir?.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.qty as number) || 1), 0) || 0;
 				const transactionIds = new Set(
-					(kas || []).map((t: any) => t.transaction_id).filter(Boolean)
+					(kas || []).map((t: Record<string, unknown>) => t.transaction_id as string).filter(Boolean)
 				);
 				const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-				const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+				const omzet = kas.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
 
 				// Profit riil sederhana (tanpa HPP): pemasukan - pengeluaran di hari ini
 				const pemasukan = (kas || [])
-					.filter((t: any) => t.tipe === 'in')
-					.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+					.filter((t: Record<string, unknown>) => t.tipe === 'in')
+					.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
 				const pengeluaran = (kas || [])
-					.filter((t: any) => t.tipe === 'out')
-					.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+					.filter((t: Record<string, unknown>) => t.tipe === 'out')
+					.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
 				const profit = pemasukan - pengeluaran;
 
 				// Ambil avgTransaksi dan jamRamai dari cache mingguan
@@ -300,9 +301,9 @@ export class DataService {
 					.gte('created_at', start7Utc)
 					.lte('created_at', end7LastUtc);
 
-				let bestSellersResult: any[] = [];
+				let bestSellersResult: { name: string; image: string; total_qty: number }[] = [];
 				if (!error && items) {
-					const grouped: { [key: string]: any } = {};
+					const grouped: Record<string, number> = {};
 					for (const item of items) {
 						if (!item.produk_id) continue;
 						if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
@@ -310,7 +311,7 @@ export class DataService {
 					}
 
 					const topProdukIds = Object.entries(grouped)
-						.sort((a: any, b: any) => b[1] - a[1])
+						.sort((a: [string, number], b: [string, number]) => b[1] - a[1])
 						.slice(0, 3)
 						.map(([produk_id]) => produk_id);
 
@@ -320,12 +321,12 @@ export class DataService {
 							.select('id, name, gambar');
 
 						const validProdukIds = topProdukIds.filter(
-							(id: string) => allProducts && allProducts.some((p: any) => p.id === id)
+							(id: string) => allProducts && allProducts.some((p: { id: string }) => p.id === id)
 						);
 
 						if (validProdukIds.length > 0) {
 							bestSellersResult = validProdukIds.map((produk_id: string) => {
-								const prod = allProducts.find((p: any) => p.id === produk_id);
+								const prod = (allProducts as { id: string; name?: string; gambar?: string }[]).find(p => p.id === produk_id);
 								return {
 									name: prod?.name || '-',
 									image: prod?.gambar || '',
@@ -585,18 +586,18 @@ export class DataService {
 				// PARALLEL PAGINATION: Ambil semua buku_kas sekali, lalu turunkan kategorinya di memori
 				const allBukuKas = await this.fetchAllDataParallel('buku_kas', startWita, endWita);
 
-				const posBukuKas = (allBukuKas || []).filter((item: any) => item?.sumber === 'pos');
+				const posBukuKas = (allBukuKas || []).filter((item: Record<string, unknown>) => item?.sumber === 'pos');
 				const manualItems = (allBukuKas || []).filter(
-					(item: any) => item?.sumber && item.sumber !== 'pos'
+					(item: Record<string, unknown>) => item?.sumber && item.sumber !== 'pos'
 				);
-				const uncategorizedItems = (allBukuKas || []).filter((item: any) => !item?.sumber);
+				const uncategorizedItems = (allBukuKas || []).filter((item: Record<string, unknown>) => !item?.sumber);
 
 				// Ambil detail transaksi kasir untuk POS yang sudah difilter
-				let posItems = [];
+				let posItems: Record<string, unknown>[] = [];
 				if (posBukuKas && posBukuKas.length > 0) {
 					// Gunakan buku_kas_id untuk relasi yang benar
-					const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
-					const bukuKasById = new Map(posBukuKas.map((bk: any) => [bk.id, bk]));
+					const bukuKasIds = posBukuKas.map((bk: Record<string, unknown>) => bk.id as string).filter(Boolean);
+					const bukuKasById = new Map(posBukuKas.map((bk: Record<string, unknown>) => [bk.id as string, bk]));
 					const transaksiKasirSelect =
 						'id,buku_kas_id,produk_id,custom_name,qty,amount,created_at,produk(name)';
 
@@ -625,38 +626,38 @@ export class DataService {
 					if (!errorTransaksiKasir && transaksiKasir) {
 						// Gabungkan data buku_kas dengan transaksi_kasir menggunakan buku_kas_id
 						posItems = transaksiKasir
-							.map((tk: any) => {
-								const bukuKas = bukuKasById.get(tk.buku_kas_id);
+							.map((tk: Record<string, unknown>) => {
+								const bukuKas = bukuKasById.get(tk.buku_kas_id as string);
 								return {
 									...tk,
 									buku_kas: bukuKas
 								};
 							})
-							.filter((item: any) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
+							.filter((item: Record<string, unknown>) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
 					} else {
 						posItems = [];
 					}
 				}
 
 				// Gunakan data yang lebih lengkap untuk laporan
-				const laporan: any[] = [];
+				const laporan: Record<string, unknown>[] = [];
 
 				// Tambahkan data POS dari transaksi_kasir
-				posItems.forEach((item: any) => {
+				posItems.forEach((item: Record<string, unknown>) => {
 					laporan.push({
 						...item,
 						sumber: 'pos',
-						payment_method: item.buku_kas?.payment_method,
-						waktu: item.buku_kas?.waktu,
-						jenis: item.buku_kas?.jenis,
-						tipe: item.buku_kas?.tipe,
-						description: item.produk?.name || item.custom_name || 'Item Custom',
+						payment_method: (item.buku_kas as any)?.payment_method,
+						waktu: (item.buku_kas as any)?.waktu,
+						jenis: (item.buku_kas as any)?.jenis,
+						tipe: (item.buku_kas as any)?.tipe,
+						description: (item.produk as any)?.name || item.custom_name || 'Item Custom',
 						nominal: item.amount || 0
 					});
 				});
 
 				// Tambahkan data manual/catat
-				(manualItems || []).forEach((item: any) => {
+				(manualItems || []).forEach((item: Record<string, unknown>) => {
 					laporan.push({
 						...item,
 						sumber: item.sumber || 'catat',
@@ -670,7 +671,7 @@ export class DataService {
 				});
 
 				// Tambahkan transaksi tanpa sumber agar tetap tampil pada laporan
-				uncategorizedItems.forEach((item: any) => {
+				uncategorizedItems.forEach((item: Record<string, unknown>) => {
 					laporan.push({
 						...item,
 						sumber: 'lainnya',
@@ -684,13 +685,13 @@ export class DataService {
 				});
 
 				// Pemasukan/pengeluaran per jenis
-				const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
-				const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+				const pemasukan = laporan.filter((t: Record<string, unknown>) => t.tipe === 'in');
+				const pengeluaran = laporan.filter((t: Record<string, unknown>) => t.tipe === 'out');
 
 				// Hitung total pemasukan dan pengeluaran
-				const totalPemasukan = pemasukan.reduce((sum: number, t: any) => sum + (t.nominal || 0), 0);
+				const totalPemasukan = pemasukan.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0), 0);
 				const totalPengeluaran = pengeluaran.reduce(
-					(sum: number, t: any) => sum + (t.nominal || 0),
+					(sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0),
 					0
 				);
 
@@ -712,10 +713,10 @@ export class DataService {
 						pajak,
 						labaBersih
 					},
-					pemasukanUsaha: pemasukan.filter((t: any) => t.jenis === 'pendapatan_usaha'),
-					pemasukanLain: pemasukan.filter((t: any) => t.jenis === 'lainnya'),
-					bebanUsaha: pengeluaran.filter((t: any) => t.jenis === 'beban_usaha'),
-					bebanLain: pengeluaran.filter((t: any) => t.jenis === 'lainnya'),
+					pemasukanUsaha: pemasukan.filter((t: Record<string, unknown>) => t.jenis === 'pendapatan_usaha'),
+					pemasukanLain: pemasukan.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),
+					bebanUsaha: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'beban_usaha'),
+					bebanLain: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),
 					transactions: laporan
 				};
 
@@ -726,7 +727,7 @@ export class DataService {
 	}
 
 	// Real-time data subscription
-	subscribeToRealtimeData(table: string, callback: (payload: any) => void) {
+	subscribeToRealtimeData(table: string, callback: (payload: Record<string, unknown>) => void) {
 		if (!browser) return null;
 
 		const subscription = this.supabase
@@ -809,8 +810,8 @@ export class DataService {
 		table: string,
 		startTime: string,
 		endTime: string,
-		additionalFilters: any = {}
-	): Promise<any[]> {
+		additionalFilters: Record<string, unknown> = {}
+	): Promise<Record<string, unknown>[]> {
 		try {
 			// First, get total count to determine how many batches we need
 			let query = this.supabase
@@ -826,8 +827,8 @@ export class DataService {
 					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
 					return;
 				}
-				if (typeof filter === 'object' && filter.neq) {
-					query = query.neq(key, filter.neq);
+				if (filter !== null && typeof filter === 'object' && 'neq' in filter) {
+					query = query.neq(key, (filter as { neq: unknown }).neq);
 				} else {
 					query = query.eq(key, filter);
 				}
@@ -887,8 +888,8 @@ export class DataService {
 		endTime: string,
 		offset: number,
 		limit: number,
-		additionalFilters: any = {}
-	): Promise<any[]> {
+		additionalFilters: Record<string, unknown> = {}
+	): Promise<Record<string, unknown>[]> {
 		try {
 			let query = this.supabase
 				.from(table)
@@ -905,8 +906,8 @@ export class DataService {
 					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
 					return;
 				}
-				if (typeof filter === 'object' && filter.neq) {
-					query = query.neq(key, filter.neq);
+				if (filter !== null && typeof filter === 'object' && 'neq' in filter) {
+					query = query.neq(key, (filter as { neq: unknown }).neq);
 				} else {
 					query = query.eq(key, filter);
 				}
@@ -1050,11 +1051,11 @@ export const dataService = DataService.getInstance();
 
 // Real-time subscription manager
 export class RealtimeManager {
-	private subscriptions = new Map<string, any>();
+	private subscriptions = new Map<string, RealtimeChannel>();
 	private pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
-	private latestPayload = new Map<string, any>();
+	private latestPayload = new Map<string, Record<string, unknown>>();
 
-	subscribe(table: string, callback: (payload: any) => void) {
+	subscribe(table: string, callback: (payload: Record<string, unknown>) => void) {
 		// Unsubscribe if already subscribed
 		if (this.subscriptions.has(table)) {
 			this.unsubscribe(table);
@@ -1072,13 +1073,15 @@ export class RealtimeManager {
 				this.latestPayload.delete(table);
 
 				await dataService.invalidateCacheOnChange(table);
-				callback(latest);
+				if (latest !== undefined) callback(latest);
 			}, 250);
 
 			this.pendingTimers.set(table, timerId);
 		});
 
-		this.subscriptions.set(table, subscription);
+		if (subscription) {
+			this.subscriptions.set(table, subscription);
+		}
 	}
 
 	unsubscribe(table: string) {
@@ -1143,7 +1146,7 @@ export async function syncPendingTransactions() {
 					await dataService.supabaseClient.from('buku_kas').insert(trx);
 				}
 				if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
-					const transaksiKasirWithId = trx.transaksiKasir.map((item: any) => ({
+					const transaksiKasirWithId = trx.transaksiKasir.map((item: Record<string, unknown>) => ({
 						...item,
 						buku_kas_id: bukuKasId
 					}));

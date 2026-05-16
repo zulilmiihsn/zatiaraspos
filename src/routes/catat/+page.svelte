@@ -31,13 +31,14 @@
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { dataService } from '$lib/services/dataService';
 
-	// Touch handling variables
+	import type { TokoSession } from '$lib/types';
+
 	let touchStartX = 0;
 	let touchStartY = 0;
 	let touchEndX = 0;
 	let touchEndY = 0;
 	let isSwiping = false;
-	let isTouchDevice = false;
+	let isTouchDevice = $state(false);
 	let clickBlocked = false;
 
 	const navs = [
@@ -47,25 +48,23 @@
 		{ label: 'Laporan', path: '/laporan' }
 	];
 
-	let mode: 'pemasukan' | 'pengeluaran' = 'pemasukan';
-	let paymentMethod: 'tunai' | 'non-tunai' = 'tunai';
-	let date = '';
-	let time = '';
-	let rawNominal = '';
-	let nominal = '';
-	let jenis = '';
-	let namaJenis = '';
-	let nama = '';
-	let error = '';
+	let mode = $state<'pemasukan' | 'pengeluaran'>('pemasukan');
+	let paymentMethod = $state<'tunai' | 'non-tunai'>('tunai');
+	let date = $state('');
+	let time = $state('');
+	let rawNominal = $state('');
+	let nominal = $state('');
+	let jenis = $state('');
+	let namaJenis = $state('');
+	let nama = $state('');
+	let error = $state('');
 
-	let showDropdown = false;
-
-	// Removed PIN Modal State (showPinModal, pin, errorTimeout, isClosing)
+	let showDropdown = $state(false);
 
 	// Toast notification state
-	let showToast = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
+	let showToast = $state(false);
+	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error' | 'warning' | 'info'>('success');
 
 	function showToastNotification(
 		message: string,
@@ -85,8 +84,8 @@
 		{ value: 'lainnya', label: 'Lainnya' }
 	];
 
-	let showSnackbar = false;
-	let snackbarMsg = '';
+	let showSnackbar = $state(false);
+	let snackbarMsg = $state('');
 
 	// Helper untuk tanggal lokal user (YYYY-MM-DD)
 	function getLocalDateString() {
@@ -97,10 +96,13 @@
 		return `${year}-${month}-${day}`;
 	}
 
-	let currentUserRole = '';
-	userRole.subscribe((val) => (currentUserRole = val || ''));
+	let currentUserRole = $state('');
+	$effect(() => {
+		const unsubscribe = userRole.subscribe((val) => (currentUserRole = val || ''));
+		return unsubscribe;
+	});
 
-	let sesiAktif: any = null;
+	let sesiAktif = $state<TokoSession | null>(null);
 	async function cekSesiTokoAktif() {
 		const { data } = await getSupabaseClient(storeGet(selectedBranch))
 			.from('sesi_toko')
@@ -109,7 +111,7 @@
 			.order('opening_time', { ascending: false })
 			.limit(1)
 			.maybeSingle();
-		sesiAktif = data || null;
+		sesiAktif = (data as TokoSession) || null;
 	}
 
 	onMount(async () => {
@@ -118,18 +120,7 @@
 			loadRouteIcons('catat');
 		});
 		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		// Hapus query role dari Supabase, gunakan store
-		// const { data: { session } } = await supabase.auth.getSession();
-		// const user = session?.user;
-		// userRole = '';
-		// if (user) {
-		//   const { data: profile } = await supabase
-		//     .from('profil')
-		//     .select('role')
-		//     .eq('id', user.id)
-		//     .single();
-		//   userRole = profile?.role || '';
-		// }
+		
 		// Jika role belum ada di store, coba validasi dengan Supabase
 		if (!currentUserRole) {
 			const {
@@ -146,25 +137,29 @@
 				}
 			}
 		}
-		// Removed fetchPin() and locked_pages check
-		// Ganti inisialisasi date agar pakai waktu lokal user
+		
 		date = getLocalDateString();
 		time = new Date().toTimeString().slice(0, 5);
 		jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
 		await cekSesiTokoAktif();
 	});
 
-	// Removed fetchPin()
-
-	let showNotifModal = false;
-	let notifModalMsg = '';
-	let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
+	let showNotifModal = $state(false);
+	let notifModalMsg = $state('');
+	let notifModalType = $state('warning'); // 'warning' | 'success' | 'error'
 
 	function closeNotifModal() {
 		showNotifModal = false;
 	}
 
-	async function saveTransaksi(form: any) {
+	async function saveTransaksi(form: {
+		amount: number;
+		description: string;
+		transaction_date: string;
+		transaction_time: string;
+		payment_method: string;
+		jenis: string;
+	}) {
 		await cekSesiTokoAktif();
 		const id_sesi_toko = sesiAktif?.id || null;
 		if (!id_sesi_toko && currentUserRole === 'kasir') {
@@ -187,15 +182,14 @@
 			tipe: mode === 'pemasukan' ? 'in' : 'out',
 			sumber: 'catat',
 			payment_method: form.payment_method,
-			amount: form.amount,
+			nominal: form.amount,
 			description: form.description,
 			id_sesi_toko,
-			// Perbaiki: Konversi waktu WITA ke UTC dengan benar
 			waktu: utcTime,
 			jenis: form.jenis
 		};
 		if (navigator.onLine) {
-			const { error, data } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(storeGet(selectedBranch))
 				.from('buku_kas')
 				.insert([trx]);
 			if (error) {
@@ -216,17 +210,17 @@
 		}
 	}
 
-	// Optimized reactive statements for better performance
-	// Inisialisasi default jenis saat mode berubah
-	$: if (
-		mode === 'pemasukan' &&
-		(!jenis || (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya'))
-	) {
-		jenis = 'pendapatan_usaha';
-	}
-	$: if (mode === 'pengeluaran' && (!jenis || (jenis !== 'beban_usaha' && jenis !== 'lainnya'))) {
-		jenis = 'beban_usaha';
-	}
+	$effect(() => {
+		if (mode === 'pemasukan') {
+			if (!jenis || (jenis !== 'pendapatan_usaha' && jenis !== 'lainnya')) {
+				jenis = 'pendapatan_usaha';
+			}
+		} else if (mode === 'pengeluaran') {
+			if (!jenis || (jenis !== 'beban_usaha' && jenis !== 'lainnya')) {
+				jenis = 'beban_usaha';
+			}
+		}
+	});
 
 	function handleTouchStart(e: TouchEvent) {
 		if (!isTouchDevice) return;

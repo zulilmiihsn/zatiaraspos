@@ -16,22 +16,21 @@
 	import PinModal from '$lib/components/shared/pinModal.svelte';
 	import { securitySettings } from '$lib/stores/securitySettings';
 
-	let dashboardData: {
-		omzet: number;
-		jumlahTransaksi: number;
-		profit: number;
-		itemTerjual: number;
-		totalItem: number;
-		avgTransaksi: number;
-		jamRamai: string;
-		weeklyIncome: number[];
-		weeklyMax: number;
-		bestSellers: { name: string; image?: string; total_qty: number }[];
-	} | null = null;
+	import type { 
+		DashboardStats, 
+		WeeklyIncomeData, 
+		BestSeller,
+		BukuKasRecord,
+		TokoSession
+	} from '$lib/types';
+	import type { ComponentType } from 'svelte';
 
-	let barsVisible = false;
-	let incomeChartRef: HTMLDivElement | null = null;
-	onMount(() => {
+	let dashboardData = $state<DashboardStats & WeeklyIncomeData & { bestSellers: BestSeller[] } | null>(null);
+
+	let barsVisible = $state(false);
+	let incomeChartRef = $state<HTMLDivElement | null>(null);
+	
+	$effect(() => {
 		if (incomeChartRef) {
 			const observer = new window.IntersectionObserver(
 				(entries) => {
@@ -47,33 +46,44 @@
 	});
 
 	// Lazy load icons
-	let Wallet: any, ShoppingBag: any, Coins: any, Users: any, Clock: any, TrendingUp: any;
-	let omzet = 0;
-	let jumlahTransaksi = 0;
-	let profit = 0;
-	let itemTerjual = 0;
-	let totalItem = 0;
-	let avgTransaksi = 0;
-	let jamRamai = '';
-	let weeklyIncome: number[] = [];
-	let weeklyMax = 1;
-	let bestSellers: { name: string; image?: string; total_qty: number }[] = [];
+	let Wallet = $state<ComponentType | null>(null);
+	let ShoppingBag = $state<ComponentType | null>(null);
+	let Coins = $state<ComponentType | null>(null);
+	let Users = $state<ComponentType | null>(null);
+	let Clock = $state<ComponentType | null>(null);
+	let TrendingUp = $state<ComponentType | null>(null);
+
+	let omzet = $state(0);
+	let jumlahTransaksi = $state(0);
+	let profit = $state(0);
+	let itemTerjual = $state(0);
+	let totalItem = $state(0);
+	let avgTransaksi = $state(0);
+	let jamRamai = $state('');
+	let weeklyIncome = $state<number[]>([]);
+	let weeklyMax = $state(1);
+	let bestSellers = $state<BestSeller[]>([]);
 
 	// Subscribe ke store
-	let currentUserRole = '';
-	let userProfileData: { role: string; username: string } | null = null;
+	let currentUserRole = $state('');
+	let userProfileData = $state<{ role: string; username: string } | null>(null);
 
-	userRole.subscribe((val) => (currentUserRole = val || ''));
-	userProfile.subscribe((val) => (userProfileData = val));
+	$effect(() => {
+		const unsubscribeRole = userRole.subscribe((val) => (currentUserRole = val || ''));
+		const unsubscribeProfile = userProfile.subscribe((val) => (userProfileData = val));
+		return () => {
+			unsubscribeRole();
+			unsubscribeProfile();
+		};
+	});
 
-	let isLoadingBestSellers = true;
-	let errorBestSellers = '';
-	let isLoadingDashboard = true;
-	let dashboardRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let isLoadingBestSellers = $state(true);
+	let errorBestSellers = $state('');
+	let isLoadingDashboard = $state(true);
+	let dashboardRefreshTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 	let dashboardRefreshInFlight = false;
 	let lastDashboardPayloadFingerprint = '';
 
-	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
 
 	onMount(async () => {
@@ -124,11 +134,10 @@
 				}
 			}
 		}
+	});
 
-		// Removed fetchPin() and locked_pages check
-
-		// Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-		unsubscribeBranch = selectedBranch.subscribe(async (newBranch) => {
+	$effect(() => {
+		const unsubscribe = selectedBranch.subscribe(async (newBranch) => {
 			// Skip jika ini adalah initial load
 			if (isInitialLoad) {
 				isInitialLoad = false;
@@ -153,17 +162,15 @@
 			// Fetch ulang data
 			await loadDashboardData();
 		});
-		// window.refreshDashboardData removed
+		return unsubscribe;
 	});
 
 	onDestroy(() => {
-		if (unsubscribeBranch) unsubscribeBranch();
 		realtimeManager.unsubscribeAll();
 		if (dashboardRefreshTimer) {
 			clearTimeout(dashboardRefreshTimer);
 			dashboardRefreshTimer = null;
 		}
-		// window.refreshDashboardData cleanup removed
 	});
 
 	function scheduleDashboardRealtimeRefresh(delayMs = 220) {
@@ -216,20 +223,20 @@
 	// Setup real-time subscriptions
 	function setupRealtimeSubscriptions() {
 		// Subscribe to buku_kas changes for real-time dashboard updates
-		realtimeManager.subscribe('buku_kas', async (payload) => {
+		realtimeManager.subscribe('buku_kas', async () => {
 			scheduleDashboardRealtimeRefresh();
 		});
 
 		// Subscribe to transaksi_kasir changes
-		realtimeManager.subscribe('transaksi_kasir', async (payload) => {
+		realtimeManager.subscribe('transaksi_kasir', async () => {
 			scheduleDashboardRealtimeRefresh();
 		});
 	}
 
 	function computeDashboardPayloadFingerprint(
-		data: any,
-		nextBestSellers: { name: string; image?: string; total_qty: number }[],
-		weeklyData: { weeklyIncome: number[]; weeklyMax: number }
+		data: DashboardStats | null,
+		nextBestSellers: BestSeller[],
+		weeklyData: WeeklyIncomeData
 	): string {
 		const weekly = Array.isArray(weeklyData?.weeklyIncome) ? weeklyData.weeklyIncome : [];
 		const sellers = Array.isArray(nextBestSellers) ? nextBestSellers : [];
@@ -253,7 +260,7 @@
 		].join('|');
 	}
 
-	function applyDashboardData(data: any) {
+	function applyDashboardData(data: DashboardStats | null) {
 		if (!data) return;
 		omzet = data.omzet;
 		jumlahTransaksi = data.jumlahTransaksi;
@@ -265,9 +272,9 @@
 	}
 
 	function applyDashboardPayload(
-		data: any,
-		nextBestSellers: { name: string; image?: string; total_qty: number }[],
-		weeklyData: { weeklyIncome: number[]; weeklyMax: number }
+		data: DashboardStats | null,
+		nextBestSellers: BestSeller[],
+		weeklyData: WeeklyIncomeData
 	) {
 		const nextFingerprint = computeDashboardPayloadFingerprint(data, nextBestSellers, weeklyData);
 		if (nextFingerprint === lastDashboardPayloadFingerprint) {
@@ -286,10 +293,7 @@
 		await loadDashboardData();
 	}
 
-	// Removed fetchPin()
-
-	// Data dummy, nanti diisi dari Supabase
-	let modalAwal: number | null = null;
+	let modalAwal = $state<number | null>(null);
 
 	// Touch handling variables
 	let touchStartX = 0;
@@ -297,7 +301,7 @@
 	let touchEndX = 0;
 	let touchEndY = 0;
 	let isSwiping = false;
-	let isTouchDevice = false;
+	let isTouchDevice = $state(false);
 	let clickBlocked = false;
 
 	const navs = [
@@ -307,31 +311,15 @@
 		{ label: 'Laporan', path: '/laporan' }
 	];
 
-	// Removed 'stats' array
-
-	let imageError: Record<number, boolean> = {};
+	let imageError = $state<Record<number, boolean>>({});
 
 	function handleImgError(index: number) {
 		imageError[index] = true;
 	}
 
-	// Hapus deklarasi let days = ...
-	// Tambahkan fungsi untuk generate label hari dinamis
-	function getLast7DaysLabels() {
-		const hari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-		const today = new Date();
-		let labels = [];
-		for (let i = 6; i >= 0; i--) {
-			const d = new Date(today);
-			d.setDate(today.getDate() - i);
-			labels.push(hari[d.getDay()]);
-		}
-		return labels;
-	}
-
 	function getLast7DaysLabelsWITA() {
 		const hari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-		const todayWITA = getTodayWITA();
+		const todayWITA = getTodayWitaDate();
 		let labels = [];
 		for (let i = 6; i >= 0; i--) {
 			const d = new Date(todayWITA);
@@ -341,12 +329,10 @@
 		return labels;
 	}
 
-	// Removed PIN Modal State (showPinModal, pin, isClosing)
-
 	// Toast notification state
-	let showToast = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
+	let showToast = $state(false);
+	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error' | 'warning' | 'info'>('success');
 
 	function showToastNotification(
 		message: string,
@@ -357,38 +343,26 @@
 		showToast = true;
 	}
 
-	let showTokoModal = false;
-	let isBukaToko = true; // true: buka toko, false: tutup toko
+	let showTokoModal = $state(false);
+	let isBukaToko = $state(true); // true: buka toko, false: tutup toko
 	// Verifikasi PIN untuk aksi kasir (buka/tutup)
-	let showActionPinModal = false;
-	let actionPin = '1234';
-	let modalAwalInput = '';
-	let pinInputToko = '';
-	let pinErrorToko = '';
-	let tokoAktifLocal = false;
-	let sesiAktif: {
-		id: string;
-		opening_cash: number;
-		opening_time: string;
-		is_active: boolean;
-	} | null = null;
-	let ringkasanTutup: {
-		modalAwal: number;
-		totalPenjualan: number;
-		pemasukanTunai: number;
-		pengeluaranTunai: number;
-		uangKasir: number;
-	} = {
+	let showActionPinModal = $state(false);
+	let actionPin = $state('1234');
+	let modalAwalInput = $state('');
+	let pinInputToko = $state('');
+	let pinErrorToko = $state('');
+	let tokoAktifLocal = $state(false);
+	let sesiAktif = $state<TokoSession | null>(null);
+	let ringkasanTutup = $state({
 		modalAwal: 0,
 		totalPenjualan: 0,
 		pemasukanTunai: 0,
 		pengeluaranTunai: 0,
 		uangKasir: 0
-	};
+	});
 
 	function updateTokoAktif(val: boolean) {
 		tokoAktifLocal = val;
-		// window.tokoAktif removed
 	}
 
 	async function cekSesiToko() {
@@ -399,7 +373,7 @@
 			.order('opening_time', { ascending: false })
 			.limit(1)
 			.maybeSingle();
-		sesiAktif = data || null;
+		sesiAktif = data as TokoSession | null;
 		updateTokoAktif(!!sesiAktif);
 		// Update modalAwal agar box di beranda selalu sinkron
 		modalAwal = sesiAktif?.opening_cash ?? null;
@@ -420,7 +394,7 @@
 	function handleOpenTokoModal() {
 		// Jika kasir, wajib verifikasi PIN dahulu (PIN dari pengaturan/securitySettings)
 		if (currentUserRole === 'kasir') {
-			const settingsVal: any = storeGet(securitySettings);
+			const settingsVal = storeGet(securitySettings);
 			actionPin = (settingsVal && settingsVal.pin) || '1234';
 			pendingAction = () => {
 				cekSesiToko().then(() => {
@@ -447,7 +421,7 @@
 	}
 
 	// Pending action setelah PIN benar
-	let pendingAction: (() => void) | null = null;
+	let pendingAction = $state<(() => void) | null>(null);
 
 	function handleActionPinSuccess() {
 		showActionPinModal = false;
@@ -481,33 +455,26 @@
 			.from('buku_kas')
 			.select('*')
 			.eq('id_sesi_toko', sesiAktif.id);
-		type Kas = {
-			payment_method?: string;
-			tipe?: string;
-			amount?: number;
-			transaction_date?: string;
-			id_sesi_toko?: string;
-			sumber?: string;
-		};
-		let kas: Kas[] = Array.isArray(kasRaw) ? kasRaw : [];
+		
+		let kas: BukuKasRecord[] = Array.isArray(kasRaw) ? kasRaw : [];
 
 		// Penjualan tunai (semua pemasukan tunai)
 		const penjualanTunai = kas
 			.filter((t) => t.tipe === 'in' && t.payment_method === 'tunai')
-			.reduce((a, b) => a + (b.amount || 0), 0);
+			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
 		// Pengeluaran tunai
 		const pengeluaranTunai = kas
 			.filter((t) => t.tipe === 'out' && t.payment_method === 'tunai')
-			.reduce((a, b) => a + (b.amount || 0), 0);
-		const modalAwal = sesiAktif.opening_cash || 0;
+			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
+		const modalAwalValue = sesiAktif.opening_cash || 0;
 		// Total penjualan = semua pemasukan (in) dari sumber pos
 		const totalPenjualan = kas
 			.filter((t) => t.tipe === 'in' && t.sumber === 'pos')
-			.reduce((a, b) => a + (b.amount || 0), 0);
+			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
 		// Uang kasir seharusnya
-		const uangKasir = modalAwal + penjualanTunai - pengeluaranTunai;
+		const uangKasir = modalAwalValue + penjualanTunai - pengeluaranTunai;
 		ringkasanTutup = {
-			modalAwal,
+			modalAwal: modalAwalValue,
 			totalPenjualan,
 			pemasukanTunai: penjualanTunai,
 			pengeluaranTunai,
@@ -571,7 +538,7 @@
 			const deltaX = Math.abs(touchEndX - touchStartX);
 			const deltaY = Math.abs(touchEndY - touchStartY);
 			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
+			const swipeThreshold = viewportWidth * 0.25; 
 			if (deltaX > swipeThreshold && deltaX > deltaY) {
 				isSwiping = true;
 				clickBlocked = true;
@@ -599,7 +566,7 @@
 			// Handle swipe navigation
 			const deltaX = touchEndX - touchStartX;
 			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
+			const swipeThreshold = viewportWidth * 0.25; 
 
 			if (Math.abs(deltaX) > swipeThreshold) {
 				const currentIndex = 0; // Beranda is index 0
@@ -636,24 +603,9 @@
 		modalAwalInput = value;
 	}
 
-	// New function to get the raw number from formatted input
-	function getModalAwalInputRaw() {
-		return Number(modalAwalInput.replace(/\./g, '')); // Remove dots and convert to number
-	}
-
-	// New function to set the raw number to formatted input
-	function getModalAwalInputFormatted() {
-		return modalAwalInput;
-	}
-
-	// New function to set the formatted value for binding
-	function setModalAwalInputFormatted(value: string) {
-		modalAwalInput = value;
-	}
-
-	let hideTopbar = false;
-	let topbarRef: HTMLDivElement | null = null;
-	let sentinelRef: HTMLDivElement | null = null;
+	let hideTopbar = $state(false);
+	let topbarRef = $state<HTMLDivElement | null>(null);
+	let sentinelRef = $state<HTMLDivElement | null>(null);
 	onMount(() => {
 		// Observer untuk sticky topbar
 		if (sentinelRef && topbarRef) {
@@ -668,9 +620,8 @@
 	});
 
 	// Fungsi untuk mendapatkan tanggal hari ini WITA (tanpa jam)
-	function getTodayWITA() {
+	function getTodayWitaDate() {
 		// Ambil waktu sekarang di Asia/Makassar (WITA)
-		const now = new Date();
 		const witaString = getNowWita();
 		const witaDate = new Date(witaString);
 		witaDate.setHours(0, 0, 0, 0); // Set ke jam 00:00:00
@@ -678,14 +629,13 @@
 	}
 
 	// Inisialisasi range 7 hari terakhir berdasarkan hari WITA
-	const todayWITA = getTodayWITA();
-	const sevenDaysAgoWITA = new Date(todayWITA);
-	sevenDaysAgoWITA.setDate(todayWITA.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
-	const startDate = sevenDaysAgoWITA.toISOString().slice(0, 10) + 'T00:00:00.000Z';
+	const todayWitaDate = getTodayWitaDate();
+	const sevenDaysAgoWita = new Date(todayWitaDate);
+	sevenDaysAgoWita.setDate(todayWitaDate.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
 
-	let selectedBarIndex: number | null = null;
-	let showBarInsight = false;
-	let barHoldTimeout: ReturnType<typeof setTimeout> | null = null;
+	let selectedBarIndex = $state<number | null>(null);
+	let showBarInsight = $state(false);
+	let barHoldTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 
 	function handleBarPointerDown(i: number) {
 		barHoldTimeout = setTimeout(() => {

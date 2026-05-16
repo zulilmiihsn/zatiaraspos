@@ -23,84 +23,84 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 
+	import type { Product, Category, AddOn } from '$lib/types/product';
+
 	// Data Menu
-	let menus: any[] = [];
-	let imageError: Record<string, boolean> = {};
-	let kategoriList: any[] = [];
-	let ekstraList: any[] = [];
-	let showMenuForm = false;
-	let showKategoriForm = false;
-	let showEkstraForm = false;
-	let editMenuId: any = null;
-	let editKategoriId = null;
-	let editEkstraId: any = null;
-	let menuForm = writable({
+	let menus = $state<Product[]>([]);
+	let imageError = $state<Record<string, boolean>>({});
+	let kategoriList = $state<Category[]>([]);
+	let ekstraList = $state<(AddOn & { harga: number })[]>([]);
+	let showMenuForm = $state(false);
+	let showKategoriForm = $state(false);
+	let showEkstraForm = $state(false);
+	let editMenuId = $state<number | null>(null);
+	let editKategoriId = $state<number | null>(null);
+	let editEkstraId = $state<number | null>(null);
+
+	let menuForm = $state({
 		name: '',
-		kategori_id: null as string | null,
-		tipe: 'minuman',
+		kategori_id: null as number | null,
+		tipe: 'minuman' as 'minuman' | 'makanan' | 'snack',
 		price: '',
-		ekstra_ids: [] as any[],
+		ekstra_ids: [] as number[],
 		gambar: ''
 	});
-	let kategoriForm = { name: '' };
-	let ekstraForm = { name: '', harga: '' };
-	let selectedKategori = 'Semua';
-	let searchKeyword = '';
-	let showDeleteModal = false;
-	let menuIdToDelete: number | null = null;
-	let selectedImage: File | null = null;
-	let croppedImage: string | null = null;
-	let showCropperDialog = false;
-	let cropperDialogImage = '';
-	let touchStartX = 0;
-	let touchEndX = 0;
-	let touchStartY = 0;
-	let menuTouchStartX = 0;
-	let menuTouchStartY = 0;
-	let menuTouchStartTime = 0;
-	let menuSwipeDetected = false;
-	let showDeleteKategoriModal = false;
-	let kategoriIdToDelete: number | null = null;
-	let showKategoriDetailModal = false;
-	let kategoriDetail: any = null;
-	let selectedMenuIds: number[] = [];
-	let unselectedMenuIds: number[] = [];
-	let kategoriDetailName = '';
-	let searchKategoriKeyword = '';
-	let searchEkstra = '';
-	let showDeleteEkstraModal = false;
-	let ekstraIdToDelete: any = null;
-	let kategoriTouchStartX = 0;
-	let kategoriTouchStartY = 0;
-	let kategoriTouchStartTime = 0;
-	let kategoriSwipeDetected = false;
-	let ekstraTouchStartX = 0;
-	let ekstraTouchStartY = 0;
-	let ekstraTouchStartTime = 0;
-	let ekstraSwipeDetected = false;
-	let isTouchDevice = false;
+
+	let kategoriForm = $state({ name: '' });
+	let ekstraForm = $state({ name: '', harga: '' });
+	let selectedKategori = $state<string | number>('Semua');
+	let searchKeyword = $state('');
+	let showDeleteModal = $state(false);
+	let menuIdToDelete = $state<number | null>(null);
+	let selectedImage = $state<File | null>(null);
+	let croppedImage = $state<string | null>(null);
+	let showCropperDialog = $state(false);
+	let cropperDialogImage = $state('');
+	let touchStartX = $state(0);
+	let touchEndX = $state(0);
+	let touchStartY = $state(0);
+	let menuTouchStartX = $state(0);
+	let menuTouchStartY = $state(0);
+	let menuTouchStartTime = $state(0);
+	let menuSwipeDetected = $state(false);
+	let showDeleteKategoriModal = $state(false);
+	let kategoriIdToDelete = $state<number | null>(null);
+	let showKategoriDetailModal = $state(false);
+	let kategoriDetail = $state<Category | null>(null);
+	let selectedMenuIds = $state<number[]>([]);
+	let unselectedMenuIds = $state<number[]>([]);
+	let kategoriDetailName = $state('');
+	let searchKategoriKeyword = $state('');
+	let searchEkstra = $state('');
+	let showDeleteEkstraModal = $state(false);
+	let ekstraIdToDelete = $state<number | null>(null);
+	let kategoriTouchStartX = $state(0);
+	let kategoriTouchStartY = $state(0);
+	let kategoriTouchStartTime = $state(0);
+	let kategoriSwipeDetected = $state(false);
+	let ekstraTouchStartX = $state(0);
+	let ekstraTouchStartY = $state(0);
+	let ekstraTouchStartTime = $state(0);
+	let ekstraSwipeDetected = $state(false);
+	let isTouchDevice = $state(false);
+
 	if (typeof window !== 'undefined') {
 		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 	}
-	let isGridView = true;
-	let showNotifModal = false;
-	let notifModalMsg = '';
-	let notifModalType = 'warning';
-	let isCropping = false;
-	let fileInputEl: any;
-	let activeTab = 'menu';
-	let isLoadingMenus = true;
-	let isLoadingKategori = true;
-	let isLoadingEkstra = true;
+	let isGridView = $state(true);
+	let showNotifModal = $state(false);
+	let notifModalMsg = $state('');
+	let notifModalType = $state('warning');
+	let isCropping = $state(false);
+	let fileInputEl = $state<HTMLInputElement | null>(null);
+	let activeTab = $state('menu');
+	let isLoadingMenus = $state(true);
+	let isLoadingKategori = $state(true);
+	let isLoadingEkstra = $state(true);
 	let unsubscribeBranch: (() => void) | null = null;
 
 	// Toast management
 	const toastManager = createToastManager();
-
-	// Toast notification state
-	let showToast = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
 
 	function showToastNotification(
 		message: string,
@@ -110,44 +110,42 @@
 	}
 
 	const memoizedKategoriWithCount = memoize(
-		(menus: any[], kategoriList: any[]) =>
-			kategoriList.map((kat: any) => ({
+		(menus: Product[], kategoriList: Category[]) =>
+			kategoriList.map((kat: Category) => ({
 				...kat,
-				count: menus.filter((m: any) => m.kategori_id === kat.id).length
+				count: menus.filter((m: Product) => (m as any).kategori_id === kat.id).length
 			})),
-		(menus: any[], kategoriList: any[]) => {
-			// Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
+		(menus: Product[], kategoriList: Category[]) => {
 			const menuKategoriMap = menus.map((m: any) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
 			const kategoriIds = kategoriList.map((k: any) => k.id).join(',');
 			return `${menuKategoriMap}-${kategoriIds}`;
 		}
 	);
 
-	$: kategoriWithCount = memoizedKategoriWithCount(menus, kategoriList);
+	let kategoriWithCount = $derived(memoizedKategoriWithCount(menus, kategoriList));
 
 	const memoizedFilteredMenus = memoize(
-		(menus: any[], kategoriList: any[], selectedKategori: string, searchKeyword: string) => {
+		(menus: Product[], kategoriList: Category[], selectedKategori: string | number, searchKeyword: string) => {
 			const keyword = searchKeyword.trim().toLowerCase();
-			return menus.filter((menu: any) => {
+			return menus.filter((menu) => {
 				if (!keyword)
 					return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
 				const kategoriNama =
-					kategoriList.find((k: any) => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
+					kategoriList.find((k) => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
 				const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
 				return (
 					(selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match
 				);
 			});
 		},
-		(menus: any[], kategoriList: any[], selectedKategori: string, searchKeyword: string) => {
-			// Buat cache key yang lebih granular untuk mendeteksi perubahan kategori individual menu
-			const menuKategoriMap = menus.map((m: any) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
-			const kategoriIds = kategoriList.map((k: any) => k.id).join(',');
+		(menus: Product[], kategoriList: Category[], selectedKategori: string | number, searchKeyword: string) => {
+			const menuKategoriMap = menus.map((m) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+			const kategoriIds = kategoriList.map((k) => k.id).join(',');
 			return `${menuKategoriMap}-${kategoriIds}-${selectedKategori}-${searchKeyword}`;
 		}
 	);
 
-	$: filteredMenus = memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword);
+	let filteredMenus = $derived(memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword));
 
 	async function fetchMenus() {
 		isLoadingMenus = true;
@@ -158,9 +156,6 @@
 				.order('created_at', { ascending: false });
 			if (error) throw error;
 			menus = data || [];
-
-			// Force reactivity update
-			menus = [...menus];
 		} catch (error: any) {
 			notifModalMsg = 'Gagal mengambil data menu: ' + (error?.message || 'Unknown error');
 			notifModalType = 'error';
@@ -194,7 +189,7 @@
 				.select('*')
 				.order('created_at', { ascending: false });
 			if (error) throw error;
-			ekstraList = (data || []).map((e) => ({ ...e, harga: e.price }));
+			ekstraList = (data || []).map((e: any) => ({ ...e, harga: e.price }));
 		} catch (error: any) {
 			notifModalMsg = 'Gagal mengambil data ekstra: ' + (error?.message || 'Unknown error');
 			notifModalType = 'error';
@@ -243,7 +238,7 @@
 		if (unsubscribeBranch) unsubscribeBranch();
 	});
 
-	function openMenuForm(menu: any = null): void {
+	function openMenuForm(menu: Product | null = null): void {
 		if (showMenuForm && menu && editMenuId === menu.id) {
 			return;
 		}
@@ -252,50 +247,49 @@
 			editMenuId = menu.id;
 			// Format harga untuk display jika ada
 			const formattedPrice = menu.price ? menu.price.toLocaleString('id-ID') : '';
-			$menuForm = { ...menu, price: formattedPrice, ekstra_ids: menu.ekstra_ids ?? [] };
+			menuForm.name = menu.name;
+			menuForm.kategori_id = (menu as any).kategori_id;
+			menuForm.tipe = menu.tipe;
+			menuForm.price = formattedPrice;
+			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
+			menuForm.gambar = menu.gambar || '';
 		} else {
 			editMenuId = null;
-			$menuForm = {
-				name: '',
-				kategori_id: null,
-				tipe: 'minuman',
-				price: '',
-				ekstra_ids: [],
-				gambar: ''
-			};
+			menuForm.name = '';
+			menuForm.kategori_id = null;
+			menuForm.tipe = 'minuman';
+			menuForm.price = '';
+			menuForm.ekstra_ids = [];
+			menuForm.gambar = '';
 		}
 	}
 
 	function closeMenuForm() {
 		showMenuForm = false;
 		editMenuId = null;
-		$menuForm = {
-			name: '',
-			kategori_id: null,
-			tipe: 'minuman',
-			price: '',
-			ekstra_ids: [],
-			gambar: ''
-		};
+		menuForm.name = '';
+		menuForm.kategori_id = null;
+		menuForm.tipe = 'minuman';
+		menuForm.price = '';
+		menuForm.ekstra_ids = [];
+		menuForm.gambar = '';
 	}
 
 	async function saveMenu() {
-		if (!$menuForm.name || $menuForm.name.toString().trim() === '') {
+		if (!menuForm.name || menuForm.name.trim() === '') {
 			notifModalMsg = 'Nama menu wajib diisi!';
 			notifModalType = 'warning';
 			showNotifModal = true;
 			return;
 		}
-		if (!$menuForm.price || $menuForm.price.toString().trim() === '') {
+		if (!menuForm.price || menuForm.price.toString().trim() === '') {
 			notifModalMsg = 'Harga menu wajib diisi!';
 			notifModalType = 'warning';
 			showNotifModal = true;
 			return;
 		}
-		if (!$menuForm.kategori_id || $menuForm.kategori_id.toString().trim() === '') {
-			$menuForm = { ...$menuForm, kategori_id: null };
-		}
-		let imageUrl = $menuForm.gambar;
+		
+		let imageUrl = menuForm.gambar;
 		if (imageUrl && imageUrl.startsWith('data:image/')) {
 			try {
 				imageUrl = await uploadMenuImageFromDataUrl(imageUrl, editMenuId || Date.now());
@@ -308,15 +302,17 @@
 		}
 		// Konversi harga dari format Rupiah ke angka
 		const priceValue =
-			typeof $menuForm.price === 'string'
-				? parseInt($menuForm.price.replace(/\./g, ''))
-				: parseInt($menuForm.price);
+			typeof menuForm.price === 'string'
+				? parseInt(menuForm.price.replace(/\./g, ''))
+				: parseInt(menuForm.price);
 
 		const payload = {
-			...$menuForm,
-			gambar: imageUrl,
+			name: menuForm.name,
+			kategori_id: menuForm.kategori_id,
+			tipe: menuForm.tipe,
 			price: priceValue,
-			ekstra_ids: $menuForm.ekstra_ids
+			ekstra_ids: menuForm.ekstra_ids,
+			gambar: imageUrl
 		};
 		let result;
 		try {
@@ -346,9 +342,6 @@
 		// Force refresh data dan clear memoization
 		await fetchMenus();
 
-		// Force reactivity update untuk memastikan UI ter-update
-		menus = [...menus];
-
 		await afterUpdateCachePOS();
 		clearMemoizationCache();
 	}
@@ -369,9 +362,11 @@
 				const menu = menus.find((m) => m.id === menuIdToDelete);
 				if (menu?.gambar) {
 					const path = menu.gambar.split('/').pop();
-					await getSupabaseClient(storeGet(selectedBranch))
-						.storage.from('gambar-menu')
-						.remove([path]);
+					if (path) {
+						await getSupabaseClient(storeGet(selectedBranch))
+							.storage.from('gambar-menu')
+							.remove([path]);
+					}
 				}
 				const { error } = await getSupabaseClient(storeGet(selectedBranch))
 					.from('produk')
@@ -399,9 +394,6 @@
 			// Force refresh data dan clear memoization
 			await fetchMenus();
 
-			// Force reactivity update untuk memastikan UI ter-update
-			menus = [...menus];
-
 			await afterUpdateCachePOS();
 			clearMemoizationCache();
 		}
@@ -417,7 +409,7 @@
 		touchEndX = 0;
 	}
 
-	function openKategoriForm(kat: any) {
+	function openKategoriForm(kat: Category | null) {
 		if (!kat) {
 			kategoriDetail = null;
 			showKategoriDetailModal = true;
@@ -434,10 +426,6 @@
 			.filter((m) => !m.kategori_id)
 			.map((m) => m.id)
 			.filter((id) => !selectedMenuIds.includes(id));
-
-		// Force reactivity update untuk memastikan data terbaru
-		selectedMenuIds = [...selectedMenuIds];
-		unselectedMenuIds = [...unselectedMenuIds];
 	}
 
 	function closeKategoriDetailModal() {
@@ -486,10 +474,6 @@
 		// Force refresh data dan clear memoization
 		await fetchKategori();
 		await fetchMenus();
-
-		// Force reactivity update untuk memastikan UI ter-update
-		menus = [...menus];
-		kategoriList = [...kategoriList];
 
 		// Force refresh data setelah perubahan kategori
 		await forceRefreshAfterCategoryChange();
@@ -546,10 +530,6 @@
 				await fetchKategori();
 				await fetchMenus();
 
-				// Force reactivity update untuk memastikan UI ter-update
-				menus = [...menus];
-				kategoriList = [...kategoriList];
-
 				await afterUpdateCachePOS();
 				clearMemoizationCache();
 
@@ -573,14 +553,16 @@
 		touchEndX = 0;
 	}
 
-	function openEkstraForm(ekstra: any = null) {
+	function openEkstraForm(ekstra: (AddOn & { harga: number }) | null = null) {
 		showEkstraForm = true;
 		if (ekstra) {
 			editEkstraId = ekstra.id;
-			ekstraForm = { ...ekstra, harga: ekstra.harga.toLocaleString('id-ID') };
+			ekstraForm.name = ekstra.name;
+			ekstraForm.harga = ekstra.harga.toLocaleString('id-ID');
 		} else {
 			editEkstraId = null;
-			ekstraForm = { name: '', harga: '' };
+			ekstraForm.name = '';
+			ekstraForm.harga = '';
 		}
 	}
 
@@ -613,11 +595,9 @@
 			}
 			await fetchEkstra();
 			showEkstraForm = false;
-			ekstraForm = { name: '', harga: '' };
+			ekstraForm.name = '';
+			ekstraForm.harga = '';
 			editEkstraId = null;
-
-			// Force reactivity update untuk memastikan UI ter-update
-			ekstraList = [...ekstraList];
 		} catch (error) {
 			notifModalMsg = 'Gagal menyimpan ekstra: ' + ErrorHandler.extractErrorMessage(error);
 			notifModalType = 'error';
@@ -626,7 +606,7 @@
 		await afterUpdateCachePOS();
 	}
 
-	function confirmDeleteEkstra(id: any) {
+	function confirmDeleteEkstra(id: number) {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('click', blockNextClick, true);
 		}
@@ -647,9 +627,6 @@
 
 			// Force refresh data dan clear memoization
 			await fetchEkstra();
-
-			// Force reactivity update untuk memastikan UI ter-update
-			ekstraList = [...ekstraList];
 
 			await afterUpdateCachePOS();
 			clearMemoizationCache();
@@ -685,8 +662,8 @@
 		reader.readAsDataURL(file);
 	}
 
-	function handleCropperDone(e: CustomEvent) {
-		$menuForm = { ...$menuForm, gambar: e.detail.cropped };
+	function handleCropperDone(data: { cropped: string }) {
+		menuForm.gambar = data.cropped;
 		showCropperDialog = false;
 		cropperDialogImage = '';
 		isCropping = false;
@@ -700,7 +677,7 @@
 	}
 
 	function removeImage() {
-		$menuForm = { ...$menuForm, gambar: '' };
+		menuForm.gambar = '';
 		if (fileInputEl) {
 			fileInputEl.value = '';
 		}
@@ -714,26 +691,25 @@
 			const numericValue = parseInt(value);
 			// Tampilkan format Rupiah untuk user
 			const formattedValue = numericValue.toLocaleString('id-ID');
-			$menuForm = { ...$menuForm, price: formattedValue };
+			menuForm.price = formattedValue;
 		} else {
-			$menuForm = { ...$menuForm, price: '' };
+			menuForm.price = '';
 		}
 	}
 
 	function handleImgError(menuId: string | number) {
 		imageError[menuId] = true;
-		imageError = imageError; // trigger reactivity
 	}
 
-	function handleKategoriClick(e: Event, kat: any) {
+	function handleKategoriClick(e: Event, kat: Category) {
 		// Handle kategori click if needed
 	}
 
-	function handleEkstraClick(e: Event, ekstra: any) {
+	function handleEkstraClick(e: Event, ekstra: AddOn) {
 		// Handle ekstra click if needed
 	}
 
-	function toggleMenuInKategoriRealtime(menuId: any) {
+	function toggleMenuInKategoriRealtime(menuId: number) {
 		if (selectedMenuIds.includes(menuId)) {
 			selectedMenuIds = selectedMenuIds.filter((id) => id !== menuId);
 			unselectedMenuIds = [...unselectedMenuIds, menuId];
@@ -741,13 +717,9 @@
 			unselectedMenuIds = unselectedMenuIds.filter((id) => id !== menuId);
 			selectedMenuIds = [...selectedMenuIds, menuId];
 		}
-
-		// Force reactivity update
-		selectedMenuIds = [...selectedMenuIds];
-		unselectedMenuIds = [...unselectedMenuIds];
 	}
 
-	async function updateMenusKategori(kategoriId: any, menuIds: any[], oldKategoriId: any) {
+	async function updateMenusKategori(kategoriId: number | null, menuIds: number[], oldKategoriId: number | null) {
 		try {
 			// Update menu kategori untuk menu yang dipilih
 			for (const menuId of menuIds) {
@@ -777,7 +749,7 @@
 		}
 	}
 
-	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: any) {
+	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: number) {
 		const res = await fetch(dataUrl);
 		const blob = await res.blob();
 		const filePath = `menu-${menuId}-${Date.now()}.jpg`;
@@ -797,22 +769,19 @@
 	}
 
 	// Helper functions for modal buttons
-	function setMenuType(type: any) {
-		$menuForm = { ...$menuForm, tipe: type };
+	function setMenuType(type: 'minuman' | 'makanan' | 'snack') {
+		menuForm.tipe = type;
 	}
 
-	function setMenuKategori(kategoriId: any) {
-		$menuForm = { ...$menuForm, kategori_id: kategoriId };
+	function setMenuKategori(kategoriId: number | null) {
+		menuForm.kategori_id = kategoriId;
 	}
 
-	function toggleEkstra(ekstraId: any) {
-		if ($menuForm.ekstra_ids.includes(ekstraId)) {
-			$menuForm = {
-				...$menuForm,
-				ekstra_ids: $menuForm.ekstra_ids.filter((id) => id !== ekstraId)
-			};
+	function toggleEkstra(ekstraId: number) {
+		if (menuForm.ekstra_ids.includes(ekstraId)) {
+			menuForm.ekstra_ids = menuForm.ekstra_ids.filter((id) => id !== ekstraId);
 		} else {
-			$menuForm = { ...$menuForm, ekstra_ids: [...$menuForm.ekstra_ids, ekstraId] };
+			menuForm.ekstra_ids = [...menuForm.ekstra_ids, ekstraId];
 		}
 	}
 
@@ -852,10 +821,6 @@
 		await fetchKategori();
 		await fetchMenus();
 
-		// Force reactivity update
-		menus = [...menus];
-		kategoriList = [...kategoriList];
-
 		// Clear memoization cache
 		clearMemoizationCache();
 
@@ -864,11 +829,15 @@
 	}
 
 	// Tambahkan auto-dismiss 2 detik untuk notif
-	$: if (showNotifModal) {
-		const timeout = setTimeout(() => {
-			showNotifModal = false;
-		}, 2000);
-	}
+	$effect(() => {
+		if (showNotifModal) {
+			const timeout = setTimeout(() => {
+				showNotifModal = false;
+			}, 2000);
+			return () => clearTimeout(timeout);
+		}
+	});
+
 </script>
 
 {#if toastManager.showToast}
@@ -1413,10 +1382,10 @@
 								class="group relative w-full cursor-pointer"
 								onclick={() => fileInputEl?.click()}
 							>
-								{#if $menuForm.gambar}
+								{#if menuForm.gambar}
 									<div class="relative w-full">
 										<img
-											src={$menuForm.gambar}
+											src={menuForm.gambar}
 											alt="Preview Menu"
 											class="aspect-square w-full rounded-xl border-2 border-gray-200 object-cover shadow-sm"
 										/>
@@ -1511,7 +1480,7 @@
 							type="text"
 							id="menu-name"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
-							bind:value={$menuForm.name}
+							bind:value={menuForm.name}
 							required
 							placeholder="Contoh: Es Teh Manis"
 						/>
@@ -1528,7 +1497,7 @@
 								type="text"
 								id="menu-price"
 								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
-								bind:value={$menuForm.price}
+								bind:value={menuForm.price}
 								oninput={formatRupiahInput}
 								required
 								placeholder="0"
@@ -1542,7 +1511,7 @@
 						<div class="flex gap-3">
 							<button
 								type="button"
-								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {$menuForm.tipe ===
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
 								'minuman'
 									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
@@ -1555,7 +1524,7 @@
 							</button>
 							<button
 								type="button"
-								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {$menuForm.tipe ===
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {menuForm.tipe ===
 								'makanan'
 									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
@@ -1576,11 +1545,11 @@
 							{#each kategoriList as kat}
 								<button
 									type="button"
-									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {$menuForm.kategori_id ===
+									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {menuForm.kategori_id ===
 									kat.id
 										? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
-									onclick={() => setMenuKategori($menuForm.kategori_id === kat.id ? null : kat.id)}
+									onclick={() => setMenuKategori(menuForm.kategori_id === kat.id ? null : kat.id)}
 								>
 									{kat.name}
 								</button>
@@ -1595,7 +1564,7 @@
 							{#each ekstraList as ekstra}
 								<button
 									type="button"
-									class="rounded-xl border-2 p-3 text-left transition-all duration-200 {$menuForm.ekstra_ids.includes(
+									class="rounded-xl border-2 p-3 text-left transition-all duration-200 {menuForm.ekstra_ids.includes(
 										ekstra.id
 									)
 										? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-100'
@@ -1919,22 +1888,15 @@
 		/>
 	{/if}
 
-	<!-- Toast Notification -->
-	<ToastNotification
-		show={showToast}
-		message={toastMessage}
-		type={toastType}
-		duration={2000}
-		position="top"
-	/>
+
 
 	<!-- Komponen upload/crop gambar menu -->
 	{#if showCropperDialog}
 		<CropperDialog
 			src={cropperDialogImage}
-			open={true}
-			on:done={handleCropperDone}
-			on:cancel={handleCropperCancel}
+			bind:open={showCropperDialog}
+			ondone={handleCropperDone}
+			oncancel={handleCropperCancel}
 		/>
 	{/if}
 </div>

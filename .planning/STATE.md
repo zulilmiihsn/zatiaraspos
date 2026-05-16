@@ -2,10 +2,10 @@
 *File ini adalah "memori" proyek. Update setiap kali ada perubahan signifikan.*
 
 ## 📌 Status Saat Ini
-- **Tanggal**: 2026-04-05
+- **Tanggal**: 2026-05-17
 - **Milestone**: v2.0 — Stabilisasi & Quality
-- **Phase Aktif**: Phase 1 — Audit & Alignment
-- **Pekerjaan Terakhir**: Setup GSD + Context7 MCP
+- **Phase Aktif**: Phase 2 & 3 — Type Safety & Svelte 5 Migration
+- **Pekerjaan Terakhir**: Migrasi Svelte 5 Runes ($state, $derived) dan pembersihan tipe `any` di `manajemenmenu`, `dashboard`, `catat`, dan `riwayat`. Sinkronisasi GSD Plan.
 
 ## 🛠️ Setup Yang Sudah Selesai
 - ✅ Context7 MCP terpasang di `mcp_config.json` dengan API key

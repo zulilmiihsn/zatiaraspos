@@ -15,14 +15,29 @@
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
+	import type { BukuKasRecord, ReceiptSettings } from '$lib/types/laporan';
+
+	interface HistoryItem {
+		id: string;
+		transaction_id?: string;
+		waktu: string;
+		nama: string;
+		nominal: number;
+		amount: number;
+		tipe: string;
+		sumber: string;
+		payment_method: string;
+		customer_name: string;
+	}
+
 	// ─── State ─────────────────────────────────────────────────────────────
-	let pengaturanStruk: any = $state(null);
-	let transaksiHariIni: any[] = $state([]);
-	let loading: boolean = $state(true);
-	let searchKeyword: string = $state('');
-	let filterPayment: string = $state('all');
-	let showDetailModal: boolean = $state(false);
-	let selectedTransaksi: any = $state(null);
+	let pengaturanStruk = $state<ReceiptSettings | null>(null);
+	let transaksiHariIni = $state<HistoryItem[]>([]);
+	let loading = $state(true);
+	let searchKeyword = $state('');
+	let filterPayment = $state('all');
+	let showDetailModal = $state(false);
+	let selectedTransaksi = $state<HistoryItem | null>(null);
 
 	const toastManager = createToastManager();
 	const paymentOptions = [
@@ -49,36 +64,36 @@
 				.order('waktu', { ascending: false });
 
 			if (data && !error) {
-				let hasil = data.map((t: any) => ({
+				let hasil: HistoryItem[] = data.map((t: BukuKasRecord) => ({
 					id: t.id,
-					transaction_id: t.transaction_id,
-					waktu: t.waktu,
-					nama: t.description || t.customer_name || t.nama || '-',
-					nominal: t.amount || t.nominal,
-					amount: t.amount || t.nominal,
-					tipe: t.tipe || t.type,
+					transaction_id: t.ref_transaksi_kasir_id || (t as any).transaction_id,
+					waktu: t.waktu || t.created_at,
+					nama: t.description || (t as any).customer_name || (t as any).nama || '-',
+					nominal: t.nominal || t.amount || 0,
+					amount: t.nominal || t.amount || 0,
+					tipe: t.tipe,
 					sumber: t.sumber || 'catat',
 					payment_method: t.payment_method || 'tunai',
-					customer_name: t.customer_name || ''
+					customer_name: (t as any).customer_name || ''
 				}));
 
 				// Sort terbaru dulu
-				hasil.sort((a: any, b: any) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
+				hasil.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 				// Filter nominal > 0
 				hasil = hasil.filter(
-					(t: any) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0)
+					(t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0)
 				);
 
 				// Filter search keyword
 				if (searchKeyword.trim()) {
 					const keyword = searchKeyword.trim().toLowerCase();
-					hasil = hasil.filter((t: any) => t.nama?.toLowerCase().includes(keyword));
+					hasil = hasil.filter((t) => t.nama?.toLowerCase().includes(keyword));
 				}
 
 				// Filter payment method
 				if (filterPayment !== 'all') {
-					hasil = hasil.filter((t: any) => {
+					hasil = hasil.filter((t) => {
 						if (filterPayment === 'qris')
 							return t.payment_method === 'qris' || t.payment_method === 'non-tunai';
 						if (filterPayment === 'tunai') return t.payment_method === 'tunai';
@@ -103,7 +118,7 @@
 		if (!loading) fetchTransaksiHariIni();
 	}
 
-	function openDetail(trx: any) {
+	function openDetail(trx: HistoryItem) {
 		selectedTransaksi = { ...trx };
 		showDetailModal = true;
 	}
