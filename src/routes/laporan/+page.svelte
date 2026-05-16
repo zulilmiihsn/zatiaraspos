@@ -30,8 +30,7 @@
 	let FilterIcon: any = null;
 
 	// Subscribe ke store
-	let currentUserRole = '';
-	let userProfileData: { role: string; username: string } | null = null;
+
 		let isInitialLoad = true; // Add flag to prevent double fetching
 	let laporanRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let laporanRefreshInFlight = false;
@@ -126,8 +125,8 @@
 		return html;
 	}
 
-	$: currentUserRole = userRole.value || '';
-	$: userProfileData = userProfile.value as { role: string; username: string } | null;
+	let currentUserRole = $derived(userRole.value || '');
+	let userProfileData = $derived(userProfile.value as { role: string; username: string } | null);
 
 	// AI Chat functions
 
@@ -427,7 +426,7 @@
 		};
 	});
 
-	$: {
+	$effect(() => {
 		let _branch = selectedBranch.value;
 		if (typeof window !== 'undefined') {
 			if (isInitialLoad) {
@@ -436,7 +435,7 @@
 				void scheduleLaporanRefresh(120, true);
 			}
 		}
-	}
+	});
 
 	onDestroy(() => {
 		// Unsubscribe dari realtime
@@ -518,57 +517,57 @@
 	let laporan: BukuKasRecord[] = [];
 
 	// Tambahan: Data transaksi kas terstruktur untuk accordion
-	$: pemasukanUsahaDetail = laporan.filter(
+	let pemasukanUsahaDetail = $derived(laporan.filter(
 		(t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'pendapatan_usaha'
-	);
-	$: pemasukanLainDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'lainnya');
-	$: bebanUsahaDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'beban_usaha');
-	$: bebanLainDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'lainnya');
+	));
+	let pemasukanLainDetail = $derived(laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'lainnya'));
+	let bebanUsahaDetail = $derived(laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'beban_usaha'));
+	let bebanLainDetail = $derived(laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'lainnya'));
 
-	$: pemasukanUsahaQris = pemasukanUsahaDetail.filter((t) => t.payment_method === 'non-tunai');
-	$: pemasukanUsahaTunai = pemasukanUsahaDetail.filter((t) => t.payment_method === 'tunai');
-	$: pemasukanLainQris = pemasukanLainDetail.filter((t) => t.payment_method === 'non-tunai');
-	$: pemasukanLainTunai = pemasukanLainDetail.filter((t) => t.payment_method === 'tunai');
+	let pemasukanUsahaQris = $derived(pemasukanUsahaDetail.filter((t) => t.payment_method === 'non-tunai'));
+	let pemasukanUsahaTunai = $derived(pemasukanUsahaDetail.filter((t) => t.payment_method === 'tunai'));
+	let pemasukanLainQris = $derived(pemasukanLainDetail.filter((t) => t.payment_method === 'non-tunai'));
+	let pemasukanLainTunai = $derived(pemasukanLainDetail.filter((t) => t.payment_method === 'tunai'));
 
-	$: bebanUsahaQris = bebanUsahaDetail.filter((t) => t.payment_method === 'non-tunai');
-	$: bebanUsahaTunai = bebanUsahaDetail.filter((t) => t.payment_method === 'tunai');
-	$: bebanLainQris = bebanLainDetail.filter((t) => t.payment_method === 'non-tunai');
-	$: bebanLainTunai = bebanLainDetail.filter((t) => t.payment_method === 'tunai');
+	let bebanUsahaQris = $derived(bebanUsahaDetail.filter((t) => t.payment_method === 'non-tunai'));
+	let bebanUsahaTunai = $derived(bebanUsahaDetail.filter((t) => t.payment_method === 'tunai'));
+	let bebanLainQris = $derived(bebanLainDetail.filter((t) => t.payment_method === 'non-tunai'));
+	let bebanLainTunai = $derived(bebanLainDetail.filter((t) => t.payment_method === 'tunai'));
 
 	// Reactive statements untuk total QRIS/Tunai
-	$: totalQrisAll = [
+	let totalQrisAll = $derived([
 		...pemasukanUsahaDetail,
 		...pemasukanLainDetail,
 		...bebanUsahaDetail,
 		...bebanLainDetail
 	]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiAll = [
+	let totalTunaiAll = $derived([
 		...pemasukanUsahaDetail,
 		...pemasukanLainDetail,
 		...bebanUsahaDetail,
 		...bebanLainDetail
 	]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
+	let totalQrisPemasukan = $derived([...pemasukanUsahaDetail, ...pemasukanLainDetail]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
+	let totalTunaiPemasukan = $derived([...pemasukanUsahaDetail, ...pemasukanLainDetail]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
+	let totalQrisPengeluaran = $derived([...bebanUsahaDetail, ...bebanLainDetail]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
+	let totalTunaiPengeluaran = $derived([...bebanUsahaDetail, ...bebanLainDetail]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
 	// Memoize untuk summary box
 	const memoizedSummary = memoize(
@@ -697,37 +696,37 @@
 	}
 
 	// Reactive statements untuk total QRIS/Tunai per sub-group
-	$: totalQrisPendapatanUsaha = pemasukanUsahaDetail
+	let totalQrisPendapatanUsaha = $derived(pemasukanUsahaDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiPendapatanUsaha = pemasukanUsahaDetail
+	let totalTunaiPendapatanUsaha = $derived(pemasukanUsahaDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalQrisPemasukanLain = pemasukanLainDetail
+	let totalQrisPemasukanLain = $derived(pemasukanLainDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiPemasukanLain = pemasukanLainDetail
+	let totalTunaiPemasukanLain = $derived(pemasukanLainDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalQrisBebanUsaha = bebanUsahaDetail
+	let totalQrisBebanUsaha = $derived(bebanUsahaDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiBebanUsaha = bebanUsahaDetail
+	let totalTunaiBebanUsaha = $derived(bebanUsahaDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalQrisBebanLain = bebanLainDetail
+	let totalQrisBebanLain = $derived(bebanLainDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
-	$: totalTunaiBebanLain = bebanLainDetail
+	let totalTunaiBebanLain = $derived(bebanLainDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0));
 
 	function getDeskripsiLaporan(item: BukuKasRecord): string {
 		return item?.description?.trim() || item?.catatan?.trim() || '-';
