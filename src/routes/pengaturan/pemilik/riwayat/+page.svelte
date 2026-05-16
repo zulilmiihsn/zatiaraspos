@@ -259,81 +259,80 @@
 
 	async function printStrukDariRiwayat() {
 		if (!selectedTransaksi) return;
-		
+
 		loading = true;
 		try {
-            let items: any[] = [];
+			let items: any[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
 				const { data } = await getSupabaseClient(storeGet(selectedBranch))
 					.from('transaksi_kasir')
 					.select('*, produk:produk_id(name)')
 					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
-					
+
 				if (data) items = data;
 			}
 
-            const pengaturan = pengaturanStruk || {
-                nama_toko: 'Zatiaras Juice',
-                alamat: 'Jl. Contoh Alamat No. 123, Kota',
-                telepon: '0812-3456-7890',
-                instagram: '@zatiarasjuice',
-                ucapan: 'Terima kasih sudah ngejus di\\nZatiaras Juice!'
-            };
-            
-            let html = `<html><body style='font-family:monospace;font-size:24px;line-height:2.0;margin:0;padding:0;'>`;
-            html += `<div style='text-align:center;margin-bottom:16px;line-height:1.5;'>`;
-            html += `<div style='font-weight:bold;font-size:26px;'>${pengaturan.nama_toko}</div>`;
-            html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.alamat}</div>`;
-            if (pengaturan.instagram || pengaturan.telepon) {
-                html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
-            }
-            html += `</div>`;
-            html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
-            
-            html += `<div style='text-align:center;font-weight:bold;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
-            html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
-            html += `${selectedTransaksi.customer_name ? selectedTransaksi.customer_name + '<br/>' : ''}`;
-            html += `${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
-            html += `</div>`;
-            
-            html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
-            
-            if (items.length > 0) {
-                items.forEach((item: any, idx: any) => {
-                    const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-                    html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
-                    if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
-                });
-            } else {
-                html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
-            }
-            
-            html += `</tbody></table>`;
-            html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
-            
-            html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-            html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
-            
-            const methodLabels: Record<string, string> = {
-                tunai: 'Tunai',
-                qris: 'QRIS',
-                transfer: 'Transfer',
-                'e-wallet': 'E-Wallet',
-                card: 'Kartu',
-                'non-tunai': 'QRIS/Non-Tunai'
-            };
-            const methodKey = (selectedTransaksi.payment_method || '').toLowerCase();
-            html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
-            html += `</tbody></table>`;
-            
-            html += `<div style='margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;'>${pengaturan.ucapan}</div>`;
-            html += `</body></html>`;
+			const pengaturan = pengaturanStruk || {
+				nama_toko: 'Zatiaras Juice',
+				alamat: 'Jl. Contoh Alamat No. 123, Kota',
+				telepon: '0812-3456-7890',
+				instagram: '@zatiarasjuice',
+				ucapan: 'Terima kasih sudah ngejus di\\nZatiaras Juice!'
+			};
 
-            const gzip = pako.gzip(JSON.stringify([html]));
-            const base64 = Base64.fromUint8Array(gzip);
-            const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
-            window.location.href = intentUrl;
-            
+			let html = `<html><body style='font-family:monospace;font-size:24px;line-height:2.0;margin:0;padding:0;'>`;
+			html += `<div style='text-align:center;margin-bottom:16px;line-height:1.5;'>`;
+			html += `<div style='font-weight:bold;font-size:26px;'>${pengaturan.nama_toko}</div>`;
+			html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.alamat}</div>`;
+			if (pengaturan.instagram || pengaturan.telepon) {
+				html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+			}
+			html += `</div>`;
+			html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+
+			html += `<div style='text-align:center;font-weight:bold;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
+			html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
+			html += `${selectedTransaksi.customer_name ? selectedTransaksi.customer_name + '<br/>' : ''}`;
+			html += `${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
+			html += `</div>`;
+
+			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
+
+			if (items.length > 0) {
+				items.forEach((item: any, idx: any) => {
+					const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
+					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
+				});
+			} else {
+				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			}
+
+			html += `</tbody></table>`;
+			html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+
+			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
+			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
+
+			const methodLabels: Record<string, string> = {
+				tunai: 'Tunai',
+				qris: 'QRIS',
+				transfer: 'Transfer',
+				'e-wallet': 'E-Wallet',
+				card: 'Kartu',
+				'non-tunai': 'QRIS/Non-Tunai'
+			};
+			const methodKey = (selectedTransaksi.payment_method || '').toLowerCase();
+			html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
+			html += `</tbody></table>`;
+
+			html += `<div style='margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;'>${pengaturan.ucapan}</div>`;
+			html += `</body></html>`;
+
+			const gzip = pako.gzip(JSON.stringify([html]));
+			const base64 = Base64.fromUint8Array(gzip);
+			const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
+			window.location.href = intentUrl;
 		} catch (error) {
 			ErrorHandler.logError(error as Error, 'printStrukDariRiwayat');
 			toastManager.showToastNotification('Gagal mencetak struk', 'error');

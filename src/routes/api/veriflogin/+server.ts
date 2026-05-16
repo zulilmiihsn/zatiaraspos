@@ -53,9 +53,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
 		}
 
 		if (!isValidBranch(branch)) {
-			return new Response(JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid' }), {
-				status: 400
-			});
+			return new Response(
+				JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid' }),
+				{
+					status: 400
+				}
+			);
 		}
 
 		// Pilih Supabase client sesuai branch
@@ -67,16 +70,26 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
 			.eq('username', username)
 			.single();
 		if (error || !user) {
-			return new Response(JSON.stringify({ success: false, code: 'INVALID_CREDENTIALS', message: 'Username tidak ditemukan' }), {
-				status: 401
-			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'INVALID_CREDENTIALS',
+					message: 'Username tidak ditemukan'
+				}),
+				{
+					status: 401
+				}
+			);
 		}
 		// Verifikasi hash password
 		const match = await bcrypt.compare(password, user.password);
 		if (!match) {
-			return new Response(JSON.stringify({ success: false, code: 'INVALID_CREDENTIALS', message: 'Password salah' }), {
-				status: 401
-			});
+			return new Response(
+				JSON.stringify({ success: false, code: 'INVALID_CREDENTIALS', message: 'Password salah' }),
+				{
+					status: 401
+				}
+			);
 		}
 
 		loginAttempts.delete(clientIp);
@@ -110,8 +123,15 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
 			{ status: 200 }
 		);
 	} catch (e) {
-		return new Response(JSON.stringify({ success: false, code: 'SERVER_ERROR', message: 'Terjadi error pada server' }), {
-			status: 500
-		});
+		return new Response(
+			JSON.stringify({
+				success: false,
+				code: 'SERVER_ERROR',
+				message: 'Terjadi error pada server'
+			}),
+			{
+				status: 500
+			}
+		);
 	}
 };

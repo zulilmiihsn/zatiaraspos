@@ -172,8 +172,7 @@
 
 			if (items.length > 0) {
 				items.forEach((item: any, idx: number) => {
-					const itemName =
-						item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
+					const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
 					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
@@ -232,7 +231,9 @@
 
 <div transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
 	<!-- Top Bar -->
-	<div class="sticky top-0 z-40 mb-0 flex items-center border-b border-gray-200 bg-white px-4 py-4 shadow-sm">
+	<div
+		class="sticky top-0 z-40 mb-0 flex items-center border-b border-gray-200 bg-white px-4 py-4 shadow-sm"
+	>
 		<button
 			onclick={() => goto('/pengaturan')}
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
@@ -261,7 +262,8 @@
 		/>
 		<div class="flex gap-2">
 			<button
-				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment === 'all'
+				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment ===
+				'all'
 					? 'border-pink-500 bg-pink-500 text-white'
 					: 'border-pink-200 bg-white text-pink-500'}"
 				onclick={() => {
@@ -270,7 +272,8 @@
 				}}>Semua</button
 			>
 			<button
-				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment === 'qris'
+				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment ===
+				'qris'
 					? 'border-pink-500 bg-pink-500 text-white'
 					: 'border-pink-200 bg-white text-pink-500'}"
 				onclick={() => {
@@ -279,7 +282,8 @@
 				}}>QRIS</button
 			>
 			<button
-				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment === 'tunai'
+				class="rounded-lg border px-4 py-2 text-sm font-semibold transition-all focus:outline-none {filterPayment ===
+				'tunai'
 					? 'border-pink-500 bg-pink-500 text-white'
 					: 'border-pink-200 bg-white text-pink-500'}"
 				onclick={() => {
@@ -315,7 +319,9 @@
 			</div>
 		{:else}
 			<!-- Ringkasan singkat -->
-			<div class="mb-3 flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-2.5">
+			<div
+				class="mb-3 flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-2.5"
+			>
 				<span class="text-sm text-gray-600">Total transaksi</span>
 				<span class="font-bold text-pink-600">{transaksiHariIni.length} transaksi</span>
 			</div>
@@ -336,10 +342,7 @@
 					>
 						<!-- Info kiri -->
 						<div class="min-w-0 flex-1">
-							<div
-								class="truncate text-sm font-semibold text-gray-800"
-								title={trx.nama}
-							>
+							<div class="truncate text-sm font-semibold text-gray-800" title={trx.nama}>
 								{trx.nama}
 							</div>
 							<div class="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
@@ -349,7 +352,7 @@
 								<span class="capitalize">
 									{trx.tipe === 'in' ? 'Pemasukan' : 'Pengeluaran'}
 								</span>
-								<span class="font-semibold uppercase text-pink-500">
+								<span class="font-semibold text-pink-500 uppercase">
 									{trx.payment_method === 'qris' || trx.payment_method === 'non-tunai'
 										? 'QRIS'
 										: 'Tunai'}
@@ -365,7 +368,11 @@
 
 						<!-- Nominal kanan -->
 						<div class="flex shrink-0 flex-col items-end gap-1">
-							<div class="text-base font-bold {trx.tipe === 'in' ? 'text-pink-500' : 'text-orange-500'}">
+							<div
+								class="text-base font-bold {trx.tipe === 'in'
+									? 'text-pink-500'
+									: 'text-orange-500'}"
+							>
 								{trx.tipe === 'out' ? '-' : ''}Rp {trx.nominal?.toLocaleString('id-ID')}
 							</div>
 							<div class="text-xs text-gray-400">Tap untuk detail</div>
@@ -391,7 +398,13 @@
 				onclick={() => (showDetailModal = false)}
 				aria-label="Tutup"
 			>
-				<svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg
+					class="h-5 w-5 text-gray-500"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					viewBox="0 0 24 24"
+				>
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 				</svg>
 			</button>
@@ -409,7 +422,7 @@
 			<div class="flex flex-col gap-3">
 				<div class="rounded-xl bg-pink-50 px-4 py-3">
 					<div class="mb-0.5 text-xs font-semibold text-gray-500">Deskripsi</div>
-					<div class="break-words text-sm font-medium text-gray-800">{selectedTransaksi.nama}</div>
+					<div class="text-sm font-medium break-words text-gray-800">{selectedTransaksi.nama}</div>
 				</div>
 
 				{#if selectedTransaksi.customer_name}
@@ -431,7 +444,7 @@
 					</div>
 					<div class="rounded-xl bg-gray-50 px-4 py-3">
 						<div class="mb-0.5 text-xs font-semibold text-gray-500">Metode</div>
-						<div class="text-sm font-semibold uppercase text-pink-600">
+						<div class="text-sm font-semibold text-pink-600 uppercase">
 							{selectedTransaksi.payment_method === 'qris' ||
 							selectedTransaksi.payment_method === 'non-tunai'
 								? 'QRIS'

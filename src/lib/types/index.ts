@@ -30,6 +30,18 @@ export * from './transaction';
 export * from './components';
 
 // ============================================================================
+// 📊 LAPORAN & REPORT TYPES
+// ============================================================================
+
+export * from './laporan';
+
+// ============================================================================
+// 🏪 STORE & SESSION TYPES
+// ============================================================================
+
+export * from './store';
+
+// ============================================================================
 // 🔧 UTILITY & COMMON TYPES
 // ============================================================================
 
@@ -101,12 +113,36 @@ export enum FinancialType {
 // 🔄 STATE MANAGEMENT TYPES
 // ============================================================================
 
+export interface AuthState {
+	isAuthenticated: boolean;
+	sessionId: string | null;
+	token: string | null;
+}
+
+export interface UserState {
+	profile: import('./user').UserProfile | null;
+	role: string | null;
+	permissions: string[];
+}
+
+export interface TransactionState {
+	transactions: import('./transaction').Transaction[];
+	isLoading: boolean;
+	error: string | null;
+}
+
+export interface FinancialState {
+	records: import('./laporan').BukuKasRecord[];
+	summary: import('./laporan').LaporanSummary | null;
+	isLoading: boolean;
+}
+
 export interface AppState {
-	auth: any; // AuthState interface not defined yet
-	user: any; // UserState interface not defined yet
-	products: any; // ProductState interface not defined yet
-	transactions: any; // TransactionState interface not defined yet
-	financial: any; // FinancialState interface not defined yet
+	auth: AuthState;
+	user: UserState;
+	products: import('./product').ProductState;
+	transactions: TransactionState;
+	financial: FinancialState;
 	ui: UIState;
 }
 

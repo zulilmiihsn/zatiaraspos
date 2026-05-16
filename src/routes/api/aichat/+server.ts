@@ -816,7 +816,10 @@ async function handleTransactionAnalysis(request: Request) {
 		const { text } = await request.json();
 
 		if (!text || typeof text !== 'string') {
-			return json({ success: false, error: 'Teks transaksi diperlukan', code: 'VALIDATION_ERROR' }, { status: 400 });
+			return json(
+				{ success: false, error: 'Teks transaksi diperlukan', code: 'VALIDATION_ERROR' },
+				{ status: 400 }
+			);
 		}
 
 		// Get API key from environment
@@ -860,7 +863,10 @@ async function handleRegularChat(request: Request) {
 		const { question, branch } = await request.json();
 
 		if (!question || typeof question !== 'string') {
-			return json({ success: false, error: 'Pertanyaan diperlukan', code: 'VALIDATION_ERROR' }, { status: 400 });
+			return json(
+				{ success: false, error: 'Pertanyaan diperlukan', code: 'VALIDATION_ERROR' },
+				{ status: 400 }
+			);
 		}
 
 		// Get API key from environment
@@ -879,12 +885,18 @@ async function handleRegularChat(request: Request) {
 		}
 
 		if (question.length > 2000) {
-			return json({ success: false, error: 'Pertanyaan terlalu panjang', code: 'VALIDATION_ERROR' }, { status: 400 });
+			return json(
+				{ success: false, error: 'Pertanyaan terlalu panjang', code: 'VALIDATION_ERROR' },
+				{ status: 400 }
+			);
 		}
 
 		const requestedBranch = branch || 'Balikpapan';
 		if (!isValidBranch(requestedBranch)) {
-			return json({ success: false, error: 'Branch tidak valid', code: 'INVALID_BRANCH' }, { status: 400 });
+			return json(
+				{ success: false, error: 'Branch tidak valid', code: 'INVALID_BRANCH' },
+				{ status: 400 }
+			);
 		}
 
 		// AI 1: Identifikasi kebutuhan data

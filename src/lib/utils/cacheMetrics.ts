@@ -3,7 +3,10 @@ import { smartCache } from '$lib/utils/cache';
 const MIN_REPORT_INTERVAL_MS = 15000;
 const lastSentAtByPage = new Map<string, number>();
 
-export async function reportCacheMetrics(page: 'dashboard' | 'laporan' | 'pos', force = false): Promise<void> {
+export async function reportCacheMetrics(
+	page: 'dashboard' | 'laporan' | 'pos',
+	force = false
+): Promise<void> {
 	if (typeof window === 'undefined') return;
 
 	const now = Date.now();

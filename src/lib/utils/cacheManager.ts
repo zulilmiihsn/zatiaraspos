@@ -13,11 +13,11 @@ function isExpired(entry: { expiresAt: number }): boolean {
 export const cacheManager = {
 	set: <T>(key: string, data: T, ttl: number = 300000): void => {
 		localMirror.set(key, { value: data, expiresAt: Date.now() + ttl });
-		void smartCache.get(
-			key,
-			async () => data,
-			{ ttl, forceRefresh: true, backgroundRefresh: false }
-		);
+		void smartCache.get(key, async () => data, {
+			ttl,
+			forceRefresh: true,
+			backgroundRefresh: false
+		});
 	},
 	get: <T>(key: string): T | null => {
 		const entry = localMirror.get(key);
@@ -53,7 +53,11 @@ export const cacheManager = {
  * @deprecated Use `CacheUtils` from `$lib/utils/cache`.
  */
 export const cacheUtils = {
-	smartCache: <T>(key: string, data: T, type: 'user' | 'product' | 'transaction' | 'report'): void => {
+	smartCache: <T>(
+		key: string,
+		data: T,
+		type: 'user' | 'product' | 'transaction' | 'report'
+	): void => {
 		const ttlMap = {
 			user: 300000,
 			product: 600000,

@@ -145,7 +145,7 @@
 				try {
 					await import('@khmyznikov/pwa-install');
 					isPwaLibraryLoaded = true;
-					
+
 					// Force custom styling after library loads
 					setTimeout(() => {
 						const pwaInstall = document.querySelector('pwa-install');
@@ -561,9 +561,7 @@
 						Lihat riwayat transaksi hari ini
 					</div>
 				</button>
-
 			{/if}
-
 		</div>
 
 		<!-- Logout Section -->
@@ -671,11 +669,11 @@
 	<!-- Custom styling for PWA install dialog -->
 	<style>
 		:global(pwa-install) {
-			--pwa-install-dialog-header-color: #FFB6C1 !important;
-			--header-color: #FFB6C1 !important;
+			--pwa-install-dialog-header-color: #ffb6c1 !important;
+			--header-color: #ffb6c1 !important;
 		}
 		:global(pwa-install::part(header)) {
-			background-color: #FFB6C1 !important;
+			background-color: #ffb6c1 !important;
 		}
 	</style>
 
@@ -689,7 +687,6 @@
 			{notificationMessage}
 		</div>
 	{/if}
-
 </div>
 
 <!-- App Info -->

@@ -65,7 +65,7 @@
 	>
 		<div class="flex h-full w-full flex-col items-center justify-center p-4">
 			<div
-				class="w-full max-w-sm rounded-3xl border border-white/30 bg-white/20 p-6 md:p-8 shadow-2xl backdrop-blur-xl"
+				class="w-full max-w-sm rounded-3xl border border-white/30 bg-white/20 p-6 shadow-2xl backdrop-blur-xl md:p-8"
 			>
 				<div class="mb-4 text-center">
 					<div
@@ -95,7 +95,12 @@
 					{/each}
 				</div>
 				<!-- Reserve space for error to avoid layout shift -->
-				<div class="mb-2 h-5 text-center text-sm font-semibold text-white/90 {pinError ? 'visible opacity-100' : 'invisible opacity-0'}" aria-live="polite">
+				<div
+					class="mb-2 h-5 text-center text-sm font-semibold text-white/90 {pinError
+						? 'visible opacity-100'
+						: 'invisible opacity-0'}"
+					aria-live="polite"
+				>
 					{pinError}
 				</div>
 
@@ -128,12 +133,24 @@
 <style>
 	/* Animasi slideUp telah dihapus */
 	@keyframes shake {
-		0% { transform: translateX(0); }
-		20% { transform: translateX(-6px); }
-		40% { transform: translateX(6px); }
-		60% { transform: translateX(-4px); }
-		80% { transform: translateX(4px); }
-		100% { transform: translateX(0); }
+		0% {
+			transform: translateX(0);
+		}
+		20% {
+			transform: translateX(-6px);
+		}
+		40% {
+			transform: translateX(6px);
+		}
+		60% {
+			transform: translateX(-4px);
+		}
+		80% {
+			transform: translateX(4px);
+		}
+		100% {
+			transform: translateX(0);
+		}
 	}
 	.animate-shake {
 		animation: shake 320ms ease-in-out;

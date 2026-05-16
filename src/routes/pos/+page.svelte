@@ -138,11 +138,15 @@
 
 			const nextFingerprint = [
 				(nextProducts || []).length,
-				(nextProducts || []).map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`).join(','),
+				(nextProducts || [])
+					.map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.join(','),
 				(nextCategories || []).length,
 				(nextCategories || []).map((item: any) => item?.id || '').join(','),
 				(nextAddons || []).length,
-				(nextAddons || []).map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`).join(',')
+				(nextAddons || [])
+					.map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.join(',')
 			].join('|');
 
 			if (nextFingerprint === lastPOSPayloadFingerprint) {
@@ -803,17 +807,17 @@
 									role="button"
 									aria-label="Tambah {p.name} ke keranjang"
 								>
-								<div class="flex min-w-0 flex-1 flex-col">
-									<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
-									<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
-										>{getKategoriNameById(p.kategori_id)}</span
-									>
-								</div>
-								<div class="flex items-center gap-2">
-									<span class="text-base font-bold whitespace-nowrap text-pink-500"
-										>Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span
-									>
-								</div>
+									<div class="flex min-w-0 flex-1 flex-col">
+										<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
+										<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
+											>{getKategoriNameById(p.kategori_id)}</span
+										>
+									</div>
+									<div class="flex items-center gap-2">
+										<span class="text-base font-bold whitespace-nowrap text-pink-500"
+											>Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span
+										>
+									</div>
 								</div>
 							{/each}
 						{/if}

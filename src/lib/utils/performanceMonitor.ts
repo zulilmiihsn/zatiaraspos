@@ -1,4 +1,7 @@
-import { performanceTracker, performanceUtils as trackerUtils } from '$lib/utils/performanceTracker';
+import {
+	performanceTracker,
+	performanceUtils as trackerUtils
+} from '$lib/utils/performanceTracker';
 
 /**
  * @deprecated Use `performanceTracker` from `$lib/utils/performanceTracker`.

@@ -1,7 +1,10 @@
 import type { TransactionAnalysis, DetectedTransaction, AiRecommendation } from '$lib/types/ai';
 import { get } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch';
-import { getApiErrorMessageFromResponse, reportApiFailureFromResponse } from '$lib/utils/errorHandling';
+import {
+	getApiErrorMessageFromResponse,
+	reportApiFailureFromResponse
+} from '$lib/utils/errorHandling';
 
 export class AiAnalysisService {
 	private static instance: AiAnalysisService;

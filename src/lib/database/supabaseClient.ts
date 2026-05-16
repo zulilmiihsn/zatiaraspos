@@ -71,9 +71,7 @@ function initializeClients() {
 	return supabaseClients;
 }
 
-export function getSupabaseClient(
-	branch: BranchKey
-): SupabaseClient {
+export function getSupabaseClient(branch: BranchKey): SupabaseClient {
 	const clients = initializeClients();
 	return clients[branch];
 }

@@ -7,21 +7,23 @@ interface SecuritySettings {
 }
 
 // Initialize store with data from localStorage if available
-const initialValue = browser ? (() => {
-	try {
-		const saved = localStorage.getItem('zatiaras_security_settings');
-		if (!saved) return null;
+const initialValue = browser
+	? (() => {
+			try {
+				const saved = localStorage.getItem('zatiaras_security_settings');
+				if (!saved) return null;
 
-		const parsed = JSON.parse(saved);
-		return {
-			pin: null,
-			lockedPages: Array.isArray(parsed?.lockedPages) ? parsed.lockedPages : null
-		} as SecuritySettings;
-	} catch (e) {
-		console.error('Error parsing security settings from localStorage:', e);
-		return null;
-	}
-})() : null;
+				const parsed = JSON.parse(saved);
+				return {
+					pin: null,
+					lockedPages: Array.isArray(parsed?.lockedPages) ? parsed.lockedPages : null
+				} as SecuritySettings;
+			} catch (e) {
+				console.error('Error parsing security settings from localStorage:', e);
+				return null;
+			}
+		})()
+	: null;
 
 export const securitySettings = writable<SecuritySettings | null>(initialValue);
 

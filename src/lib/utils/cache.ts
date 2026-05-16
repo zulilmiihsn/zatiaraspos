@@ -357,7 +357,6 @@ export class SmartCache {
 						this.etagMap.set(key, result.etag);
 					}
 				}
-
 			} catch (error) {
 				// Silent error handling
 			} finally {

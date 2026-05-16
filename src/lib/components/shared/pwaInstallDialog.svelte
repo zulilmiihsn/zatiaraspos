@@ -83,7 +83,13 @@
 			highlight: '"Add to Home Screen"',
 			suffix: ''
 		},
-		{ icon: '✅', bg: 'bg-pink-100', text: 'Ketuk', highlight: '"Add"', suffix: 'di pojok kanan atas' }
+		{
+			icon: '✅',
+			bg: 'bg-pink-100',
+			text: 'Ketuk',
+			highlight: '"Add"',
+			suffix: 'di pojok kanan atas'
+		}
 	];
 
 	const androidSteps = [
@@ -112,12 +118,30 @@
 			highlight: '(···)',
 			suffix: 'di pojok kanan atas'
 		},
-		{ icon: '📱', bg: 'bg-green-100', text: 'Pilih', highlight: '"Apps"', suffix: '→ "Install this site"' },
-		{ icon: '✅', bg: 'bg-pink-100', text: 'Klik', highlight: '"Install"', suffix: 'untuk mengkonfirmasi' }
+		{
+			icon: '📱',
+			bg: 'bg-green-100',
+			text: 'Pilih',
+			highlight: '"Apps"',
+			suffix: '→ "Install this site"'
+		},
+		{
+			icon: '✅',
+			bg: 'bg-pink-100',
+			text: 'Klik',
+			highlight: '"Install"',
+			suffix: 'untuk mengkonfirmasi'
+		}
 	];
 
 	const firefoxSteps = [
-		{ icon: '🏠', bg: 'bg-orange-100', text: 'Cari ikon', highlight: 'rumah (+)', suffix: 'di address bar' },
+		{
+			icon: '🏠',
+			bg: 'bg-orange-100',
+			text: 'Cari ikon',
+			highlight: 'rumah (+)',
+			suffix: 'di address bar'
+		},
 		{
 			icon: '📲',
 			bg: 'bg-green-100',
@@ -125,7 +149,13 @@
 			highlight: '(⋮)',
 			suffix: '→ "Add to Home Screen"'
 		},
-		{ icon: '✅', bg: 'bg-pink-100', text: 'Konfirmasi', highlight: 'instalasi', suffix: 'di dialog yang muncul' }
+		{
+			icon: '✅',
+			bg: 'bg-pink-100',
+			text: 'Konfirmasi',
+			highlight: 'instalasi',
+			suffix: 'di dialog yang muncul'
+		}
 	];
 
 	$: steps =
@@ -181,7 +211,16 @@
 				<div
 					class="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 shadow-lg"
 				>
-					<img src="/img/icon-192.png" alt="App Icon" class="h-full w-full object-cover" onerror={(e) => { (e.currentTarget as HTMLElement).style.display='none'; const next = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement; if(next) next.style.display='flex'; }} />
+					<img
+						src="/img/icon-192.png"
+						alt="App Icon"
+						class="h-full w-full object-cover"
+						onerror={(e) => {
+							(e.currentTarget as HTMLElement).style.display = 'none';
+							const next = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+							if (next) next.style.display = 'flex';
+						}}
+					/>
 					<div class="hidden h-full w-full items-center justify-center text-3xl text-white">🧋</div>
 				</div>
 				<div class="flex-1">
@@ -258,7 +297,7 @@
 					</div>
 				{:else if steps}
 					<!-- Step-by-step guide -->
-					<div class="text-sm font-medium text-gray-600 mb-3">Ikuti langkah berikut:</div>
+					<div class="mb-3 text-sm font-medium text-gray-600">Ikuti langkah berikut:</div>
 					<div class="space-y-3">
 						{#each steps as step, i}
 							<div class="flex items-start gap-3">
@@ -281,14 +320,14 @@
 					<!-- Generic fallback -->
 					<div class="py-2 text-center text-sm text-gray-600">
 						<div class="mb-3 text-4xl">💡</div>
-						Buka halaman ini di <strong>Chrome</strong> atau <strong>Safari</strong> untuk bisa
-						memasang aplikasi ke Home Screen
+						Buka halaman ini di<strong>Chrome</strong> atau <strong>Safari</strong> untuk bisa memasang
+						aplikasi ke Home Screen
 					</div>
 				{/if}
 			</div>
 
 			<!-- Footer buttons -->
-			<div class="px-6 pb-6 pt-2">
+			<div class="px-6 pt-2 pb-6">
 				{#if isAlreadyInstalled || installSuccess}
 					<button
 						class="w-full rounded-2xl bg-gray-100 py-3 font-semibold text-gray-700"

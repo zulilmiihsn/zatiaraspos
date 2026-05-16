@@ -147,7 +147,11 @@
 			const data = await res.json();
 			if (!res.ok || !data.success) {
 				reportApiFailure(data, res.status, '/api/gantikeamanan');
-				kasirUserPassError = getApiErrorMessage(data, res.status, 'Gagal update username/password kasir.');
+				kasirUserPassError = getApiErrorMessage(
+					data,
+					res.status,
+					'Gagal update username/password kasir.'
+				);
 				return;
 			}
 			kasirUserPassError = '';
@@ -428,7 +432,9 @@
 								/>
 							</div>
 							<div>
-								<label for="kasir-confirm-password" class="mb-1 block text-sm font-medium text-gray-700"
+								<label
+									for="kasir-confirm-password"
+									class="mb-1 block text-sm font-medium text-gray-700"
 									>Konfirmasi Password Baru</label
 								>
 								<input
@@ -443,7 +449,7 @@
 							{#if kasirUserPassError}
 								<div class="mt-1 text-center text-xs text-blue-600">{kasirUserPassError}</div>
 							{/if}
-					</div>
+						</div>
 						<button
 							class="mt-2 w-full rounded-xl bg-blue-500 py-3 font-bold text-white shadow-lg transition-colors duration-200 hover:bg-blue-600 active:bg-blue-700 lg:mt-auto"
 							type="submit">Simpan Perubahan Kasir</button

@@ -114,10 +114,10 @@ async function getJamRamaiMingguan(supabase: any): Promise<string> {
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
 		return cached.value; // Cache 24 jam untuk konsistensi dengan rata-rata transaksi
 	}
-	
+
 	// Hitung ulang - gunakan cache data POS 7 hari yang sama dengan avg transaksi
 	const kas = await getCachedPosKas7Hari(supabase);
-	
+
 	const jamCount: { [key: string]: number } = {};
 	if (kas) {
 		for (const t of kas) {
@@ -127,7 +127,7 @@ async function getJamRamaiMingguan(supabase: any): Promise<string> {
 			jamCount[jam] = (jamCount[jam] || 0) + 1;
 		}
 	}
-	
+
 	let peakHour = '';
 	let maxCount = 0;
 	for (const [jam, count] of Object.entries(jamCount)) {
@@ -136,13 +136,13 @@ async function getJamRamaiMingguan(supabase: any): Promise<string> {
 			peakHour = jam;
 		}
 	}
-	
+
 	let jamRamai = '';
 	if (peakHour !== '') {
 		const jamInt = parseInt(peakHour, 10);
 		jamRamai = `${jamInt.toString().padStart(2, '0')}.00–${(jamInt + 1).toString().padStart(2, '0')}.00`;
 	}
-	
+
 	await setCache(cacheKey, { value: jamRamai, timestamp: Date.now() });
 	return jamRamai;
 }
@@ -224,7 +224,9 @@ export class DataService {
 				}
 
 				const itemTerjual = kasir?.reduce((sum: number, t: any) => sum + (t.qty || 1), 0) || 0;
-				const transactionIds = new Set((kas || []).map((t: any) => t.transaction_id).filter(Boolean));
+				const transactionIds = new Set(
+					(kas || []).map((t: any) => t.transaction_id).filter(Boolean)
+				);
 				const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
 				const omzet = kas.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
@@ -581,11 +583,7 @@ export class DataService {
 				}
 
 				// PARALLEL PAGINATION: Ambil semua buku_kas sekali, lalu turunkan kategorinya di memori
-				const allBukuKas = await this.fetchAllDataParallel(
-					'buku_kas',
-					startWita,
-					endWita
-				);
+				const allBukuKas = await this.fetchAllDataParallel('buku_kas', startWita, endWita);
 
 				const posBukuKas = (allBukuKas || []).filter((item: any) => item?.sumber === 'pos');
 				const manualItems = (allBukuKas || []).filter(
@@ -739,26 +737,26 @@ export class DataService {
 		return subscription;
 	}
 
-		private async invalidateDashboardCachesForBranch(branch: string) {
-			await Promise.all([
-				smartCache.invalidate(`${CACHE_KEYS.DASHBOARD_STATS}_${branch}`),
-				smartCache.invalidate(`${CACHE_KEYS.BEST_SELLERS}_${branch}`),
-				smartCache.invalidate(`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`)
-			]);
+	private async invalidateDashboardCachesForBranch(branch: string) {
+		await Promise.all([
+			smartCache.invalidate(`${CACHE_KEYS.DASHBOARD_STATS}_${branch}`),
+			smartCache.invalidate(`${CACHE_KEYS.BEST_SELLERS}_${branch}`),
+			smartCache.invalidate(`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`)
+		]);
+	}
+
+	async invalidateDashboardCaches(branch?: string) {
+		if (branch) {
+			await this.invalidateDashboardCachesForBranch(branch);
+			return;
 		}
 
-		async invalidateDashboardCaches(branch?: string) {
-			if (branch) {
-				await this.invalidateDashboardCachesForBranch(branch);
-				return;
-			}
-
-			await Promise.all([
-				smartCache.invalidate(`${CACHE_KEYS.DASHBOARD_STATS}_*`),
-				smartCache.invalidate(`${CACHE_KEYS.BEST_SELLERS}_*`),
-				smartCache.invalidate(`${CACHE_KEYS.WEEKLY_INCOME}_*`)
-			]);
-		}
+		await Promise.all([
+			smartCache.invalidate(`${CACHE_KEYS.DASHBOARD_STATS}_*`),
+			smartCache.invalidate(`${CACHE_KEYS.BEST_SELLERS}_*`),
+			smartCache.invalidate(`${CACHE_KEYS.WEEKLY_INCOME}_*`)
+		]);
+	}
 
 	// SMART CACHE INVALIDATION: Invalidate cache when data changes
 	async invalidateCacheOnChange(table: string) {

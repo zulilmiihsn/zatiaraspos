@@ -70,7 +70,7 @@
 			try {
 				const { Workbox } = await import('workbox-window');
 				const wb = new Workbox('/sw.js');
-				
+
 				wb.addEventListener('waiting', () => {
 					updateAvailable = true;
 					showUpdateNotification = true;
@@ -196,10 +196,7 @@
 				const fullLockedPath = mapLockedNameToPath(lockedPageName);
 				if (!fullLockedPath) return false;
 				if (fullLockedPath === '/') return currentPath === '/';
-				return (
-					currentPath === fullLockedPath ||
-					currentPath.startsWith(fullLockedPath + '/')
-				);
+				return currentPath === fullLockedPath || currentPath.startsWith(fullLockedPath + '/');
 			});
 
 		// Tentukan apakah modal PIN harus ditampilkan
@@ -419,14 +416,14 @@
 	.animate-fade-in {
 		animation: fade-in 0.4s ease;
 	}
-	
+
 	/* Prevent unwanted zoom while maintaining accessibility */
 	:global(html) {
 		touch-action: manipulation;
 		-webkit-text-size-adjust: 100%;
 		-ms-text-size-adjust: 100%;
 	}
-	
+
 	:global(body) {
 		touch-action: manipulation;
 		-webkit-touch-callout: none;
@@ -436,7 +433,7 @@
 		-ms-user-select: none;
 		user-select: none;
 	}
-	
+
 	/* Allow text selection in input fields */
 	:global(input, textarea, [contenteditable]) {
 		-webkit-user-select: text;

@@ -15,12 +15,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const csrfHeader = event.request.headers.get('x-csrf-token');
 
 		if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-			return new Response(JSON.stringify({ success: false, code: 'CSRF_INVALID', message: 'CSRF token invalid' }), {
-				status: 403,
-				headers: {
-					'Content-Type': 'application/json'
+			return new Response(
+				JSON.stringify({ success: false, code: 'CSRF_INVALID', message: 'CSRF token invalid' }),
+				{
+					status: 403,
+					headers: {
+						'Content-Type': 'application/json'
+					}
 				}
-			});
+			);
 		}
 	}
 
@@ -28,12 +31,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isProtectedApi = protectedApiRoutes.some((route) => event.url.pathname.startsWith(route));
 
 	if (isProtectedApi && !event.locals.authSession) {
-		return new Response(JSON.stringify({ success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' }), {
-			status: 401,
-			headers: {
-				'Content-Type': 'application/json'
+		return new Response(
+			JSON.stringify({ success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' }),
+			{
+				status: 401,
+				headers: {
+					'Content-Type': 'application/json'
+				}
 			}
-		});
+		);
 	}
 
 	const response = await resolve(event);

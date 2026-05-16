@@ -173,8 +173,8 @@
 					>
 						<div class="checkmark-circle">
 							<svg class="checkmark" viewBox="0 0 52 52">
-								<circle class="checkmark-circle-path" cx="26" cy="26" r="25" fill="none"/>
-								<path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+								<circle class="checkmark-circle-path" cx="26" cy="26" r="25" fill="none" />
+								<path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
 							</svg>
 						</div>
 						<div class="mt-4 text-lg font-bold text-pink-500">Login Berhasil!</div>
@@ -378,7 +378,7 @@
 		height: 90px;
 		position: relative;
 	}
-	
+
 	.checkmark {
 		width: 90px;
 		height: 90px;
@@ -388,9 +388,11 @@
 		stroke: #ec4899;
 		stroke-miterlimit: 10;
 		box-shadow: inset 0 0 0 #ec4899;
-		animation: fillCircle 0.4s ease-in-out 0.4s forwards, scaleCircle 0.3s ease-in-out 0.9s both;
+		animation:
+			fillCircle 0.4s ease-in-out 0.4s forwards,
+			scaleCircle 0.3s ease-in-out 0.9s both;
 	}
-	
+
 	.checkmark-circle-path {
 		stroke-dasharray: 166;
 		stroke-dashoffset: 166;
@@ -400,7 +402,7 @@
 		fill: #fce7f3;
 		animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 	}
-	
+
 	.checkmark-check {
 		transform-origin: 50% 50%;
 		stroke-dasharray: 48;
@@ -409,27 +411,28 @@
 		stroke-width: 3;
 		animation: strokeCheck 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
 	}
-	
+
 	@keyframes strokeCircle {
 		100% {
 			stroke-dashoffset: 0;
 		}
 	}
-	
+
 	@keyframes strokeCheck {
 		100% {
 			stroke-dashoffset: 0;
 		}
 	}
-	
+
 	@keyframes fillCircle {
 		100% {
 			box-shadow: inset 0 0 0 60px #fce7f3;
 		}
 	}
-	
+
 	@keyframes scaleCircle {
-		0%, 100% {
+		0%,
+		100% {
 			transform: none;
 		}
 		50% {

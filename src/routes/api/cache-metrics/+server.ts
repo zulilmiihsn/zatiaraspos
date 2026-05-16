@@ -67,13 +67,16 @@ function pushMetric(entry: (typeof metricsHistory)[number]): void {
 }
 
 function summarize(cutoff: number) {
-	const pageTotals = new Map<string, {
-		count: number;
-		memoryHits: number;
-		indexedDBHits: number;
-		networkFetches: number;
-		requests: number;
-	}>();
+	const pageTotals = new Map<
+		string,
+		{
+			count: number;
+			memoryHits: number;
+			indexedDBHits: number;
+			networkFetches: number;
+			requests: number;
+		}
+	>();
 	const latestByPage = new Map<string, (typeof metricsHistory)[number]>();
 
 	for (let index = metricsHistory.length - 1; index >= 0; index -= 1) {
@@ -86,15 +89,13 @@ function summarize(cutoff: number) {
 			latestByPage.set(item.page, item);
 		}
 
-		const current =
-			pageTotals.get(item.page) ||
-			{
-				count: 0,
-				memoryHits: 0,
-				indexedDBHits: 0,
-				networkFetches: 0,
-				requests: 0
-			};
+		const current = pageTotals.get(item.page) || {
+			count: 0,
+			memoryHits: 0,
+			indexedDBHits: 0,
+			networkFetches: 0,
+			requests: 0
+		};
 
 		current.count += 1;
 		current.memoryHits += item.stats.memoryHits;
@@ -119,14 +120,14 @@ function summarize(cutoff: number) {
 			hitRate,
 			latest: latest
 				? {
-					timestamp: latest.timestamp,
-					receivedAt: latest.receivedAt,
-					memorySize: latest.stats.memorySize || 0,
-					registeredKeys: latest.stats.registeredKeys || 0,
-					backgroundRefreshCount: latest.stats.backgroundRefreshCount || 0,
-					etagCount: latest.stats.etagCount || 0,
-					hitRate: latest.stats.hitRate
-				  }
+						timestamp: latest.timestamp,
+						receivedAt: latest.receivedAt,
+						memorySize: latest.stats.memorySize || 0,
+						registeredKeys: latest.stats.registeredKeys || 0,
+						backgroundRefreshCount: latest.stats.backgroundRefreshCount || 0,
+						etagCount: latest.stats.etagCount || 0,
+						hitRate: latest.stats.hitRate
+					}
 				: null
 		};
 	});
@@ -176,17 +177,25 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 	try {
 		payload = await request.json();
 	} catch {
-		return json({ success: false, code: 'INVALID_JSON', message: 'Invalid JSON payload' }, { status: 400 });
+		return json(
+			{ success: false, code: 'INVALID_JSON', message: 'Invalid JSON payload' },
+			{ status: 400 }
+		);
 	}
 
-	const normalizedPage =
-		typeof payload.page === 'string' ? payload.page.trim().toLowerCase() : '';
+	const normalizedPage = typeof payload.page === 'string' ? payload.page.trim().toLowerCase() : '';
 	if (!ALLOWED_PAGES.has(normalizedPage)) {
-		return json({ success: false, code: 'VALIDATION_ERROR', message: 'Invalid page' }, { status: 400 });
+		return json(
+			{ success: false, code: 'VALIDATION_ERROR', message: 'Invalid page' },
+			{ status: 400 }
+		);
 	}
 
 	if (!payload.stats || typeof payload.stats !== 'object') {
-		return json({ success: false, code: 'VALIDATION_ERROR', message: 'Invalid stats' }, { status: 400 });
+		return json(
+			{ success: false, code: 'VALIDATION_ERROR', message: 'Invalid stats' },
+			{ status: 400 }
+		);
 	}
 
 	const rawStats = payload.stats as Record<string, unknown>;

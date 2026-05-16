@@ -85,11 +85,7 @@ export const auth = {
 	}
 };
 
-export async function loginWithUsername(
-	username: string,
-	password: string,
-	branch: BranchKey
-) {
+export async function loginWithUsername(username: string, password: string, branch: BranchKey) {
 	const res = await fetchWithCsrfRetry('/api/veriflogin', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

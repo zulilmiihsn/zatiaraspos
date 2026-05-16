@@ -4,6 +4,8 @@
  * Type definitions untuk semua entity yang berkaitan dengan transaksi dan keuangan
  */
 
+import type { ApiResponse, PaginatedResponse } from './index';
+
 // ============================================================================
 // 💳 TRANSACTION INTERFACES
 // ============================================================================
@@ -310,23 +312,5 @@ export interface FinancialFilters {
 	max_amount?: number;
 }
 
-// ============================================================================
-// 🎯 GENERIC TYPES (Re-export from other files)
-// ============================================================================
-
-export interface ApiResponse<T> {
-	data: T;
-	success: boolean;
-	message?: string;
-	error?: string;
-}
-
-export interface PaginatedResponse<T> {
-	data: T[];
-	total: number;
-	page: number;
-	limit: number;
-	totalPages: number;
-}
-
+// ApiResponse dan PaginatedResponse sudah didefinisikan di index.ts
 // CartItem sudah di-export dari product.ts

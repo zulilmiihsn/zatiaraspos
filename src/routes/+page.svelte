@@ -359,20 +359,20 @@
 
 	let showTokoModal = false;
 	let isBukaToko = true; // true: buka toko, false: tutup toko
-// Verifikasi PIN untuk aksi kasir (buka/tutup)
-let showActionPinModal = false;
-let actionPin = '1234';
-let modalAwalInput = '';
-let pinInputToko = '';
-let pinErrorToko = '';
-let tokoAktifLocal = false;
-let sesiAktif: {
+	// Verifikasi PIN untuk aksi kasir (buka/tutup)
+	let showActionPinModal = false;
+	let actionPin = '1234';
+	let modalAwalInput = '';
+	let pinInputToko = '';
+	let pinErrorToko = '';
+	let tokoAktifLocal = false;
+	let sesiAktif: {
 		id: string;
 		opening_cash: number;
 		opening_time: string;
 		is_active: boolean;
 	} | null = null;
-let ringkasanTutup: {
+	let ringkasanTutup: {
 		modalAwal: number;
 		totalPenjualan: number;
 		pemasukanTunai: number;
@@ -449,16 +449,16 @@ let ringkasanTutup: {
 	// Pending action setelah PIN benar
 	let pendingAction: (() => void) | null = null;
 
-function handleActionPinSuccess() {
-	showActionPinModal = false;
-	if (pendingAction) pendingAction();
-	pendingAction = null;
-}
+	function handleActionPinSuccess() {
+		showActionPinModal = false;
+		if (pendingAction) pendingAction();
+		pendingAction = null;
+	}
 
-function handleActionPinClose() {
-	showActionPinModal = false;
-	pendingAction = null;
-}
+	function handleActionPinClose() {
+		showActionPinModal = false;
+		pendingAction = null;
+	}
 
 	async function handleBukaToko() {
 		const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));

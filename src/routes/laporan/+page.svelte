@@ -19,15 +19,19 @@
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler, getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
+	import type { BukuKasRecord, LaporanSummary } from '$lib/types/laporan';
 
-	// Lazy load icons with proper typing
-	let Wallet: any, ArrowDownCircle: any, ArrowUpCircle: any, FilterIcon: any;
-	// Hapus variabel userRole yang lama
-	// let userRole = '';
+	// Lazy load icons — using `any` is acceptable here since Lucide icon types
+	// are complex and vary by version; they're only used in template rendering.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let Wallet: any = null;
+	let ArrowDownCircle: any = null;
+	let ArrowUpCircle: any = null;
+	let FilterIcon: any = null;
 
-	// Ganti dengan subscribe ke store
+	// Subscribe ke store
 	let currentUserRole = '';
-	let userProfileData: any = null;
+	let userProfileData: { role: string; username: string } | null = null;
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
 	let laporanRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -35,8 +39,8 @@
 	let lastLaporanRefreshAt = 0;
 	let lastAppliedReportFingerprint = '';
 
-	function computeReportFingerprint(reportData: any): string {
-		const summaryData = reportData?.summary || {};
+	function computeReportFingerprint(reportData: { summary?: LaporanSummary; transactions?: BukuKasRecord[] }): string {
+		const summaryData: LaporanSummary = reportData?.summary || { pendapatan: null, pengeluaran: null, saldo: null, labaKotor: null, pajak: null, labaBersih: null };
 		const transactions = reportData?.transactions || [];
 		const txLength = Array.isArray(transactions) ? transactions.length : 0;
 
@@ -495,14 +499,7 @@
 	// Removed PIN Modal State (showPinModal, pin, errorTimeout, isClosing)
 
 	// Inisialisasi summary dan list dengan default kosong
-	let summary: {
-		pendapatan: number | null;
-		pengeluaran: number | null;
-		saldo: number | null;
-		labaKotor: number | null;
-		pajak: number | null;
-		labaBersih: number | null;
-	} = {
+	let summary: LaporanSummary = {
 		pendapatan: null,
 		pengeluaran: null,
 		saldo: null,
@@ -510,23 +507,23 @@
 		pajak: null,
 		labaBersih: null
 	};
-	let pemasukanUsaha: any[] = [];
-	let pemasukanLain: any[] = [];
-	let bebanUsaha: any[] = [];
-	let bebanLain: any[] = [];
-	let pengeluaran: any = null;
-	let produkTerlaris: any[] = [];
-	let kategoriTerlaris: any[] = [];
+	let pemasukanUsaha: BukuKasRecord[] = [];
+	let pemasukanLain: BukuKasRecord[] = [];
+	let bebanUsaha: BukuKasRecord[] = [];
+	let bebanLain: BukuKasRecord[] = [];
+	let pengeluaran: number | null = null;
+	let produkTerlaris: { name: string; total: number }[] = [];
+	let kategoriTerlaris: { name: string; total: number }[] = [];
 
-	let laporan: any[] = [];
+	let laporan: BukuKasRecord[] = [];
 
 	// Tambahan: Data transaksi kas terstruktur untuk accordion
 	$: pemasukanUsahaDetail = laporan.filter(
-		(t: any) => t.tipe === 'in' && t.jenis === 'pendapatan_usaha'
+		(t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'pendapatan_usaha'
 	);
-	$: pemasukanLainDetail = laporan.filter((t: any) => t.tipe === 'in' && t.jenis === 'lainnya');
-	$: bebanUsahaDetail = laporan.filter((t: any) => t.tipe === 'out' && t.jenis === 'beban_usaha');
-	$: bebanLainDetail = laporan.filter((t: any) => t.tipe === 'out' && t.jenis === 'lainnya');
+	$: pemasukanLainDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'lainnya');
+	$: bebanUsahaDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'beban_usaha');
+	$: bebanLainDetail = laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'lainnya');
 
 	$: pemasukanUsahaQris = pemasukanUsahaDetail.filter((t) => t.payment_method === 'non-tunai');
 	$: pemasukanUsahaTunai = pemasukanUsahaDetail.filter((t) => t.payment_method === 'tunai');
@@ -546,7 +543,7 @@
 		...bebanLainDetail
 	]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiAll = [
 		...pemasukanUsahaDetail,
@@ -555,39 +552,39 @@
 		...bebanLainDetail
 	]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalQrisPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiPemasukan = [...pemasukanUsahaDetail, ...pemasukanLainDetail]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalQrisPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiPengeluaran = [...bebanUsahaDetail, ...bebanLainDetail]
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	// Memoize untuk summary box
 	const memoizedSummary = memoize(
 		(
-			pemasukanUsahaDetail: any[],
-			pemasukanLainDetail: any[],
-			bebanUsahaDetail: any[],
-			bebanLainDetail: any[]
+			pemasukanUsahaDetail: BukuKasRecord[],
+			pemasukanLainDetail: BukuKasRecord[],
+			bebanUsahaDetail: BukuKasRecord[],
+			bebanLainDetail: BukuKasRecord[]
 		) => {
 			// Gunakan nominal seperti dataService, fallback ke amount jika nominal tidak ada
 			const totalPemasukan = pemasukanUsahaDetail
 				.concat(pemasukanLainDetail)
-				.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 			const totalPengeluaran = bebanUsahaDetail
 				.concat(bebanLainDetail)
-				.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 			// Laba (Rugi) Kotor = Pendapatan - Pengeluaran
 			const labaKotor = totalPemasukan - totalPengeluaran;
@@ -607,28 +604,10 @@
 				labaBersih
 			};
 		},
-		(a: any, b: any, c: any, d: any) => `${a.length}-${b.length}-${c.length}-${d.length}`
+		(a: BukuKasRecord[], b: BukuKasRecord[], c: BukuKasRecord[], d: BukuKasRecord[]) =>
+			`${a.length}-${b.length}-${c.length}-${d.length}`
 	);
 
-	// HAPUS reactive statement yang konflik - gunakan summary dari dataService langsung
-	// $: summary = memoizedSummary(pemasukanUsahaDetail, pemasukanLainDetail, bebanUsahaDetail, bebanLainDetail);
-
-	// HAPUS watcher universal yang menyebabkan double fetching
-	// $: if (startDate && endDate) {
-	//   loadLaporanData();
-	// }
-
-	// Watcher untuk reload data saat filter berubah - DISABLED untuk mencegah double fetching
-	// let filterChangeTimeout: number;
-	// $: if (!showFilter && startDate && endDate && filterType) {
-	// 	// Clear existing timeout
-	// 	if (filterChangeTimeout) clearTimeout(filterChangeTimeout);
-
-	// 	// Debounce untuk menghindari multiple calls
-	// 	filterChangeTimeout = setTimeout(() => {
-	// 		loadLaporanData();
-	// 	}, 300) as any;
-	// }
 
 	// Fungsi untuk menghitung range tanggal berdasarkan filter type
 	function calculateDateRange(type: string, date?: string, month?: string, year?: string) {
@@ -644,7 +623,6 @@
 				case 'mingguan':
 					if (date) {
 						const startDate = new Date(date + 'T00:00:00');
-						// Validasi tanggal
 						if (isNaN(startDate.getTime())) {
 							return { startDate: '', endDate: '' };
 						}
@@ -660,15 +638,12 @@
 					if (month && year) {
 						const y = parseInt(year);
 						const m = parseInt(month) - 1;
-						// Validasi bulan dan tahun
 						if (isNaN(y) || isNaN(m) || m < 0 || m > 11) {
 							return { startDate: '', endDate: '' };
 						}
-						// Gunakan timezone WITA untuk konsistensi
 						const first = new Date(y, m, 1);
 						const last = new Date(y, m + 1, 0);
 
-						// Format tanggal dengan padding nol
 						const formatDate = (date: Date) => {
 							const year = date.getFullYear();
 							const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -676,26 +651,22 @@
 							return `${year}-${month}-${day}`;
 						};
 
-						const result = {
+						return {
 							startDate: formatDate(first),
 							endDate: formatDate(last)
 						};
-
-						return result;
 					}
 					break;
 				case 'tahunan':
 					if (year) {
 						const y = parseInt(year);
-						// Validasi tahun
 						if (isNaN(y) || y < 1900 || y > 2100) {
 							return { startDate: '', endDate: '' };
 						}
-						const result = {
+						return {
 							startDate: `${y}-01-01`,
 							endDate: `${y}-12-31`
 						};
-						return result;
 					}
 					break;
 			}
@@ -705,52 +676,8 @@
 		return { startDate: '', endDate: '' };
 	}
 
-	// Watcher untuk filter harian - DISABLED untuk mencegah double fetching
-	// $: if (filterType === 'harian' && startDate) {
-	// 	const range = calculateDateRange('harian', startDate);
-	// 	if (range.startDate && range.endDate) {
-	// 		endDate = range.endDate;
-	// 		// Panggil loadLaporanData setelah update range
-	// 		loadLaporanData();
-	// 	}
-	// }
-
-	// Watcher untuk filter mingguan - DISABLED untuk mencegah double fetching
-	// $: if (filterType === 'mingguan' && startDate) {
-	// 	const range = calculateDateRange('mingguan', startDate);
-	// 	if (range.startDate && range.endDate) {
-	// 		endDate = range.endDate;
-	// 		// Panggil loadLaporanData setelah update range
-	// 		loadLaporanData();
-	// 	}
-	// }
-
-	// Watcher untuk filter bulanan - DISABLED untuk mencegah double fetching
-	// $: if (filterType === 'bulanan' && filterMonth && filterYear) {
-	// 	const range = calculateDateRange('bulanan', undefined, filterMonth, filterYear);
-	// 	if (range.startDate && range.endDate) {
-	// 		startDate = range.startDate;
-	// 		endDate = range.endDate;
-	// 		// Panggil loadLaporanData setelah update range
-	// 		loadLaporanData();
-	// 	}
-	// }
-
-	// Watcher untuk filter tahunan - DISABLED untuk mencegah double fetching
-	// $: if (filterType === 'tahunan') {
-	// 	if (filterYear) {
-	// 		const range = calculateDateRange('tahunan', undefined, undefined, filterYear);
-	// 		if (range.startDate && range.endDate) {
-	// 			startDate = range.startDate;
-	// 			endDate = range.endDate;
-	// 			// Panggil loadLaporanData setelah update range
-	// 			loadLaporanData();
-	// 		}
-	// 	}
-	// }
-
 	// Helper function untuk format currency yang aman
-	function formatCurrency(amount: any): string {
+	function formatCurrency(amount: number | null | undefined): string {
 		if (amount === null || amount === undefined || isNaN(amount)) {
 			return '0';
 		}
@@ -758,53 +685,51 @@
 	}
 
 	// Fungsi untuk group dan sum item berdasarkan nama (description/catatan)
-	function groupAndSumByName(items: any[]): any[] {
-		const map = new Map();
+	function groupAndSumByName(items: BukuKasRecord[]): { name: string; total: number }[] {
+		const map = new Map<string, number>();
 		for (const item of items) {
-			// Gunakan nama produk yang sebenarnya tanpa flag
 			const name = getDeskripsiLaporan(item);
 
 			const prev = map.get(name) || 0;
 			map.set(name, prev + (item.nominal || item.amount || 0));
 		}
-		// Kembalikan array of { name, total }
 		return Array.from(map.entries()).map(([name, total]) => ({ name, total }));
 	}
 
 	// Reactive statements untuk total QRIS/Tunai per sub-group
 	$: totalQrisPendapatanUsaha = pemasukanUsahaDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiPendapatanUsaha = pemasukanUsahaDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalQrisPemasukanLain = pemasukanLainDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiPemasukanLain = pemasukanLainDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalQrisBebanUsaha = bebanUsahaDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiBebanUsaha = bebanUsahaDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalQrisBebanLain = bebanLainDetail
 		.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
 	$: totalTunaiBebanLain = bebanLainDetail
 		.filter((t) => t.payment_method === 'tunai')
-		.reduce((sum: number, t: any) => sum + (t.nominal || t.amount || 0), 0);
+		.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0);
 
-	function getDeskripsiLaporan(item: any): string {
+	function getDeskripsiLaporan(item: BukuKasRecord): string {
 		return item?.description?.trim() || item?.catatan?.trim() || '-';
 	}
 
@@ -816,7 +741,7 @@
 		return `${year}-${month}-${day}`;
 	}
 
-	function formatDate(dateString: any, isEndDate = false): string {
+	function formatDate(dateString: string, isEndDate = false): string {
 		if (!dateString) {
 			return '';
 		}
@@ -860,7 +785,7 @@
 
 	// State untuk item yang sedang diperpanjang (expanded)
 	let expandedItems = new Set();
-	function toggleExpand(name: any): void {
+	function toggleExpand(name: string): void {
 		if (expandedItems.has(name)) {
 			expandedItems.delete(name);
 		} else {

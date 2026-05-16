@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
-let initialBranch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2' = 'samarinda';
+let initialBranch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2' =
+	'samarinda';
 if (typeof window !== 'undefined') {
 	const saved = localStorage.getItem('selectedBranch'); // Changed to localStorage
 	if (
@@ -13,9 +14,9 @@ if (typeof window !== 'undefined') {
 		initialBranch = saved;
 	}
 }
-export const selectedBranch = writable<'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2'>(
-	initialBranch
-);
+export const selectedBranch = writable<
+	'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2'
+>(initialBranch);
 
 if (typeof window !== 'undefined') {
 	selectedBranch.subscribe((val) => localStorage.setItem('selectedBranch', val)); // Changed to localStorage

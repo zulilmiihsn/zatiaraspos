@@ -38,9 +38,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 	try {
 		const requesterRole = locals.authSession?.role;
 		if (requesterRole !== 'pemilik' && requesterRole !== 'admin') {
-			return new Response(JSON.stringify({ success: false, code: 'FORBIDDEN', message: 'Forbidden' }), {
-				status: 403
-			});
+			return new Response(
+				JSON.stringify({ success: false, code: 'FORBIDDEN', message: 'Forbidden' }),
+				{
+					status: 403
+				}
+			);
 		}
 
 		const clientIp = getClientAddress();
@@ -56,24 +59,28 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 			);
 		}
 
-		const {
-			usernameLama,
-			usernameBaru,
-			passwordLama,
-			passwordBaru,
-			branch,
-			targetRole
-		} = await request.json();
+		const { usernameLama, usernameBaru, passwordLama, passwordBaru, branch, targetRole } =
+			await request.json();
 		if (!usernameLama || !usernameBaru || !passwordLama || !passwordBaru || !branch) {
-			return new Response(JSON.stringify({ success: false, code: 'VALIDATION_ERROR', message: 'Semua field wajib diisi.' }), {
-				status: 400
-			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'VALIDATION_ERROR',
+					message: 'Semua field wajib diisi.'
+				}),
+				{
+					status: 400
+				}
+			);
 		}
 
 		if (!isValidBranch(branch)) {
-			return new Response(JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid.' }), {
-				status: 400
-			});
+			return new Response(
+				JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid.' }),
+				{
+					status: 400
+				}
+			);
 		}
 
 		if (!isStrongPassword(passwordBaru)) {
@@ -90,23 +97,37 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 
 		const supabase = getSupabaseClient(branch);
 		// Ambil user dari tabel profil
-		let query = supabase.from('profil').select('id, username, password, role').eq('username', usernameLama);
+		let query = supabase
+			.from('profil')
+			.select('id, username, password, role')
+			.eq('username', usernameLama);
 		if (targetRole) {
 			query = query.eq('role', targetRole);
 		}
 		const { data: user, error } = await query.single();
 		if (error || !user) {
 			return new Response(
-				JSON.stringify({ success: false, code: 'NOT_FOUND', message: 'Username lama tidak ditemukan.' }),
+				JSON.stringify({
+					success: false,
+					code: 'NOT_FOUND',
+					message: 'Username lama tidak ditemukan.'
+				}),
 				{ status: 404 }
 			);
 		}
 		// Verifikasi password lama
 		const match = await bcrypt.compare(passwordLama, user.password);
 		if (!match) {
-			return new Response(JSON.stringify({ success: false, code: 'INVALID_CREDENTIALS', message: 'Password lama salah.' }), {
-				status: 401
-			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'INVALID_CREDENTIALS',
+					message: 'Password lama salah.'
+				}),
+				{
+					status: 401
+				}
+			);
 		}
 		// Hash password baru
 		const hashedPassword = await bcrypt.hash(passwordBaru, 10);
@@ -117,7 +138,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 			.eq('id', user.id);
 		if (updateError) {
 			return new Response(
-				JSON.stringify({ success: false, code: 'UPDATE_FAILED', message: 'Gagal update username/password.' }),
+				JSON.stringify({
+					success: false,
+					code: 'UPDATE_FAILED',
+					message: 'Gagal update username/password.'
+				}),
 				{ status: 500 }
 			);
 		}
@@ -129,8 +154,15 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 			{ status: 200 }
 		);
 	} catch (e) {
-		return new Response(JSON.stringify({ success: false, code: 'SERVER_ERROR', message: 'Terjadi error pada server.' }), {
-			status: 500
-		});
+		return new Response(
+			JSON.stringify({
+				success: false,
+				code: 'SERVER_ERROR',
+				message: 'Terjadi error pada server.'
+			}),
+			{
+				status: 500
+			}
+		);
 	}
 };

@@ -109,7 +109,10 @@ function summarizeWindow(cutoff: number) {
 		apiFailures: {
 			total: totalApiFailures,
 			byEndpointCodeStatus,
-			topEndpoints: toTopList(endpointCounts, 10, 'endpoint') as Array<{ endpoint: string; count: number }>,
+			topEndpoints: toTopList(endpointCounts, 10, 'endpoint') as Array<{
+				endpoint: string;
+				count: number;
+			}>,
 			topCodes: toTopList(codeCounts, 10, 'code') as Array<{ code: string; count: number }>
 		}
 	};
@@ -165,16 +168,25 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 	try {
 		payload = await request.json();
 	} catch {
-		return json({ success: false, code: 'INVALID_JSON', message: 'Invalid JSON payload' }, { status: 400 });
+		return json(
+			{ success: false, code: 'INVALID_JSON', message: 'Invalid JSON payload' },
+			{ status: 400 }
+		);
 	}
 
 	const eventType = sanitizeEventType(payload.eventType);
 	if (!eventType) {
-		return json({ success: false, code: 'VALIDATION_ERROR', message: 'Invalid eventType' }, { status: 400 });
+		return json(
+			{ success: false, code: 'VALIDATION_ERROR', message: 'Invalid eventType' },
+			{ status: 400 }
+		);
 	}
 
 	if (!ALLOWED_EVENT_TYPES.has(eventType)) {
-		return json({ success: false, code: 'UNSUPPORTED_EVENT_TYPE', message: 'Unsupported eventType' }, { status: 400 });
+		return json(
+			{ success: false, code: 'UNSUPPORTED_EVENT_TYPE', message: 'Unsupported eventType' },
+			{ status: 400 }
+		);
 	}
 
 	const receivedAt = Date.now();
@@ -182,7 +194,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 	const eventData = payload.data ?? {};
 	const dataBytes = Buffer.byteLength(JSON.stringify(eventData), 'utf8');
 	if (dataBytes > MAX_EVENT_DATA_BYTES) {
-		return json({ success: false, code: 'PAYLOAD_TOO_LARGE', message: 'Event payload too large' }, { status: 413 });
+		return json(
+			{ success: false, code: 'PAYLOAD_TOO_LARGE', message: 'Event payload too large' },
+			{ status: 413 }
+		);
 	}
 
 	console.info('[SECURITY_EVENT]', {
