@@ -1,6 +1,6 @@
 import type { TransactionAnalysis, DetectedTransaction, AiRecommendation } from '$lib/types/ai';
 import { get } from 'svelte/store';
-import { selectedBranch } from '$lib/stores/selectedBranch';
+import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import {
 	getApiErrorMessageFromResponse,
 	reportApiFailureFromResponse
@@ -22,7 +22,7 @@ export class AiAnalysisService {
 	async analyzeTransaction(text: string): Promise<TransactionAnalysis> {
 		try {
 			// Get current branch from store
-			const currentBranch = get(selectedBranch) || 'default';
+			const currentBranch = selectedBranch.value || 'default';
 
 			// Kirim ke backend AI untuk analisis
 			const response = await fetch('/api/aichat?action=analyze', {

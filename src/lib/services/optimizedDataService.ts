@@ -6,7 +6,7 @@
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { VALID_BRANCHES, isValidBranch, type BranchKey } from '$lib/database/supabaseClient';
 import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
-import { selectedBranch } from '$lib/stores/selectedBranch';
+import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { get as storeGet } from 'svelte/store';
 import { browser } from '$app/environment';
 
@@ -73,7 +73,7 @@ export class OptimizedDataService {
 	 * Get optimized connection for branch
 	 */
 	private getConnection(branch?: string): ReturnType<typeof getSupabaseClient> {
-		const currentBranch = branch || storeGet(selectedBranch);
+		const currentBranch = branch || selectedBranch.value;
 		const branchKey: BranchKey = isValidBranch(currentBranch) ? currentBranch : 'Balikpapan';
 
 		if (!this.connectionPool[branchKey]) {
@@ -522,7 +522,7 @@ export class OptimizedDataService {
 	 * Clear cache for specific branch
 	 */
 	clearBranchCache(branch?: string): void {
-		const branchKey = branch || storeGet(selectedBranch) || 'default';
+		const branchKey = branch || selectedBranch.value || 'default';
 		advancedCache.invalidatePattern(new RegExp(`_${branchKey}$`));
 	}
 

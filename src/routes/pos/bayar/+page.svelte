@@ -9,9 +9,9 @@
 	import { formatWitaDateTime, getNowWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 	import { memoize } from '$lib/utils/performance';
@@ -68,8 +68,7 @@
 	let showNoSessionModal = false;
 	let noSessionModalMsg = '';
 
-	let currentUserRole = '';
-	userRole.subscribe((val) => (currentUserRole = val || ''));
+	let currentUserRole = $derived(userRole.value || '');
 
 	let showNotifModal = false;
 	let notifModalMsg = '';
@@ -105,7 +104,7 @@
 
 	let sesiAktif: TokoSession | null = null;
 	async function cekSesiTokoAktif() {
-		const { data } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data } = await getSupabaseClient(selectedBranch.value)
 			.from('sesi_toko')
 			.select('*')
 			.eq('is_active', true)
@@ -117,7 +116,7 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('*')
 				.eq('id', 1)
@@ -164,9 +163,9 @@
 		return { totalQty, totalHarga };
 	});
 
-	$: ({ totalQty, totalHarga } = calculateCartSummary(cart));
-	$: kembalian = (parseInt(cashReceived) || 0) - totalHarga;
-	$: formattedCashReceived = cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '';
+	let { totalQty, totalHarga } = $derived(calculateCartSummary(cart));
+	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
+	let formattedCashReceived = $derived(cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '');
 
 	function handleCancel() {
 		showCancelModal = true;
@@ -342,7 +341,7 @@
 			return;
 		}
 		if (navigator.onLine) {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.insert(insert);
 			if (error) {
@@ -352,7 +351,7 @@
 				return;
 			}
 			const { data: lastBukuKas, error: lastBukuKasError } = await getSupabaseClient(
-				storeGet(selectedBranch)
+				selectedBranch.value
 			)
 				.from('buku_kas')
 				.select('id, transaction_id, sumber, waktu')
@@ -380,7 +379,7 @@
 					};
 				});
 				if (transaksiKasirInserts.length) {
-					const { error: errorKasir } = await getSupabaseClient(storeGet(selectedBranch))
+					const { error: errorKasir } = await getSupabaseClient(selectedBranch.value)
 						.from('transaksi_kasir')
 						.insert(transaksiKasirInserts);
 				}

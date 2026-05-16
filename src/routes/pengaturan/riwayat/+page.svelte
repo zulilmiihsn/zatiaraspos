@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -56,7 +56,7 @@
 		const { startUtc: start, endUtc: end } = todayRange();
 
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.select('*')
 				.gte('waktu', start)
@@ -66,15 +66,15 @@
 			if (data && !error) {
 				let hasil: HistoryItem[] = data.map((t: BukuKasRecord) => ({
 					id: t.id,
-					transaction_id: t.ref_transaksi_kasir_id || (t as any).transaction_id,
+					transaction_id: t.ref_transaksi_kasir_id || t.transaction_id,
 					waktu: t.waktu || t.created_at,
-					nama: t.description || (t as any).customer_name || (t as any).nama || '-',
+					nama: t.description || t.customer_name || t.nama || '-',
 					nominal: t.nominal || t.amount || 0,
 					amount: t.nominal || t.amount || 0,
 					tipe: t.tipe,
 					sumber: t.sumber || 'catat',
 					payment_method: t.payment_method || 'tunai',
-					customer_name: (t as any).customer_name || ''
+					customer_name: t.customer_name || ''
 				}));
 
 				// Sort terbaru dulu
@@ -126,7 +126,7 @@
 	// ─── Fetch pengaturan struk ────────────────────────────────────────────
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('*')
 				.eq('id', 1)
@@ -149,9 +149,9 @@
 
 		loading = true;
 		try {
-			let items: any[] = [];
+			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				const { data } = await getSupabaseClient(storeGet(selectedBranch))
+				const { data } = await getSupabaseClient(selectedBranch.value)
 					.from('transaksi_kasir')
 					.select('*, produk:produk_id(name)')
 					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
@@ -186,9 +186,10 @@
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 
 			if (items.length > 0) {
-				items.forEach((item: any, idx: number) => {
-					const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				items.forEach((item: Record<string, unknown>, idx: number) => {
+					const produk = item.produk as Record<string, unknown> | undefined;
+					const itemName = item.custom_name || (produk && produk.name) || 'Produk Custom';
+					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(Number(item.price) ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {

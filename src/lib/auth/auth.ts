@@ -1,9 +1,9 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import { setUserRole, clearUserRole } from '$lib/stores/userRole';
+import { setUserRole, clearUserRole } from '$lib/stores/userRole.svelte';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { BranchKey } from '$lib/database/supabaseClient';
-import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings';
+import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings.svelte';
 import { clearCsrfTokenCache, fetchWithCsrfRetry } from '$lib/utils/csrf';
 import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 

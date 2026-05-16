@@ -32,6 +32,9 @@ export interface BukuKasRecord {
 	ref_transaksi_kasir_id?: string;
 	nama_produk?: string;
 	produk_detail?: string;
+	transaction_id?: string;
+	nama?: string;
+	customer_name?: string;
 }
 
 // ============================================================================

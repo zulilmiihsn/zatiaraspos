@@ -11,7 +11,7 @@
 	import { fly, fade } from 'svelte/transition';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { posGridView } from '$lib/stores/posGridView';
+	import { posGridView } from '$lib/stores/posGridView.svelte';
 	import {
 		debounce,
 		throttle,
@@ -20,12 +20,14 @@
 		calculateCartTotal,
 		fuzzySearch
 	} from '$lib/utils/performance';
-	import { userRole } from '$lib/stores/userRole';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { userRole } from '$lib/stores/userRole.svelte';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
-	let currentUserRole = '';
-	userRole.subscribe((val) => (currentUserRole = val || ''));
+	let currentUserRole = $state('');
+	$effect(() => {
+		currentUserRole = userRole.value || '';
+	});
 
 	import { browser } from '$app/environment';
 	let sesiAktif: TokoSession | null = null;
@@ -118,18 +120,13 @@
 		}
 
 		// Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-		unsubscribeBranch = selectedBranch.subscribe(() => {
-			// Skip jika ini adalah initial load
-			if (isInitialLoad) {
-				isInitialLoad = false;
-				return;
-			}
+		if (!isInitialLoad && selectedBranch.value) {
 			loadPOSData();
-		});
+		}
+		isInitialLoad = false;
 	});
 
 	onDestroy(() => {
-		if (unsubscribeBranch) unsubscribeBranch();
 		realtimeManager.unsubscribeAll();
 		if (posRefreshTimer) {
 			clearTimeout(posRefreshTimer);
@@ -225,8 +222,8 @@
 	let touchEndX = 0;
 	let touchEndY = 0;
 	let isSwiping = false;
-	let isTouchDevice = false;
-	let clickBlocked = false;
+	let isTouchDevice = $state(false);
+	let clickBlocked = $state(false);
 
 	// Throttled touch handlers
 	const throttledTouchMove = throttle((e: TouchEvent) => {
@@ -273,15 +270,14 @@
 	];
 
 	// Kategori produk
-	let selectedCategory = 'all';
+	let selectedCategory = $state('all');
 
 	// Produk mock dengan kategori
-	let products: PosProduct[] = [];
-	$: products = produkData;
+	let categories = $derived(kategoriData);
+	let products = $derived(produkData);
 
 	// Topping mock tanpa emoji/icon
-	let addOns: PosAddOn[] = [];
-	$: addOns = tambahanData;
+	let addOns = $derived(tambahanData);
 
 	// Jenis gula dan es
 	const sugarOptions = [
@@ -295,22 +291,22 @@
 		{ id: 'normal', label: 'Normal' }
 	];
 
-	let showModal = false;
-	let selectedProduct: PosProduct | null = null;
-	let selectedAddOns: string[] = [];
-	let selectedSugar = 'normal';
-	let selectedIce = 'normal';
-	let qty = 1;
-	let selectedNote = '';
+	let showModal = $state(false);
+	let selectedProduct = $state<PosProduct | null>(null);
+	let selectedAddOns = $state<string[]>([]);
+	let selectedSugar = $state('normal');
+	let selectedIce = $state('normal');
+	let qty = $state(1);
+	let selectedNote = $state('');
 
 	// Keranjang sementara
-	let cart: PosCartItem[] = [];
+	let cart = $state<PosCartItem[]>([]);
 
 	// Untuk track error gambar per produk (pakai string key)
-	let imageError: Record<string, boolean> = {};
+	let imageError = $state<Record<string, boolean>>({});
 
 	// Search produk dengan debounce
-	let search = '';
+	let search = $state('');
 
 	// Debounced search dengan optimasi
 	const debouncedSearch = debounce((value: string) => {
@@ -323,9 +319,9 @@
 
 	// Memoized computed values untuk performance
 	const memoizedCartTotal = memoize(calculateCartTotal);
-	$: cartTotal = memoizedCartTotal(cart);
-	$: totalItems = cartTotal.items;
-	$: totalHarga = cartTotal.total;
+	let cartTotal = $derived(memoizedCartTotal(cart));
+	let totalItems = $derived(cartTotal.items);
+	let totalHarga = $derived(cartTotal.total);
 
 	// Memoized filtered products dengan optimasi
 	const memoizedFilter = memoize(
@@ -343,9 +339,9 @@
 			`${products.length}-${categories.length}-${selectedCategory}-${search}`
 	);
 
-	$: filteredProducts = memoizedFilter(products, categories, selectedCategory, search);
+	let filteredProducts = $derived(memoizedFilter(products, categories, selectedCategory, search));
 
-	let showCartModal = false;
+	let showCartModal = $state(false);
 	function openCartModal() {
 		showModal = false;
 		showCartModal = true;
@@ -480,13 +476,13 @@
 		if (qty > 1) qty--;
 	}
 
-	let cartPreviewX = 0;
+	let cartPreviewX = $state(0);
 	let cartPreviewStartX = 0;
-	let cartPreviewDragging = false;
-	let cartPreviewRef: unknown;
+	let cartPreviewDragging = $state(false);
+	let cartPreviewRef = $state<unknown>(null);
 	let cartPreviewWidth = 0;
-	let showSnackbar = false;
-	let snackbarMsg = '';
+	let showSnackbar = $state(false);
+	let snackbarMsg = $state('');
 	let prevCartLength = 0;
 
 	function handleCartPreviewTouchStart(e: TouchEvent): void {
@@ -516,12 +512,12 @@
 		}
 	}
 
-	$: {
+	$effect(() => {
 		if (prevCartLength === 0 && cart.length > 0 && !cartPreviewDragging) {
 			cartPreviewX = 0;
 		}
 		prevCartLength = cart.length;
-	}
+	});
 
 	function handleGlobalClick(e: Event): void {
 		if (clickBlocked) {
@@ -536,10 +532,7 @@
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
 
-	let categories: PosCategory[] = [];
-	$: categories = kategoriData;
-
-	let skeletonCount = 9;
+	let skeletonCount = $state(9);
 	if (typeof window !== 'undefined') {
 		if (window.innerWidth < 768) {
 			skeletonCount = 6;
@@ -550,8 +543,8 @@
 		}
 	}
 
-	let showErrorNotification = false;
-	let errorNotificationMessage = '';
+	let showErrorNotification = $state(false);
+	let errorNotificationMessage = $state('');
 	let errorNotificationTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function showErrorNotif(message: string) {
@@ -563,11 +556,11 @@
 		}, 3000);
 	}
 
-	let showCustomItemModal = false;
-	let customItemName = '';
+	let showCustomItemModal = $state(false);
+	let customItemName = $state('');
 	let customItemPriceRaw = '';
-	let customItemPriceFormatted = '';
-	let customItemNote = '';
+	let customItemPriceFormatted = $state('');
+	let customItemNote = $state('');
 
 	function formatRupiahInput(value: string): string {
 		// Hanya angka
@@ -624,9 +617,11 @@
 	}
 
 	// Sinkronisasi cart ke localStorage setiap kali cart berubah
-	$: if (typeof window !== 'undefined') {
-		localStorage.setItem('pos_cart', JSON.stringify(cart));
-	}
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('pos_cart', JSON.stringify(cart));
+		}
+	});
 
 	function handleSelectCategoryAll(): void {
 		selectedCategory = 'all';
@@ -787,7 +782,7 @@
 				class="h-[calc(100vh-112px-48px)] overflow-y-auto md:h-[calc(100vh-128px-48px)] lg:h-[calc(100vh-160px-48px)]"
 				style="scrollbar-width:none;-ms-overflow-style:none;"
 			>
-				{#if $posGridView}
+				{#if posGridView.value}
 					<div
 						class="flex min-h-[60vh] flex-col gap-1 px-4 pb-4"
 						transition:slide={{ duration: 250 }}

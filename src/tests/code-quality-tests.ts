@@ -24,6 +24,17 @@ export interface CodeQualityTestResult {
 	executionTime?: number;
 }
 
+export interface CodeQualityTest {
+	name: string;
+	description: string;
+	test: () => Promise<CodeQualityTestResult>;
+}
+
+export interface CodeQualityTestSuiteDef {
+	name: string;
+	tests: CodeQualityTest[];
+}
+
 export interface CodeQualityTestSuite {
 	name: string;
 	tests: CodeQualityTestResult[];
@@ -37,7 +48,7 @@ export interface CodeQualityTestSuite {
 // 🧪 TYPE SCRIPT TESTS
 // ============================================================================
 
-export const typescriptTests = {
+export const typescriptTests: CodeQualityTestSuiteDef = {
 	name: 'TypeScript Compilation',
 	tests: [
 		{
@@ -62,14 +73,15 @@ export const typescriptTests = {
 						details: 'All TypeScript files compiled without errors',
 						executionTime
 					};
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error & { stdout?: string };
 
 					return {
 						name: 'TypeScript Check',
 						success: false,
 						message: 'TypeScript compilation failed',
-						details: error.stdout || error.message,
+						details: e.stdout || e.message,
 						executionTime
 					};
 				}
@@ -97,14 +109,15 @@ export const typescriptTests = {
 						details: 'Application built without errors',
 						executionTime
 					};
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error & { stdout?: string };
 
 					return {
 						name: 'TypeScript Build',
 						success: false,
 						message: 'Build failed',
-						details: error.stdout || error.message,
+						details: e.stdout || e.message,
 						executionTime
 					};
 				}
@@ -117,7 +130,7 @@ export const typescriptTests = {
 // 🧪 LINTING TESTS
 // ============================================================================
 
-export const lintingTests = {
+export const lintingTests: CodeQualityTestSuiteDef = {
 	name: 'Code Linting',
 	tests: [
 		{
@@ -142,14 +155,15 @@ export const lintingTests = {
 						details: 'No linting errors found',
 						executionTime
 					};
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error & { stdout?: string };
 
 					return {
 						name: 'ESLint Check',
 						success: false,
 						message: 'ESLint failed',
-						details: error.stdout || error.message,
+						details: e.stdout || e.message,
 						executionTime
 					};
 				}
@@ -177,14 +191,15 @@ export const lintingTests = {
 						details: 'All files follow formatting standards',
 						executionTime
 					};
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error & { stdout?: string };
 
 					return {
 						name: 'Prettier Format Check',
 						success: false,
 						message: 'Code formatting issues found',
-						details: error.stdout || error.message,
+						details: e.stdout || e.message,
 						executionTime
 					};
 				}
@@ -197,7 +212,7 @@ export const lintingTests = {
 // 🧪 FILE STRUCTURE TESTS
 // ============================================================================
 
-export const fileStructureTests = {
+export const fileStructureTests: CodeQualityTestSuiteDef = {
 	name: 'File Structure',
 	tests: [
 		{
@@ -247,14 +262,15 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error;
 
 					return {
 						name: 'Required Files Exist',
 						success: false,
 						message: 'File check failed',
-						details: error.message,
+						details: e.message,
 						executionTime
 					};
 				}
@@ -306,14 +322,15 @@ export const fileStructureTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error;
 
 					return {
 						name: 'Directory Structure',
 						success: false,
 						message: 'Directory check failed',
-						details: error.message,
+						details: e.message,
 						executionTime
 					};
 				}
@@ -326,7 +343,7 @@ export const fileStructureTests = {
 // 🧪 DEPENDENCY TESTS
 // ============================================================================
 
-export const dependencyTests = {
+export const dependencyTests: CodeQualityTestSuiteDef = {
 	name: 'Dependencies',
 	tests: [
 		{
@@ -368,14 +385,15 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error;
 
 					return {
 						name: 'Package.json Valid',
 						success: false,
 						message: 'Package.json validation failed',
-						details: error.message,
+						details: e.message,
 						executionTime
 					};
 				}
@@ -413,14 +431,15 @@ export const dependencyTests = {
 							executionTime
 						};
 					}
-				} catch (error: any) {
+								} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
+					const e = error as Error;
 
 					return {
 						name: 'Dependencies Installed',
 						success: false,
 						message: 'Dependency check failed',
-						details: error.message,
+						details: e.message,
 						executionTime
 					};
 				}
@@ -463,9 +482,9 @@ export class CodeQualityTestRunner {
 	/**
 	 * Jalankan satu test suite
 	 */
-	private async runTestSuite(suite: any): Promise<CodeQualityTestSuite> {
+	private async runTestSuite(suite: CodeQualityTestSuiteDef): Promise<CodeQualityTestSuite> {
 		const startTime = Date.now();
-		const results: any[] = [];
+		const results: CodeQualityTestResult[] = [];
 
 		for (const test of suite.tests) {
 			try {
@@ -475,21 +494,22 @@ export class CodeQualityTestRunner {
 				// Log individual test result
 				const status = result.success ? '✅' : '❌';
 				console.log(`  ${status} ${result.name}: ${result.message}`);
-			} catch (error: any) {
+						} catch (error: unknown) {
+				const e = error as Error;
 				results.push({
 					name: test.name,
 					success: false,
 					message: 'Test execution failed',
-					details: error.message
+					details: e.message
 				});
 
-				console.log(`  ❌ ${test.name}: Test execution failed - ${error.message}`);
+				console.log(`  ❌ ${test.name}: Test execution failed - ${e.message}`);
 			}
 		}
 
 		const totalExecutionTime = Date.now() - startTime;
-		const passedTests = results.filter((r: any) => r.success).length;
-		const failedTests = results.filter((r: any) => !r.success).length;
+		const passedTests = results.filter((r) => r.success).length;
+		const failedTests = results.filter((r) => !r.success).length;
 
 		return {
 			name: suite.name,

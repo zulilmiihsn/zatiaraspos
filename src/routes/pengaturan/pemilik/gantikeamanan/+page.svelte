@@ -4,9 +4,9 @@
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { userRole, setUserRole } from '$lib/stores/userRole';
+	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Shield from 'lucide-svelte/icons/shield';
 	import User from 'lucide-svelte/icons/user';
@@ -42,14 +42,12 @@
 	let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
 	onMount(async () => {
-		userRole.subscribe((role) => {
-			if (role !== 'pemilik') {
-				goto('/unauthorized');
-			}
-			currentUserRole = role || '';
-		});
+		if (userRole.value !== 'pemilik') {
+			goto('/unauthorized');
+		}
+		currentUserRole = userRole.value || '';
 		// Fetch PIN dan lockedPages dari Supabase
-		const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data, error } = await getSupabaseClient(selectedBranch.value)
 			.from('pengaturan')
 			.select('id, pin, locked_pages')
 			.eq('id', 1)
@@ -77,7 +75,7 @@
 			return;
 		}
 		try {
-			const branch = storeGet(selectedBranch);
+			const branch = selectedBranch.value;
 			const res = await fetchWithCsrfRetry('/api/gantikeamanan', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -131,7 +129,7 @@
 			return;
 		}
 		try {
-			const branch = storeGet(selectedBranch);
+			const branch = selectedBranch.value;
 			const res = await fetchWithCsrfRetry('/api/gantikeamanan', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -187,7 +185,7 @@
 			return;
 		}
 		try {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.update({ pin: newPin })
 				.eq('id', pengaturanKeamananId);
@@ -222,7 +220,7 @@
 	// Simpan pengaturan lockedPages ke Supabase
 	async function saveLockedPages() {
 		try {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.update({ locked_pages: lockedPages })
 				.eq('id', pengaturanKeamananId);

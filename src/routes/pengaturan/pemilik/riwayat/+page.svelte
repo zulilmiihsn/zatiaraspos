@@ -2,14 +2,14 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import { witaToUtcRange, getTodayWita } from '$lib/utils/dateTime';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -17,18 +17,34 @@
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
-	let pengaturanStruk: any = null;
+	import type { BukuKasRecord, ReceiptSettings } from '$lib/types/laporan';
+	import type { ComponentType } from 'svelte';
 
-	let transaksiHariIni: any[] = [];
+	interface HistoryItem {
+		id: string;
+		transaction_id?: string;
+		waktu: string;
+		nama: string;
+		nominal: number;
+		amount: number;
+		tipe: string;
+		sumber: string;
+		payment_method: string;
+		customer_name: string;
+	}
+
+	let pengaturanStruk: ReceiptSettings | null = null;
+
+	let transaksiHariIni: HistoryItem[] = [];
 	let loading = true;
 	let showDeleteModal = false;
-	let transaksiToDelete: any = null;
+	let transaksiToDelete: HistoryItem | null = null;
 	let searchKeyword = '';
 	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
-	let Trash: any;
-	let pollingInterval: any;
+	let Trash: ComponentType | null = null;
+	let pollingInterval: number | null = null;
 	let showDetailModal = false;
-	let selectedTransaksi: any = null;
+	let selectedTransaksi: HistoryItem | null = null;
 	let showDropdownPayment = false;
 	const paymentOptions = [
 		{ value: 'tunai', label: 'Tunai' },
@@ -50,7 +66,7 @@
 
 		try {
 			// Ambil data dari buku_kas
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.select('*')
 				.gte('waktu', start)
@@ -60,14 +76,14 @@
 			transaksiHariIni = [];
 			if (data && !error) {
 				transaksiHariIni.push(
-					...data.map((t) => ({
+					...data.map((t: BukuKasRecord) => ({
 						id: t.id,
-						transaction_id: t.transaction_id, // Tambahkan transaction_id untuk delete operation
-						waktu: t.waktu,
+						transaction_id: t.ref_transaksi_kasir_id || t.transaction_id, // Tambahkan transaction_id untuk delete operation
+						waktu: t.waktu || t.created_at,
 						nama: t.description || t.customer_name || t.nama || '-',
-						nominal: t.amount || t.nominal, // Support both amount and nominal fields
-						amount: t.amount || t.nominal, // Keep both for compatibility
-						tipe: t.tipe || t.type, // Handle kemungkinan perbedaan nama kolom
+						nominal: t.amount || t.nominal || 0, // Support both amount and nominal fields
+						amount: t.amount || t.nominal || 0, // Keep both for compatibility
+						tipe: t.tipe || (t as unknown as Record<string, string>).type, // Handle kemungkinan perbedaan nama kolom
 						sumber: t.sumber || 'catat',
 						payment_method: t.payment_method || 'tunai',
 						customer_name: t.customer_name || ''
@@ -106,7 +122,7 @@
 		}
 	}
 
-	function confirmDeleteTransaksi(trx: any) {
+	function confirmDeleteTransaksi(trx: HistoryItem) {
 		transaksiToDelete = trx;
 		showDeleteModal = true;
 	}
@@ -128,7 +144,7 @@
 		try {
 			if (transaksiToDelete.sumber === 'catat') {
 				// Untuk transaksi manual/catat, hapus dari buku_kas saja
-				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(selectedBranch.value)
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
@@ -141,7 +157,7 @@
 				const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
 
 				// Hapus detail transaksi dari transaksi_kasir
-				const { error: kasirError } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error: kasirError } = await getSupabaseClient(selectedBranch.value)
 					.from('transaksi_kasir')
 					.delete()
 					.eq('transaction_id', transactionId);
@@ -151,14 +167,14 @@
 				}
 
 				// Hapus total pembayaran dari buku_kas - coba dengan ID langsung dulu
-				const { error: bukuError } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error: bukuError } = await getSupabaseClient(selectedBranch.value)
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
 
 				if (bukuError) {
 					// Coba dengan transaction_id sebagai fallback
-					const { error: bukuError2 } = await getSupabaseClient(storeGet(selectedBranch))
+					const { error: bukuError2 } = await getSupabaseClient(selectedBranch.value)
 						.from('buku_kas')
 						.delete()
 						.eq('transaction_id', transactionId);
@@ -169,7 +185,7 @@
 				}
 			} else {
 				// Fallback: hapus berdasarkan ID langsung
-				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(selectedBranch.value)
 					.from('buku_kas')
 					.delete()
 					.eq('id', transaksiToDelete.id);
@@ -186,8 +202,9 @@
 				toastManager.hideToast();
 			}, 3000);
 		} catch (error) {
-			ErrorHandler.logError(error as any, 'deleteTransaksi');
-			const message = (error as any)?.message || 'Unknown error';
+			const err = error as Error;
+			ErrorHandler.logError(err, 'deleteTransaksi');
+			const message = err?.message || 'Unknown error';
 			toastManager.showToastNotification(`Gagal menghapus transaksi: ${message}`, 'error');
 		} finally {
 			await fetchTransaksiHariIni();
@@ -199,19 +216,19 @@
 		if (!loading) fetchTransaksiHariIni();
 	}
 
-	function openDetail(trx: any) {
+	function openDetail(trx: HistoryItem) {
 		selectedTransaksi = { ...trx };
 		showDetailModal = true;
 	}
 
-	async function updatePaymentMethod(newMethod: any) {
+	async function updatePaymentMethod(newMethod: string) {
 		if (!selectedTransaksi) return;
 		const currentMethod = selectedTransaksi.payment_method;
 		const dbMethod = newMethod === 'qris' ? 'non-tunai' : newMethod;
 		if (currentMethod === dbMethod) return;
 		loading = true;
 		try {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.update({ payment_method: dbMethod })
 				.eq('id', selectedTransaksi.id);
@@ -231,16 +248,14 @@
 	}
 
 	onMount(() => {
-		userRole.subscribe((role) => {
-			if (role !== 'pemilik') {
-				goto('/unauthorized');
-			}
-		})();
+		if (userRole.value !== 'pemilik') {
+			goto('/unauthorized');
+		}
 	});
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('*')
 				.eq('id', 1)
@@ -262,9 +277,9 @@
 
 		loading = true;
 		try {
-			let items: any[] = [];
+			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				const { data } = await getSupabaseClient(storeGet(selectedBranch))
+				const { data } = await getSupabaseClient(selectedBranch.value)
 					.from('transaksi_kasir')
 					.select('*, produk:produk_id(name)')
 					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
@@ -299,9 +314,10 @@
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 
 			if (items.length > 0) {
-				items.forEach((item: any, idx: any) => {
-					const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				items.forEach((item: Record<string, unknown>, idx: number) => {
+					const produk = item.produk as Record<string, unknown> | undefined;
+					const itemName = item.custom_name || (produk && produk.name) || 'Produk Custom';
+					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(Number(item.price) ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
@@ -343,11 +359,11 @@
 
 	// Cek role sebelum delete
 	function canDeleteTransaction() {
-		const currentRole = storeGet(userRole);
+		const currentRole = userRole.value;
 		return currentRole === 'pemilik';
 	}
 
-	let aiHandler: any;
+	let aiHandler: EventListener;
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
@@ -361,9 +377,9 @@
 			await fetchTransaksiHariIni();
 		};
 		if (typeof window !== 'undefined') {
-			window.addEventListener('ai-recommendations-applied', aiHandler as any);
+			window.addEventListener('ai-recommendations-applied', aiHandler);
 			// Ekspor refresher global untuk dipanggil langsung
-			(window as any).__refreshRiwayat = async () => {
+			(window as unknown as Record<string, unknown>).__refreshRiwayat = async () => {
 				await fetchTransaksiHariIni();
 			};
 		}
@@ -374,8 +390,8 @@
 		}
 		// clearInterval(pollingInterval); // HAPUS polling otomatis
 		if (typeof window !== 'undefined' && aiHandler) {
-			window.removeEventListener('ai-recommendations-applied', aiHandler as any);
-			delete (window as any).__refreshRiwayat;
+			window.removeEventListener('ai-recommendations-applied', aiHandler);
+			delete (window as unknown as Record<string, unknown>).__refreshRiwayat;
 		}
 	});
 </script>
@@ -618,9 +634,9 @@
 							>{paymentOptions.find(
 								(opt) =>
 									opt.value ===
-									(selectedTransaksi.payment_method === 'non-tunai'
+									(selectedTransaksi?.payment_method === 'non-tunai'
 										? 'qris'
-										: selectedTransaksi.payment_method)
+										: selectedTransaksi?.payment_method)
 							)?.label || 'Pilih'}</span
 						>
 						<svg

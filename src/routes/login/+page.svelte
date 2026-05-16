@@ -4,23 +4,27 @@
 	import { loginWithUsername } from '$lib/auth/auth';
 	import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
+	type BranchType = 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2';
 	import { get } from 'svelte/store';
 	import { isAuthenticated } from '$lib/utils/authGuard';
 
-	let userRole = '';
-	let username = '';
-	let password = '';
-	let isLoading = false;
-	let errorMessage = '';
-	let successMessage = '';
+	let userRole = $state('');
+	let username = $state('');
+	let password = $state('');
+	let isLoading = $state(false);
+	let errorMessage = $state('');
+	let successMessage = $state('');
 
 	// Form validation
-	let usernameError = '';
-	let passwordError = '';
+	let usernameError = $state('');
+	let passwordError = $state('');
 
-	let branch: 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2' = 'samarinda';
-	$: selectedBranch.set(branch);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let branch: BranchType = $state('samarinda') as any;
+	$effect(() => {
+		selectedBranch.value = branch as BranchType;
+	});
 
 	// Validate form
 	function validateForm(): boolean {
@@ -38,10 +42,10 @@
 		return isValid;
 	}
 
-	let showLottieSuccess = false;
-	let lottieTimeout: any = null;
-	let showLottieError = false;
-	let lottieErrorTimeout: any = null;
+	let showLottieSuccess = $state(false);
+	let lottieTimeout: ReturnType<typeof setTimeout> | null = null;
+	let showLottieError = $state(false);
+	let lottieErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	async function handleSubmit() {
 		errorMessage = '';
@@ -50,7 +54,7 @@
 		if (!securityUtils.checkFormRateLimit('login')) {
 			errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
 			showLottieError = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -63,7 +67,7 @@
 				reason: 'suspicious_activity'
 			});
 			showLottieError = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 			return;
 		}
@@ -80,7 +84,7 @@
 				reason: 'invalid_credentials'
 			});
 			showLottieError = true;
-			clearTimeout(lottieErrorTimeout);
+			if (lottieErrorTimeout) clearTimeout(lottieErrorTimeout);
 			lottieErrorTimeout = setTimeout(() => (showLottieError = false), 1200);
 		} finally {
 			isLoading = false;
@@ -231,7 +235,7 @@
 				</div>
 			{/if}
 
-			<form on:submit|preventDefault={handleSubmit} class="space-y-5">
+			<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-5">
 				<!-- Username Field -->
 				<div>
 					<label for="username" class="mb-2 block text-sm font-medium text-gray-700">
@@ -242,8 +246,8 @@
 							id="username"
 							type="text"
 							bind:value={username}
-							on:input={handleUsernameChange}
-							on:keypress={handleKeyPress}
+							oninput={handleUsernameChange}
+							onkeypress={handleKeyPress}
 							class="block w-full rounded-xl border border-gray-200 bg-white/80 px-4 py-3 text-gray-800 placeholder-gray-400 shadow-sm transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none"
 							placeholder="Masukkan username"
 							autocomplete="username"
@@ -278,8 +282,8 @@
 							id="password"
 							type="password"
 							bind:value={password}
-							on:input={handlePasswordChange}
-							on:keypress={handleKeyPress}
+							oninput={handlePasswordChange}
+							onkeypress={handleKeyPress}
 							class="block w-full rounded-xl border border-gray-200 bg-white/80 px-4 py-3 text-gray-800 placeholder-gray-400 shadow-sm transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100 focus:outline-none"
 							placeholder="Masukkan password"
 							autocomplete="current-password"

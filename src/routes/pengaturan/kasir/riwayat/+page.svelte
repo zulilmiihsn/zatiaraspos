@@ -2,14 +2,14 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import { witaToUtcRange, getTodayWita } from '$lib/utils/dateTime';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -17,15 +17,28 @@
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
-	let pengaturanStruk: any = null;
+	let pengaturanStruk: import('$lib/types/laporan').ReceiptSettings | null = null;
 
-	let transaksiHariIni: any[] = [];
+	interface HistoryItem {
+		id: string;
+		transaction_id?: string;
+		waktu: string;
+		nama: string;
+		nominal: number;
+		amount: number;
+		tipe: string;
+		sumber: string;
+		payment_method: string;
+		customer_name: string;
+	}
+
+	let transaksiHariIni: HistoryItem[] = [];
 	let loading = true;
 	let searchKeyword = '';
 	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
-	let pollingInterval: any;
+	let pollingInterval: number | null = null;
 	let showDetailModal = false;
-	let selectedTransaksi: any = null;
+	let selectedTransaksi: HistoryItem | null = null;
 	let showDropdownPayment = false;
 	const paymentOptions = [
 		{ value: 'tunai', label: 'Tunai' },
@@ -45,7 +58,7 @@
 		const { startUtc: start, endUtc: end } = todayRange();
 
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.select('*')
 				.gte('waktu', start)
@@ -101,23 +114,21 @@
 		if (!loading) fetchTransaksiHariIni();
 	}
 
-	function openDetail(trx: any) {
+	function openDetail(trx: HistoryItem) {
 		selectedTransaksi = { ...trx };
 		showDetailModal = true;
 	}
 
 	// Guard: hanya kasir yang boleh akses
 	onMount(() => {
-		userRole.subscribe((role) => {
-			if (role !== 'kasir') {
-				goto('/unauthorized');
-			}
-		})();
+		if (userRole.value !== 'kasir') {
+			goto('/unauthorized');
+		}
 	});
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('*')
 				.eq('id', 1)
@@ -139,9 +150,9 @@
 
 		loading = true;
 		try {
-			let items: any[] = [];
+			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				const { data } = await getSupabaseClient(storeGet(selectedBranch))
+				const { data } = await getSupabaseClient(selectedBranch.value)
 					.from('transaksi_kasir')
 					.select('*, produk:produk_id(name)')
 					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
@@ -176,9 +187,10 @@
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 
 			if (items.length > 0) {
-				items.forEach((item: any, idx: any) => {
-					const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				items.forEach((item: Record<string, unknown>, idx: number) => {
+					const produk = item.produk as Record<string, unknown> | undefined;
+					const itemName = item.custom_name || (produk && produk.name) || 'Produk Custom';
+					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(Number(item.price) ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
@@ -218,7 +230,7 @@
 		}
 	}
 
-	let aiHandler: any;
+	let aiHandler: EventListener;
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
@@ -229,8 +241,8 @@
 			await fetchTransaksiHariIni();
 		};
 		if (typeof window !== 'undefined') {
-			window.addEventListener('ai-recommendations-applied', aiHandler as any);
-			(window as any).__refreshRiwayatKasir = async () => {
+			window.addEventListener('ai-recommendations-applied', aiHandler);
+			(window as unknown as Record<string, unknown>).__refreshRiwayatKasir = async () => {
 				await fetchTransaksiHariIni();
 			};
 		}
@@ -240,8 +252,8 @@
 			document.body.classList.remove('hide-nav');
 		}
 		if (typeof window !== 'undefined' && aiHandler) {
-			window.removeEventListener('ai-recommendations-applied', aiHandler as any);
-			delete (window as any).__refreshRiwayatKasir;
+			window.removeEventListener('ai-recommendations-applied', aiHandler);
+			delete (window as unknown as Record<string, unknown>).__refreshRiwayatKasir;
 		}
 	});
 </script>
@@ -437,7 +449,6 @@
 				</div>
 				<div class="mb-2 flex flex-col gap-1">
 					<span class="font-semibold text-gray-500">Jenis Pembayaran</span>
-					<!-- Dibuat read-only untuk kasir -->
 					<button
 						type="button"
 						class="flex w-full items-center justify-between rounded-lg border-[1.5px] border-pink-200 bg-gray-50 px-3 py-2.5 font-medium text-gray-400"
@@ -445,8 +456,13 @@
 						disabled
 					>
 						<span class="truncate">
-							{paymentOptions.find((opt) => opt.value === selectedTransaksi.payment_method)
-								?.label || 'Pilih'}
+							{paymentOptions.find(
+								(opt) =>
+									opt.value ===
+									(selectedTransaksi?.payment_method === 'non-tunai'
+										? 'qris'
+										: selectedTransaksi?.payment_method)
+							)?.label || 'Pilih'}
 						</span>
 						<svg
 							class="ml-2 h-4 w-4 text-gray-300"

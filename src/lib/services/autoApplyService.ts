@@ -1,6 +1,6 @@
 import type { AiRecommendation, AutoApplyResult } from '$lib/types/ai';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
-import { selectedBranch } from '$lib/stores/selectedBranch';
+import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { get as storeGet } from 'svelte/store';
 
 export class AutoApplyService {
@@ -90,7 +90,7 @@ export class AutoApplyService {
 			throw new Error('Description transaksi tidak valid atau kosong');
 		}
 
-		const branch = storeGet(selectedBranch);
+		const branch = selectedBranch.value;
 		const supabase = getSupabaseClient(branch as any);
 
 		// Map type ke tipe yang digunakan di database
@@ -199,7 +199,7 @@ export class AutoApplyService {
 			throw new Error('ID transaksi diperlukan untuk update');
 		}
 
-		const branch = storeGet(selectedBranch);
+		const branch = selectedBranch.value;
 		const supabase = getSupabaseClient(branch as any);
 
 		const tipe = data.type === 'pemasukan' ? 'in' : 'out';
@@ -222,7 +222,7 @@ export class AutoApplyService {
 	 * Membuat kategori baru
 	 */
 	private async createCategory(data: any): Promise<void> {
-		const branch = storeGet(selectedBranch);
+		const branch = selectedBranch.value;
 		const supabase = getSupabaseClient(branch as any);
 
 		const categoryData = {

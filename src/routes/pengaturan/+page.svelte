@@ -5,11 +5,11 @@
 	import { auth } from '$lib/auth/auth';
 	import { securityUtils } from '$lib/utils/security';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { userRole, setUserRole } from '$lib/stores/userRole';
+	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Crown from 'lucide-svelte/icons/crown';
 	import CreditCard from 'lucide-svelte/icons/credit-card';
@@ -37,10 +37,7 @@
 	let isProfileLoaded = false;
 	let isPengaturanLoaded = false;
 
-	let currentUserRole = '';
-
-	// Subscribe ke store
-	userRole.subscribe((val) => (currentUserRole = val || ''));
+	let currentUserRole = $derived(userRole.value || '');
 	let showLogoutModal = false;
 	let currentPage = 'security';
 
@@ -87,7 +84,7 @@
 	}
 
 	async function fetchPengaturan() {
-		const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data, error } = await getSupabaseClient(selectedBranch.value)
 			.from('pengaturan')
 			.select('locked_pages, pin')
 			.eq('id', 1)
@@ -117,9 +114,9 @@
 			if (!currentUserRole) {
 				const {
 					data: { session }
-				} = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
+				} = await getSupabaseClient(selectedBranch.value).auth.getSession();
 				if (session?.user) {
-					const { data: profile } = await getSupabaseClient(storeGet(selectedBranch))
+					const { data: profile } = await getSupabaseClient(selectedBranch.value)
 						.from('profil')
 						.select('role, username')
 						.eq('id', session.user.id)
@@ -344,25 +341,25 @@
 	];
 
 	// Filter sections based on user role
-	$: filteredSections =
-		currentUserRole === 'admin' || currentUserRole === 'pemilik'
-			? settingsSections
-			: settingsSections.filter((section) => section.title !== 'Data & Backup');
+	let filteredSections = $derived(
+		settingsSections
+			.filter((section) => section.title !== 'Data & Backup' || currentUserRole === 'admin' || currentUserRole === 'pemilik')
+	);
 
 	// Get role icon once and store it
-	$: roleIcon = getRoleIcon();
+	let roleIcon = $derived(getRoleIcon());
 
 	// Tambahkan fungsi upload gambar menu ke bucket 'gambar-menu' Supabase Storage
 	async function uploadMenuImage(file: File, menuId: string) {
 		const ext = file.name.split('.').pop();
 		const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
 		// Upload ke bucket 'gambar-menu'
-		const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data, error } = await getSupabaseClient(selectedBranch.value)
 			.storage.from('gambar-menu')
 			.upload(filePath, file, { upsert: true });
 		if (error) throw error;
 		// Dapatkan public URL
-		const { data: publicUrlData } = getSupabaseClient(storeGet(selectedBranch))
+		const { data: publicUrlData } = getSupabaseClient(selectedBranch.value)
 			.storage.from('gambar-menu')
 			.getPublicUrl(filePath);
 		return publicUrlData.publicUrl;

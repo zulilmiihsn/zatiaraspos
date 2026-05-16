@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+
 import { browser } from '$app/environment';
 
 interface SecuritySettings {
@@ -25,10 +25,13 @@ const initialValue = browser
 		})()
 	: null;
 
-export const securitySettings = writable<SecuritySettings | null>(initialValue);
+class SecuritySettingsState {
+	value = $state<SecuritySettings | null>(initialValue);
+}
+export const securitySettings = new SecuritySettingsState();
 
 export function setSecuritySettings(settings: SecuritySettings) {
-	securitySettings.set(settings);
+	securitySettings.value = settings;
 	// Persist to localStorage
 	if (browser) {
 		try {
@@ -45,7 +48,7 @@ export function setSecuritySettings(settings: SecuritySettings) {
 }
 
 export function clearSecuritySettings() {
-	securitySettings.set(null);
+	securitySettings.value = null;
 	// Clear from localStorage
 	if (browser) {
 		try {

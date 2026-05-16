@@ -22,11 +22,11 @@
 		getTodayWita,
 		getNowWita
 	} from '$lib/utils/dateTime';
-	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { dataService } from '$lib/services/dataService';
@@ -98,13 +98,12 @@
 
 	let currentUserRole = $state('');
 	$effect(() => {
-		const unsubscribe = userRole.subscribe((val) => (currentUserRole = val || ''));
-		return unsubscribe;
+		currentUserRole = userRole.value || '';
 	});
 
 	let sesiAktif = $state<TokoSession | null>(null);
 	async function cekSesiTokoAktif() {
-		const { data } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data } = await getSupabaseClient(selectedBranch.value)
 			.from('sesi_toko')
 			.select('*')
 			.eq('is_active', true)
@@ -125,9 +124,9 @@
 		if (!currentUserRole) {
 			const {
 				data: { session }
-			} = await getSupabaseClient(storeGet(selectedBranch)).auth.getSession();
+			} = await getSupabaseClient(selectedBranch.value).auth.getSession();
 			if (session?.user) {
-				const { data: profile } = await getSupabaseClient(storeGet(selectedBranch))
+				const { data: profile } = await getSupabaseClient(selectedBranch.value)
 					.from('profil')
 					.select('role, username')
 					.eq('id', session.user.id)
@@ -189,7 +188,7 @@
 			jenis: form.jenis
 		};
 		if (navigator.onLine) {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('buku_kas')
 				.insert([trx]);
 			if (error) {

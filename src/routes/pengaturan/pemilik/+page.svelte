@@ -4,13 +4,11 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Utensils from 'lucide-svelte/icons/utensils';
 	import Shield from 'lucide-svelte/icons/shield';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	onMount(() => {
-		userRole.subscribe((role) => {
-			if (role !== 'pemilik') {
-				goto('/unauthorized');
-			}
-		})();
+		if (userRole.value !== 'pemilik') {
+			goto('/unauthorized');
+		}
 	});
 </script>
 

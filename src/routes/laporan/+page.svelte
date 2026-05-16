@@ -11,11 +11,11 @@
 		witaRangeToUtcRange
 	} from '$lib/utils/dateTime';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
-	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 	import { memoize } from '$lib/utils/performance';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler, getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
@@ -32,8 +32,7 @@
 	// Subscribe ke store
 	let currentUserRole = '';
 	let userProfileData: { role: string; username: string } | null = null;
-	let unsubscribeBranch: (() => void) | null = null;
-	let isInitialLoad = true; // Add flag to prevent double fetching
+		let isInitialLoad = true; // Add flag to prevent double fetching
 	let laporanRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let laporanRefreshInFlight = false;
 	let lastLaporanRefreshAt = 0;
@@ -127,10 +126,11 @@
 		return html;
 	}
 
-	userRole.subscribe((val) => (currentUserRole = val || ''));
-	userProfile.subscribe((val) => (userProfileData = val));
+	$: currentUserRole = userRole.value || '';
+	$: userProfileData = userProfile.value as { role: string; username: string } | null;
 
 	// AI Chat functions
+
 
 	async function handleAiAsk(question: string) {
 		aiQuestion = question;
@@ -146,7 +146,7 @@
 				},
 				body: JSON.stringify({
 					question: question,
-					branch: $selectedBranch
+					branch: selectedBranch.value
 				})
 			});
 
@@ -371,16 +371,6 @@
 			}
 		});
 
-		// Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-		unsubscribeBranch = selectedBranch.subscribe(() => {
-			// Skip jika ini adalah initial load
-			if (isInitialLoad) {
-				isInitialLoad = false;
-				return;
-			}
-			void scheduleLaporanRefresh(120, true);
-		});
-
 		// Tambahkan event listener untuk visibility change (saat kembali ke tab)
 		const handleVisibilityChange = () => {
 			if (!document.hidden) {
@@ -437,6 +427,17 @@
 		};
 	});
 
+	$: {
+		let _branch = selectedBranch.value;
+		if (typeof window !== 'undefined') {
+			if (isInitialLoad) {
+				isInitialLoad = false;
+			} else {
+				void scheduleLaporanRefresh(120, true);
+			}
+		}
+	}
+
 	onDestroy(() => {
 		// Unsubscribe dari realtime
 		realtimeManager.unsubscribeAll();
@@ -446,7 +447,6 @@
 		}
 
 		// Unsubscribe dari branch changes
-		if (unsubscribeBranch) unsubscribeBranch();
 
 		// Clear any pending timeouts
 		// Removed errorTimeout

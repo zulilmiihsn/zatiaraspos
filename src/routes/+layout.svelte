@@ -3,31 +3,33 @@
 	import Topbar from '$lib/components/shared/topBar.svelte';
 	import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	import { page } from '$app/stores';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import Download from 'lucide-svelte/icons/download';
-	import { posGridView } from '$lib/stores/posGridView';
+	import { posGridView } from '$lib/stores/posGridView.svelte';
 	import { slide, fade, fly } from 'svelte/transition';
 	import { auth } from '$lib/auth/auth';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import { dataService } from '$lib/services/dataService';
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
-	import { securitySettings, setSecuritySettings } from '$lib/stores/securitySettings';
+	import { securitySettings, setSecuritySettings } from '$lib/stores/securitySettings.svelte';
 	import { requireAuth } from '$lib/utils/authGuard';
 
+	let { children }: { children: Snippet } = $props();
+
 	// PWA Update Notification
-	let showUpdateNotification = false;
+	let showUpdateNotification = $state(false);
 	let updateAvailable = false;
 
 	let hasPrefetched = false;
-	let isOffline = !navigator.onLine;
-	let pendingCount = 0;
-	let showToast = false;
+	let isOffline = $state(!navigator.onLine);
+	let pendingCount = $state(0);
+	let showToast = $state(false);
 
 	async function updatePending() {
 		pendingCount = (await getPendingTransactions()).length;
@@ -118,8 +120,8 @@
 	});
 
 	// --- Logika Tampilan Navigasi ---
-	let showNav = true;
-	$: {
+	let showNav = $state(true);
+	$effect(() => {
 		const path = $page.url.pathname;
 		const noNavRoutes = ['/login', '/unauthorized', '/pos/bayar'];
 		if (noNavRoutes.includes(path) || path.startsWith('/pengaturan')) {
@@ -127,11 +129,11 @@
 		} else {
 			showNav = true;
 		}
-	}
+	});
 
 	// --- Logika PinModal Global ---
-	let showPinModal = false;
-	let currentPin = '';
+	let showPinModal = $state(false);
+	let currentPin = $state('');
 	let pinUnlockedForCurrentPage = false; // Flag untuk menandai PIN sudah dibuka untuk halaman saat ini
 	let lastPath = '';
 	let isLoadingSecuritySettings = false;
@@ -141,7 +143,7 @@
 		isLoadingSecuritySettings = true;
 
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('pin, locked_pages')
 				.eq('id', 1)
@@ -169,14 +171,16 @@
 	}
 
 	// Reset pinUnlockedForCurrentPage jika navigasi ke halaman baru
-	$: if ($navigating) {
-		pinUnlockedForCurrentPage = false;
-	}
+	$effect(() => {
+		if ($navigating) {
+			pinUnlockedForCurrentPage = false;
+		}
+	});
 
 	// Reactive statement untuk menangani PIN modal
-	$: {
-		const currentUserRole = $userRole;
-		const currentSecuritySettings = $securitySettings;
+	$effect(() => {
+		const currentUserRole = userRole.value;
+		const currentSecuritySettings = securitySettings.value;
 		const currentPath = $page.url.pathname;
 
 		if (currentUserRole === 'kasir' && (!currentSecuritySettings || !currentSecuritySettings.pin)) {
@@ -211,7 +215,7 @@
 		} else {
 			showPinModal = false;
 		}
-	}
+	});
 
 	function handlePinSuccess() {
 		pinUnlockedForCurrentPage = true;
@@ -284,13 +288,13 @@
 		<p class="mb-4 text-sm opacity-90">Aplikasi akan diperbarui untuk performa yang lebih baik.</p>
 		<div class="flex gap-2">
 			<button
-				on:click={applyUpdate}
+				onclick={applyUpdate}
 				class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-blue-500 transition-colors hover:bg-blue-50"
 			>
 				Update Sekarang
 			</button>
 			<button
-				on:click={dismissUpdate}
+				onclick={dismissUpdate}
 				class="rounded-lg border border-white/30 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
 			>
 				Nanti
@@ -308,11 +312,11 @@
 					{#if $page.url.pathname === '/pos'}
 						<button
 							class="mr-2 flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 transition-colors hover:bg-pink-50"
-							on:click={() => posGridView.update((v) => !v)}
-							aria-label={$posGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
+							onclick={() => posGridView.toggle()}
+							aria-label={posGridView.value ? 'Tampilkan List' : 'Tampilkan Grid'}
 							type="button"
 						>
-							{#if $posGridView}
+							{#if posGridView.value}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									class="h-5 w-5 text-gray-600"
@@ -368,7 +372,7 @@
 			class="min-h-0 flex-1 overflow-y-auto"
 			style="scrollbar-width:none;-ms-overflow-style:none;"
 		>
-			<slot />
+			{@render children()}
 		</div>
 		<div class="sticky bottom-0 z-30 bg-white">
 			<BottomNav />
@@ -378,7 +382,7 @@
 	<!-- Layout tanpa navigasi -->
 	<div class="page-transition flex h-screen min-h-0 flex-col bg-white">
 		<div class="min-h-0 flex-1 overflow-y-auto">
-			<slot />
+			{@render children()}
 		</div>
 	</div>
 {/if}

@@ -6,15 +6,19 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/auth/auth';
 	import { browser } from '$app/environment';
-	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole';
+	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
+	import { NAV_ITEMS, getNavIndex } from '$lib/constants/navigation';
+
+	const { handleTouchStart, handleTouchMove, handleTouchEnd, handleGlobalClick } = createSwipeNavigation(0);
+	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
-	import { securitySettings } from '$lib/stores/securitySettings';
+	import { securitySettings } from '$lib/stores/securitySettings.svelte';
 
 	import type { 
 		DashboardStats, 
@@ -69,12 +73,8 @@
 	let userProfileData = $state<{ role: string; username: string } | null>(null);
 
 	$effect(() => {
-		const unsubscribeRole = userRole.subscribe((val) => (currentUserRole = val || ''));
-		const unsubscribeProfile = userProfile.subscribe((val) => (userProfileData = val));
-		return () => {
-			unsubscribeRole();
-			unsubscribeProfile();
-		};
+		currentUserRole = userRole.value || '';
+		userProfileData = userProfile.value as { role: string; username: string } | null;
 	});
 
 	let isLoadingBestSellers = $state(true);
@@ -136,33 +136,35 @@
 		}
 	});
 
+	// Reactive: fetch ulang data saat cabang berubah
 	$effect(() => {
-		const unsubscribe = selectedBranch.subscribe(async (newBranch) => {
-			// Skip jika ini adalah initial load
-			if (isInitialLoad) {
-				isInitialLoad = false;
-				return;
-			}
+		// Read .value untuk tracking reaktif
+		const _branch = selectedBranch.value;
 
-			// Reset semua metriks
-			omzet = 0;
-			jumlahTransaksi = 0;
-			profit = 0;
-			itemTerjual = 0;
-			totalItem = 0;
-			avgTransaksi = 0;
-			jamRamai = '';
-			weeklyIncome = [];
-			weeklyMax = 1;
-			bestSellers = [];
-			isLoadingDashboard = true;
-			isLoadingBestSellers = true;
-			// Invalidate cache dashboard metriks untuk semua cabang
+		if (isInitialLoad) {
+			isInitialLoad = false;
+			return;
+		}
+
+		// Reset semua metriks
+		omzet = 0;
+		jumlahTransaksi = 0;
+		profit = 0;
+		itemTerjual = 0;
+		totalItem = 0;
+		avgTransaksi = 0;
+		jamRamai = '';
+		weeklyIncome = [];
+		weeklyMax = 1;
+		bestSellers = [];
+		isLoadingDashboard = true;
+		isLoadingBestSellers = true;
+
+		// Async dalam effect: jalankan via fire-and-forget
+		(async () => {
 			await dataService.invalidateDashboardCaches();
-			// Fetch ulang data
 			await loadDashboardData();
-		});
-		return unsubscribe;
+		})();
 	});
 
 	onDestroy(() => {
@@ -394,7 +396,7 @@
 	function handleOpenTokoModal() {
 		// Jika kasir, wajib verifikasi PIN dahulu (PIN dari pengaturan/securitySettings)
 		if (currentUserRole === 'kasir') {
-			const settingsVal = storeGet(securitySettings);
+			const settingsVal = securitySettings.value;
 			actionPin = (settingsVal && settingsVal.pin) || '1234';
 			pendingAction = () => {
 				cekSesiToko().then(() => {
@@ -495,104 +497,7 @@
 		cekSesiToko();
 	}
 
-	function handleTouchStart(e: TouchEvent) {
-		if (!isTouchDevice) return;
 
-		// Don't handle touch on interactive elements
-		const target = e.target as HTMLElement;
-		if (
-			target.tagName === 'BUTTON' ||
-			target.tagName === 'INPUT' ||
-			target.tagName === 'A' ||
-			target.closest('button') ||
-			target.closest('input') ||
-			target.closest('a')
-		) {
-			return;
-		}
-
-		touchStartX = e.touches[0].clientX;
-		touchStartY = e.touches[0].clientY;
-		isSwiping = false;
-		clickBlocked = false;
-	}
-
-	function handleTouchMove(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		// Don't handle touch on interactive elements
-		const target = e.target as HTMLElement;
-		if (
-			target.tagName === 'BUTTON' ||
-			target.tagName === 'INPUT' ||
-			target.tagName === 'A' ||
-			target.closest('button') ||
-			target.closest('input') ||
-			target.closest('a')
-		) {
-			return;
-		}
-		if (browser) {
-			touchEndX = e.touches[0].clientX;
-			touchEndY = e.touches[0].clientY;
-			const deltaX = Math.abs(touchEndX - touchStartX);
-			const deltaY = Math.abs(touchEndY - touchStartY);
-			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.25; 
-			if (deltaX > swipeThreshold && deltaX > deltaY) {
-				isSwiping = true;
-				clickBlocked = true;
-			}
-		}
-	}
-
-	function handleTouchEnd(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		// Don't handle touch on interactive elements
-		const target = e.target as HTMLElement;
-		if (
-			target.tagName === 'BUTTON' ||
-			target.tagName === 'INPUT' ||
-			target.tagName === 'A' ||
-			target.closest('button') ||
-			target.closest('input') ||
-			target.closest('a')
-		) {
-			return;
-		}
-
-		if (browser && isSwiping) {
-			// Handle swipe navigation
-			const deltaX = touchEndX - touchStartX;
-			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.25; 
-
-			if (Math.abs(deltaX) > swipeThreshold) {
-				const currentIndex = 0; // Beranda is index 0
-				if (deltaX > 0 && currentIndex > 0) {
-					// Swipe right - go to previous tab
-					goto(navs[currentIndex - 1].path);
-				} else if (deltaX < 0 && currentIndex < navs.length - 1) {
-					// Swipe left - go to next tab
-					goto(navs[currentIndex + 1].path);
-				}
-			}
-
-			// Block any subsequent click events
-			setTimeout(() => {
-				clickBlocked = false;
-			}, 100);
-		}
-	}
-
-	function handleGlobalClick(e: Event) {
-		if (clickBlocked) {
-			e.preventDefault();
-			e.stopPropagation();
-			return;
-		}
-	}
 
 	// New function to format modalAwalInput to Rupiah format
 	function formatModalAwalInput(e: Event) {

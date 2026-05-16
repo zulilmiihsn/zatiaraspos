@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { get as storeGet } from 'svelte/store';
-	import { selectedBranch } from '$lib/stores/selectedBranch';
+	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { writable } from 'svelte/store';
 	import CropperDialog from '$lib/components/shared/cropperDialog.svelte';
 	import { fly, fade, slide } from 'svelte/transition';
@@ -11,7 +11,7 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { get as getCache, set as setCache } from 'idb-keyval';
 	import { memoize } from '$lib/utils/performance';
-	import { userRole } from '$lib/stores/userRole';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Edit from 'lucide-svelte/icons/edit';
 	import Trash from 'lucide-svelte/icons/trash';
@@ -97,8 +97,7 @@
 	let isLoadingMenus = $state(true);
 	let isLoadingKategori = $state(true);
 	let isLoadingEkstra = $state(true);
-	let unsubscribeBranch: (() => void) | null = null;
-
+	
 	// Toast management
 	const toastManager = createToastManager();
 
@@ -150,7 +149,7 @@
 	async function fetchMenus() {
 		isLoadingMenus = true;
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('produk')
 				.select('*')
 				.order('created_at', { ascending: false });
@@ -168,7 +167,7 @@
 	async function fetchKategori() {
 		isLoadingKategori = true;
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('kategori')
 				.select('*')
 				.order('created_at', { ascending: false });
@@ -186,7 +185,7 @@
 	async function fetchEkstra() {
 		isLoadingEkstra = true;
 		try {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('tambahan')
 				.select('*')
 				.order('created_at', { ascending: false });
@@ -218,27 +217,30 @@
 			document.body.classList.add('hide-nav');
 		}
 
-		if (storeGet(userRole) !== 'pemilik') {
+		if (userRole.value !== 'pemilik') {
 			goto('/unauthorized');
 		}
 
-		// Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-		unsubscribeBranch = selectedBranch.subscribe(() => {
-			if (first) {
-				first = false;
-				return; // skip trigger pertama
+	});
+
+	let isInitialLoad = true;
+	$effect(() => {
+		let _branch = selectedBranch.value;
+		if (typeof window !== 'undefined') {
+			if (isInitialLoad) {
+				isInitialLoad = false;
+				return;
 			}
 			fetchMenus();
 			fetchKategori();
 			fetchEkstra();
-		});
+		}
 	});
 
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.remove('hide-nav');
 		}
-		if (unsubscribeBranch) unsubscribeBranch();
 	});
 
 	function openMenuForm(menu: Product | null = null): void {
@@ -320,12 +322,12 @@
 		let result;
 		try {
 			if (editMenuId) {
-				result = await getSupabaseClient(storeGet(selectedBranch))
+				result = await getSupabaseClient(selectedBranch.value)
 					.from('produk')
 					.update(payload)
 					.eq('id', editMenuId);
 			} else {
-				result = await getSupabaseClient(storeGet(selectedBranch)).from('produk').insert([payload]);
+				result = await getSupabaseClient(selectedBranch.value).from('produk').insert([payload]);
 			}
 			if (result.error) {
 				throw result.error;
@@ -366,12 +368,12 @@
 				if (menu?.gambar) {
 					const path = menu.gambar.split('/').pop();
 					if (path) {
-						await getSupabaseClient(storeGet(selectedBranch))
+						await getSupabaseClient(selectedBranch.value)
 							.storage.from('gambar-menu')
 							.remove([path]);
 					}
 				}
-				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(selectedBranch.value)
 					.from('produk')
 					.delete()
 					.eq('id', menuIdToDelete);
@@ -441,7 +443,7 @@
 
 	async function saveKategoriDetail() {
 		if (kategoriDetail) {
-			const { error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { error } = await getSupabaseClient(selectedBranch.value)
 				.from('kategori')
 				.update({ name: kategoriDetailName })
 				.eq('id', kategoriDetail.id);
@@ -453,7 +455,7 @@
 			}
 			await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
 		} else {
-			const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+			const { data, error } = await getSupabaseClient(selectedBranch.value)
 				.from('kategori')
 				.insert([{ name: kategoriDetailName }])
 				.select();
@@ -496,7 +498,7 @@
 		if (kategoriIdToDelete !== null) {
 			try {
 				// Pertama, update semua menu yang menggunakan kategori ini menjadi null
-				const { error: updateError } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error: updateError } = await getSupabaseClient(selectedBranch.value)
 					.from('produk')
 					.update({ kategori_id: null })
 					.eq('kategori_id', kategoriIdToDelete);
@@ -509,7 +511,7 @@
 				}
 
 				// Kemudian hapus kategori
-				const { error: deleteError } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error: deleteError } = await getSupabaseClient(selectedBranch.value)
 					.from('kategori')
 					.delete()
 					.eq('id', kategoriIdToDelete);
@@ -585,13 +587,13 @@
 		}
 		try {
 			if (editEkstraId) {
-				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(selectedBranch.value)
 					.from('tambahan')
 					.update({ name: ekstraForm.name, price: harga })
 					.eq('id', editEkstraId);
 				if (error) throw error;
 			} else {
-				const { error } = await getSupabaseClient(storeGet(selectedBranch))
+				const { error } = await getSupabaseClient(selectedBranch.value)
 					.from('tambahan')
 					.insert([{ name: ekstraForm.name, price: harga }]);
 				if (error) throw error;
@@ -621,7 +623,7 @@
 
 	async function doDeleteEkstra() {
 		if (ekstraIdToDelete !== null) {
-			await getSupabaseClient(storeGet(selectedBranch))
+			await getSupabaseClient(selectedBranch.value)
 				.from('tambahan')
 				.delete()
 				.eq('id', ekstraIdToDelete);
@@ -726,7 +728,7 @@
 		try {
 			// Update menu kategori untuk menu yang dipilih
 			for (const menuId of menuIds) {
-				await getSupabaseClient(storeGet(selectedBranch))
+				await getSupabaseClient(selectedBranch.value)
 					.from('produk')
 					.update({ kategori_id: kategoriId })
 					.eq('id', menuId);
@@ -740,7 +742,7 @@
 				);
 
 				for (const menu of menusToRemoveFromOldKategori) {
-					await getSupabaseClient(storeGet(selectedBranch))
+					await getSupabaseClient(selectedBranch.value)
 						.from('produk')
 						.update({ kategori_id: null })
 						.eq('id', menu.id);
@@ -756,11 +758,11 @@
 		const res = await fetch(dataUrl);
 		const blob = await res.blob();
 		const filePath = `menu-${menuId}-${Date.now()}.jpg`;
-		const { data, error } = await getSupabaseClient(storeGet(selectedBranch))
+		const { data, error } = await getSupabaseClient(selectedBranch.value)
 			.storage.from('gambar-menu')
 			.upload(filePath, blob, { upsert: true });
 		if (error) throw error;
-		const { data: publicUrlData } = getSupabaseClient(storeGet(selectedBranch))
+		const { data: publicUrlData } = getSupabaseClient(selectedBranch.value)
 			.storage.from('gambar-menu')
 			.getPublicUrl(filePath);
 		return publicUrlData.publicUrl;

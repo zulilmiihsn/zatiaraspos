@@ -1,7 +1,7 @@
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { get as storeGet } from 'svelte/store';
-import { selectedBranch } from '$lib/stores/selectedBranch';
+import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import {
 	getTodayWita,
@@ -21,7 +21,7 @@ import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 async function getCachedPosKas7Hari(supabase: SupabaseClient) {
 	const todayStr = getTodayWita();
-	const branch = storeGet(selectedBranch) || 'default';
+	const branch = selectedBranch.value || 'default';
 	const cacheKey = `pos_kas_7hari_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 
@@ -62,7 +62,7 @@ async function getCachedPosKas7Hari(supabase: SupabaseClient) {
 // Fungsi cache harian untuk rata-rata transaksi/hari
 async function getAvgTransaksiHarian(supabase: SupabaseClient): Promise<number> {
 	const todayStr = getTodayWita();
-	const branch = storeGet(selectedBranch) || 'default';
+	const branch = selectedBranch.value || 'default';
 	const cacheKey = `avg_transaksi_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
@@ -109,7 +109,7 @@ async function getAvgTransaksiHarian(supabase: SupabaseClient): Promise<number> 
 // Fungsi cache mingguan untuk jam paling ramai (7 hari terakhir)
 async function getJamRamaiMingguan(supabase: SupabaseClient): Promise<string> {
 	const todayStr = getTodayWita();
-	const branch = storeGet(selectedBranch) || 'default';
+	const branch = selectedBranch.value || 'default';
 	const cacheKey = `jam_ramai_mingguan_${branch}_${todayStr}`;
 	const cached = await getCache(cacheKey);
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
@@ -151,25 +151,18 @@ async function getJamRamaiMingguan(supabase: SupabaseClient): Promise<string> {
 // Data service untuk fetching dengan smart caching
 export class DataService {
 	private static instance: DataService;
-	private supabase: SupabaseClient;
 	private isInitialLoad = true; // Add flag to prevent double fetching
 
 	constructor() {
-		this.supabase = getSupabaseClient(storeGet(selectedBranch));
-		// Subscribe ke selectedBranch agar supabase client ikut berubah
-		selectedBranch.subscribe((branch) => {
-			// Skip jika ini adalah initial load
-			if (this.isInitialLoad) {
-				this.isInitialLoad = false;
-				return;
-			}
-			this.supabase = getSupabaseClient(branch);
-		});
 	}
 
 	// Getter untuk supabase client
 	get supabaseClient() {
-		return this.supabase;
+		return getSupabaseClient(selectedBranch.value as any);
+	}
+
+	get supabase() {
+		return this.supabaseClient;
 	}
 
 	static getInstance(): DataService {
@@ -181,7 +174,7 @@ export class DataService {
 
 	// Dashboard data fetching dengan cache
 	async getDashboardStats() {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		return smartCache.get(
 			`${CACHE_KEYS.DASHBOARD_STATS}_${branch}`,
 			async () => {
@@ -268,7 +261,7 @@ export class DataService {
 
 	// Best sellers dengan cache per cabang
 	async getBestSellers() {
-		const branch = storeGet(selectedBranch);
+		const branch = selectedBranch.value;
 		return smartCache.get(
 			`${CACHE_KEYS.BEST_SELLERS}_${branch}`,
 			async () => {
@@ -348,7 +341,7 @@ export class DataService {
 
 	// Weekly income dengan cache per cabang
 	async getWeeklyIncome() {
-		const branch = storeGet(selectedBranch);
+		const branch = selectedBranch.value;
 		return smartCache.get(
 			`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`,
 			async () => {
@@ -406,7 +399,7 @@ export class DataService {
 
 	// Products dengan cache
 	async getProducts() {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		const cacheKey = `${CACHE_KEYS.PRODUCTS}_${branch}`;
 
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -434,7 +427,7 @@ export class DataService {
 
 	// Categories dengan cache
 	async getCategories() {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		const cacheKey = `${CACHE_KEYS.CATEGORIES}_${branch}`;
 
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -462,7 +455,7 @@ export class DataService {
 
 	// Add-ons dengan cache
 	async getAddOns() {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		const cacheKey = `${CACHE_KEYS.ADDONS}_${branch}`;
 
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -491,7 +484,7 @@ export class DataService {
 	// Report data dengan ETag support
 	async getReportData(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
 		// SMART CACHING: Cache per date range dengan strategi yang lebih pintar
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		const cacheKey = this.generateSmartCacheKey(type, dateRange, branch);
 
 		// Check cache first dengan TTL yang berbeda per type
@@ -761,7 +754,7 @@ export class DataService {
 
 	// SMART CACHE INVALIDATION: Invalidate cache when data changes
 	async invalidateCacheOnChange(table: string) {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 
 		switch (table) {
 			case 'produk':
@@ -1001,7 +994,7 @@ export class DataService {
 
 	// SMART CACHING: Invalidate cache berdasarkan date range
 	async invalidateReportCache(type: string, dateRange?: string) {
-		const branch = storeGet(selectedBranch) || 'default';
+		const branch = selectedBranch.value || 'default';
 		if (dateRange) {
 			// Invalidate specific date range
 			const cacheKey = this.generateSmartCacheKey(type, dateRange, branch);
