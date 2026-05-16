@@ -195,8 +195,16 @@ Pertanyaan user: "${question}"`
 // AI 2: Business Analyst
 async function analyzeBusinessData(
 	question: string,
-	reportData: any,
-	dateRange: any,
+	reportData: string,
+	dateRange: {
+		start?: string;
+		startFormatted?: string;
+		end?: string;
+		endFormatted?: string;
+		type?: string;
+		reasoning?: string;
+		dataRequirements?: { jenisData?: string[]; prioritas?: string; scope?: string };
+	},
 	apiKey: string
 ): Promise<string> {
 	const systemMessage: ChatMessage = {
@@ -322,9 +330,9 @@ async function analyzeTransactionText(
 	apiKey: string,
 	request?: Request
 ): Promise<{
-	transactions: any[];
+	transactions: Record<string, unknown>[];
 	confidence: number;
-	recommendations: any[];
+	recommendations: Record<string, unknown>[];
 }> {
 	// Fetch product data untuk analisis
 	let productData = '';
@@ -943,8 +951,8 @@ async function handleRegularChat(request: Request) {
 		};
 
 		// Function untuk fetch data dengan pagination dan timeout handling
-		async function fetchAllData(table: string, filters: any) {
-			let allData: any[] = [];
+		async function fetchAllData(table: string, filters: Record<string, unknown>) {
+			let allData: Record<string, unknown>[] = [];
 			let page = 0;
 			const pageSize = 500; // Reduce page size untuk menghindari timeout
 			let hasMore = true;
@@ -975,7 +983,7 @@ async function handleRegularChat(request: Request) {
 						setTimeout(() => reject(new Error('Query timeout')), 30000)
 					);
 
-					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as any;
+					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as { data: Record<string, unknown>[] | null; error: { code?: string; message?: string } | null };
 
 					if (error) {
 						if (error.code === '57014' || error.message?.includes('timeout')) {
@@ -1010,10 +1018,10 @@ async function handleRegularChat(request: Request) {
 		]);
 
 		// Ambil data transaksi_kasir dengan relasi produk untuk data POS
-		let transaksiKasirData: any[] = [];
+		let transaksiKasirData: Record<string, unknown>[] = [];
 		if (bukuKasPos && bukuKasPos.length > 0) {
 			// Ambil buku_kas_id dari data POS
-			const bukuKasIds = bukuKasPos.map((item: any) => item.id).filter(Boolean);
+			const bukuKasIds = bukuKasPos.map((item: Record<string, unknown>) => item.id).filter(Boolean);
 
 			if (bukuKasIds.length > 0) {
 				try {
@@ -1058,10 +1066,10 @@ async function handleRegularChat(request: Request) {
 		}
 
 		// Data periode yang diminta - gunakan logika yang sama dengan DataService
-		const laporan: any[] = [];
+		const laporan: Record<string, unknown>[] = [];
 
 		// 1. Tambahkan data POS dari buku_kas (sumber='pos')
-		(bukuKasPos || []).forEach((item: any) => {
+		(bukuKasPos || []).forEach((item: Record<string, unknown>) => {
 			laporan.push({
 				...item,
 				sumber: 'pos',
@@ -1070,7 +1078,7 @@ async function handleRegularChat(request: Request) {
 		});
 
 		// 2. Tambahkan data manual/catat
-		(bukuKasManual || []).forEach((item: any) => {
+		(bukuKasManual || []).forEach((item: Record<string, unknown>) => {
 			laporan.push({
 				...item,
 				sumber: item.sumber || 'catat',
@@ -1079,11 +1087,11 @@ async function handleRegularChat(request: Request) {
 		});
 
 		// Hitung data periode yang diminta
-		const pemasukan = laporan.filter((t: any) => t.tipe === 'in');
-		const pengeluaran = laporan.filter((t: any) => t.tipe === 'out');
+		const pemasukan = laporan.filter((t: Record<string, unknown>) => t.tipe === 'in');
+		const pengeluaran = laporan.filter((t: Record<string, unknown>) => t.tipe === 'out');
 
-		const totalPemasukan = pemasukan.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
-		const totalPengeluaran = pengeluaran.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
+		const totalPemasukan = pemasukan.reduce((s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0), 0);
+		const totalPengeluaran = pengeluaran.reduce((s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0), 0);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
@@ -1103,7 +1111,7 @@ async function handleRegularChat(request: Request) {
 
 		// Proses data periode yang diminta per bulan
 		for (const item of laporan) {
-			const date = new Date(item.waktu);
+			const date = new Date(item.waktu as string | number);
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 			const monthName = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
@@ -1118,7 +1126,7 @@ async function handleRegularChat(request: Request) {
 				};
 			}
 
-			const amount = item.nominal || 0;
+			const amount = (item.nominal as number) || 0;
 			if (item.tipe === 'in') {
 				requestedMonthlyData[monthKey].pemasukan += amount;
 			} else {
@@ -1132,7 +1140,7 @@ async function handleRegularChat(request: Request) {
 			}
 
 			// Hitung metode pembayaran per bulan
-			const pm = (item as any)?.payment_method || 'lainnya';
+			const pm = (item.payment_method as string) || 'lainnya';
 			if (!requestedMonthlyData[monthKey].paymentMethods[pm]) {
 				requestedMonthlyData[monthKey].paymentMethods[pm] = { jumlah: 0, nominal: 0 };
 			}
@@ -1144,17 +1152,17 @@ async function handleRegularChat(request: Request) {
 
 		// Hitung produk terlaris per bulan menggunakan data transaksi_kasir
 		for (const item of transaksiKasirData || []) {
-			const date = new Date(item.created_at || item.waktu);
+			const date = new Date((item.created_at || item.waktu) as string | number);
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
 			if (requestedMonthlyData[monthKey]) {
-				const pid = (item as any)?.produk_id;
+				const pid = item.produk_id as string;
 				if (!pid) continue;
-				const qty = Number((item as any)?.qty || 0) || 0;
-				const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
+				const qty = Number(item.qty || 0) || 0;
+				const unit = Number(item.price || item.amount || 0) || 0;
 				const revenue = unit * (qty || 1);
 				const productName =
-					(item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+					((item.produk as Record<string, unknown>)?.name as string) || (item.custom_name as string) || `Produk ${pid.slice(0, 8)}`;
 
 				if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
 					requestedMonthlyData[monthKey].produkTerlaris[pid] = {
@@ -1221,7 +1229,7 @@ async function handleRegularChat(request: Request) {
 		// Hitung jam ramai dari transaksi POS
 		const hourCount: Record<string, number> = {};
 		for (const t of bukuKasPos || []) {
-			const waktu = new Date(t.waktu);
+			const waktu = new Date(t.waktu as string | number);
 			const wita = new Date(waktu);
 			const h = wita.getHours();
 			const key = h.toString().padStart(2, '0');
@@ -1235,10 +1243,10 @@ async function handleRegularChat(request: Request) {
 		// Analisis tren harian untuk insight lebih mendalam
 		const dailyTrend: Record<string, { count: number; revenue: number; avgTicket: number }> = {};
 		for (const t of bukuKasPos || []) {
-			const waktu = new Date(t.waktu);
+			const waktu = new Date(t.waktu as string | number);
 			const wita = new Date(waktu);
 			const dateKey = wita.toISOString().split('T')[0];
-			const revenue = t.amount || 0;
+			const revenue = (t.amount as number) || 0;
 
 			if (!dailyTrend[dateKey]) {
 				dailyTrend[dateKey] = { count: 0, revenue: 0, avgTicket: 0 };
@@ -1548,7 +1556,19 @@ ${
 			: 'Tidak ada data laporan tersedia.';
 
 		// AI 2: Analisis data bisnis
-		const answer = await analyzeBusinessData(question, reportContext, rangeContext, apiKey);
+		const answer = await analyzeBusinessData(
+			question,
+			reportContext,
+			{
+				start: rangeContext.requested.start,
+				startFormatted: rangeContext.requested.startFormatted,
+				end: rangeContext.requested.end,
+				endFormatted: rangeContext.requested.endFormatted,
+				type: rangeContext.requested.type,
+				dataRequirements: rangeContext.dataRequirements
+			},
+			apiKey
+		);
 
 		return json({
 			success: true,
