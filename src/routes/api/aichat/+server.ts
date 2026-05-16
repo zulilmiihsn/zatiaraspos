@@ -1211,7 +1211,7 @@ async function handleRegularChat(request: Request) {
 			labaKotor,
 			pajak,
 			labaBersih,
-			totalTransaksi: new Set((bukuKasPos || []).map((b: any) => b.transaction_id).filter(Boolean))
+			totalTransaksi: new Set((bukuKasPos || []).map((b: { transaction_id?: string }) => b.transaction_id).filter(Boolean))
 				.size,
 			// Data per bulan untuk periode yang diminta
 			requestedMonthlyData: formattedRequestedMonthlyData
@@ -1297,9 +1297,9 @@ async function handleRegularChat(request: Request) {
 		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
-		let products: any[] = [];
-		let categories: any[] = [];
-		let addons: any[] = [];
+		let products: { id: string; name: string; price: number; category_id?: string }[] = [];
+		let categories: { id: string; name: string }[] = [];
+		let addons: { id: string; name: string; price: number }[] = [];
 
 		// Fetch data berdasarkan jenis data yang diperlukan
 		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
@@ -1394,9 +1394,9 @@ async function handleRegularChat(request: Request) {
 			tipe: dataRequirements.periode.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
-			products: (products || []).map((p: any) => ({ id: p.id, name: p.name, price: p.price })),
-			categories: (categories || []).map((c: any) => ({ id: c.id, name: c.name })),
-			addons: (addons || []).map((a: any) => ({ id: a.id, name: a.name, price: a.price })),
+			products: (products || []).map((p: { id: string; name: string; price: number }) => ({ id: p.id, name: p.name, price: p.price })),
+			categories: (categories || []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
+			addons: (addons || []).map((a: { id: string; name: string; price: number }) => ({ id: a.id, name: a.name, price: a.price })),
 			produkTerlaris,
 			specificProduct, // Produk spesifik yang dicari
 			// Data analisis mendalam
@@ -1462,14 +1462,14 @@ PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user b
 ${
 	(serverReportData.summary?.requestedMonthlyData || [])
 		.map(
-			(month: any) => `
+			(month: { monthName: string; month: string; pemasukan: number; pengeluaran: number; laba: number; transaksi: number; paymentMethods: Record<string, { jumlah: number; nominal: number }>; topProducts: { nama: string; totalTerjual: number; totalPendapatan: number }[] }) => `
 Bulan ${month.monthName} (${month.month}):
 - Pendapatan: Rp ${month.pemasukan.toLocaleString('id-ID')}
 - Pengeluaran: Rp ${month.pengeluaran.toLocaleString('id-ID')}
 - Laba: Rp ${month.laba.toLocaleString('id-ID')}
 - Total Transaksi: ${month.transaksi}
 - Metode Pembayaran: ${Object.entries(month.paymentMethods)
-				.map(([method, data]: any) => {
+				.map(([method, data]: [string, { jumlah: number; nominal: number }]) => {
 					const methodLabels: Record<string, string> = {
 						tunai: 'Tunai (Cash)',
 						qris: 'QRIS (Digital Payment)',
@@ -1479,7 +1479,7 @@ Bulan ${month.monthName} (${month.month}):
 					return `${label}: ${data.jumlah} trx (Rp ${data.nominal.toLocaleString('id-ID')})`;
 				})
 				.join(', ')}
-- Top 3 Produk Terlaris: ${month.topProducts.map((p: any) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
+- Top 3 Produk Terlaris: ${month.topProducts.map((p: { nama: string; totalTerjual: number; totalPendapatan: number }) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
 `
 		)
 		.join('\n') || '- (tidak ada data per bulan)'
@@ -1488,7 +1488,7 @@ Bulan ${month.monthName} (${month.month}):
 === RINCIAN PEMBAYARAN ===
 ${
 	Object.entries(serverReportData.pembayaran || {})
-		.map(([k, v]: any) => {
+		.map(([k, v]: [string, { jumlah: number; nominal: number }]) => {
 			const methodLabels: Record<string, string> = {
 				tunai: 'Tunai (Cash)',
 				qris: 'QRIS (Digital Payment)',
@@ -1508,13 +1508,13 @@ ${(serverReportData.jamRamai || []).map((s: string, i: number) => `- ${i + 1}. $
 Produk (sample): ${
 					serverReportData.products
 						?.slice(0, 5)
-						.map((p: any) => p.name)
+						.map((p: { name: string }) => p.name)
 						.join(', ') || '-'
 				}
 Kategori (sample): ${
 					serverReportData.categories
 						?.slice(0, 5)
-						.map((c: any) => c.name)
+						.map((c: { name: string }) => c.name)
 						.join(', ') || '-'
 				}
 
@@ -1530,7 +1530,7 @@ ID: ${serverReportData.specificProduct.id}
 }
 
 Top Produk Terlaris:
-${(serverReportData.produkTerlaris || []).map((p: any, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
+${(serverReportData.produkTerlaris || []).map((p: { nama: string; totalTerjual: number; totalPendapatan: number }, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
 
 === ANALISIS MENDALAM ===
 Performa Harian:
@@ -1547,7 +1547,7 @@ Detail Performa Harian:
 ${
 	(serverReportData.dailyPerformance || [])
 		.map(
-			(day: any) =>
+			(day: { formattedDate: string; count: number; revenue: number; avgTicket: number }) =>
 				`- ${day.formattedDate}: ${day.count} trx, Rp ${day.revenue.toLocaleString('id-ID')} (avg Rp ${Math.round(day.avgTicket).toLocaleString('id-ID')})`
 		)
 		.join('\n') || '- (tidak ada data harian)'

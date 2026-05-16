@@ -353,14 +353,14 @@
 
 			// Jika role belum ada di store, coba validasi dengan Supabase
 			if (!currentUserRole) {
-				dataService.supabaseClient.auth.getSession().then(({ data: { session } }: any) => {
+				dataService.supabaseClient.auth.getSession().then(({ data: { session } }) => {
 					if (session?.user) {
 						dataService.supabaseClient
 							.from('profil')
 							.select('role, username')
 							.eq('id', session.user.id)
 							.single()
-							.then(({ data: profile }: any) => {
+							.then(({ data: profile }) => {
 								if (profile) {
 									setUserRole(profile.role, profile);
 								}

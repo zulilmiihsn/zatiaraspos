@@ -155,13 +155,13 @@
 			const nextFingerprint = [
 				(nextProducts || []).length,
 				(nextProducts || [])
-					.map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.map((item: { id?: string; harga?: number; price?: number }) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
 					.join(','),
 				(nextCategories || []).length,
-				(nextCategories || []).map((item: any) => item?.id || '').join(','),
+				(nextCategories || []).map((item: { id?: string }) => item?.id || '').join(','),
 				(nextAddons || []).length,
 				(nextAddons || [])
-					.map((item: any) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.map((item: { id?: string; harga?: number; price?: number }) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
 					.join(',')
 			].join('|');
 
