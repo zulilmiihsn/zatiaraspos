@@ -18,8 +18,25 @@
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { dataService } from '$lib/services/dataService';
+	import type { ReceiptSettings } from '$lib/types/laporan';
+	import type { TokoSession } from '$lib/types/store';
 
-	let cart: any[] = [];
+	interface BayarAddOn {
+		id: string;
+		name: string;
+		price: number;
+		harga: number;
+	}
+	interface BayarCartItem {
+		product: { id: string; name: string; price: number; harga: number; tipe: string };
+		qty: number;
+		addOns: BayarAddOn[];
+		sugar: string;
+		ice: string;
+		note: string;
+	}
+
+	let cart: BayarCartItem[] = [];
 	let customerName = '';
 	let paymentMethod = '';
 	const paymentOptions = [
@@ -43,10 +60,10 @@
 
 	let showErrorNotification = false;
 	let errorNotificationMessage = '';
-	let errorNotificationTimeout: any = null;
+	let errorNotificationTimeout: number | null = null;
 	let showSuccessNotification = false;
 	let successNotificationMessage = '';
-	let successNotificationTimeout: any = null;
+	let successNotificationTimeout: number | null = null;
 
 	let showNoSessionModal = false;
 	let noSessionModalMsg = '';
@@ -58,13 +75,13 @@
 	let notifModalMsg = '';
 	let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
 
-	let pengaturanStruk: any = null;
+	let pengaturanStruk: ReceiptSettings | null = null;
 
 	function showErrorNotif(message: string) {
 		errorNotificationMessage = message;
 		showErrorNotification = true;
-		clearTimeout(errorNotificationTimeout);
-		errorNotificationTimeout = setTimeout(() => {
+		if (errorNotificationTimeout !== null) clearTimeout(errorNotificationTimeout);
+		errorNotificationTimeout = window.setTimeout(() => {
 			showErrorNotification = false;
 		}, 3000);
 	}
@@ -72,8 +89,8 @@
 	function showSuccessNotif(message: string) {
 		successNotificationMessage = message;
 		showSuccessNotification = true;
-		clearTimeout(successNotificationTimeout);
-		successNotificationTimeout = setTimeout(() => {
+		if (successNotificationTimeout !== null) clearTimeout(successNotificationTimeout);
+		successNotificationTimeout = window.setTimeout(() => {
 			showSuccessNotification = false;
 		}, 3000);
 	}
@@ -86,7 +103,7 @@
 		return `JUS${lastNum.toString().padStart(5, '0')}`;
 	}
 
-	let sesiAktif: any = null;
+	let sesiAktif: TokoSession | null = null;
 	async function cekSesiTokoAktif() {
 		const { data } = await getSupabaseClient(storeGet(selectedBranch))
 			.from('sesi_toko')
@@ -131,7 +148,7 @@
 		transactionCode = generateTransactionCode(); // Untuk tampilan/struk
 	});
 
-	const calculateCartSummary = memoize((cart: any) => {
+	const calculateCartSummary = memoize((cart: BayarCartItem[]) => {
 		let totalQty = 0;
 		let totalHarga = 0;
 		for (const item of cart) {
@@ -139,7 +156,7 @@
 			totalHarga += item.qty * (item.product.price ?? item.product.harga ?? 0);
 			if (item.addOns) {
 				totalHarga += item.addOns.reduce(
-					(a: any, b: any) => a + (b.price ?? b.harga ?? 0) * item.qty,
+					(a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0) * item.qty,
 					0
 				);
 			}
@@ -178,7 +195,7 @@
 		// Catat ke laporan
 		catatTransaksiKeLaporan();
 	}
-	function addCashTemplate(nom: any) {
+	function addCashTemplate(nom: number) {
 		cashReceived = ((parseInt(cashReceived) || 0) + nom).toString();
 	}
 	function closeCashModal() {
@@ -229,7 +246,7 @@
 		// Catat ke laporan
 		catatTransaksiKeLaporan();
 	}
-	function handleKeypad(val: any) {
+	function handleKeypad(val: string | number) {
 		if (val === '⌫') {
 			cashReceived = cashReceived.slice(0, -1);
 		} else {
@@ -240,7 +257,7 @@
 	function getLocalOffsetString() {
 		const offset = -new Date().getTimezoneOffset();
 		const sign = offset >= 0 ? '+' : '-';
-		const pad = (n: any) => n.toString().padStart(2, '0');
+		const pad = (n: number) => n.toString().padStart(2, '0');
 		const hours = pad(Math.floor(Math.abs(offset) / 60));
 		const minutes = pad(Math.abs(offset) % 60);
 		return `${sign}${hours}:${minutes}`;
@@ -276,17 +293,17 @@
 			typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : uuidv4();
 		// Satu row summary untuk buku_kas
 		const totalAmount = cart.reduce(
-			(sum: any, item: any) =>
+			(sum: number, item: BayarCartItem) =>
 				sum +
 				item.qty *
 					((item.product.price ?? item.product.harga ?? 0) +
 						(item.addOns
-							? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0)
+							? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
 							: 0)),
 			0
 		);
-		const description = 'Penjualan ' + cart.map((item: any) => item.product.name).join(', ');
-		const totalQty = cart.reduce((sum: any, item: any) => sum + item.qty, 0);
+		const description = 'Penjualan ' + cart.map((item: BayarCartItem) => item.product.name).join(', ');
+		const totalQty = cart.reduce((sum: number, item: BayarCartItem) => sum + item.qty, 0);
 		const insert = {
 			tipe: 'in',
 			sumber: 'pos',
@@ -301,9 +318,9 @@
 			transaction_id: transactionId
 		};
 		// Detail transaksi untuk transaksi_kasir
-		const transaksiKasirInserts = cart.map((item: any) => {
+		const transaksiKasirInserts = cart.map((item: BayarCartItem) => {
 			const addOnTotal = item.addOns
-				? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0)
+				? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
 				: 0;
 			const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
 			return {
@@ -345,9 +362,9 @@
 				.limit(1)
 				.maybeSingle();
 			if (lastBukuKas && lastBukuKas.id) {
-				const transaksiKasirInserts = cart.map((item: any) => {
+				const transaksiKasirInserts = cart.map((item: BayarCartItem) => {
 					const addOnTotal = item.addOns
-						? item.addOns.reduce((a: any, b: any) => a + (b.price ?? b.harga ?? 0), 0)
+						? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
 						: 0;
 					const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
 					return {
@@ -414,10 +431,10 @@
 		html += `</div>`;
 		// Daftar pesanan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
-		cart.forEach((item: any, idx: any) => {
+		cart.forEach((item: BayarCartItem, idx: number) => {
 			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
-				item.addOns.forEach((a: any) => {
+				item.addOns.forEach((a: BayarAddOn) => {
 					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
 				});
 			}
@@ -474,14 +491,14 @@
 		window.location.href = intentUrl;
 	}
 
-	function handleAddCashTemplate(t: any) {
+	function handleAddCashTemplate(t: number) {
 		addCashTemplate(t);
 	}
-	function handleKeypadButton(key: any) {
+	function handleKeypadButton(key: string | number) {
 		if (key === 'C') cashReceived = '';
 		else handleKeypad(key);
 	}
-	function handleSetPaymentMethod(id: any) {
+	function handleSetPaymentMethod(id: string) {
 		paymentMethod = id;
 	}
 	function handleBackToKasir() {

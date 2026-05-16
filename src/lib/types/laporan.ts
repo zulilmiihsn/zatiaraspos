@@ -61,7 +61,11 @@ export interface ReceiptSettings {
 	id?: string;
 	nama_toko: string;
 	alamat_toko?: string;
+	alamat?: string; // Alias from `pengaturan` table
 	no_telp?: string;
+	telepon?: string; // Alias from `pengaturan` table
+	instagram?: string;
+	ucapan?: string;
 	catatan_bawah?: string;
 	show_logo?: boolean;
 	logo_url?: string;
