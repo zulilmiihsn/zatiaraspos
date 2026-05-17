@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { slide, fade, fly } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { dataService } from '$lib/services/dataService';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';

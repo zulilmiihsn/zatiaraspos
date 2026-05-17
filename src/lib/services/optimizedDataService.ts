@@ -7,7 +7,6 @@ import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { VALID_BRANCHES, isValidBranch, type BranchKey } from '$lib/database/supabaseClient';
 import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-import { browser } from '$app/environment';
 
 interface QueryOptions {
 	ttl?: number;

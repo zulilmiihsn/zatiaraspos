@@ -2,21 +2,20 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-	import { writable } from 'svelte/store';
+
 	import CropperDialog from '$lib/components/shared/cropperDialog.svelte';
 	import { fly, fade, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { get as getCache, set as setCache } from 'idb-keyval';
+
 	import { memoize } from '$lib/utils/performance';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import Plus from 'lucide-svelte/icons/plus';
-	import Edit from 'lucide-svelte/icons/edit';
+
 	import Trash from 'lucide-svelte/icons/trash';
-	import Coffee from 'lucide-svelte/icons/coffee';
-	import Utensils from 'lucide-svelte/icons/utensils';
-	import Tag from 'lucide-svelte/icons/tag';
+
 	import { dataService } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
@@ -30,10 +29,10 @@
 	let kategoriList = $state<Category[]>([]);
 	let ekstraList = $state<(AddOn & { harga: number })[]>([]);
 	let showMenuForm = $state(false);
-	let showKategoriForm = $state(false);
+
 	let showEkstraForm = $state(false);
 	let editMenuId = $state<number | null>(null);
-	let editKategoriId = $state<number | null>(null);
+
 	let editEkstraId = $state<number | null>(null);
 
 	let menuForm = $state({
@@ -45,23 +44,18 @@
 		gambar: ''
 	});
 
-	let kategoriForm = $state({ name: '' });
 	let ekstraForm = $state({ name: '', harga: '' });
 	let selectedKategori = $state<string | number>('Semua');
 	let searchKeyword = $state('');
 	let showDeleteModal = $state(false);
 	let menuIdToDelete = $state<number | null>(null);
+
 	let selectedImage = $state<File | null>(null);
-	let croppedImage = $state<string | null>(null);
 	let showCropperDialog = $state(false);
 	let cropperDialogImage = $state('');
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
-	let touchStartY = $state(0);
-	let menuTouchStartX = $state(0);
-	let menuTouchStartY = $state(0);
-	let menuTouchStartTime = $state(0);
-	let menuSwipeDetected = $state(false);
+
 	let showDeleteKategoriModal = $state(false);
 	let kategoriIdToDelete = $state<number | null>(null);
 	let showKategoriDetailModal = $state(false);
@@ -73,19 +67,7 @@
 	let searchEkstra = $state('');
 	let showDeleteEkstraModal = $state(false);
 	let ekstraIdToDelete = $state<number | null>(null);
-	let kategoriTouchStartX = $state(0);
-	let kategoriTouchStartY = $state(0);
-	let kategoriTouchStartTime = $state(0);
-	let kategoriSwipeDetected = $state(false);
-	let ekstraTouchStartX = $state(0);
-	let ekstraTouchStartY = $state(0);
-	let ekstraTouchStartTime = $state(0);
-	let ekstraSwipeDetected = $state(false);
-	let isTouchDevice = $state(false);
 
-	if (typeof window !== 'undefined') {
-		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-	}
 	let isGridView = $state(true);
 	let showNotifModal = $state(false);
 	let notifModalMsg = $state('');
@@ -99,13 +81,6 @@
 
 	// Toast management
 	const toastManager = createToastManager();
-
-	function showToastNotification(
-		message: string,
-		type: 'success' | 'error' | 'warning' | 'info' = 'success'
-	) {
-		toastManager.showToastNotification(message, type);
-	}
 
 	const memoizedKategoriWithCount = memoize(
 		(menus: Product[], kategoriList: Category[]) =>

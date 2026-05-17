@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { fly, fade } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+
 	import { onDestroy } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -43,13 +42,6 @@
 				}, 120);
 			}
 		}
-	}
-
-	function handleClose() {
-		show = false;
-		pinInput = '';
-		pinError = '';
-		dispatch('close');
 	}
 
 	// Cleanup on component destroy

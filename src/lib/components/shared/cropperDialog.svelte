@@ -126,9 +126,9 @@
 		// Batasan agar cropper tidak keluar area crop
 		const drawW = img.width * zoom;
 		const drawH = img.height * zoom;
-		const minX = (cropSize - drawW) / 2;
+		const _minX = (cropSize - drawW) / 2;
 		const maxX = (drawW - cropSize) / 2;
-		const minY = (cropSize - drawH) / 2;
+		const _minY = (cropSize - drawH) / 2;
 		const maxY = (drawH - cropSize) / 2;
 		offset.x = Math.max(-maxX, Math.min(offset.x, maxX));
 		offset.y = Math.max(-maxY, Math.min(offset.y, maxY));

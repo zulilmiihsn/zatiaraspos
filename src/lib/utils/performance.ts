@@ -49,10 +49,10 @@ export function memoize<T extends (...args: any[]) => any>(
 }
 
 // Performance measurement
-export async function measureAsyncPerformance(name: string, fn: () => Promise<void>) {
-	const start = performance.now();
+export async function measureAsyncPerformance(_name: string, fn: () => Promise<void>) {
+	const _start = performance.now();
 	await fn();
-	const end = performance.now();
+	const _end = performance.now();
 }
 
 // Cart calculations dengan memoization

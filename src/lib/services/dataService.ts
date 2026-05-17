@@ -6,16 +6,11 @@ import {
 	getTodayWita,
 	getNowWita,
 	witaToUtcRange,
-	witaRangeToUtcRange,
 	witaRangeToWitaQuery
 } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as getCache, set as setCache } from 'idb-keyval';
-import {
-	addPendingTransaction,
-	getPendingTransactions,
-	clearPendingTransactions
-} from '$lib/utils/offline';
+import { getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 async function getCachedPosKas7Hari(supabase: SupabaseClient) {
@@ -298,7 +293,7 @@ export class DataService {
 					pendapatanPerHari[tanggal] = 0;
 				}
 
-				const { startUtc: start7Utc, endUtc: end7Utc } = witaToUtcRange(hariLabels[0]);
+				const { startUtc: start7Utc } = witaToUtcRange(hariLabels[0]);
 				const { endUtc: end7LastUtc } = witaToUtcRange(hariLabels[6]);
 
 				const { data: items, error } = await this.supabase

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { getLast7DaysLabelsWITA } from '$lib/utils/dateTime';
 
 	let { weeklyIncome = [], weeklyMax = 1 } = $props<{

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	export let open = false;
 	export let title = '';
 	const dispatch = createEventDispatcher();

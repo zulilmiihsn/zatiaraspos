@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 

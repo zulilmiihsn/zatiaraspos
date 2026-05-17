@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-	import type { AiChatMessage, TransactionAnalysis, AiRecommendation } from '$lib/types/ai';
+	import type { AiChatMessage, TransactionAnalysis } from '$lib/types/ai';
 	import { AiAnalysisService } from '$lib/services/aiAnalysisService';
 	import { AutoApplyService } from '$lib/services/autoApplyService';
 	import { refreshBus } from '$lib/utils/refreshBus';

@@ -39,31 +39,27 @@ class IconLoader {
 			return cachedIcon;
 		}
 
-		try {
-			// Gunakan import.meta.glob agar Vite bisa melakukan code-splitting dengan benar
-			const iconPath = `/node_modules/lucide-svelte/icons/${iconName}.svelte`;
-			const iconLoader = (ICON_MODULES as Record<string, () => Promise<any>>)[iconPath];
-			if (!iconLoader) {
-				throw new Error(`Icon tidak ditemukan: ${iconName}`);
-			}
-
-			const iconPromise = iconLoader().then((module) => module.default);
-			this.cache[iconName] = iconPromise;
-
-			// Mark as loaded when resolved
-			iconPromise
-				.then(() => {
-					this.loadedIcons.add(iconName);
-				})
-				.catch(() => {
-					// Remove from cache if loading fails
-					delete this.cache[iconName];
-				});
-
-			return iconPromise;
-		} catch (error) {
-			throw error;
+		// Gunakan import.meta.glob agar Vite bisa melakukan code-splitting dengan benar
+		const iconPath = `/node_modules/lucide-svelte/icons/${iconName}.svelte`;
+		const iconLoader = (ICON_MODULES as Record<string, () => Promise<any>>)[iconPath];
+		if (!iconLoader) {
+			throw new Error(`Icon tidak ditemukan: ${iconName}`);
 		}
+
+		const iconPromise = iconLoader().then((module) => module.default);
+		this.cache[iconName] = iconPromise;
+
+		// Mark as loaded when resolved
+		iconPromise
+			.then(() => {
+				this.loadedIcons.add(iconName);
+			})
+			.catch(() => {
+				// Remove from cache if loading fails
+				delete this.cache[iconName];
+			});
+
+		return iconPromise;
 	}
 
 	/**
