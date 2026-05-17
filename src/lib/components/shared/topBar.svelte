@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Settings from 'lucide-svelte/icons/settings';
+	import { refreshBus } from '$lib/utils/refreshBus';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { getPendingTransactions } from '$lib/utils/offline';
@@ -45,12 +46,8 @@
 		showAiChat = false;
 		// Panggil refresher global di background saat modal ditutup
 		if (typeof window !== 'undefined') {
-			if (typeof (window as any).__refreshLaporan === 'function') {
-				(window as any).__refreshLaporan();
-			}
-			if (typeof (window as any).__refreshRiwayat === 'function') {
-				(window as any).__refreshRiwayat();
-			}
+			refreshBus.emit('laporan');
+			refreshBus.emit('riwayat');
 		}
 	}
 

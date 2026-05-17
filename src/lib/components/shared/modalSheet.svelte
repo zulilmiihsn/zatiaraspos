@@ -51,8 +51,6 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
 		class="modal-backdrop"
 		onclick={(e) => e.target === e.currentTarget && close()}

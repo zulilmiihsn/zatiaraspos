@@ -1,52 +1,33 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
+
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
 	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
 	import {
 		validateNumber,
 		validateText,
-		validateDate,
 		validateTime,
 		sanitizeInput,
 		validateIncomeExpense
 	} from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
 	import { auth } from '$lib/auth/auth';
-	import { goto } from '$app/navigation';
-	import {
-		formatWitaDateTime,
-		witaToUtcRange,
-		witaToUtcISO,
-		getTodayWita,
-		getNowWita
-	} from '$lib/utils/dateTime';
-	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
-	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
+	import { witaToUtcISO } from '$lib/utils/dateTime';
+	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
+
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { dataService } from '$lib/services/dataService';
+	import { createToastManager } from '$lib/utils/ui';
 
 	import type { TokoSession } from '$lib/types';
 
-	let touchStartX = 0;
-	let touchStartY = 0;
-	let touchEndX = 0;
-	let touchEndY = 0;
-	let isSwiping = false;
-	let isTouchDevice = $state(false);
-	let clickBlocked = false;
+	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
 
-	const navs = [
-		{ label: 'Beranda', path: '/' },
-		{ label: 'Kasir', path: '/pos' },
-		{ label: 'Catat', path: '/catat' },
-		{ label: 'Laporan', path: '/laporan' }
-	];
+	const swipeNav = createSwipeNavigation(2); // 2 = Catat
 
 	let mode = $state<'pemasukan' | 'pengeluaran'>('pemasukan');
 	let paymentMethod = $state<'tunai' | 'non-tunai'>('tunai');
@@ -61,19 +42,8 @@
 
 	let showDropdown = $state(false);
 
-	// Toast notification state
-	let showToast = $state(false);
-	let toastMessage = $state('');
-	let toastType = $state<'success' | 'error' | 'warning' | 'info'>('success');
-
-	function showToastNotification(
-		message: string,
-		type: 'success' | 'error' | 'warning' | 'info' = 'success'
-	) {
-		toastMessage = message;
-		toastType = type;
-		showToast = true;
-	}
+	// Toast notification - use shared createToastManager
+	const toastManager = createToastManager();
 
 	const jenisPemasukan = [
 		{ value: 'pendapatan_usaha', label: 'Pendapatan Usaha' },
@@ -118,8 +88,7 @@
 		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
 			loadRouteIcons('catat');
 		});
-		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		
+
 		// Jika role belum ada di store, coba validasi dengan Supabase
 		if (!currentUserRole) {
 			const {
@@ -136,7 +105,7 @@
 				}
 			}
 		}
-		
+
 		date = getLocalDateString();
 		time = new Date().toTimeString().slice(0, 5);
 		jenis = mode === 'pemasukan' ? 'pendapatan_usaha' : 'beban_usaha';
@@ -220,81 +189,6 @@
 			}
 		}
 	});
-
-	function handleTouchStart(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		touchStartX = e.touches[0].clientX;
-		touchStartY = e.touches[0].clientY;
-		isSwiping = false;
-		clickBlocked = false;
-	}
-
-	function handleTouchMove(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		touchEndX = e.touches[0].clientX;
-		touchEndY = e.touches[0].clientY;
-
-		const deltaX = Math.abs(touchEndX - touchStartX);
-		const deltaY = Math.abs(touchEndY - touchStartY);
-		const viewportWidth = window.innerWidth;
-		const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-
-		// Check if this is a horizontal swipe
-		if (deltaX > swipeThreshold && deltaX > deltaY) {
-			isSwiping = true;
-			clickBlocked = true;
-		}
-	}
-
-	function handleTouchEnd(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		if (isSwiping) {
-			// Handle swipe navigation
-			const deltaX = touchEndX - touchStartX;
-			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.25; // 25% of viewport width (sama dengan pengaturan/pemilik)
-
-			if (Math.abs(deltaX) > swipeThreshold) {
-				const currentIndex = 2; // Catat is index 2
-				if (deltaX > 0 && currentIndex > 0) {
-					// Swipe right - go to previous tab
-					goto(navs[currentIndex - 1].path);
-				} else if (deltaX < 0 && currentIndex < navs.length - 1) {
-					// Swipe left - go to next tab
-					goto(navs[currentIndex + 1].path);
-				}
-			}
-
-			// Block any subsequent click events
-			setTimeout(() => {
-				clickBlocked = false;
-			}, 100);
-		}
-	}
-
-	function handleGlobalClick(e: Event) {
-		// Don't block clicks on interactive elements even if swipe was detected
-		const target = e.target as HTMLElement;
-		if (
-			target.tagName === 'BUTTON' ||
-			target.tagName === 'INPUT' ||
-			target.tagName === 'A' ||
-			target.closest('button') ||
-			target.closest('input') ||
-			target.closest('a')
-		) {
-			return;
-		}
-
-		if (clickBlocked) {
-			e.preventDefault();
-			e.stopPropagation();
-			return;
-		}
-	}
 
 	function formatRupiah(angka: string | number): string {
 		if (!angka) return '';
@@ -460,9 +354,9 @@
 
 <!-- Toast Notification -->
 <ToastNotification
-	show={showToast}
-	message={toastMessage}
-	type={toastType}
+	show={toastManager.showToast}
+	message={toastManager.toastMessage}
+	type={toastManager.toastType}
 	duration={2000}
 	position="top"
 />
@@ -585,15 +479,12 @@
 	</div>
 {/if}
 
-<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <div
 	class="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-white"
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
-	onclick={handleGlobalClick}
-	onkeydown={(e) => e.key === 'Escape' && handleGlobalClick(e)}
-	onkeypress={(e) => e.key === 'Enter' && handleGlobalClick(e)}
+	ontouchstart={swipeNav.handleTouchStart}
+	ontouchmove={swipeNav.handleTouchMove}
+	ontouchend={swipeNav.handleTouchEnd}
+	onkeydown={(e) => e.key === 'Escape' && swipeNav.handleGlobalClick(e as unknown as Event)}
 	role="main"
 	aria-label="Halaman catat pemasukan pengeluaran"
 	tabindex="-1"

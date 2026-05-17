@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { writable } from 'svelte/store';
 	import CropperDialog from '$lib/components/shared/cropperDialog.svelte';
@@ -97,7 +96,7 @@
 	let isLoadingMenus = $state(true);
 	let isLoadingKategori = $state(true);
 	let isLoadingEkstra = $state(true);
-	
+
 	// Toast management
 	const toastManager = createToastManager();
 
@@ -115,7 +114,9 @@
 				count: menus.filter((m: Product) => m.kategori_id === kat.id).length
 			})),
 		(menus: Product[], kategoriList: Category[]) => {
-			const menuKategoriMap = menus.map((m: Product) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
+			const menuKategoriMap = menus
+				.map((m: Product) => `${m.id}:${m.kategori_id || 'null'}`)
+				.join(',');
 			const kategoriIds = kategoriList.map((k: Category) => k.id).join(',');
 			return `${menuKategoriMap}-${kategoriIds}`;
 		}
@@ -124,7 +125,12 @@
 	let kategoriWithCount = $derived(memoizedKategoriWithCount(menus, kategoriList));
 
 	const memoizedFilteredMenus = memoize(
-		(menus: Product[], kategoriList: Category[], selectedKategori: string | number, searchKeyword: string) => {
+		(
+			menus: Product[],
+			kategoriList: Category[],
+			selectedKategori: string | number,
+			searchKeyword: string
+		) => {
 			const keyword = searchKeyword.trim().toLowerCase();
 			return menus.filter((menu) => {
 				if (!keyword)
@@ -137,14 +143,21 @@
 				);
 			});
 		},
-		(menus: Product[], kategoriList: Category[], selectedKategori: string | number, searchKeyword: string) => {
+		(
+			menus: Product[],
+			kategoriList: Category[],
+			selectedKategori: string | number,
+			searchKeyword: string
+		) => {
 			const menuKategoriMap = menus.map((m) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
 			const kategoriIds = kategoriList.map((k) => k.id).join(',');
 			return `${menuKategoriMap}-${kategoriIds}-${selectedKategori}-${searchKeyword}`;
 		}
 	);
 
-	let filteredMenus = $derived(memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword));
+	let filteredMenus = $derived(
+		memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword)
+	);
 
 	async function fetchMenus() {
 		isLoadingMenus = true;
@@ -220,7 +233,6 @@
 		if (userRole.value !== 'pemilik') {
 			goto('/unauthorized');
 		}
-
 	});
 
 	let isInitialLoad = true;
@@ -293,7 +305,7 @@
 			showNotifModal = true;
 			return;
 		}
-		
+
 		let imageUrl = menuForm.gambar;
 		if (imageUrl && imageUrl.startsWith('data:image/')) {
 			try {
@@ -724,7 +736,11 @@
 		}
 	}
 
-	async function updateMenusKategori(kategoriId: number | null, menuIds: number[], oldKategoriId: number | null) {
+	async function updateMenusKategori(
+		kategoriId: number | null,
+		menuIds: number[],
+		oldKategoriId: number | null
+	) {
 		try {
 			// Update menu kategori untuk menu yang dipilih
 			for (const menuId of menuIds) {
@@ -842,7 +858,6 @@
 			return () => clearTimeout(timeout);
 		}
 	});
-
 </script>
 
 {#if toastManager.showToast}
@@ -1346,8 +1361,6 @@
 
 	<!-- Modal untuk tambah/edit menu -->
 	{#if showMenuForm}
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 		<div
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
 			role="dialog"
@@ -1357,8 +1370,6 @@
 			onkeypress={(e) => e.key === 'Enter' && closeMenuForm()}
 			tabindex="-1"
 		>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 			<div
 				class="animate-slideUpModal mx-4 flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl"
 				role="document"
@@ -1609,8 +1620,6 @@
 
 	<!-- Modal untuk tambah/edit kategori -->
 	{#if showKategoriDetailModal}
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 		<div
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
 			role="dialog"
@@ -1620,8 +1629,6 @@
 			onkeypress={(e) => e.key === 'Enter' && closeKategoriDetailModal()}
 			tabindex="-1"
 		>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 			<div
 				class="animate-slideUpModal mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
 				role="document"
@@ -1735,8 +1742,6 @@
 
 	<!-- Modal untuk tambah/edit ekstra -->
 	{#if showEkstraForm}
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 		<div
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
 			role="dialog"
@@ -1752,8 +1757,6 @@
 				((showEkstraForm = false), (ekstraForm = { name: '', harga: '' }), (editEkstraId = null))}
 			tabindex="-1"
 		>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 			<div
 				class="animate-slideUpModal relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
 				role="document"
@@ -1892,8 +1895,6 @@
 			position="top"
 		/>
 	{/if}
-
-
 
 	<!-- Komponen upload/crop gambar menu -->
 	{#if showCropperDialog}

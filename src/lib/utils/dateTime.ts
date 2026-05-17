@@ -152,3 +152,19 @@ export function witaRangeToWitaQuery(
 		throw new Error(`Failed to convert date range to WITA: ${startDate} to ${endDate}`);
 	}
 }
+
+export function getLast7DaysLabelsWITA(): string[] {
+	const labels: string[] = [];
+	const now = new Date();
+	for (let i = 6; i >= 0; i--) {
+		const date = new Date(now);
+		date.setDate(date.getDate() - i);
+		// Format WITA day name
+		const dayName = new Intl.DateTimeFormat('id-ID', {
+			weekday: 'short',
+			timeZone: 'Asia/Makassar'
+		}).format(date);
+		labels.push(dayName);
+	}
+	return labels;
+}

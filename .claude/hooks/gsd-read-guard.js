@@ -24,54 +24,54 @@ const path = require('path');
 let input = '';
 const stdinTimeout = setTimeout(() => process.exit(0), 3000);
 process.stdin.setEncoding('utf8');
-process.stdin.on('data', chunk => input += chunk);
+process.stdin.on('data', (chunk) => (input += chunk));
 process.stdin.on('end', () => {
-  clearTimeout(stdinTimeout);
-  try {
-    const data = JSON.parse(input);
-    const toolName = data.tool_name;
+	clearTimeout(stdinTimeout);
+	try {
+		const data = JSON.parse(input);
+		const toolName = data.tool_name;
 
-    // Only intercept Write and Edit tool calls
-    if (toolName !== 'Write' && toolName !== 'Edit') {
-      process.exit(0);
-    }
+		// Only intercept Write and Edit tool calls
+		if (toolName !== 'Write' && toolName !== 'Edit') {
+			process.exit(0);
+		}
 
-    const filePath = data.tool_input?.file_path || '';
-    if (!filePath) {
-      process.exit(0);
-    }
+		const filePath = data.tool_input?.file_path || '';
+		if (!filePath) {
+			process.exit(0);
+		}
 
-    // Only inject guidance when the file already exists.
-    // New files don't need a prior Read — the runtime allows creating them directly.
-    let fileExists = false;
-    try {
-      fs.accessSync(filePath, fs.constants.F_OK);
-      fileExists = true;
-    } catch {
-      // File does not exist — no guidance needed
-    }
+		// Only inject guidance when the file already exists.
+		// New files don't need a prior Read — the runtime allows creating them directly.
+		let fileExists = false;
+		try {
+			fs.accessSync(filePath, fs.constants.F_OK);
+			fileExists = true;
+		} catch {
+			// File does not exist — no guidance needed
+		}
 
-    if (!fileExists) {
-      process.exit(0);
-    }
+		if (!fileExists) {
+			process.exit(0);
+		}
 
-    const fileName = path.basename(filePath);
+		const fileName = path.basename(filePath);
 
-    // Advisory guidance — does not block the operation
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        additionalContext:
-          `READ-BEFORE-EDIT REMINDER: You are about to modify "${fileName}" which already exists. ` +
-          'If you have not already used the Read tool to read this file in the current session, ' +
-          'you MUST Read it first before editing. The runtime will reject edits to files that ' +
-          'have not been read. Use the Read tool on this file path, then retry your edit.',
-      },
-    };
+		// Advisory guidance — does not block the operation
+		const output = {
+			hookSpecificOutput: {
+				hookEventName: 'PreToolUse',
+				additionalContext:
+					`READ-BEFORE-EDIT REMINDER: You are about to modify "${fileName}" which already exists. ` +
+					'If you have not already used the Read tool to read this file in the current session, ' +
+					'you MUST Read it first before editing. The runtime will reject edits to files that ' +
+					'have not been read. Use the Read tool on this file path, then retry your edit.'
+			}
+		};
 
-    process.stdout.write(JSON.stringify(output));
-  } catch {
-    // Silent fail — never block tool execution
-    process.exit(0);
-  }
+		process.stdout.write(JSON.stringify(output));
+	} catch {
+		// Silent fail — never block tool execution
+		process.exit(0);
+	}
 });

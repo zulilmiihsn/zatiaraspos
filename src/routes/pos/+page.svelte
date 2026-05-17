@@ -1,15 +1,16 @@
 <script lang="ts">
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
+	import ProductGrid from '$lib/components/pos/ProductGrid.svelte';
+	import CustomItemModal from '$lib/components/pos/CustomItemModal.svelte';
+	import CartPreview from '$lib/components/pos/CartPreview.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { get } from 'svelte/store';
-	import type { ReceiptSettings } from '$lib/types/laporan';
+
 	import type { TokoSession } from '$lib/types/store';
 	import { validateNumber, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
 	import { fly, fade } from 'svelte/transition';
-	import { slide } from 'svelte/transition';
+
 	import { cubicOut } from 'svelte/easing';
 	import { posGridView } from '$lib/stores/posGridView.svelte';
 	import {
@@ -23,6 +24,7 @@
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
+	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	let currentUserRole = $state('');
 	$effect(() => {
@@ -32,14 +34,7 @@
 	import { browser } from '$app/environment';
 	let sesiAktif: TokoSession | null = null;
 	async function cekSesiTokoAktif(): Promise<void> {
-		const { data } = await dataService.supabaseClient
-			.from('sesi_toko')
-			.select('*')
-			.eq('is_active', true)
-			.order('opening_time', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		sesiAktif = data || null;
+		sesiAktif = await getSesiAktif();
 	}
 
 	onMount(() => {
@@ -155,13 +150,19 @@
 			const nextFingerprint = [
 				(nextProducts || []).length,
 				(nextProducts || [])
-					.map((item: { id?: string; harga?: number; price?: number }) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.map(
+						(item: { id?: string; harga?: number; price?: number }) =>
+							`${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`
+					)
 					.join(','),
 				(nextCategories || []).length,
 				(nextCategories || []).map((item: { id?: string }) => item?.id || '').join(','),
 				(nextAddons || []).length,
 				(nextAddons || [])
-					.map((item: { id?: string; harga?: number; price?: number }) => `${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`)
+					.map(
+						(item: { id?: string; harga?: number; price?: number }) =>
+							`${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`
+					)
 					.join(',')
 			].join('|');
 
@@ -216,58 +217,9 @@
 		});
 	}
 
-	// Touch handling dengan throttling
-	let touchStartX = 0;
-	let touchStartY = 0;
-	let touchEndX = 0;
-	let touchEndY = 0;
-	let isSwiping = false;
-	let isTouchDevice = $state(false);
-	let clickBlocked = $state(false);
+	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
 
-	// Throttled touch handlers
-	const throttledTouchMove = throttle((e: TouchEvent) => {
-		if (!isTouchDevice) return;
-		const touch = e.touches[0];
-		const deltaX = Math.abs(touch.clientX - touchStartX);
-		const deltaY = Math.abs(touch.clientY - touchStartY);
-
-		if (deltaX > deltaY && deltaX > 10) {
-			isSwiping = true;
-			clickBlocked = true;
-		}
-	}, 16); // ~60fps
-
-	const throttledTouchEnd = throttle(() => {
-		if (isTouchDevice) {
-			setTimeout(() => {
-				isSwiping = false;
-				clickBlocked = false;
-			}, 100);
-		}
-	}, 16);
-
-	function handleTouchStart(e: TouchEvent) {
-		const touch = e.touches[0];
-		touchStartX = touch.clientX;
-		touchStartY = touch.clientY;
-		isTouchDevice = true;
-	}
-
-	function handleTouchMove(e: TouchEvent) {
-		throttledTouchMove(e);
-	}
-
-	function handleTouchEnd() {
-		throttledTouchEnd();
-	}
-
-	const navs = [
-		{ label: 'Beranda', path: '/' },
-		{ label: 'Kasir', path: '/pos' },
-		{ label: 'Catat', path: '/catat' },
-		{ label: 'Laporan', path: '/laporan' }
-	];
+	const swipeNav = createSwipeNavigation(1); // 1 = Kasir
 
 	// Kategori produk
 	let selectedCategory = $state('all');
@@ -325,7 +277,12 @@
 
 	// Memoized filtered products dengan optimasi
 	const memoizedFilter = memoize(
-		(products: PosProduct[], categories: PosCategory[], selectedCategory: string, search: string) => {
+		(
+			products: PosProduct[],
+			categories: PosCategory[],
+			selectedCategory: string,
+			search: string
+		) => {
 			let filtered = products;
 			if (search) {
 				filtered = fuzzySearch(search, products);
@@ -476,55 +433,16 @@
 		if (qty > 1) qty--;
 	}
 
-	let cartPreviewX = $state(0);
-	let cartPreviewStartX = 0;
-	let cartPreviewDragging = $state(false);
-	let cartPreviewRef = $state<unknown>(null);
-	let cartPreviewWidth = 0;
 	let showSnackbar = $state(false);
 	let snackbarMsg = $state('');
-	let prevCartLength = 0;
 
-	function handleCartPreviewTouchStart(e: TouchEvent): void {
-		if (e.touches.length !== 1) return;
-		cartPreviewDragging = true;
-		cartPreviewStartX = e.touches[0].clientX;
-		cartPreviewWidth = (cartPreviewRef as HTMLElement)?.offsetWidth || 1;
-	}
-	function handleCartPreviewTouchMove(e: TouchEvent): void {
-		if (!cartPreviewDragging) return;
-		const deltaX = e.touches[0].clientX - cartPreviewStartX;
-		cartPreviewX = Math.min(0, deltaX); // hanya ke kiri
-	}
-	function handleCartPreviewTouchEnd() {
-		if (!cartPreviewDragging) return;
-		cartPreviewDragging = false;
-		if (Math.abs(cartPreviewX) > cartPreviewWidth * 0.6) {
-			cart = [];
-			cartPreviewX = -cartPreviewWidth;
-			showSnackbar = true;
-			snackbarMsg = 'Keranjang dikosongkan';
-			setTimeout(() => {
-				showSnackbar = false;
-			}, 1800);
-		} else {
-			cartPreviewX = 0;
-		}
-	}
-
-	$effect(() => {
-		if (prevCartLength === 0 && cart.length > 0 && !cartPreviewDragging) {
-			cartPreviewX = 0;
-		}
-		prevCartLength = cart.length;
-	});
-
-	function handleGlobalClick(e: Event): void {
-		if (clickBlocked) {
-			e.preventDefault();
-			e.stopPropagation();
-			return;
-		}
+	function clearCart() {
+		cart = [];
+		showSnackbar = true;
+		snackbarMsg = 'Keranjang dikosongkan';
+		setTimeout(() => {
+			showSnackbar = false;
+		}, 1800);
 	}
 
 	function capitalizeFirst(str: string): string {
@@ -557,56 +475,9 @@
 	}
 
 	let showCustomItemModal = $state(false);
-	let customItemName = $state('');
-	let customItemPriceRaw = '';
-	let customItemPriceFormatted = $state('');
-	let customItemNote = $state('');
 
-	function formatRupiahInput(value: string): string {
-		// Hanya angka
-		const numberString = value.replace(/[^\d]/g, '');
-		if (!numberString) return '';
-		return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-	}
-
-	function handleCustomPriceInput(e: Event): void {
-		const target = e.target as HTMLInputElement;
-		const raw = target.value.replace(/[^\d]/g, '');
-		customItemPriceRaw = raw;
-		customItemPriceFormatted = formatRupiahInput(raw);
-	}
-
-	function addCustomItemToCart(e?: Event) {
-		if (e) e.preventDefault();
-		if (
-			!customItemName.trim() ||
-			!customItemPriceRaw ||
-			isNaN(Number(customItemPriceRaw)) ||
-			Number(customItemPriceRaw) <= 0
-		)
-			return;
-		cart = [
-			...cart,
-			{
-				product: {
-					id: `custom-${Date.now()}`,
-					name: customItemName.trim(),
-					harga: Number(customItemPriceRaw),
-					price: Number(customItemPriceRaw),
-					tipe: 'custom'
-				},
-				addOns: [],
-				sugar: '',
-				ice: '',
-				qty: qty, // Gunakan qty dari modal
-				note: customItemNote.trim()
-			}
-		];
-		showCustomItemModal = false;
-		customItemName = '';
-		customItemPriceRaw = '';
-		customItemPriceFormatted = '';
-		customItemNote = '';
+	function addCustomItemToCart(item: any) {
+		cart = [...cart, item];
 	}
 
 	// Helper untuk ambil nama kategori dari kategori_id
@@ -656,20 +527,17 @@
 
 <div
 	class="h-100vh flex w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-white"
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
-	onclick={handleGlobalClick}
-	onkeydown={(e) => e.key === 'Escape' && handleGlobalClick(e)}
+	ontouchstart={swipeNav.handleTouchStart}
+	ontouchmove={swipeNav.handleTouchMove}
+	ontouchend={swipeNav.handleTouchEnd}
+	onclick={swipeNav.handleGlobalClick}
+	onkeydown={(e) => e.key === 'Escape' && swipeNav.handleGlobalClick(e as unknown as Event)}
 	role="button"
 	tabindex="0"
 >
 	<main
 		class="page-content w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
-		ontouchstart={handleTouchStart}
-		ontouchmove={handleTouchMove}
-		ontouchend={handleTouchEnd}
 	>
 		<div class="flex items-center gap-3 bg-white px-4 py-4 md:py-8 lg:py-10">
 			<div class="relative w-full">
@@ -777,252 +645,27 @@
 				</button>
 			{/if}
 		</div>
-		<div class="w-full max-w-full flex-1 px-0" style="min-height:0;">
-			<div
-				class="h-[calc(100vh-112px-48px)] overflow-y-auto md:h-[calc(100vh-128px-48px)] lg:h-[calc(100vh-160px-48px)]"
-				style="scrollbar-width:none;-ms-overflow-style:none;"
-			>
-				{#if posGridView.value}
-					<div
-						class="flex min-h-[60vh] flex-col gap-1 px-4 pb-4"
-						transition:slide={{ duration: 250 }}
-					>
-						{#if isLoadingProducts}
-							{#each Array(skeletonCount) as _, i}
-								<div
-									class="flex max-h-[80px] min-h-[56px] animate-pulse cursor-pointer items-center justify-between rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 px-3 py-2 shadow-md transition-shadow"
-								></div>
-							{/each}
-						{:else if filteredProducts.length === 0}
-							<div
-								class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center py-12 text-center"
-							>
-								<div class="mb-2 text-6xl">🍽️</div>
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Menu</div>
-								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
-							</div>
-						{:else}
-							{#each filteredProducts as p}
-								<div
-									class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-100 bg-white px-3 py-2 transition-colors hover:bg-pink-50"
-									tabindex="0"
-									onclick={() => handleOpenAddOnModal(p)}
-									onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)}
-									role="button"
-									aria-label="Tambah {p.name} ke keranjang"
-								>
-									<div class="flex min-w-0 flex-1 flex-col">
-										<span class="mb-0.5 truncate text-sm font-medium text-gray-800">{p.name}</span>
-										<span class="mb-0.5 min-h-[18px] truncate text-xs text-gray-400"
-											>{getKategoriNameById(p.kategori_id || '')}</span
-										>
-									</div>
-									<div class="flex items-center gap-2">
-										<span class="text-base font-bold whitespace-nowrap text-pink-500"
-											>Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}</span
-										>
-									</div>
-								</div>
-							{/each}
-						{/if}
-					</div>
-				{:else}
-					<div
-						class="grid min-h-0 grid-cols-2 gap-3 px-4 pb-4 md:grid-cols-3 md:gap-6 md:px-8 md:pb-8 lg:grid-cols-6"
-						transition:slide={{ duration: 250 }}
-					>
-						{#if isLoadingProducts}
-							{#each Array(skeletonCount) as _, i}
-								<div
-									class="flex aspect-[3/4] max-h-[260px] min-h-[140px] animate-pulse cursor-pointer flex-col items-center justify-between rounded-xl border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-2.5 shadow-md transition-shadow md:max-h-[320px] md:min-h-[180px] md:p-6"
-								></div>
-							{/each}
-						{:else if filteredProducts.length === 0}
-							<div
-								class="pointer-events-none col-span-2 flex min-h-[50vh] flex-col items-center justify-center py-12 text-center md:col-span-3"
-							>
-								<div class="mb-2 text-6xl">🍽️</div>
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Menu</div>
-								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
-							</div>
-						{:else}
-							{#each filteredProducts as p}
-								<div
-									class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-gray-100 bg-white p-3 shadow-md transition-shadow md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6 md:hover:shadow-lg"
-									tabindex="0"
-									onclick={() => handleOpenAddOnModal(p)}
-									onkeydown={(e) => handleKeydownOpenAddOnModal(p, e)}
-									role="button"
-									aria-label="Tambah {p.name} ke keranjang"
-								>
-									{#if (p.gambar || p.image) && !imageError[String(p.id)]}
-										<img
-											class="mb-2 aspect-square h-full min-h-[80px] w-full rounded-xl object-cover md:mb-3 md:rounded-2xl"
-											src={p.gambar || p.image}
-											alt={p.name}
-											loading="lazy"
-											onerror={() => handleImgErrorId(p.id)}
-										/>
-									{:else}
-										<div
-											class="mb-2 flex aspect-square min-h-[80px] w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-4xl md:mb-3 md:rounded-2xl md:text-5xl"
-										>
-											🍹
-										</div>
-									{/if}
-									<div class="flex w-full flex-col items-center">
-										<h3
-											class="mb-0.5 w-full truncate text-center text-sm font-semibold text-gray-800 md:mb-1 md:text-lg"
-										>
-											{p.name}
-										</h3>
-										<span class="min-h-[18px] truncate text-xs text-gray-400 md:text-sm"
-											>{getKategoriNameById(p.kategori_id || '')}</span
-										>
-										<div class="text-base font-bold text-pink-500 md:mt-1 md:text-xl">
-											Rp {Number(p.price ?? p.harga ?? 0).toLocaleString('id-ID')}
-										</div>
-									</div>
-								</div>
-							{/each}
-						{/if}
-					</div>
-				{/if}
-				<!-- Tombol Custom Item -->
-				<!-- Modal Custom Item -->
-				{#if showCustomItemModal}
-					<ModalSheet
-						bind:open={showCustomItemModal}
-						title={customItemName ? customItemName : 'Menu Kustom'}
-						on:close={() => (showCustomItemModal = false)}
-					>
-						<div
-							class="addon-list addon-modal-content min-h-0 flex-1 overflow-y-auto pb-48"
-							onclick={handleStopPropagation}
-							onkeydown={(e) => e.key === 'Escape' && e.stopPropagation()}
-							style="scrollbar-width:none;-ms-overflow-style:none;"
-							role="button"
-							tabindex="0"
-						>
-							<div class="mt-4 mb-6">
-								<label class="mb-2 block text-base font-semibold text-gray-800" for="custom-nama"
-									>Nama Menu</label
-								>
-								<input
-									id="custom-nama"
-									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-semibold text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
-									type="text"
-									bind:value={customItemName}
-									required
-									maxlength="50"
-									placeholder="Contoh: Jus Mangga Spesial"
-								/>
-							</div>
-							<div class="mb-6">
-								<label
-									class="mt-4 mb-2 block text-base font-semibold text-gray-800"
-									for="custom-harga">Harga</label
-								>
-								<div class="relative">
-									<span class="absolute top-1/2 left-4 -translate-y-1/2 font-semibold text-gray-400"
-										>Rp</span
-									>
-									<input
-										id="custom-harga"
-										class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base font-semibold text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
-										type="text"
-										inputmode="numeric"
-										pattern="[0-9]*"
-										min="1"
-										max="99999999"
-										value={customItemPriceFormatted}
-										oninput={handleCustomPriceInput}
-										required
-										placeholder="0"
-									/>
-								</div>
-							</div>
-							<div class="mb-6">
-								<label
-									class="mt-4 mb-2 block text-base font-semibold text-gray-800"
-									for="custom-catatan">Catatan</label
-								>
-								<textarea
-									id="custom-catatan"
-									class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base font-normal text-gray-800 outline-none focus:border-pink-400 focus:outline-2 focus:outline-pink-400"
-									bind:value={customItemNote}
-									maxlength="100"
-									rows="2"
-									placeholder="Contoh: Tanpa gula, es sedikit, dsb"
-								></textarea>
-							</div>
-							<div class="mt-0 mb-2 text-base font-semibold text-gray-800">Jumlah</div>
-							<div class="mb-4 flex items-center justify-center gap-3">
-								<button
-									class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
-									type="button"
-									onclick={decQty}>-</button
-								>
-								<input
-									class="w-12 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-center text-lg font-semibold text-gray-800 outline-none"
-									type="number"
-									min="1"
-									max="99"
-									bind:value={qty}
-								/>
-								<button
-									class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
-									type="button"
-									onclick={incQty}>+</button
-								>
-							</div>
-							<div class="mt-2 flex gap-3">
-								<button
-									type="button"
-									class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
-									onclick={addCustomItemToCart}>Tambah ke Keranjang</button
-								>
-							</div>
-						</div>
-					</ModalSheet>
-				{/if}
-			</div>
-		</div>
+		<ProductGrid
+			posGridView={posGridView.value}
+			{isLoadingProducts}
+			skeletonCount={12}
+			{filteredProducts}
+			{categories}
+			{imageError}
+			onSelectProduct={handleOpenAddOnModal}
+			onImgError={handleImgErrorId}
+		/>
 
-		{#if cart.length > 0}
-			<div
-				bind:this={cartPreviewRef}
-				class="fixed right-0 bottom-16 left-0 z-20 flex min-h-[56px] items-center justify-between rounded-t-lg border-t-2 border-gray-100 bg-white px-6 py-3 text-base font-medium text-gray-900 shadow-md"
-				style="transform: translateX({cartPreviewX}px); transition: {cartPreviewDragging
-					? 'none'
-					: 'transform 0.25s cubic-bezier(.4,0,.2,1)'}; touch-action: pan-y;"
-				ontouchstart={handleCartPreviewTouchStart}
-				ontouchmove={handleCartPreviewTouchMove}
-				ontouchend={handleCartPreviewTouchEnd}
-				transition:fly={{ x: -64, duration: 320, opacity: 0.9 }}
-			>
-				<div
-					class="flex flex-1 cursor-pointer flex-col justify-center select-none"
-					onclick={openCartModal}
-					onkeydown={(e) => e.key === 'Enter' && openCartModal()}
-					role="button"
-					tabindex="0"
-					aria-label="Buka keranjang belanja"
-					style="min-width:0;"
-				>
-					<div class="truncate text-sm text-gray-500">{totalItems} item pesanan</div>
-					<div class="truncate text-lg font-bold text-pink-500">
-						Rp {Number(totalHarga ?? 0).toLocaleString('id-ID')}
-					</div>
-				</div>
-				<div class="ml-4 flex items-center justify-center">
-					<button
-						class="flex items-center justify-center rounded-lg bg-pink-500 px-6 py-2 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
-						onclick={handleGoToBayar}>Bayar</button
-					>
-				</div>
-			</div>
-		{/if}
+		<CustomItemModal bind:show={showCustomItemModal} onAdd={addCustomItemToCart} />
+
+		<CartPreview
+			{cart}
+			{totalItems}
+			{totalHarga}
+			onOpenCart={openCartModal}
+			onGoToBayar={handleGoToBayar}
+			onClearCart={clearCart}
+		/>
 
 		{#if showCartModal}
 			<ModalSheet bind:open={showCartModal} title="Keranjang" on:close={closeCartModal}>
@@ -1159,9 +802,7 @@
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
 											: 'text-pink-500'}"
-										>+Rp {Number(a.price ?? a.harga ?? 0).toLocaleString(
-											'id-ID'
-										)}</span
+										>+Rp {Number(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span
 									>
 								</button>
 							{/each}

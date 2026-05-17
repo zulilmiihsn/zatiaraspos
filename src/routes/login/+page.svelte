@@ -6,7 +6,7 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	type BranchType = 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2';
-	import { get } from 'svelte/store';
+
 	import { isAuthenticated } from '$lib/utils/authGuard';
 
 	let userRole = $state('');
@@ -14,7 +14,6 @@
 	let password = $state('');
 	let isLoading = $state(false);
 	let errorMessage = $state('');
-	let successMessage = $state('');
 
 	// Form validation
 	let usernameError = $state('');
@@ -43,13 +42,12 @@
 	}
 
 	let showLottieSuccess = $state(false);
-	let lottieTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	let showLottieError = $state(false);
 	let lottieErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	async function handleSubmit() {
 		errorMessage = '';
-		successMessage = '';
 		if (!validateForm()) return;
 		if (!securityUtils.checkFormRateLimit('login')) {
 			errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 1 menit.';
@@ -235,7 +233,13 @@
 				</div>
 			{/if}
 
-			<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-5">
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSubmit();
+				}}
+				class="space-y-5"
+			>
 				<!-- Username Field -->
 				<div>
 					<label for="username" class="mb-2 block text-sm font-medium text-gray-700">

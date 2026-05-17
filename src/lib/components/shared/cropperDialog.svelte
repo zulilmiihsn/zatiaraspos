@@ -1,7 +1,7 @@
 <script lang="ts">
-	let { 
-		src = '', 
-		open = $bindable(false), 
+	let {
+		src = '',
+		open = $bindable(false),
 		aspect = 1,
 		ondone,
 		oncancel

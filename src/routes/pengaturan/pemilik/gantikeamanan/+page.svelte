@@ -4,8 +4,7 @@
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
-	import { get as storeGet } from 'svelte/store';
+	import { userRole } from '$lib/stores/userRole.svelte';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Shield from 'lucide-svelte/icons/shield';
@@ -13,7 +12,6 @@
 	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 
-	let currentUserRole = '';
 	let oldUsername = '';
 	let newUsername = '';
 	let oldPassword = '';
@@ -45,7 +43,7 @@
 		if (userRole.value !== 'pemilik') {
 			goto('/unauthorized');
 		}
-		currentUserRole = userRole.value || '';
+
 		// Fetch PIN dan lockedPages dari Supabase
 		const { data, error } = await getSupabaseClient(selectedBranch.value)
 			.from('pengaturan')

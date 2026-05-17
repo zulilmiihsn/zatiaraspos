@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -25,7 +24,7 @@
 	async function loadPengaturan() {
 		// Coba load dari Supabase, fallback ke localStorage
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
+			const { data, error: _error } = await getSupabaseClient(selectedBranch.value)
 				.from('pengaturan')
 				.select('*')
 				.eq('id', 1)

@@ -125,7 +125,6 @@ export interface ProductListResponse extends PaginatedResponse<Product> {
 	addOns: AddOn[];
 }
 
-
 // ============================================================================
 // 🔄 STATE MANAGEMENT TYPES
 // ============================================================================

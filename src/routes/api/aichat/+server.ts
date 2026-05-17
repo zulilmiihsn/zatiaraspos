@@ -961,7 +961,7 @@ async function handleRegularChat(request: Request) {
 			while (hasMore && page < maxPages) {
 				try {
 					// Add timeout wrapper - gunakan query yang lebih sederhana dulu
-					let queryPromise = supabase
+					const queryPromise = supabase
 						.from(table)
 						.select('*')
 						.gte('waktu', startDate)
@@ -983,7 +983,10 @@ async function handleRegularChat(request: Request) {
 						setTimeout(() => reject(new Error('Query timeout')), 30000)
 					);
 
-					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as { data: Record<string, unknown>[] | null; error: { code?: string; message?: string } | null };
+					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as {
+						data: Record<string, unknown>[] | null;
+						error: { code?: string; message?: string } | null;
+					};
 
 					if (error) {
 						if (error.code === '57014' || error.message?.includes('timeout')) {
@@ -1090,8 +1093,14 @@ async function handleRegularChat(request: Request) {
 		const pemasukan = laporan.filter((t: Record<string, unknown>) => t.tipe === 'in');
 		const pengeluaran = laporan.filter((t: Record<string, unknown>) => t.tipe === 'out');
 
-		const totalPemasukan = pemasukan.reduce((s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0), 0);
-		const totalPengeluaran = pengeluaran.reduce((s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0), 0);
+		const totalPemasukan = pemasukan.reduce(
+			(s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0),
+			0
+		);
+		const totalPengeluaran = pengeluaran.reduce(
+			(s: number, t: Record<string, unknown>) => s + ((t.nominal as number) || 0),
+			0
+		);
 		const labaKotor = totalPemasukan - totalPengeluaran;
 		const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 		const labaBersih = labaKotor - pajak;
@@ -1162,7 +1171,9 @@ async function handleRegularChat(request: Request) {
 				const unit = Number(item.price || item.amount || 0) || 0;
 				const revenue = unit * (qty || 1);
 				const productName =
-					((item.produk as Record<string, unknown>)?.name as string) || (item.custom_name as string) || `Produk ${pid.slice(0, 8)}`;
+					((item.produk as Record<string, unknown>)?.name as string) ||
+					(item.custom_name as string) ||
+					`Produk ${pid.slice(0, 8)}`;
 
 				if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
 					requestedMonthlyData[monthKey].produkTerlaris[pid] = {
@@ -1211,8 +1222,9 @@ async function handleRegularChat(request: Request) {
 			labaKotor,
 			pajak,
 			labaBersih,
-			totalTransaksi: new Set((bukuKasPos || []).map((b: { transaction_id?: string }) => b.transaction_id).filter(Boolean))
-				.size,
+			totalTransaksi: new Set(
+				(bukuKasPos || []).map((b: { transaction_id?: string }) => b.transaction_id).filter(Boolean)
+			).size,
 			// Data per bulan untuk periode yang diminta
 			requestedMonthlyData: formattedRequestedMonthlyData
 		};
@@ -1394,9 +1406,20 @@ async function handleRegularChat(request: Request) {
 			tipe: dataRequirements.periode.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
-			products: (products || []).map((p: { id: string; name: string; price: number }) => ({ id: p.id, name: p.name, price: p.price })),
-			categories: (categories || []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
-			addons: (addons || []).map((a: { id: string; name: string; price: number }) => ({ id: a.id, name: a.name, price: a.price })),
+			products: (products || []).map((p: { id: string; name: string; price: number }) => ({
+				id: p.id,
+				name: p.name,
+				price: p.price
+			})),
+			categories: (categories || []).map((c: { id: string; name: string }) => ({
+				id: c.id,
+				name: c.name
+			})),
+			addons: (addons || []).map((a: { id: string; name: string; price: number }) => ({
+				id: a.id,
+				name: a.name,
+				price: a.price
+			})),
 			produkTerlaris,
 			specificProduct, // Produk spesifik yang dicari
 			// Data analisis mendalam
@@ -1462,7 +1485,16 @@ PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user b
 ${
 	(serverReportData.summary?.requestedMonthlyData || [])
 		.map(
-			(month: { monthName: string; month: string; pemasukan: number; pengeluaran: number; laba: number; transaksi: number; paymentMethods: Record<string, { jumlah: number; nominal: number }>; topProducts: { nama: string; totalTerjual: number; totalPendapatan: number }[] }) => `
+			(month: {
+				monthName: string;
+				month: string;
+				pemasukan: number;
+				pengeluaran: number;
+				laba: number;
+				transaksi: number;
+				paymentMethods: Record<string, { jumlah: number; nominal: number }>;
+				topProducts: { nama: string; totalTerjual: number; totalPendapatan: number }[];
+			}) => `
 Bulan ${month.monthName} (${month.month}):
 - Pendapatan: Rp ${month.pemasukan.toLocaleString('id-ID')}
 - Pengeluaran: Rp ${month.pengeluaran.toLocaleString('id-ID')}

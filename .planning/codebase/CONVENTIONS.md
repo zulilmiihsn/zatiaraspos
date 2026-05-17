@@ -7,11 +7,11 @@
 <script lang="ts">
   let count = $state(0);
   let doubled = $derived(count * 2);
-  
+
   $effect(() => {
     console.log('count changed:', count);
   });
-  
+
   let { title, onClose }: { title: string; onClose: () => void } = $props();
 </script>
 
@@ -34,6 +34,7 @@ async function getData(id: any): Promise<any> { ... }
 ```
 
 ## ✅ Naming Conventions
+
 - **Files**: `camelCase.ts`, `PascalCase.svelte`
 - **Components**: PascalCase (`BottomNav.svelte`)
 - **Functions**: camelCase (`getProducts`)
@@ -42,6 +43,7 @@ async function getData(id: any): Promise<any> { ... }
 - **CSS classes**: Tailwind utilities (tidak ada custom class kecuali terpaksa)
 
 ## ✅ Import Pattern
+
 ```typescript
 // Selalu import types dari barrel file
 import type { Product, UserRole, Transaction } from '$lib/types';
@@ -54,18 +56,20 @@ import { userRole } from '$lib/stores/userRole';
 ```
 
 ## ✅ Error Handling
+
 ```typescript
 // ✅ Selalu handle error dengan graceful fallback
 try {
-  const data = await dataService.getProducts(branchId);
-  return data;
+	const data = await dataService.getProducts(branchId);
+	return data;
 } catch (error) {
-  console.error('[getProducts]', error);
-  return []; // fallback kosong, jangan crash
+	console.error('[getProducts]', error);
+	return []; // fallback kosong, jangan crash
 }
 ```
 
 ## ✅ Supabase Query Pattern
+
 ```typescript
 // ✅ Selalu destructure error
 const { data, error } = await supabase.from('products').select('*');
@@ -74,6 +78,7 @@ return data;
 ```
 
 ## ✅ UI/UX Rules
+
 - **Jangan ubah UI yang ada** kecuali diminta eksplisit
 - Semua animasi pakai Svelte transitions (`fade`, `slide`, `scale`)
 - Toast/notifikasi pakai komponen `toastNotification.svelte` yang sudah ada

@@ -1,6 +1,5 @@
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import { get as storeGet } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import {
@@ -153,8 +152,7 @@ export class DataService {
 	private static instance: DataService;
 	private isInitialLoad = true; // Add flag to prevent double fetching
 
-	constructor() {
-	}
+	constructor() {}
 
 	// Getter untuk supabase client
 	get supabaseClient() {
@@ -217,20 +215,35 @@ export class DataService {
 					};
 				}
 
-				const itemTerjual = kasir?.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.qty as number) || 1), 0) || 0;
+				const itemTerjual =
+					kasir?.reduce(
+						(sum: number, t: Record<string, unknown>) => sum + ((t.qty as number) || 1),
+						0
+					) || 0;
 				const transactionIds = new Set(
-					(kas || []).map((t: Record<string, unknown>) => t.transaction_id as string).filter(Boolean)
+					(kas || [])
+						.map((t: Record<string, unknown>) => t.transaction_id as string)
+						.filter(Boolean)
 				);
 				const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-				const omzet = kas.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
+				const omzet = kas.reduce(
+					(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
+					0
+				);
 
 				// Profit riil sederhana (tanpa HPP): pemasukan - pengeluaran di hari ini
 				const pemasukan = (kas || [])
 					.filter((t: Record<string, unknown>) => t.tipe === 'in')
-					.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
+					.reduce(
+						(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
+						0
+					);
 				const pengeluaran = (kas || [])
 					.filter((t: Record<string, unknown>) => t.tipe === 'out')
-					.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0), 0);
+					.reduce(
+						(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
+						0
+					);
 				const profit = pemasukan - pengeluaran;
 
 				// Ambil avgTransaksi dan jamRamai dari cache mingguan
@@ -319,7 +332,9 @@ export class DataService {
 
 						if (validProdukIds.length > 0) {
 							bestSellersResult = validProdukIds.map((produk_id: string) => {
-								const prod = (allProducts as { id: string; name?: string; gambar?: string }[]).find(p => p.id === produk_id);
+								const prod = (allProducts as { id: string; name?: string; gambar?: string }[]).find(
+									(p) => p.id === produk_id
+								);
 								return {
 									name: prod?.name || '-',
 									image: prod?.gambar || '',
@@ -579,18 +594,26 @@ export class DataService {
 				// PARALLEL PAGINATION: Ambil semua buku_kas sekali, lalu turunkan kategorinya di memori
 				const allBukuKas = await this.fetchAllDataParallel('buku_kas', startWita, endWita);
 
-				const posBukuKas = (allBukuKas || []).filter((item: Record<string, unknown>) => item?.sumber === 'pos');
+				const posBukuKas = (allBukuKas || []).filter(
+					(item: Record<string, unknown>) => item?.sumber === 'pos'
+				);
 				const manualItems = (allBukuKas || []).filter(
 					(item: Record<string, unknown>) => item?.sumber && item.sumber !== 'pos'
 				);
-				const uncategorizedItems = (allBukuKas || []).filter((item: Record<string, unknown>) => !item?.sumber);
+				const uncategorizedItems = (allBukuKas || []).filter(
+					(item: Record<string, unknown>) => !item?.sumber
+				);
 
 				// Ambil detail transaksi kasir untuk POS yang sudah difilter
 				let posItems: Record<string, unknown>[] = [];
 				if (posBukuKas && posBukuKas.length > 0) {
 					// Gunakan buku_kas_id untuk relasi yang benar
-					const bukuKasIds = posBukuKas.map((bk: Record<string, unknown>) => bk.id as string).filter(Boolean);
-					const bukuKasById = new Map(posBukuKas.map((bk: Record<string, unknown>) => [bk.id as string, bk]));
+					const bukuKasIds = posBukuKas
+						.map((bk: Record<string, unknown>) => bk.id as string)
+						.filter(Boolean);
+					const bukuKasById = new Map(
+						posBukuKas.map((bk: Record<string, unknown>) => [bk.id as string, bk])
+					);
 					const transaksiKasirSelect =
 						'id,buku_kas_id,produk_id,custom_name,qty,amount,created_at,produk(name)';
 
@@ -682,7 +705,10 @@ export class DataService {
 				const pengeluaran = laporan.filter((t: Record<string, unknown>) => t.tipe === 'out');
 
 				// Hitung total pemasukan dan pengeluaran
-				const totalPemasukan = pemasukan.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0), 0);
+				const totalPemasukan = pemasukan.reduce(
+					(sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0),
+					0
+				);
 				const totalPengeluaran = pengeluaran.reduce(
 					(sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0),
 					0
@@ -706,7 +732,9 @@ export class DataService {
 						pajak,
 						labaBersih
 					},
-					pemasukanUsaha: pemasukan.filter((t: Record<string, unknown>) => t.jenis === 'pendapatan_usaha'),
+					pemasukanUsaha: pemasukan.filter(
+						(t: Record<string, unknown>) => t.jenis === 'pendapatan_usaha'
+					),
 					pemasukanLain: pemasukan.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),
 					bebanUsaha: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'beban_usaha'),
 					bebanLain: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),

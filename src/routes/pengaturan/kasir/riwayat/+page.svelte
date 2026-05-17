@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { refreshBus } from '$lib/utils/refreshBus';
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
@@ -10,7 +10,7 @@
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import { witaToUtcRange, getTodayWita } from '$lib/utils/dateTime';
 	import { userRole } from '$lib/stores/userRole.svelte';
-	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
+
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
@@ -36,10 +36,10 @@
 	let loading = true;
 	let searchKeyword = '';
 	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
-	let pollingInterval: number | null = null;
+
 	let showDetailModal = false;
 	let selectedTransaksi: HistoryItem | null = null;
-	let showDropdownPayment = false;
+
 	const paymentOptions = [
 		{ value: 'tunai', label: 'Tunai' },
 		{ value: 'qris', label: 'QRIS/Non-Tunai' }
@@ -231,6 +231,8 @@
 	}
 
 	let aiHandler: EventListener;
+	let offRiwayatKasir: () => void;
+
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
@@ -242,18 +244,19 @@
 		};
 		if (typeof window !== 'undefined') {
 			window.addEventListener('ai-recommendations-applied', aiHandler);
-			(window as unknown as Record<string, unknown>).__refreshRiwayatKasir = async () => {
+			offRiwayatKasir = refreshBus.on('riwayat', async () => {
 				await fetchTransaksiHariIni();
-			};
+			});
 		}
 	});
+
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.remove('hide-nav');
 		}
 		if (typeof window !== 'undefined' && aiHandler) {
 			window.removeEventListener('ai-recommendations-applied', aiHandler);
-			delete (window as unknown as Record<string, unknown>).__refreshRiwayatKasir;
+			if (offRiwayatKasir) offRiwayatKasir();
 		}
 	});
 </script>

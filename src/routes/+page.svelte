@@ -1,55 +1,28 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { slide, fade, fly } from 'svelte/transition';
-	import { cubicIn, cubicOut } from 'svelte/easing';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { fly } from 'svelte/transition';
 	import { auth } from '$lib/auth/auth';
 	import { browser } from '$app/environment';
 	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
-	import { NAV_ITEMS, getNavIndex } from '$lib/constants/navigation';
-
-	const { handleTouchStart, handleTouchMove, handleTouchEnd, handleGlobalClick } = createSwipeNavigation(0);
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
+	import { getNowWita } from '$lib/utils/dateTime';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
 	import { securitySettings } from '$lib/stores/securitySettings.svelte';
+	import DashboardMetrics from '$lib/components/dashboard/DashboardMetrics.svelte';
+	import WeeklyChart from '$lib/components/dashboard/WeeklyChart.svelte';
+	import TokoModal from '$lib/components/dashboard/TokoModal.svelte';
+	import { createToastManager } from '$lib/utils/ui';
+	import { getSesiAktif } from '$lib/services/sesiTokoService';
+	import { refreshBus } from '$lib/utils/refreshBus';
 
-	import type { 
-		DashboardStats, 
-		WeeklyIncomeData, 
-		BestSeller,
-		BukuKasRecord,
-		TokoSession
-	} from '$lib/types';
+	import type { DashboardStats, WeeklyIncomeData, BestSeller, TokoSession } from '$lib/types';
 	import type { ComponentType } from 'svelte';
 
-	let dashboardData = $state<DashboardStats & WeeklyIncomeData & { bestSellers: BestSeller[] } | null>(null);
-
-	let barsVisible = $state(false);
-	let incomeChartRef = $state<HTMLDivElement | null>(null);
-	
-	$effect(() => {
-		if (incomeChartRef) {
-			const observer = new window.IntersectionObserver(
-				(entries) => {
-					if (entries[0].isIntersecting) {
-						barsVisible = true;
-						observer.disconnect();
-					}
-				},
-				{ threshold: 0.3 }
-			);
-			observer.observe(incomeChartRef);
-		}
-	});
-
-	// Lazy load icons
+	// Lazy load icons — assigned in onMount, consumed by DashboardMetrics via svelte:component
 	let Wallet = $state<ComponentType | null>(null);
 	let ShoppingBag = $state<ComponentType | null>(null);
 	let Coins = $state<ComponentType | null>(null);
@@ -70,16 +43,15 @@
 
 	// Subscribe ke store
 	let currentUserRole = $state('');
-	let userProfileData = $state<{ role: string; username: string } | null>(null);
 
 	$effect(() => {
 		currentUserRole = userRole.value || '';
-		userProfileData = userProfile.value as { role: string; username: string } | null;
 	});
 
 	let isLoadingBestSellers = $state(true);
 	let errorBestSellers = $state('');
 	let isLoadingDashboard = $state(true);
+
 	let dashboardRefreshTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 	let dashboardRefreshInFlight = false;
 	let lastDashboardPayloadFingerprint = '';
@@ -115,8 +87,6 @@
 
 		// Setup real-time subscriptions
 		setupRealtimeSubscriptions();
-
-		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 		// Jika role belum ada di store, coba validasi dengan Supabase
 		if (!currentUserRole) {
@@ -167,11 +137,17 @@
 		})();
 	});
 
+	let offDashboardRefreshBus: (() => void) | null = null;
+
 	onDestroy(() => {
 		realtimeManager.unsubscribeAll();
 		if (dashboardRefreshTimer) {
 			clearTimeout(dashboardRefreshTimer);
 			dashboardRefreshTimer = null;
+		}
+		if (offDashboardRefreshBus) {
+			offDashboardRefreshBus();
+			offDashboardRefreshBus = null;
 		}
 	});
 
@@ -231,6 +207,11 @@
 
 		// Subscribe to transaksi_kasir changes
 		realtimeManager.subscribe('transaksi_kasir', async () => {
+			scheduleDashboardRealtimeRefresh();
+		});
+
+		// Listen for explicit dashboard refresh (e.g. from pos/bayar after successful transaction)
+		offDashboardRefreshBus = refreshBus.on('dashboard', () => {
 			scheduleDashboardRealtimeRefresh();
 		});
 	}
@@ -297,21 +278,7 @@
 
 	let modalAwal = $state<number | null>(null);
 
-	// Touch handling variables
-	let touchStartX = 0;
-	let touchStartY = 0;
-	let touchEndX = 0;
-	let touchEndY = 0;
-	let isSwiping = false;
-	let isTouchDevice = $state(false);
-	let clickBlocked = false;
-
-	const navs = [
-		{ label: 'Beranda', path: '/' },
-		{ label: 'Kasir', path: '/pos' },
-		{ label: 'Catat', path: '/catat' },
-		{ label: 'Laporan', path: '/laporan' }
-	];
+	const swipeNav = createSwipeNavigation(0); // 0 = Beranda
 
 	let imageError = $state<Record<number, boolean>>({});
 
@@ -331,18 +298,15 @@
 		return labels;
 	}
 
-	// Toast notification state
-	let showToast = $state(false);
-	let toastMessage = $state('');
-	let toastType = $state<'success' | 'error' | 'warning' | 'info'>('success');
+	// Toast notification — use shared createToastManager
+	const toastManager = createToastManager();
 
+	// Shim for local callers that expect showToastNotification(msg, type)
 	function showToastNotification(
 		message: string,
 		type: 'success' | 'error' | 'warning' | 'info' = 'success'
 	) {
-		toastMessage = message;
-		toastType = type;
-		showToast = true;
+		toastManager.showToastNotification(message, type);
 	}
 
 	let showTokoModal = $state(false);
@@ -368,14 +332,7 @@
 	}
 
 	async function cekSesiToko() {
-		const { data } = await dataService.supabaseClient
-			.from('sesi_toko')
-			.select('*')
-			.eq('is_active', true)
-			.order('opening_time', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		sesiAktif = data as TokoSession | null;
+		sesiAktif = await getSesiAktif();
 		updateTokoAktif(!!sesiAktif);
 		// Update modalAwal agar box di beranda selalu sinkron
 		modalAwal = sesiAktif?.opening_cash ?? null;
@@ -402,10 +359,6 @@
 				cekSesiToko().then(() => {
 					isBukaToko = !tokoAktifLocal;
 					showTokoModal = true;
-					modalAwalInput = '';
-					pinInputToko = '';
-					pinErrorToko = '';
-					if (!isBukaToko) hitungRingkasanTutup();
 				});
 			};
 			showActionPinModal = true;
@@ -415,10 +368,6 @@
 		cekSesiToko().then(() => {
 			isBukaToko = !tokoAktifLocal;
 			showTokoModal = true;
-			modalAwalInput = '';
-			pinInputToko = '';
-			pinErrorToko = '';
-			if (!isBukaToko) hitungRingkasanTutup();
 		});
 	}
 
@@ -434,78 +383,6 @@
 	function handleActionPinClose() {
 		showActionPinModal = false;
 		pendingAction = null;
-	}
-
-	async function handleBukaToko() {
-		const modalAwalRaw = Number((modalAwalInput || '').replace(/\D/g, ''));
-		if (!modalAwalRaw || isNaN(modalAwalRaw) || modalAwalRaw < 0) {
-			pinErrorToko = 'Modal awal wajib diisi dan valid';
-			return;
-		}
-		await dataService.supabaseClient.from('sesi_toko').insert({
-			opening_cash: modalAwalRaw,
-			opening_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
-			is_active: true
-		});
-		showTokoModal = false;
-		cekSesiToko();
-	}
-
-	async function hitungRingkasanTutup() {
-		if (!sesiAktif) return;
-		const { data: kasRaw } = await dataService.supabaseClient
-			.from('buku_kas')
-			.select('*')
-			.eq('id_sesi_toko', sesiAktif.id);
-		
-		let kas: BukuKasRecord[] = Array.isArray(kasRaw) ? kasRaw : [];
-
-		// Penjualan tunai (semua pemasukan tunai)
-		const penjualanTunai = kas
-			.filter((t) => t.tipe === 'in' && t.payment_method === 'tunai')
-			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
-		// Pengeluaran tunai
-		const pengeluaranTunai = kas
-			.filter((t) => t.tipe === 'out' && t.payment_method === 'tunai')
-			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
-		const modalAwalValue = sesiAktif.opening_cash || 0;
-		// Total penjualan = semua pemasukan (in) dari sumber pos
-		const totalPenjualan = kas
-			.filter((t) => t.tipe === 'in' && t.sumber === 'pos')
-			.reduce((a, b) => a + (b.nominal || b.amount || 0), 0);
-		// Uang kasir seharusnya
-		const uangKasir = modalAwalValue + penjualanTunai - pengeluaranTunai;
-		ringkasanTutup = {
-			modalAwal: modalAwalValue,
-			totalPenjualan,
-			pemasukanTunai: penjualanTunai,
-			pengeluaranTunai,
-			uangKasir
-		};
-	}
-
-	async function handleTutupToko() {
-		if (!sesiAktif) return;
-		await dataService.supabaseClient
-			.from('sesi_toko')
-			.update({
-				closing_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
-				is_active: false
-			})
-			.eq('id', sesiAktif.id);
-		showTokoModal = false;
-		cekSesiToko();
-	}
-
-
-
-	// New function to format modalAwalInput to Rupiah format
-	function formatModalAwalInput(e: Event) {
-		let value = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
-		if (value.length > 0) {
-			value = Number(value).toLocaleString('id-ID'); // Format as Rupiah
-		}
-		modalAwalInput = value;
 	}
 
 	let hideTopbar = $state(false);
@@ -537,32 +414,15 @@
 	const todayWitaDate = getTodayWitaDate();
 	const sevenDaysAgoWita = new Date(todayWitaDate);
 	sevenDaysAgoWita.setDate(todayWitaDate.getDate() - 6); // 6 hari ke belakang + hari ini = 7 hari
-
-	let selectedBarIndex = $state<number | null>(null);
-	let showBarInsight = $state(false);
-	let barHoldTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
-
-	function handleBarPointerDown(i: number) {
-		barHoldTimeout = setTimeout(() => {
-			selectedBarIndex = i;
-			showBarInsight = true;
-		}, 120); // Sedikit delay agar tidak accidental tap
-	}
-
-	function handleBarPointerUp() {
-		if (barHoldTimeout) clearTimeout(barHoldTimeout);
-		showBarInsight = false;
-		selectedBarIndex = null;
-	}
 </script>
 
 <!-- PinModal removed -->
 
 <!-- Toast Notification -->
 <ToastNotification
-	show={showToast}
-	message={toastMessage}
-	type={toastType}
+	show={toastManager.showToast}
+	message={toastManager.toastMessage}
+	type={toastManager.toastType}
 	duration={2000}
 	position="top"
 />
@@ -579,131 +439,7 @@
 {/if}
 
 <!-- Modal Buka/Tutup Toko -->
-{#if showTokoModal}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-		onclick={() => (showTokoModal = false)}
-		onkeydown={(e) => e.key === 'Escape' && (showTokoModal = false)}
-		role="dialog"
-		aria-modal="true"
-		aria-label="Modal buka tutup toko"
-		onkeyup={(e) => e.key === 'Enter' && (showTokoModal = false)}
-		tabindex="-1"
-		onkeypress={(e) => e.key === 'Enter' && (showTokoModal = false)}
-	>
-		<div
-			class="modal-slideup mx-auto box-border w-full max-w-[95vw] rounded-2xl bg-white p-8 shadow-2xl md:p-12 lg:max-w-lg lg:p-10 xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-16"
-			onclick={(event) => event.stopPropagation()}
-			role="document"
-		>
-			{#if isBukaToko}
-				<div class="mb-4 flex flex-col items-center">
-					<div class="mb-2 text-4xl">🍹</div>
-					<h2 class="mb-1 text-xl font-bold text-pink-500">Buka Toko</h2>
-					<div class="mb-2 text-sm text-gray-400">Yuk, buka toko dan mulai hari ini.</div>
-				</div>
-				<div class="mb-4">
-					<div class="relative">
-						<span
-							class="absolute top-1/2 left-4 -translate-y-1/2 font-semibold text-pink-400 select-none"
-							>Rp</span
-						>
-						<input
-							type="text"
-							inputmode="numeric"
-							pattern="[0-9]*"
-							min="0"
-							bind:value={modalAwalInput}
-							oninput={formatModalAwalInput}
-							class="w-full rounded-xl border-2 border-pink-200 bg-pink-50 py-3 pr-4 pl-12 text-lg font-bold text-gray-800 placeholder-pink-300 shadow-sm transition outline-none focus:ring-2 focus:ring-pink-300"
-							placeholder="Modal awal kas hari ini"
-						/>
-					</div>
-				</div>
-				{#if pinErrorToko}
-					<div
-						class="fixed top-20 left-1/2 z-50 rounded-xl bg-red-500 px-6 py-3 text-white shadow-lg transition-all duration-300 ease-out"
-						style="transform: translateX(-50%);"
-						in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-						out:fade={{ duration: 200 }}
-					>
-						{pinErrorToko}
-					</div>
-				{/if}
-				<button
-					class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-pink-400 py-3 text-lg font-extrabold text-white shadow-xl transition-all hover:scale-105 hover:shadow-2xl active:scale-100"
-					onclick={handleBukaToko}
-				>
-					<span class="text-2xl">🍹</span>
-					<span>Buka Toko Sekarang</span>
-				</button>
-			{:else}
-				<div class="mb-4 flex flex-col items-center">
-					<div class="mb-2 text-4xl">🔒</div>
-					<h2 class="mb-1 text-xl font-bold text-pink-500">Tutup Toko</h2>
-					<div class="mb-2 text-center text-sm text-gray-400">
-						Terima kasih atas kerja keras hari ini! Cek ringkasan sebelum tutup toko.
-					</div>
-				</div>
-				<div class="mb-4 space-y-3 text-base text-gray-700">
-					<div
-						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
-					>
-						<span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span
-						>
-					</div>
-					<div
-						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
-					>
-						<span>Total Penjualan</span><span
-							>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span
-						>
-					</div>
-					<div
-						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
-					>
-						<span>Pemasukan Tunai</span><span
-							>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span
-						>
-					</div>
-					<div
-						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
-					>
-						<span>Pengeluaran Tunai</span><span
-							>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span
-						>
-					</div>
-					<div class="mb-1 flex flex-col items-center">
-						<div class="mb-1 text-center text-base font-bold text-pink-600 md:text-lg">
-							Uang Kasir Seharusnya
-						</div>
-						<div
-							class="mx-8 flex w-full max-w-xs flex-col items-center justify-center rounded-xl border-2 border-pink-400 bg-white px-2 py-5 shadow-sm md:mx-16"
-						>
-							<div class="mb-1 text-4xl">💸</div>
-							<span
-								class="animate-glow text-2xl font-extrabold whitespace-nowrap text-pink-600 md:text-3xl"
-								>Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span
-							>
-							<div class="mt-2 text-center text-xs text-gray-400">
-								Pastikan uang kasir sesuai sebelum tutup toko
-							</div>
-						</div>
-					</div>
-				</div>
-				<button
-					class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-pink-400 py-3 text-lg font-extrabold text-white shadow-xl transition-all hover:scale-105 hover:shadow-2xl active:scale-100"
-					onclick={handleTutupToko}
-				>
-					<span class="text-2xl">🔒</span>
-					<span>Tutup Toko Sekarang</span>
-				</button>
-			{/if}
-		</div>
-	</div>
-{/if}
+<TokoModal bind:show={showTokoModal} {isBukaToko} {sesiAktif} onTokoStatusChanged={cekSesiToko} />
 
 <!-- Top Bar Status Toko -->
 <div class="relative min-h-[64px] w-full overflow-hidden md:mx-0">
@@ -746,9 +482,13 @@
 
 <div
 	class="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-white"
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
+	ontouchstart={swipeNav.handleTouchStart}
+	ontouchmove={swipeNav.handleTouchMove}
+	ontouchend={swipeNav.handleTouchEnd}
+	onclick={swipeNav.handleGlobalClick}
+	onkeydown={(e) => e.key === 'Escape' && swipeNav.handleGlobalClick(e as unknown as Event)}
+	role="main"
+	tabindex="-1"
 >
 	<main
 		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden md:mx-auto md:max-w-3xl md:rounded-2xl md:bg-white md:shadow-xl lg:max-w-5xl"
@@ -756,143 +496,7 @@
 		<div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
 			<div class="flex flex-col space-y-3 md:space-y-10">
 				<!-- Metrik Utama -->
-				<div
-					class="grid grid-cols-2 gap-3 md:grid-cols-2 md:grid-rows-2 md:gap-6 md:rounded-2xl md:border md:border-gray-100 md:bg-white md:p-6 md:shadow-lg"
-				>
-					<div
-						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-sky-200 to-sky-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-sky-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
-					>
-						{#if ShoppingBag}
-							<svelte:component
-								this={ShoppingBag}
-								class="mb-2 h-6 w-6 text-sky-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							/>
-						{:else}
-							<div
-								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							>
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="mb-1 text-xs font-medium text-gray-500 md:mb-0 md:text-center md:text-base">
-							Item Terjual
-						</div>
-						<div class="text-xl font-bold text-sky-600 md:text-center md:text-3xl">
-							{itemTerjual ?? '--'}
-						</div>
-					</div>
-					<div
-						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-purple-200 to-purple-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-purple-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
-					>
-						{#if TrendingUp}
-							<svelte:component
-								this={TrendingUp}
-								class="mb-2 h-6 w-6 text-purple-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							/>
-						{:else}
-							<div
-								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							>
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="mb-1 text-xs font-medium text-gray-500 md:mb-0 md:text-center md:text-base">
-							Jumlah Transaksi
-						</div>
-						<div class="text-xl font-bold text-purple-600 md:text-center md:text-3xl">
-							{jumlahTransaksi ?? '--'}
-						</div>
-					</div>
-					<div
-						class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-green-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
-					>
-						{#if Wallet}
-							<svelte:component
-								this={Wallet}
-								class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							/>
-						{:else}
-							<div
-								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							>
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="text-sm font-medium text-green-900/80 md:text-center md:text-base">
-							Pendapatan
-						</div>
-						<div class="text-xl font-bold text-green-900 md:text-center md:text-3xl">
-							{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
-						</div>
-					</div>
-					<div
-						class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-cyan-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
-					>
-						{#if Wallet}
-							<svelte:component
-								this={Wallet}
-								class="mb-2 h-6 w-6 text-cyan-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							/>
-						{:else}
-							<div
-								class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-							>
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="text-sm font-medium text-cyan-900/80 md:text-center md:text-base">
-							Modal Awal
-						</div>
-						<div class="text-xl font-bold text-cyan-900 md:text-center md:text-3xl">
-							{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
-						</div>
-					</div>
-				</div>
-				<!-- Box pendapatan & modal awal satu baris penuh di mobile, hilang di md+ -->
-				<div class="flex flex-col gap-3 md:hidden">
-					<div
-						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md"
-					>
-						{#if Wallet}
-							<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-green-900" />
-						{:else}
-							<div class="mb-2 flex h-6 w-6 items-center justify-center">
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="text-sm font-medium text-green-900/80">Pendapatan</div>
-						<div class="text-xl font-bold text-green-900">
-							{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
-						</div>
-					</div>
-					<div
-						class="flex flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md"
-					>
-						{#if Wallet}
-							<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-cyan-900" />
-						{:else}
-							<div class="mb-2 flex h-6 w-6 items-center justify-center">
-								<span
-									class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-								></span>
-							</div>
-						{/if}
-						<div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
-						<div class="text-xl font-bold text-cyan-900">
-							{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
-						</div>
-					</div>
-				</div>
+				<DashboardMetrics {itemTerjual} {jumlahTransaksi} {omzet} {modalAwal} />
 				<!-- Menu Terlaris -->
 				<div class="mt-6 md:mt-12">
 					<div
@@ -1000,63 +604,7 @@
 					</div>
 					<!-- Grafik Pendapatan 7 Hari -->
 					<div class="mt-3 md:mt-0">
-						<div
-							class="flex flex-col rounded-xl bg-white p-4 shadow md:rounded-2xl md:border md:border-pink-100 md:p-8 md:shadow-none"
-							bind:this={incomeChartRef}
-						>
-							<div class="mt-1 mb-2 text-xs text-gray-500 md:text-sm">
-								Pendapatan 7 Hari Terakhir
-							</div>
-							<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
-								{#if weeklyIncome.length === 0}
-									<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
-										{#each getLast7DaysLabelsWITA() as label, i}
-											<div class="flex flex-1 flex-col items-center">
-												<div
-													class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10"
-													style="height: 8px;"
-												></div>
-												<div class="mt-1 text-xs text-gray-400 md:text-sm">{label}</div>
-											</div>
-										{/each}
-										<div
-											class="pointer-events-none absolute inset-0 flex items-center justify-center"
-										>
-											<span class="text-center text-base text-gray-400 md:text-lg"
-												>Belum ada data grafik pendapatan</span
-											>
-										</div>
-									</div>
-								{:else}
-									{#each weeklyIncome as income, i}
-										<div class="relative flex flex-1 flex-col items-center">
-											<div
-												class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"
-												style="height: {barsVisible && income > 0 && weeklyMax > 0
-													? Math.max(Math.min((income / weeklyMax) * 96, 96), 4)
-													: 0}px"
-												onpointerdown={() => handleBarPointerDown(i)}
-												onpointerup={handleBarPointerUp}
-												onpointerleave={handleBarPointerUp}
-												ontouchstart={() => handleBarPointerDown(i)}
-												ontouchend={handleBarPointerUp}
-												ontouchcancel={handleBarPointerUp}
-											></div>
-											<div class="mt-1 text-xs md:text-sm">{getLast7DaysLabelsWITA()[i]}</div>
-											{#if showBarInsight && selectedBarIndex === i}
-												<div
-													class="animate-fade-in pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-xl border border-pink-200 bg-white px-4 py-2 text-center text-sm font-bold text-pink-600 shadow-lg"
-												>
-													<span class="font-normal text-gray-700"
-														>Rp {income.toLocaleString('id-ID')}</span
-													>
-												</div>
-											{/if}
-										</div>
-									{/each}
-								{/if}
-							</div>
-						</div>
+						<WeeklyChart {weeklyIncome} {weeklyMax} />
 					</div>
 				</div>
 			</div>

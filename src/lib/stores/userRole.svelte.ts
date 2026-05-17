@@ -45,7 +45,12 @@ export function clearUserRole() {
  */
 export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 'network_error'> {
 	try {
-		const branch = selectedBranch.value as "samarinda" | "berau" | "Balikpapan" | "samarinda2" | "balikpapan2";
+		const branch = selectedBranch.value as
+			| 'samarinda'
+			| 'berau'
+			| 'Balikpapan'
+			| 'samarinda2'
+			| 'balikpapan2';
 		const {
 			data: { session },
 			error: sessionError

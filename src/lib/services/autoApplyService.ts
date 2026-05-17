@@ -1,7 +1,7 @@
 import type { AiRecommendation, AutoApplyResult } from '$lib/types/ai';
 import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-import { get as storeGet } from 'svelte/store';
+import { refreshBus } from '$lib/utils/refreshBus';
 
 export class AutoApplyService {
 	private static instance: AutoApplyService;
@@ -134,12 +134,8 @@ export class AutoApplyService {
 				window.dispatchEvent(
 					new CustomEvent('ai-recommendations-applied', { detail: { success: true } })
 				);
-				if (typeof (window as any).__refreshLaporan === 'function') {
-					await (window as any).__refreshLaporan();
-				}
-				if (typeof (window as any).__refreshRiwayat === 'function') {
-					await (window as any).__refreshRiwayat();
-				}
+				refreshBus.emit('laporan');
+				refreshBus.emit('riwayat');
 			} catch {}
 		}
 	}

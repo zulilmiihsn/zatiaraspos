@@ -97,4 +97,4 @@ Zatiaras POS hadir untuk mengubah cara bisnis retail dan restoran mengelola oper
 
 ---
 
-_Dibuat dengan ❤️ untuk Zatiaras
+\_Dibuat dengan ❤️ untuk Zatiaras

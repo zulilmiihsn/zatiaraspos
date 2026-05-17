@@ -8,7 +8,6 @@
 	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Crown from 'lucide-svelte/icons/crown';
@@ -342,8 +341,12 @@
 
 	// Filter sections based on user role
 	let filteredSections = $derived(
-		settingsSections
-			.filter((section) => section.title !== 'Data & Backup' || currentUserRole === 'admin' || currentUserRole === 'pemilik')
+		settingsSections.filter(
+			(section) =>
+				section.title !== 'Data & Backup' ||
+				currentUserRole === 'admin' ||
+				currentUserRole === 'pemilik'
+		)
 	);
 
 	// Get role icon once and store it

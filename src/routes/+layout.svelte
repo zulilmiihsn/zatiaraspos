@@ -3,15 +3,14 @@
 	import Topbar from '$lib/components/shared/topBar.svelte';
 	import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	import { page } from '$app/stores';
-	import { onMount, onDestroy, type Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView.svelte';
-	import { slide, fade, fly } from 'svelte/transition';
+
 	import { auth } from '$lib/auth/auth';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { dataService } from '$lib/services/dataService';

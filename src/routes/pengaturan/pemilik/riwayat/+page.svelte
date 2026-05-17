@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { refreshBus } from '$lib/utils/refreshBus';
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
@@ -42,7 +42,7 @@
 	let searchKeyword = '';
 	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
 	let Trash: ComponentType | null = null;
-	let pollingInterval: number | null = null;
+
 	let showDetailModal = false;
 	let selectedTransaksi: HistoryItem | null = null;
 	let showDropdownPayment = false;
@@ -364,6 +364,8 @@
 	}
 
 	let aiHandler: EventListener;
+	let offRiwayat: () => void;
+
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
@@ -379,11 +381,12 @@
 		if (typeof window !== 'undefined') {
 			window.addEventListener('ai-recommendations-applied', aiHandler);
 			// Ekspor refresher global untuk dipanggil langsung
-			(window as unknown as Record<string, unknown>).__refreshRiwayat = async () => {
+			offRiwayat = refreshBus.on('riwayat', async () => {
 				await fetchTransaksiHariIni();
-			};
+			});
 		}
 	});
+
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.remove('hide-nav');
@@ -391,7 +394,7 @@
 		// clearInterval(pollingInterval); // HAPUS polling otomatis
 		if (typeof window !== 'undefined' && aiHandler) {
 			window.removeEventListener('ai-recommendations-applied', aiHandler);
-			delete (window as unknown as Record<string, unknown>).__refreshRiwayat;
+			if (offRiwayat) offRiwayat();
 		}
 	});
 </script>

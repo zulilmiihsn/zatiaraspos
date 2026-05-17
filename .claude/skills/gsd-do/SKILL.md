@@ -1,7 +1,7 @@
 ---
 name: gsd-do
-description: "Route freeform text to the right GSD command automatically"
-argument-hint: "<description of what you want to do>"
+description: 'Route freeform text to the right GSD command automatically'
+argument-hint: '<description of what you want to do>'
 allowed-tools:
   - Read
   - Bash

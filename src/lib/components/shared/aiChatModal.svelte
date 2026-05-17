@@ -3,6 +3,7 @@
 	import type { AiChatMessage, TransactionAnalysis, AiRecommendation } from '$lib/types/ai';
 	import { AiAnalysisService } from '$lib/services/aiAnalysisService';
 	import { AutoApplyService } from '$lib/services/autoApplyService';
+	import { refreshBus } from '$lib/utils/refreshBus';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -123,13 +124,8 @@
 			if (result.success && typeof window !== 'undefined') {
 				window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: result }));
 				// Panggil API refresher global bila tersedia, agar update benar-benar segera
-				// @ts-ignore
-				if (typeof (window as any).__refreshLaporan === 'function') {
-					await (window as any).__refreshLaporan();
-				}
-				if (typeof (window as any).__refreshRiwayat === 'function') {
-					await (window as any).__refreshRiwayat();
-				}
+				refreshBus.emit('laporan');
+				refreshBus.emit('riwayat');
 			}
 		} catch (error) {
 			const errorMessage: AiChatMessage = {
@@ -157,13 +153,8 @@
 			// Pastikan broadcast sekali lagi saat ditutup jika sebelumnya berhasil menerapkan
 			window.dispatchEvent(new CustomEvent('ai-recommendations-applied'));
 			// Trigger refresh di background saat modal ditutup
-			// @ts-ignore
-			if (typeof (window as any).__refreshLaporan === 'function') {
-				(window as any).__refreshLaporan();
-			}
-			if (typeof (window as any).__refreshRiwayat === 'function') {
-				(window as any).__refreshRiwayat();
-			}
+			refreshBus.emit('laporan');
+			refreshBus.emit('riwayat');
 		}
 		messages = [];
 		currentAnalysis = null;

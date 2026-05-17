@@ -1,16 +1,19 @@
 # 🍹 ZatiarasPOS — PROJECT.md
 
 ## Visi
+
 ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis retail Zatiaras. Aplikasi ini dirancang mobile-first, mendukung multi-cabang, dan mampu beroperasi secara offline-first dengan sinkronisasi real-time ke Supabase.
 
 ## Target Pengguna
-| Peran | Kebutuhan Utama |
-|---|---|
-| **Kasir** | Interface cepat, mudah, minim error |
+
+| Peran               | Kebutuhan Utama                     |
+| ------------------- | ----------------------------------- |
+| **Kasir**           | Interface cepat, mudah, minim error |
 | **Pemilik/Manager** | Laporan akurat, analytics real-time |
-| **Admin** | Manajemen menu, user, dan branch |
+| **Admin**           | Manajemen menu, user, dan branch    |
 
 ## Tech Stack (LOCKED)
+
 - **Framework**: SvelteKit 5.0 (WAJIB pakai Runes: `$state`, `$derived`, `$effect`)
 - **Styling**: Tailwind CSS 4.x (utility-first, no arbitrary values kecuali perlu)
 - **Database**: Supabase (PostgreSQL) dengan RLS aktif di semua tabel
@@ -19,6 +22,7 @@ ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis
 - **PWA**: `@vite-pwa/sveltekit` + Workbox
 
 ## Prinsip Pengembangan (WAJIB DIIKUTI)
+
 1. **Svelte 5 Runes Only** — Tidak boleh pakai `writable()` store lagi
 2. **TypeScript Strict** — Semua kode harus typed, tidak ada `any` kecuali terpaksa
 3. **Offline First** — Data penting harus tersimpan lokal dulu, sync kemudian
@@ -27,6 +31,7 @@ ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis
 6. **No Breaking Changes** — Jangan ubah UI/UX yang sudah ada kecuali diminta
 
 ## Modul Inti
+
 - `/` — Dashboard & Analytics (omzet, grafik, produk terlaris)
 - `/pos` — Point of Sale (keranjang, pencarian, pembayaran)
 - `/pos/bayar` — Proses pembayaran

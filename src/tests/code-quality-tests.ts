@@ -73,7 +73,7 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 						details: 'All TypeScript files compiled without errors',
 						executionTime
 					};
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error & { stdout?: string };
 
@@ -109,7 +109,7 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 						details: 'Application built without errors',
 						executionTime
 					};
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error & { stdout?: string };
 
@@ -155,7 +155,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 						details: 'No linting errors found',
 						executionTime
 					};
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error & { stdout?: string };
 
@@ -191,7 +191,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 						details: 'All files follow formatting standards',
 						executionTime
 					};
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error & { stdout?: string };
 
@@ -262,7 +262,7 @@ export const fileStructureTests: CodeQualityTestSuiteDef = {
 							executionTime
 						};
 					}
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error;
 
@@ -322,7 +322,7 @@ export const fileStructureTests: CodeQualityTestSuiteDef = {
 							executionTime
 						};
 					}
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error;
 
@@ -385,7 +385,7 @@ export const dependencyTests: CodeQualityTestSuiteDef = {
 							executionTime
 						};
 					}
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error;
 
@@ -431,7 +431,7 @@ export const dependencyTests: CodeQualityTestSuiteDef = {
 							executionTime
 						};
 					}
-								} catch (error: unknown) {
+				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
 					const e = error as Error;
 
@@ -494,7 +494,7 @@ export class CodeQualityTestRunner {
 				// Log individual test result
 				const status = result.success ? '✅' : '❌';
 				console.log(`  ${status} ${result.name}: ${result.message}`);
-						} catch (error: unknown) {
+			} catch (error: unknown) {
 				const e = error as Error;
 				results.push({
 					name: test.name,

@@ -6,7 +6,10 @@ class BranchState {
 	constructor() {
 		if (typeof window !== 'undefined') {
 			const saved = localStorage.getItem('selectedBranch') as BranchType | null;
-			if (saved && ['berau', 'samarinda', 'Balikpapan', 'samarinda2', 'balikpapan2'].includes(saved)) {
+			if (
+				saved &&
+				['berau', 'samarinda', 'Balikpapan', 'samarinda2', 'balikpapan2'].includes(saved)
+			) {
 				this.#value = saved;
 			}
 		}

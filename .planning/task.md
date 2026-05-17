@@ -1,10 +1,12 @@
 # ZatiarasPOS Refactoring Tasks
 
 ## Fase 1: Formatting & Dead Code Cleanup
+
 - [x] **1.1** Run Prettier on all src files
 - [x] **1.2** Remove dead commented-out code in laporan/+page.svelte (LoC 614-750)
 
 ## Fase 2: Type Safety (13 tasks)
+
 - [x] **2.1a** Remove duplicate ApiResponse/PaginatedResponse from types/product.ts
 - [x] **2.1b** Remove duplicate ApiResponse/PaginatedResponse from types/transaction.ts
 - [x] **2.2** Fix AppState `any` fields in types/index.ts
@@ -20,6 +22,7 @@
 - [ ] **2.4h** Fix `any` in tests/code-quality-tests.ts
 
 ## Fase 3: Svelte 5 Migration (11 tasks)
+
 - [ ] **3.1a** Migrate userRole.ts → userRole.svelte.ts
 - [ ] **3.1b** Migrate selectedBranch.ts → selectedBranch.svelte.ts
 - [ ] **3.1c** Migrate securitySettings.ts → securitySettings.svelte.ts
@@ -33,6 +36,7 @@
 - [ ] **3.3b** Replace selectedBranch.subscribe() with $effect (4 files)
 
 ## Fase 4: Component Extraction (13 tasks)
+
 - [ ] **4.1a** Create utils/touchNavigation.ts
 - [ ] **4.1b** Create constants/navigation.ts
 - [ ] **4.1c** Create utils/refreshBus.ts
@@ -48,9 +52,10 @@
 - [ ] **4.4c** Extract CustomItemModal.svelte
 
 ## Fase 5: Deduplikasi & Polish (10 tasks)
+
 - [ ] **5.1** Replace touch handlers in 3 routes with touchNavigation import
 - [ ] **5.2** Replace navs arrays in 3 routes with navigation constant
-- [ ] **5.3** Replace (window as any).__refreshXxx (30 instances) with refreshBus
+- [ ] **5.3** Replace (window as any).\_\_refreshXxx (30 instances) with refreshBus
 - [ ] **5.4** Centralize sesiAktif type and cekSesiToko logic
 - [ ] **5.5** Standardize toast notification pattern
 - [ ] **5.6** Fix a11y-ignore comments

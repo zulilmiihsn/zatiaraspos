@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { get as storeGet } from 'svelte/store';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
@@ -40,10 +39,6 @@
 	let selectedTransaksi = $state<HistoryItem | null>(null);
 
 	const toastManager = createToastManager();
-	const paymentOptions = [
-		{ value: 'tunai', label: 'Tunai' },
-		{ value: 'qris', label: 'QRIS/Non-Tunai' }
-	];
 
 	// ─── Helpers ───────────────────────────────────────────────────────────
 	function todayRange() {
@@ -81,9 +76,7 @@
 				hasil.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 				// Filter nominal > 0
-				hasil = hasil.filter(
-					(t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0)
-				);
+				hasil = hasil.filter((t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0));
 
 				// Filter search keyword
 				if (searchKeyword.trim()) {

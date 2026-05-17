@@ -2,15 +2,15 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
-	import { validateNumber, validateText, sanitizeInput } from '$lib/utils/validation';
+	import { validateNumber, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
 	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { v4 as uuidv4 } from 'uuid';
-	import { formatWitaDateTime, getNowWita, witaToUtcISO } from '$lib/utils/dateTime';
+	import { getNowWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
-	import { get as storeGet } from 'svelte/store';
+
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
@@ -18,6 +18,7 @@
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { dataService } from '$lib/services/dataService';
+	import { refreshBus } from '$lib/utils/refreshBus';
 	import type { ReceiptSettings } from '$lib/types/laporan';
 	import type { TokoSession } from '$lib/types/store';
 
@@ -36,16 +37,16 @@
 		note: string;
 	}
 
-	let cart: BayarCartItem[] = [];
-	let customerName = '';
-	let paymentMethod = '';
+	let cart: BayarCartItem[] = $state([]);
+	let customerName = $state('');
+	let paymentMethod = $state('');
 	const paymentOptions = [
 		{ id: 'tunai', label: 'Tunai' },
 		{ id: 'qris', label: 'QRIS' }
 	];
-	let showCancelModal = false;
-	let showCashModal = false;
-	let cashReceived = '';
+	let showCancelModal = $state(false);
+	let showCashModal = $state(false);
+	let cashReceived = $state('');
 	const cashTemplates = [5000, 10000, 20000, 50000, 100000];
 	let keypad = [
 		[1, 2, 3],
@@ -53,26 +54,26 @@
 		[7, 8, 9],
 		['⌫', 0, 'C']
 	];
-	let showSuccessModal = false;
-	let showQrisWarning = false;
-	let transactionId = '';
-	let transactionCode = '';
+	let showSuccessModal = $state(false);
+	let showQrisWarning = $state(false);
+	let transactionId = $state('');
+	let transactionCode = $state('');
 
-	let showErrorNotification = false;
-	let errorNotificationMessage = '';
+	let showErrorNotification = $state(false);
+	let errorNotificationMessage = $state('');
 	let errorNotificationTimeout: number | null = null;
-	let showSuccessNotification = false;
-	let successNotificationMessage = '';
+	let showSuccessNotification = $state(false);
+	let successNotificationMessage = $state('');
 	let successNotificationTimeout: number | null = null;
 
-	let showNoSessionModal = false;
-	let noSessionModalMsg = '';
+	let showNoSessionModal = $state(false);
+	let noSessionModalMsg = $state('');
 
 	let currentUserRole = $derived(userRole.value || '');
 
-	let showNotifModal = false;
-	let notifModalMsg = '';
-	let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
+	let showNotifModal = $state(false);
+	let notifModalMsg = $state('');
+	let notifModalType = $state('warning'); // 'warning' | 'success' | 'error'
 
 	let pengaturanStruk: ReceiptSettings | null = null;
 
@@ -165,7 +166,9 @@
 
 	let { totalQty, totalHarga } = $derived(calculateCartSummary(cart));
 	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
-	let formattedCashReceived = $derived(cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '');
+	let formattedCashReceived = $derived(
+		cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : ''
+	);
 
 	function handleCancel() {
 		showCancelModal = true;
@@ -301,7 +304,8 @@
 							: 0)),
 			0
 		);
-		const description = 'Penjualan ' + cart.map((item: BayarCartItem) => item.product.name).join(', ');
+		const description =
+			'Penjualan ' + cart.map((item: BayarCartItem) => item.product.name).join(', ');
 		const totalQty = cart.reduce((sum: number, item: BayarCartItem) => sum + item.qty, 0);
 		const insert = {
 			tipe: 'in',
@@ -387,9 +391,7 @@
 			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
 			await dataService.invalidateCacheOnChange('buku_kas');
 			await dataService.invalidateCacheOnChange('transaksi_kasir');
-			if (typeof window !== 'undefined' && (window as any).refreshDashboardData) {
-				await (window as any).refreshDashboardData();
-			}
+			refreshBus.emit('dashboard');
 		} else {
 			// Offline mode: simpan summary dan detail ke pending
 			addPendingTransaction({ bukuKas: insert, transaksiKasir: transaksiKasirInserts });

@@ -6,20 +6,20 @@
 
 ## Status Sekarang (Setelah Audit)
 
-| Metrik | Angka | Status |
-|---|---|---|
-| Total files di `src/` | 78 | — |
-| `$state()` (Svelte 5) | **7** uses (hanya di 1 file) | 🔴 |
-| `$derived()` | **0** uses | 🔴 |
-| `$effect()` | **0** uses | 🔴 |
-| `$:` (Svelte 4) | **50+** uses di 7 files | 🔴 |
-| `writable()` stores | **4** stores | 🔴 |
-| `.subscribe()` calls | **23** calls di routes | 🔴 |
-| `any` type usage | **270+** instances | 🔴 |
-| `(window as any)` hacks | **30** instances di 8 files | 🔴 |
-| Touch handler duplicates | **3** full copies (dashboard, pos, catat) | 🟡 |
-| Prettier violations | ~~425 files~~ → **0** (FIXED ✅) | ✅ |
-| `svelte-check` errors | 0 | ✅ |
+| Metrik                   | Angka                                     | Status |
+| ------------------------ | ----------------------------------------- | ------ |
+| Total files di `src/`    | 78                                        | —      |
+| `$state()` (Svelte 5)    | **7** uses (hanya di 1 file)              | 🔴     |
+| `$derived()`             | **0** uses                                | 🔴     |
+| `$effect()`              | **0** uses                                | 🔴     |
+| `$:` (Svelte 4)          | **50+** uses di 7 files                   | 🔴     |
+| `writable()` stores      | **4** stores                              | 🔴     |
+| `.subscribe()` calls     | **23** calls di routes                    | 🔴     |
+| `any` type usage         | **270+** instances                        | 🔴     |
+| `(window as any)` hacks  | **30** instances di 8 files               | 🔴     |
+| Touch handler duplicates | **3** full copies (dashboard, pos, catat) | 🟡     |
+| Prettier violations      | ~~425 files~~ → **0** (FIXED ✅)          | ✅     |
+| `svelte-check` errors    | 0                                         | ✅     |
 
 ---
 
@@ -38,12 +38,13 @@
 
 ### 2.1 Perbaiki Duplikasi Interface
 
-| Interface | Didefinisikan di | Aksi |
-|---|---|---|
-| `ApiResponse<T>` | `index.ts`, `product.ts`, `transaction.ts` | Hapus dari `product.ts` dan `transaction.ts`, import dari `index.ts` |
+| Interface              | Didefinisikan di                           | Aksi                                                                 |
+| ---------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| `ApiResponse<T>`       | `index.ts`, `product.ts`, `transaction.ts` | Hapus dari `product.ts` dan `transaction.ts`, import dari `index.ts` |
 | `PaginatedResponse<T>` | `index.ts`, `product.ts`, `transaction.ts` | Hapus dari `product.ts` dan `transaction.ts`, import dari `index.ts` |
 
 #### Step-by-step:
+
 - [ ] **2.1a** [types/product.ts](file:///d:/kulyeah/project/zatiaraspos/src/lib/types/product.ts) — Hapus `ApiResponse<T>` (LoC 122-127) dan `PaginatedResponse<T>` (LoC 129-135), tambahkan `import { ApiResponse, PaginatedResponse } from './index'`
 - [ ] **2.1b** [types/transaction.ts](file:///d:/kulyeah/project/zatiaraspos/src/lib/types/transaction.ts) — Hapus `ApiResponse<T>` (LoC 317-322) dan `PaginatedResponse<T>` (LoC 324-330), tambahkan import dari `./index`
 
@@ -52,10 +53,17 @@
 - [ ] **2.2** [types/index.ts](file:///d:/kulyeah/project/zatiaraspos/src/lib/types/index.ts#L104) LoC 104-111 — Ganti semua `any` dengan interface yang sudah ada:
   ```ts
   // BEFORE:
-  auth: any; user: any; products: any; transactions: any; financial: any;
+  auth: any;
+  user: any;
+  products: any;
+  transactions: any;
+  financial: any;
   // AFTER:
-  auth: AuthState; user: UserState; products: ProductState; 
-  transactions: TransactionState; financial: FinancialState;
+  auth: AuthState;
+  user: UserState;
+  products: ProductState;
+  transactions: TransactionState;
+  financial: FinancialState;
   ```
 
 ### 2.3 Buat Tipe Baru yang Hilang
@@ -247,6 +255,7 @@ Setelah stores jadi Runes, subscriber pattern bisa diganti:
 ## Verification Plan
 
 ### Automated (setelah setiap fase)
+
 ```bash
 pnpm check                 # svelte-check: 0 errors, 0 warnings
 pnpm lint                  # Prettier + ESLint: exit 0
@@ -255,6 +264,7 @@ pnpm test:features         # Feature tests pass
 ```
 
 ### Manual (setelah Fase 3 & 4)
+
 - [ ] Dashboard load, metrics tampil, chart animasi
 - [ ] Ganti cabang → data refresh
 - [ ] Buka/tutup toko flow
@@ -273,7 +283,7 @@ graph TD
     B --> C["Fase 3: Svelte 5 Migration"]
     C --> D["Fase 4: Component Extraction"]
     D --> E["Fase 5: Dedup & Polish"]
-    
+
     B -.->|"verify"| V1["pnpm check"]
     C -.->|"verify"| V2["pnpm check + manual test"]
     D -.->|"verify"| V3["pnpm check + full manual test"]

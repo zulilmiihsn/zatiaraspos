@@ -18,20 +18,9 @@
 	let indicatorWidth = 0;
 	let navRefs: HTMLElement[] = [];
 
-	// Touch handling variables
-	let touchStartX = 0;
-	let touchStartY = 0;
-	let touchEndX = 0;
-	let touchEndY = 0;
-	let isSwiping = false;
-	let isTouchDevice = false;
-	let clickBlocked = false;
 	let currentTabIndex = 0;
 
 	onMount(() => {
-		// Detect touch device
-		isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
 		// Set initial tab index
 		const idx = navs.findIndex((n) =>
 			n.path === '/'
@@ -56,66 +45,7 @@
 		}
 	}
 
-	function handleTouchStart(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		touchStartX = e.touches[0].clientX;
-		touchStartY = e.touches[0].clientY;
-		isSwiping = false;
-		clickBlocked = false;
-	}
-
-	function handleTouchMove(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		touchEndX = e.touches[0].clientX;
-		touchEndY = e.touches[0].clientY;
-
-		const deltaX = Math.abs(touchEndX - touchStartX);
-		const deltaY = Math.abs(touchEndY - touchStartY);
-		const viewportWidth = window.innerWidth;
-		const swipeThreshold = viewportWidth * 0.4; // 40% of viewport width
-
-		// Check if this is a horizontal swipe
-		if (deltaX > swipeThreshold && deltaX > deltaY) {
-			isSwiping = true;
-			clickBlocked = true;
-		}
-	}
-
-	function handleTouchEnd(e: TouchEvent) {
-		if (!isTouchDevice) return;
-
-		if (isSwiping) {
-			// Handle swipe navigation
-			const deltaX = touchEndX - touchStartX;
-			const viewportWidth = window.innerWidth;
-			const swipeThreshold = viewportWidth * 0.4;
-
-			if (Math.abs(deltaX) > swipeThreshold) {
-				if (deltaX > 0 && currentTabIndex > 0) {
-					// Swipe right - go to previous tab
-					goto(navs[currentTabIndex - 1].path);
-				} else if (deltaX < 0 && currentTabIndex < navs.length - 1) {
-					// Swipe left - go to next tab
-					goto(navs[currentTabIndex + 1].path);
-				}
-			}
-
-			// Block any subsequent click events
-			setTimeout(() => {
-				clickBlocked = false;
-			}, 100);
-		}
-	}
-
 	function handleNavClick(path: string, e: Event) {
-		if (clickBlocked) {
-			e.preventDefault();
-			e.stopPropagation();
-			return;
-		}
-
 		goto(path);
 	}
 </script>
@@ -123,9 +53,6 @@
 <nav
 	class="nav-transition fixed right-0 bottom-0 left-0 z-10 flex h-[58px] items-center justify-around overflow-hidden rounded-t-sm bg-white px-0.5 shadow-[0_-6px_24px_-4px_rgba(236,72,153,0.13)]"
 	style="position:relative;"
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
 >
 	{#each navs as nav, i}
 		<a
