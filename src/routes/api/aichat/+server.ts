@@ -1346,16 +1346,20 @@ async function handleRegularChat(request: Request) {
 
 		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil
 		const productIdToSale: Record<string, { qty: number; revenue: number; name?: string }> = {};
+		// Prototype pollution guard: reject dangerous keys
+		const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 		for (const item of transaksiKasirData || []) {
 			const pid = (item as any)?.produk_id;
-			if (!pid) continue;
+			if (!pid || typeof pid !== 'string' || FORBIDDEN_KEYS.has(pid)) continue;
 			const qty = Number((item as any)?.qty || 0) || 0;
 			const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
 			const revenue = unit * (qty || 1);
 			// Ambil nama dari relasi produk atau custom_name
 			const productName =
 				(item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
-			if (!productIdToSale[pid]) productIdToSale[pid] = { qty: 0, revenue: 0, name: productName };
+			if (!Object.prototype.hasOwnProperty.call(productIdToSale, pid)) {
+				productIdToSale[pid] = { qty: 0, revenue: 0, name: productName };
+			}
 			productIdToSale[pid].qty += qty || 0;
 			productIdToSale[pid].revenue += revenue;
 			if (!productIdToSale[pid].name) productIdToSale[pid].name = productName;

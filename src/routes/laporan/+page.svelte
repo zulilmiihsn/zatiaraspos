@@ -24,11 +24,11 @@
 
 	// Lazy load icons — using `any` is acceptable here since Lucide icon types
 	// are complex and vary by version; they're only used in template rendering.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let Wallet: any = null;
-	let ArrowDownCircle: any = null;
-	let ArrowUpCircle: any = null;
-	let FilterIcon: any = null;
+
+	let Wallet: any = $state(null);
+	let ArrowDownCircle: any = $state(null);
+	let ArrowUpCircle: any = $state(null);
+	let FilterIcon: any = $state(null);
 
 	// Subscribe ke store
 

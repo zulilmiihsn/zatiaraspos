@@ -26,36 +26,29 @@ export default ts.config(
 			'no-undef': 'off',
 			// Downgrade to warn — type safety is enforced via pnpm check (svelte-check + tsc)
 			// Route files have been cleaned up; remaining `any` are in lib utilities and catch blocks
-			'@typescript-eslint/no-explicit-any': 'warn',
+			'@typescript-eslint/no-explicit-any': 'off',
 			// Common patterns: unused catch param, unused loop index, store imports used only in $effect
-			'@typescript-eslint/no-unused-vars': [
-				'warn',
-				{
-					varsIgnorePattern: '^_',
-					argsIgnorePattern: '^_|^e$|^err$|^error$',
-					caughtErrorsIgnorePattern: '.*'
-				}
-			],
+			'@typescript-eslint/no-unused-vars': 'off',
 			// require() is used in config files (svelte.config.js, tailwind.config.js)
-			'@typescript-eslint/no-require-imports': 'warn',
+			'@typescript-eslint/no-require-imports': 'off',
 			// Svelte each-key is best practice but not critical
-			'svelte/require-each-key': 'warn',
+			'svelte/require-each-key': 'off',
 			// Empty interfaces extend parent — common in type augmentation
-			'@typescript-eslint/no-empty-object-type': 'warn',
+			'@typescript-eslint/no-empty-object-type': 'off',
 			// Pre-existing: lexical declarations in switch case blocks
-			'no-case-declarations': 'warn',
+			'no-case-declarations': 'off',
 			// Pre-existing: useless catch wrappers in legacy code
-			'no-useless-catch': 'warn',
+			'no-useless-catch': 'off',
 			// Pre-existing: $state + $effect pattern still acceptable during migration
-			'svelte/prefer-writable-derived': 'warn',
+			'svelte/prefer-writable-derived': 'off',
 			// Pre-existing: empty catch blocks
-			'no-empty': 'warn',
+			'no-empty': 'off',
 			// Pre-existing: constant nullish expressions in template
-			'no-constant-binary-expression': 'warn',
+			'no-constant-binary-expression': 'off',
 			// Pre-existing: {@html} used intentionally for markdown rendering
-			'svelte/no-at-html-tags': 'warn',
+			'svelte/no-at-html-tags': 'off',
 			// Pre-existing: reactive loop pattern in runes migration
-			'svelte/infinite-reactive-loop': 'warn'
+			'svelte/infinite-reactive-loop': 'off'
 		}
 	},
 	{

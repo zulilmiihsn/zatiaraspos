@@ -146,17 +146,21 @@ export class XSSProtection {
 			return '';
 		}
 
-		// Remove javascript: and data: protocols
-		if (url.toLowerCase().startsWith('javascript:') || url.toLowerCase().startsWith('data:')) {
-			return '';
+		// Allowlist: only permit safe URI schemes
+		const ALLOWED_SCHEMES = ['https:', 'http:', 'mailto:'];
+		try {
+			const parsed = new URL(url);
+			if (!ALLOWED_SCHEMES.includes(parsed.protocol)) {
+				return '';
+			}
+			return parsed.href;
+		} catch {
+			// Relative URLs — only allow path-like strings (no colon before first slash)
+			if (/^[a-z]+:/i.test(url)) {
+				return '';
+			}
+			return url;
 		}
-
-		// Ensure URL starts with http:// or https://
-		if (!url.match(/^https?:\/\//)) {
-			return '';
-		}
-
-		return url;
 	}
 }
 

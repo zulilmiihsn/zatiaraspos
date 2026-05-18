@@ -34,10 +34,7 @@
 		class="flex flex-col items-start rounded-xl bg-gradient-to-br from-sky-200 to-sky-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-sky-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if ShoppingBag}
-			<svelte:component
-				this={ShoppingBag}
-				class="mb-2 h-6 w-6 text-sky-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-			/>
+			<ShoppingBag class="mb-2 h-6 w-6 text-sky-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2">
 				<span
@@ -56,10 +53,7 @@
 		class="flex flex-col items-start rounded-xl bg-gradient-to-br from-purple-200 to-purple-400 p-4 shadow-md md:items-center md:justify-center md:gap-2 md:border md:border-purple-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if TrendingUp}
-			<svelte:component
-				this={TrendingUp}
-				class="mb-2 h-6 w-6 text-purple-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-			/>
+			<TrendingUp class="mb-2 h-6 w-6 text-purple-500 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2">
 				<span
@@ -78,10 +72,7 @@
 		class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-green-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if Wallet}
-			<svelte:component
-				this={Wallet}
-				class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-			/>
+			<TrendingUp class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2">
 				<span
@@ -98,10 +89,7 @@
 		class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-cyan-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if Wallet}
-			<svelte:component
-				this={Wallet}
-				class="mb-2 h-6 w-6 text-cyan-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2"
-			/>
+			<Wallet class="mb-2 h-6 w-6 text-cyan-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2">
 				<span
@@ -121,7 +109,7 @@
 		class="flex flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md"
 	>
 		{#if Wallet}
-			<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-green-900" />
+			<Wallet class="mb-2 h-6 w-6 text-green-900" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center">
 				<span
@@ -138,7 +126,7 @@
 		class="flex flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md"
 	>
 		{#if Wallet}
-			<svelte:component this={Wallet} class="mb-2 h-6 w-6 text-cyan-900" />
+			<Wallet class="mb-2 h-6 w-6 text-cyan-900" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center">
 				<span

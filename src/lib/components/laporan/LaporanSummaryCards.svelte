@@ -15,12 +15,12 @@
 	} = $props();
 
 	// Lazy load icons
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let Wallet: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let ArrowDownCircle: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let ArrowUpCircle: any = null;
+
+	let Wallet: any = $state(null);
+
+	let ArrowDownCircle: any = $state(null);
+
+	let ArrowUpCircle: any = $state(null);
 
 	onMount(async () => {
 		const icons = await import('lucide-svelte');
@@ -38,8 +38,7 @@
 				class="flex flex-col items-start rounded-xl bg-gradient-to-br from-green-100 to-green-300 p-3 shadow-sm md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
 				{#if ArrowDownCircle}
-					<svelte:component
-						this={ArrowDownCircle}
+					<ArrowDownCircle
 						class="mb-2 h-6 w-6 text-green-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
 					/>
 				{:else}
@@ -68,8 +67,7 @@
 				class="flex flex-col items-start rounded-xl bg-gradient-to-br from-red-100 to-red-300 p-3 shadow-sm md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
 				{#if ArrowUpCircle}
-					<svelte:component
-						this={ArrowUpCircle}
+					<ArrowUpCircle
 						class="mb-2 h-6 w-6 text-red-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
 					/>
 				{:else}
@@ -98,10 +96,7 @@
 				class="col-span-2 flex flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-3 shadow-sm md:col-span-1 md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
 				{#if Wallet}
-					<svelte:component
-						this={Wallet}
-						class="mb-2 h-6 w-6 text-cyan-900 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					/>
+					<Wallet class="mb-2 h-6 w-6 text-cyan-900 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6" />
 				{:else}
 					<div
 						class="mb-2 flex h-6 w-6 items-center justify-center md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"

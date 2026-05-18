@@ -19,7 +19,6 @@
 	let usernameError = $state('');
 	let passwordError = $state('');
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let branch: BranchType = $state('samarinda') as any;
 	$effect(() => {
 		selectedBranch.value = branch as BranchType;

@@ -1,4 +1,3 @@
-import { getSupabaseClient } from '$lib/database/supabaseClient';
 import { selectedBranch } from './selectedBranch.svelte';
 
 // Store untuk user role dan profile menggunakan runes Svelte 5
@@ -45,48 +44,16 @@ export function clearUserRole() {
  */
 export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 'network_error'> {
 	try {
-		const branch = selectedBranch.value as
-			| 'samarinda'
-			| 'berau'
-			| 'Balikpapan'
-			| 'samarinda2'
-			| 'balikpapan2';
-		const {
-			data: { session },
-			error: sessionError
-		} = await getSupabaseClient(branch).auth.getSession();
-
-		if (sessionError) {
-			return 'network_error';
-		}
-
-		if (!session?.user) {
+		const res = await fetch('/api/session');
+		if (!res.ok) return 'network_error';
+		const data = await res.json();
+		if (!data?.user) {
 			clearUserRole();
 			return 'invalid';
 		}
-
-		const { data: profile, error: profileError } = await getSupabaseClient(branch)
-			.from('profil')
-			.select('role, username')
-			.eq('id', session.user.id)
-			.single();
-
-		if (profileError) {
-			if (profileError.code === 'PGRST116') {
-				clearUserRole();
-				return 'invalid';
-			}
-			return 'network_error';
-		}
-
-		if (!profile) {
-			clearUserRole();
-			return 'invalid';
-		}
-
-		setUserRole(profile.role, profile);
+		setUserRole(data.user.role, data.user);
 		return 'valid';
-	} catch (error) {
+	} catch {
 		return 'network_error';
 	}
 }

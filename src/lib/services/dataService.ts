@@ -1,5 +1,3 @@
-import { getSupabaseClient } from '$lib/database/supabaseClient';
-import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import {
@@ -9,750 +7,389 @@ import {
 	witaRangeToWitaQuery
 } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
-import { get as getCache, set as setCache } from 'idb-keyval';
-import { getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
+import { getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
+import { subscribeToChannel } from '$lib/realtime/ablyClient';
 
-async function getCachedPosKas7Hari(supabase: SupabaseClient) {
+// ─── Internal API helpers ─────────────────────────────────────────────────────
+
+async function dbGet(table: string, params: Record<string, string> = {}): Promise<any[]> {
+	const branch = selectedBranch.value || 'default';
+	const qs = new URLSearchParams({ table, branch, ...params }).toString();
+	const res = await fetch(`/api/data?${qs}`);
+	if (!res.ok) return [];
+	return res.json();
+}
+
+async function dbPost(
+	table: string,
+	action: 'insert' | 'update' | 'delete',
+	payload: Record<string, unknown> | Record<string, unknown>[],
+	where?: Record<string, string>
+): Promise<{ ok: boolean }> {
+	const branch = selectedBranch.value || 'default';
+	const res = await fetch('/api/data', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ table, action, payload, branch, where })
+	});
+	if (!res.ok) throw new Error(`dbPost ${table}/${action} failed: ${res.status}`);
+	return res.json();
+}
+
+// ─── 7-day cache helpers ──────────────────────────────────────────────────────
+
+async function getCachedPosKas7Hari() {
 	const todayStr = getTodayWita();
 	const branch = selectedBranch.value || 'default';
 	const cacheKey = `pos_kas_7hari_${branch}_${todayStr}`;
-	const cached = await getCache(cacheKey);
-
+	const cached = await idbGet(cacheKey);
 	if (cached && Array.isArray(cached.data) && Date.now() - cached.timestamp < 300000) {
 		return cached.data;
 	}
 
-	const hariLabels = [];
-	const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
+	const todayWita = new Date(todayStr + 'T00:00:00+08:00');
+	const labels: string[] = [];
 	for (let i = 6; i >= 0; i--) {
 		const d = new Date(todayWita);
 		d.setDate(todayWita.getDate() - i);
-		const yyyy = d.getFullYear();
-		const mm = String(d.getMonth() + 1).padStart(2, '0');
-		const dd = String(d.getDate()).padStart(2, '0');
-		hariLabels.push(`${yyyy}-${mm}-${dd}`);
+		labels.push(d.toISOString().slice(0, 10));
 	}
+	const { startUtc } = witaToUtcRange(labels[0]);
+	const { endUtc } = witaToUtcRange(labels[6]);
 
-	const { startUtc } = witaToUtcRange(hariLabels[0]);
-	const { endUtc } = witaToUtcRange(hariLabels[6]);
-
-	const { data: kas7, error } = await supabase
-		.from('buku_kas')
-		.select('transaction_id,waktu')
-		.gte('waktu', startUtc)
-		.lte('waktu', endUtc)
-		.eq('sumber', 'pos');
-
-	if (error) {
-		return [];
-	}
-
-	const result = kas7 || [];
-	await setCache(cacheKey, { data: result, timestamp: Date.now() });
+	const result = await dbGet('pos_kas_7hari', { start: startUtc, end: endUtc });
+	await idbSet(cacheKey, { data: result, timestamp: Date.now() });
 	return result;
 }
 
-// Fungsi cache harian untuk rata-rata transaksi/hari
-async function getAvgTransaksiHarian(supabase: SupabaseClient): Promise<number> {
+async function getAvgTransaksiHarian(): Promise<number> {
 	const todayStr = getTodayWita();
 	const branch = selectedBranch.value || 'default';
 	const cacheKey = `avg_transaksi_${branch}_${todayStr}`;
-	const cached = await getCache(cacheKey);
+	const cached = await idbGet(cacheKey);
 	if (cached && typeof cached.value === 'number' && Date.now() - cached.timestamp < 86400000) {
-		return cached.value; // Cache 24 jam
+		return cached.value;
 	}
-	// Hitung ulang
-	const hariLabels = [];
-	const todayWita = new Date(getTodayWita() + 'T00:00:00+08:00');
+
+	const kas7 = await getCachedPosKas7Hari();
+	const todayWita = new Date(todayStr + 'T00:00:00+08:00');
+	const labels: string[] = [];
 	for (let i = 6; i >= 0; i--) {
 		const d = new Date(todayWita);
 		d.setDate(todayWita.getDate() - i);
-		const yyyy = d.getFullYear();
-		const mm = String(d.getMonth() + 1).padStart(2, '0');
-		const dd = String(d.getDate()).padStart(2, '0');
-		hariLabels.push(`${yyyy}-${mm}-${dd}`);
+		labels.push(d.toISOString().slice(0, 10));
 	}
-	const kas7 = await getCachedPosKas7Hari(supabase);
-	let avgTransaksi = 0;
-	if (kas7) {
-		const transaksiPerHari: { [key: string]: Set<string> } = {};
-		for (const tanggal of hariLabels) {
-			transaksiPerHari[tanggal] = new Set<string>();
-		}
-		for (const t of kas7) {
-			const waktu = new Date(t.waktu);
-			const yyyy = waktu.getFullYear();
-			const mm = String(waktu.getMonth() + 1).padStart(2, '0');
-			const dd = String(waktu.getDate()).padStart(2, '0');
-			const tanggal = `${yyyy}-${mm}-${dd}`;
-			if (transaksiPerHari[tanggal] && t.transaction_id) {
-				transaksiPerHari[tanggal].add(t.transaction_id);
-			}
-		}
-		const totalTransaksi7Hari = (Object.values(transaksiPerHari) as Set<string>[]).reduce(
-			(sum, set) => sum + set.size,
-			0
-		);
-		avgTransaksi = Math.round(totalTransaksi7Hari / 7);
+
+	const perHari: Record<string, Set<string>> = {};
+	labels.forEach((l) => (perHari[l] = new Set()));
+	for (const t of kas7) {
+		const date = new Date(t.waktu).toISOString().slice(0, 10);
+		if (perHari[date] && t.transaction_id) perHari[date].add(t.transaction_id);
 	}
-	await setCache(cacheKey, { value: avgTransaksi, timestamp: Date.now() });
-	return avgTransaksi;
+	const avg = Math.round(Object.values(perHari).reduce((s, set) => s + set.size, 0) / 7);
+	await idbSet(cacheKey, { value: avg, timestamp: Date.now() });
+	return avg;
 }
 
-// Fungsi cache mingguan untuk jam paling ramai (7 hari terakhir)
-async function getJamRamaiMingguan(supabase: SupabaseClient): Promise<string> {
+async function getJamRamaiMingguan(): Promise<string> {
 	const todayStr = getTodayWita();
 	const branch = selectedBranch.value || 'default';
 	const cacheKey = `jam_ramai_mingguan_${branch}_${todayStr}`;
-	const cached = await getCache(cacheKey);
+	const cached = await idbGet(cacheKey);
 	if (cached && typeof cached.value === 'string' && Date.now() - cached.timestamp < 86400000) {
-		return cached.value; // Cache 24 jam untuk konsistensi dengan rata-rata transaksi
+		return cached.value;
 	}
 
-	// Hitung ulang - gunakan cache data POS 7 hari yang sama dengan avg transaksi
-	const kas = await getCachedPosKas7Hari(supabase);
-
-	const jamCount: { [key: string]: number } = {};
-	if (kas) {
-		for (const t of kas) {
-			const waktu = new Date(t.waktu);
-			const waktuWITA = new Date(waktu);
-			const jam = waktuWITA.getHours();
-			jamCount[jam] = (jamCount[jam] || 0) + 1;
-		}
+	const kas = await getCachedPosKas7Hari();
+	const jamCount: Record<number, number> = {};
+	for (const t of kas) {
+		const jam = new Date(t.waktu).getHours();
+		jamCount[jam] = (jamCount[jam] || 0) + 1;
 	}
 
-	let peakHour = '';
-	let maxCount = 0;
+	let peak = -1, maxCount = 0;
 	for (const [jam, count] of Object.entries(jamCount)) {
-		if (count > maxCount) {
-			maxCount = count;
-			peakHour = jam;
-		}
+		if (count > maxCount) { maxCount = count; peak = Number(jam); }
 	}
 
-	let jamRamai = '';
-	if (peakHour !== '') {
-		const jamInt = parseInt(peakHour, 10);
-		jamRamai = `${jamInt.toString().padStart(2, '0')}.00–${(jamInt + 1).toString().padStart(2, '0')}.00`;
-	}
+	const result = peak >= 0
+		? `${String(peak).padStart(2, '0')}.00–${String(peak + 1).padStart(2, '0')}.00`
+		: '';
 
-	await setCache(cacheKey, { value: jamRamai, timestamp: Date.now() });
-	return jamRamai;
+	await idbSet(cacheKey, { value: result, timestamp: Date.now() });
+	return result;
 }
 
-// Data service untuk fetching dengan smart caching
+// ─── DataService ──────────────────────────────────────────────────────────────
+
 export class DataService {
 	private static instance: DataService;
-	private isInitialLoad = true; // Add flag to prevent double fetching
-
-	constructor() {}
-
-	// Getter untuk supabase client
-	get supabaseClient() {
-		return getSupabaseClient(selectedBranch.value as any);
-	}
-
-	get supabase() {
-		return this.supabaseClient;
-	}
 
 	static getInstance(): DataService {
-		if (!DataService.instance) {
-			DataService.instance = new DataService();
-		}
+		if (!DataService.instance) DataService.instance = new DataService();
 		return DataService.instance;
 	}
 
-	// Dashboard data fetching dengan cache
 	async getDashboardStats() {
 		const branch = selectedBranch.value || 'default';
 		return smartCache.get(
 			`${CACHE_KEYS.DASHBOARD_STATS}_${branch}`,
 			async () => {
-				// Data hari ini untuk item terjual, jumlah transaksi, omzet, dst
 				const now = new Date();
-				const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-				const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-				const startUTC = start.toISOString();
-				const endUTC = end.toISOString();
+				const startUTC = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+				const endUTC = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-				const kasirPromise = this.supabase
-					.from('transaksi_kasir')
-					.select('qty, transaction_id')
-					.gte('created_at', startUTC)
-					.lte('created_at', endUTC);
+				const qs = new URLSearchParams({ table: 'dashboard_stats', branch, start: startUTC, end: endUTC }).toString();
+				const res = await fetch(`/api/data?${qs}`);
+				const { kasir = [], kas = [] } = res.ok ? await res.json() : {};
 
-				const bukuKasPromise = this.supabase
-					.from('buku_kas')
-					.select('amount,tipe,transaction_id')
-					.gte('waktu', startUTC)
-					.lte('waktu', endUTC)
-					.eq('sumber', 'pos');
+				const itemTerjual = kasir.reduce((s: number, t: any) => s + (t.qty || 1), 0);
+				const txIds = new Set(kas.map((t: any) => t.transaction_id).filter(Boolean));
+				const jumlahTransaksi = txIds.size || kas.length;
+				const omzet = kas.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+				const pemasukan = kas.filter((t: any) => t.tipe === 'in').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+				const pengeluaran = kas.filter((t: any) => t.tipe === 'out').reduce((s: number, t: any) => s + (t.amount || 0), 0);
 
-				const [kasirResult, bukuKasResult] = await Promise.all([kasirPromise, bukuKasPromise]);
-				const { data: kasir, error: errorKasir } = kasirResult;
-				const { data: kas, error } = bukuKasResult;
-
-				if (error || errorKasir) {
-					return {
-						itemTerjual: 0,
-						jumlahTransaksi: 0,
-						omzet: 0,
-						profit: 0,
-						totalItem: 0,
-						avgTransaksi: 0,
-						jamRamai: '',
-						weeklyIncome: [],
-						weeklyMax: 1,
-						bestSellers: []
-					};
-				}
-
-				const itemTerjual =
-					kasir?.reduce(
-						(sum: number, t: Record<string, unknown>) => sum + ((t.qty as number) || 1),
-						0
-					) || 0;
-				const transactionIds = new Set(
-					(kas || [])
-						.map((t: Record<string, unknown>) => t.transaction_id as string)
-						.filter(Boolean)
-				);
-				const jumlahTransaksi = transactionIds.size > 0 ? transactionIds.size : kas.length;
-				const omzet = kas.reduce(
-					(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
-					0
-				);
-
-				// Profit riil sederhana (tanpa HPP): pemasukan - pengeluaran di hari ini
-				const pemasukan = (kas || [])
-					.filter((t: Record<string, unknown>) => t.tipe === 'in')
-					.reduce(
-						(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
-						0
-					);
-				const pengeluaran = (kas || [])
-					.filter((t: Record<string, unknown>) => t.tipe === 'out')
-					.reduce(
-						(sum: number, t: Record<string, unknown>) => sum + ((t.amount as number) || 0),
-						0
-					);
-				const profit = pemasukan - pengeluaran;
-
-				// Ambil avgTransaksi dan jamRamai dari cache mingguan
 				const [avgTransaksi, jamRamai] = await Promise.all([
-					getAvgTransaksiHarian(this.supabase),
-					getJamRamaiMingguan(this.supabase)
+					getAvgTransaksiHarian(),
+					getJamRamaiMingguan()
 				]);
 
-				return {
-					itemTerjual,
-					jumlahTransaksi,
-					omzet,
-					profit,
-					totalItem: itemTerjual,
-					avgTransaksi,
-					jamRamai,
-					weeklyIncome: [],
-					weeklyMax: 1,
-					bestSellers: []
-				};
+				return { itemTerjual, jumlahTransaksi, omzet, profit: pemasukan - pengeluaran, totalItem: itemTerjual, avgTransaksi, jamRamai, weeklyIncome: [], weeklyMax: 1, bestSellers: [] };
 			},
-			{
-				ttl: 45000,
-				backgroundRefresh: true
-			}
+			{ ttl: 45000, backgroundRefresh: true }
 		);
 	}
 
-	// Best sellers dengan cache per cabang
 	async getBestSellers() {
-		const branch = selectedBranch.value;
+		const branch = selectedBranch.value || 'default';
 		return smartCache.get(
 			`${CACHE_KEYS.BEST_SELLERS}_${branch}`,
 			async () => {
 				const todayWita = new Date(getNowWita());
-				const yyyy = todayWita.getFullYear();
-				const mm = String(todayWita.getMonth() + 1).padStart(2, '0');
-				const dd = String(todayWita.getDate()).padStart(2, '0');
-				const todayStr = `${yyyy}-${mm}-${dd}`;
-
-				// --- GRAFIK 7 HARI TERAKHIR (WITA) ---
-				const hariLabels: string[] = [];
-				const pendapatanPerHari: Record<string, number> = {};
+				const labels: string[] = [];
 				for (let i = 6; i >= 0; i--) {
 					const d = new Date(todayWita);
 					d.setDate(todayWita.getDate() - i);
-					const yyyy = d.getFullYear();
-					const mm = String(d.getMonth() + 1).padStart(2, '0');
-					const dd = String(d.getDate()).padStart(2, '0');
-					const tanggal = `${yyyy}-${mm}-${dd}`;
-					hariLabels.push(tanggal);
-					pendapatanPerHari[tanggal] = 0;
+					labels.push(d.toISOString().slice(0, 10));
+				}
+				const { startUtc } = witaToUtcRange(labels[0]);
+				const { endUtc } = witaToUtcRange(labels[6]);
+
+				const items = await dbGet('transaksi_kasir', { start: startUtc, end: endUtc });
+				const grouped: Record<string, number> = {};
+				for (const item of items) {
+					if (!item.produk_id) continue;
+					grouped[item.produk_id] = (grouped[item.produk_id] || 0) + (item.qty || 1);
 				}
 
-				const { startUtc: start7Utc } = witaToUtcRange(hariLabels[0]);
-				const { endUtc: end7LastUtc } = witaToUtcRange(hariLabels[6]);
+				const topIds = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => id);
+				if (!topIds.length) return [];
 
-				const { data: items, error } = await this.supabase
-					.from('transaksi_kasir')
-					.select('produk_id, qty, created_at')
-					.gte('created_at', start7Utc)
-					.lte('created_at', end7LastUtc);
-
-				let bestSellersResult: { name: string; image: string; total_qty: number }[] = [];
-				if (!error && items) {
-					const grouped: Record<string, number> = {};
-					for (const item of items) {
-						if (!item.produk_id) continue;
-						if (!grouped[item.produk_id]) grouped[item.produk_id] = 0;
-						grouped[item.produk_id] += item.qty || 1;
-					}
-
-					const topProdukIds = Object.entries(grouped)
-						.sort((a: [string, number], b: [string, number]) => b[1] - a[1])
-						.slice(0, 3)
-						.map(([produk_id]) => produk_id);
-
-					if (topProdukIds.length > 0) {
-						const { data: allProducts } = await this.supabase
-							.from('produk')
-							.select('id, name, gambar');
-
-						const validProdukIds = topProdukIds.filter(
-							(id: string) => allProducts && allProducts.some((p: { id: string }) => p.id === id)
-						);
-
-						if (validProdukIds.length > 0) {
-							bestSellersResult = validProdukIds.map((produk_id: string) => {
-								const prod = (allProducts as { id: string; name?: string; gambar?: string }[]).find(
-									(p) => p.id === produk_id
-								);
-								return {
-									name: prod?.name || '-',
-									image: prod?.gambar || '',
-									total_qty: grouped[produk_id]
-								};
-							});
-						}
-					}
-				}
-
-				return bestSellersResult;
+				const allProducts = await dbGet('produk', {});
+				return topIds.map((id) => {
+					const prod = allProducts.find((p: any) => p.id === id);
+					return { name: prod?.name || '-', image: prod?.gambar || '', total_qty: grouped[id] };
+				});
 			},
-			{
-				ttl: 300000, // 5 minutes
-				backgroundRefresh: true
-			}
+			{ ttl: 300000, backgroundRefresh: true }
 		);
 	}
 
-	// Weekly income dengan cache per cabang
 	async getWeeklyIncome() {
-		const branch = selectedBranch.value;
+		const branch = selectedBranch.value || 'default';
 		return smartCache.get(
 			`${CACHE_KEYS.WEEKLY_INCOME}_${branch}`,
 			async () => {
 				const todayWita = new Date(getNowWita());
-				const hariLabels: string[] = [];
-				const pendapatanPerHari: Record<string, number> = {};
-
+				const labels: string[] = [];
+				const perHari: Record<string, number> = {};
 				for (let i = 6; i >= 0; i--) {
 					const d = new Date(todayWita);
 					d.setDate(todayWita.getDate() - i);
-					const yyyy = d.getFullYear();
-					const mm = String(d.getMonth() + 1).padStart(2, '0');
-					const dd = String(d.getDate()).padStart(2, '0');
-					const tanggal = `${yyyy}-${mm}-${dd}`;
-					hariLabels.push(tanggal);
-					pendapatanPerHari[tanggal] = 0;
+					const tanggal = d.toISOString().slice(0, 10);
+					labels.push(tanggal);
+					perHari[tanggal] = 0;
 				}
 
-				const { startUtc: start7Utc } = witaToUtcRange(hariLabels[0]);
-				const { endUtc: end7Utc } = witaToUtcRange(hariLabels[6]);
+				const { startUtc } = witaToUtcRange(labels[0]);
+				const { endUtc } = witaToUtcRange(labels[6]);
 
-				const { data: kas7Hari, error } = await this.supabase
-					.from('buku_kas')
-					.select('amount,waktu')
-					.gte('waktu', start7Utc)
-					.lte('waktu', end7Utc)
-					.eq('sumber', 'pos')
-					.eq('tipe', 'in');
-
-				if (!error && kas7Hari) {
-					const dateFormatter = new Intl.DateTimeFormat('sv-SE', {
-						timeZone: 'Asia/Makassar'
-					});
-
-					for (const transaksi of kas7Hari) {
-						const waktu = transaksi?.waktu ? new Date(transaksi.waktu) : null;
-						if (!waktu || Number.isNaN(waktu.getTime())) continue;
-						const tanggalWita = dateFormatter.format(waktu);
-						if (!(tanggalWita in pendapatanPerHari)) continue;
-						pendapatanPerHari[tanggalWita] += Number(transaksi?.amount || 0);
-					}
+				const rows = await dbGet('buku_kas', { start: startUtc, end: endUtc, sumber: 'pos', tipe: 'in' });
+				const fmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Makassar' });
+				for (const t of rows) {
+					const d = new Date(t.waktu);
+					if (isNaN(d.getTime())) continue;
+					const tanggal = fmt.format(d);
+					if (tanggal in perHari) perHari[tanggal] += Number(t.amount || 0);
 				}
 
-				const weeklyIncome = hariLabels.map((tanggal) => pendapatanPerHari[tanggal] || 0);
-				const weeklyMax = Math.max(1, ...weeklyIncome);
-
-				return { weeklyIncome, weeklyMax };
+				const weeklyIncome = labels.map((l) => perHari[l] || 0);
+				return { weeklyIncome, weeklyMax: Math.max(1, ...weeklyIncome) };
 			},
-			{
-				ttl: 300000, // 5 minutes
-				backgroundRefresh: true
-			}
+			{ ttl: 300000, backgroundRefresh: true }
 		);
 	}
 
-	// Products dengan cache
 	async getProducts() {
 		const branch = selectedBranch.value || 'default';
-		const cacheKey = `${CACHE_KEYS.PRODUCTS}_${branch}`;
-
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			const cached = await idbGet('products');
-			if (cached) return cached;
-			return [];
+			return (await idbGet('products')) || [];
 		}
-
 		const data = await smartCache.get(
-			cacheKey,
-			async () => {
-				const { data, error } = await this.supabase
-					.from('produk')
-					.select('*')
-					.order('created_at', { ascending: false });
-				if (error) return [];
-				return data || [];
-			},
+			`${CACHE_KEYS.PRODUCTS}_${branch}`,
+			async () => dbGet('produk'),
 			{ ttl: 180000, backgroundRefresh: true }
 		);
-
 		await idbSet('products', data || []);
 		return data || [];
 	}
 
-	// Categories dengan cache
 	async getCategories() {
 		const branch = selectedBranch.value || 'default';
-		const cacheKey = `${CACHE_KEYS.CATEGORIES}_${branch}`;
-
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			const cached = await idbGet('categories');
-			if (cached) return cached;
-			return [];
+			return (await idbGet('categories')) || [];
 		}
-
 		const data = await smartCache.get(
-			cacheKey,
-			async () => {
-				const { data, error } = await this.supabase
-					.from('kategori')
-					.select('*')
-					.order('created_at', { ascending: false });
-				if (error) return [];
-				return data || [];
-			},
+			`${CACHE_KEYS.CATEGORIES}_${branch}`,
+			async () => dbGet('kategori'),
 			{ ttl: 180000, backgroundRefresh: true }
 		);
-
 		await idbSet('categories', data || []);
 		return data || [];
 	}
 
-	// Add-ons dengan cache
 	async getAddOns() {
 		const branch = selectedBranch.value || 'default';
-		const cacheKey = `${CACHE_KEYS.ADDONS}_${branch}`;
-
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			const cached = await idbGet('addons');
-			if (cached) return cached;
-			return [];
+			return (await idbGet('addons')) || [];
 		}
-
 		const data = await smartCache.get(
-			cacheKey,
-			async () => {
-				const { data, error } = await this.supabase
-					.from('tambahan')
-					.select('*')
-					.order('created_at', { ascending: false });
-				if (error) return [];
-				return data || [];
-			},
+			`${CACHE_KEYS.ADDONS}_${branch}`,
+			async () => dbGet('tambahan'),
 			{ ttl: 180000, backgroundRefresh: true }
 		);
-
 		await idbSet('addons', data || []);
 		return data || [];
 	}
 
-	// Report data dengan ETag support
 	async getReportData(dateRange: string, type: 'daily' | 'weekly' | 'monthly' | 'yearly') {
-		// SMART CACHING: Cache per date range dengan strategi yang lebih pintar
 		const branch = selectedBranch.value || 'default';
-		const cacheKey = this.generateSmartCacheKey(type, dateRange, branch);
-
-		// Check cache first dengan TTL yang berbeda per type
-		const cacheOptions = this.getCacheOptionsForType(type);
+		const cacheKey = `smart_${type}_${branch}_${this.normalizeDateRange(dateRange, type)}`;
 
 		return smartCache.get(
 			cacheKey,
 			async () => {
-				// Generate ETag based on date range and type
-				const etagValue = `${type}_${dateRange}_${Date.now()}`;
-
 				let startDate: string, endDate: string;
-
 				switch (type) {
 					case 'daily':
-						// Handle both single date and date range
 						if (dateRange.includes('_')) {
-							const [start, end] = dateRange.split('_');
-							startDate = start;
-							endDate = end;
+							[startDate, endDate] = dateRange.split('_');
 						} else {
-							startDate = dateRange;
-							endDate = dateRange;
+							startDate = endDate = dateRange;
 						}
 						break;
-					case 'weekly':
-						// Calculate week range
-						const date = new Date(dateRange);
-						const startOfWeek = new Date(date);
-						startOfWeek.setDate(date.getDate() - date.getDay());
-						const endOfWeek = new Date(startOfWeek);
-						endOfWeek.setDate(startOfWeek.getDate() + 6);
-						startDate = startOfWeek.toISOString().split('T')[0];
-						endDate = endOfWeek.toISOString().split('T')[0];
+					case 'weekly': {
+						const d = new Date(dateRange);
+						const sow = new Date(d);
+						sow.setDate(d.getDate() - d.getDay());
+						const eow = new Date(sow);
+						eow.setDate(sow.getDate() + 6);
+						startDate = sow.toISOString().slice(0, 10);
+						endDate = eow.toISOString().slice(0, 10);
 						break;
+					}
 					case 'monthly':
 						startDate = `${dateRange}-01`;
-						const lastDay = new Date(
-							parseInt(dateRange.split('-')[0]),
-							parseInt(dateRange.split('-')[1]),
-							0
-						);
-						endDate = lastDay.toISOString().split('T')[0];
+						endDate = new Date(Number(dateRange.split('-')[0]), Number(dateRange.split('-')[1]), 0).toISOString().slice(0, 10);
 						break;
 					case 'yearly':
 						startDate = `${dateRange}-01-01`;
 						endDate = `${dateRange}-12-31`;
 						break;
 					default:
-						startDate = dateRange;
-						endDate = dateRange;
+						startDate = endDate = dateRange;
 				}
 
 				let startWita: string, endWita: string;
-
 				try {
-					// STANDAR: Gunakan WITA untuk query database
-					if (startDate === endDate) {
-						// Single date: gunakan witaRangeToWitaQuery dengan tanggal yang sama
-						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
-							startDate,
-							startDate
-						);
-						startWita = startWitaTemp;
-						endWita = endWitaTemp;
-					} else {
-						// Range date: gunakan witaRangeToWitaQuery
-						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
-							startDate,
-							endDate
-						);
-						startWita = startWitaTemp;
-						endWita = endWitaTemp;
-					}
-				} catch (error) {
-					// Fallback to current date if date conversion fails
+					({ startWita, endWita } = witaRangeToWitaQuery(startDate, endDate));
+				} catch {
 					const today = getTodayWita();
-					try {
-						const { startWita: startWitaTemp, endWita: endWitaTemp } = witaRangeToWitaQuery(
-							today,
-							today
-						);
-						startWita = startWitaTemp;
-						endWita = endWitaTemp;
-					} catch (fallbackError) {
-						// Use hardcoded fallback
-						startWita = today + 'T00:00:00+08:00';
-						endWita = today + 'T23:59:59+08:00';
-					}
+					startWita = today + 'T00:00:00+08:00';
+					endWita = today + 'T23:59:59+08:00';
 				}
 
-				// PARALLEL PAGINATION: Ambil semua buku_kas sekali, lalu turunkan kategorinya di memori
-				const allBukuKas = await this.fetchAllDataParallel('buku_kas', startWita, endWita);
+				const allBukuKas = await dbGet('buku_kas', { start: startWita, end: endWita });
+				const posBukuKas = allBukuKas.filter((i: any) => i.sumber === 'pos');
+				const manualItems = allBukuKas.filter((i: any) => i.sumber && i.sumber !== 'pos');
+				const uncategorized = allBukuKas.filter((i: any) => !i.sumber);
 
-				const posBukuKas = (allBukuKas || []).filter(
-					(item: Record<string, unknown>) => item?.sumber === 'pos'
-				);
-				const manualItems = (allBukuKas || []).filter(
-					(item: Record<string, unknown>) => item?.sumber && item.sumber !== 'pos'
-				);
-				const uncategorizedItems = (allBukuKas || []).filter(
-					(item: Record<string, unknown>) => !item?.sumber
-				);
+				let posItems: any[] = [];
+				if (posBukuKas.length) {
+					const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
+					const bukuKasById = new Map(posBukuKas.map((bk: any) => [bk.id, bk]));
 
-				// Ambil detail transaksi kasir untuk POS yang sudah difilter
-				let posItems: Record<string, unknown>[] = [];
-				if (posBukuKas && posBukuKas.length > 0) {
-					// Gunakan buku_kas_id untuk relasi yang benar
-					const bukuKasIds = posBukuKas
-						.map((bk: Record<string, unknown>) => bk.id as string)
-						.filter(Boolean);
-					const bukuKasById = new Map(
-						posBukuKas.map((bk: Record<string, unknown>) => [bk.id as string, bk])
-					);
-					const transaksiKasirSelect =
-						'id,buku_kas_id,produk_id,custom_name,qty,amount,created_at,produk(name)';
-
-					// Batasi query jika terlalu banyak buku_kas_id
-					let transaksiKasir, errorTransaksiKasir;
-					if (bukuKasIds.length > 1000) {
-						// Gunakan query berdasarkan created_at range sebagai alternatif
-						const { data: transaksiKasirAlt, error: errorTransaksiKasirAlt } = await this.supabase
-							.from('transaksi_kasir')
-							.select(transaksiKasirSelect)
-							.gte('created_at', startWita)
-							.lte('created_at', endWita);
-
-						transaksiKasir = transaksiKasirAlt;
-						errorTransaksiKasir = errorTransaksiKasirAlt;
+					const tkParams: Record<string, string> = {};
+					if (bukuKasIds.length <= 1000) {
+						tkParams.buku_kas_ids = bukuKasIds.join(',');
 					} else {
-						const { data: transaksiKasirData, error: errorTransaksiKasirData } = await this.supabase
-							.from('transaksi_kasir')
-							.select(transaksiKasirSelect)
-							.in('buku_kas_id', bukuKasIds);
-
-						transaksiKasir = transaksiKasirData;
-						errorTransaksiKasir = errorTransaksiKasirData;
+						tkParams.start = startWita;
+						tkParams.end = endWita;
 					}
-
-					if (!errorTransaksiKasir && transaksiKasir) {
-						// Gabungkan data buku_kas dengan transaksi_kasir menggunakan buku_kas_id
-						posItems = transaksiKasir
-							.map((tk: Record<string, unknown>) => {
-								const bukuKas = bukuKasById.get(tk.buku_kas_id as string);
-								return {
-									...tk,
-									buku_kas: bukuKas
-								};
-							})
-							.filter((item: Record<string, unknown>) => item.buku_kas); // Hanya ambil yang ada buku_kas-nya
-					} else {
-						posItems = [];
-					}
+					const tk = await dbGet('transaksi_kasir', tkParams);
+					posItems = tk.map((t: any) => ({ ...t, buku_kas: bukuKasById.get(t.buku_kas_id) })).filter((t: any) => t.buku_kas);
 				}
 
-				// Gunakan data yang lebih lengkap untuk laporan
-				const laporan: Record<string, unknown>[] = [];
-
-				// Tambahkan data POS dari transaksi_kasir
-				posItems.forEach((item: Record<string, unknown>) => {
-					laporan.push({
+				const laporan: any[] = [
+					...posItems.map((item: any) => ({
 						...item,
 						sumber: 'pos',
-						payment_method: (item.buku_kas as any)?.payment_method,
-						waktu: (item.buku_kas as any)?.waktu,
-						jenis: (item.buku_kas as any)?.jenis,
-						tipe: (item.buku_kas as any)?.tipe,
-						description: (item.produk as any)?.name || item.custom_name || 'Item Custom',
+						payment_method: item.buku_kas?.payment_method,
+						waktu: item.buku_kas?.waktu,
+						jenis: item.buku_kas?.jenis,
+						tipe: item.buku_kas?.tipe,
+						description: item.custom_name || 'Item Custom',
 						nominal: item.amount || 0
-					});
-				});
+					})),
+					...manualItems.map((item: any) => ({ ...item, sumber: item.sumber || 'catat', nominal: item.amount || 0 })),
+					...uncategorized.map((item: any) => ({ ...item, sumber: 'lainnya', description: item.description || 'Transaksi Lainnya', nominal: item.amount || 0 }))
+				];
 
-				// Tambahkan data manual/catat
-				(manualItems || []).forEach((item: Record<string, unknown>) => {
-					laporan.push({
-						...item,
-						sumber: item.sumber || 'catat',
-						payment_method: item.payment_method,
-						waktu: item.waktu,
-						jenis: item.jenis,
-						tipe: item.tipe,
-						description: item.description,
-						nominal: item.amount || 0
-					});
-				});
-
-				// Tambahkan transaksi tanpa sumber agar tetap tampil pada laporan
-				uncategorizedItems.forEach((item: Record<string, unknown>) => {
-					laporan.push({
-						...item,
-						sumber: 'lainnya',
-						payment_method: item.payment_method,
-						waktu: item.waktu,
-						jenis: item.jenis,
-						tipe: item.tipe,
-						description: item.description || 'Transaksi Lainnya',
-						nominal: item.amount || 0
-					});
-				});
-
-				// Pemasukan/pengeluaran per jenis
-				const pemasukan = laporan.filter((t: Record<string, unknown>) => t.tipe === 'in');
-				const pengeluaran = laporan.filter((t: Record<string, unknown>) => t.tipe === 'out');
-
-				// Hitung total pemasukan dan pengeluaran
-				const totalPemasukan = pemasukan.reduce(
-					(sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0),
-					0
-				);
-				const totalPengeluaran = pengeluaran.reduce(
-					(sum: number, t: Record<string, unknown>) => sum + ((t.nominal as number) || 0),
-					0
-				);
-
-				// Hitung Laba (Rugi) Kotor
+				const pemasukan = laporan.filter((t) => t.tipe === 'in');
+				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
+				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.nominal || 0), 0);
+				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.nominal || 0), 0);
 				const labaKotor = totalPemasukan - totalPengeluaran;
-
-				// Hitung Pajak Penghasilan (0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0)
 				const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 
-				// Hitung Laba (Rugi) Bersih
-				const labaBersih = labaKotor - pajak;
-
-				const reportData = {
-					summary: {
-						pendapatan: totalPemasukan,
-						pengeluaran: totalPengeluaran,
-						saldo: totalPemasukan - totalPengeluaran,
-						labaKotor,
-						pajak,
-						labaBersih
+				return {
+					data: {
+						summary: { pendapatan: totalPemasukan, pengeluaran: totalPengeluaran, saldo: labaKotor, labaKotor, pajak, labaBersih: labaKotor - pajak },
+						pemasukanUsaha: pemasukan.filter((t) => t.jenis === 'pendapatan_usaha'),
+						pemasukanLain: pemasukan.filter((t) => t.jenis === 'lainnya'),
+						bebanUsaha: pengeluaran.filter((t) => t.jenis === 'beban_usaha'),
+						bebanLain: pengeluaran.filter((t) => t.jenis === 'lainnya'),
+						transactions: laporan
 					},
-					pemasukanUsaha: pemasukan.filter(
-						(t: Record<string, unknown>) => t.jenis === 'pendapatan_usaha'
-					),
-					pemasukanLain: pemasukan.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),
-					bebanUsaha: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'beban_usaha'),
-					bebanLain: pengeluaran.filter((t: Record<string, unknown>) => t.jenis === 'lainnya'),
-					transactions: laporan
+					etag: `${type}_${dateRange}_${Date.now()}`
 				};
-
-				return { data: reportData, etag: etagValue };
 			},
-			cacheOptions
+			this.getCacheOptionsForType(type)
 		);
 	}
 
-	// Real-time data subscription
+	// ── Realtime ──────────────────────────────────────────────────────────────
+
 	subscribeToRealtimeData(table: string, callback: (payload: Record<string, unknown>) => void) {
 		if (!browser) return null;
-
-		const subscription = this.supabase
-			.channel(`realtime_${table}`)
-			.on('postgres_changes', { event: '*', schema: 'public', table }, callback)
-			.subscribe();
-
-		return subscription;
+		const branch = selectedBranch.value || 'default';
+		const channelName = `zatiaras:${branch}`;
+		return subscribeToChannel(channelName, table, callback);
 	}
+
+	// ── Cache invalidation ────────────────────────────────────────────────────
 
 	private async invalidateDashboardCachesForBranch(branch: string) {
 		await Promise.all([
@@ -763,426 +400,172 @@ export class DataService {
 	}
 
 	async invalidateDashboardCaches(branch?: string) {
-		if (branch) {
-			await this.invalidateDashboardCachesForBranch(branch);
-			return;
-		}
-
-		await Promise.all([
-			smartCache.invalidate(`${CACHE_KEYS.DASHBOARD_STATS}_*`),
-			smartCache.invalidate(`${CACHE_KEYS.BEST_SELLERS}_*`),
-			smartCache.invalidate(`${CACHE_KEYS.WEEKLY_INCOME}_*`)
-		]);
+		const b = branch || selectedBranch.value || 'default';
+		await this.invalidateDashboardCachesForBranch(b);
 	}
 
-	// SMART CACHE INVALIDATION: Invalidate cache when data changes
 	async invalidateCacheOnChange(table: string) {
 		const branch = selectedBranch.value || 'default';
-
 		switch (table) {
 			case 'produk':
 			case 'kategori':
 			case 'tambahan':
-				await smartCache.invalidate(`${CACHE_KEYS.PRODUCTS}_${branch}`);
-				await smartCache.invalidate(`${CACHE_KEYS.CATEGORIES}_${branch}`);
-				await smartCache.invalidate(`${CACHE_KEYS.ADDONS}_${branch}`);
+				await Promise.all([
+					smartCache.invalidate(`${CACHE_KEYS.PRODUCTS}_${branch}`),
+					smartCache.invalidate(`${CACHE_KEYS.CATEGORIES}_${branch}`),
+					smartCache.invalidate(`${CACHE_KEYS.ADDONS}_${branch}`)
+				]);
 				break;
 			case 'buku_kas':
 			case 'transaksi_kasir':
 				await this.invalidateDashboardCaches(branch);
 				await CacheUtils.invalidateReportData();
-				// SMART: Invalidate semua report caches yang mungkin terpengaruh
 				await this.invalidateAllReportCaches();
 				break;
 			case 'profil':
 				await smartCache.invalidate(CACHE_KEYS.USER_PROFILE);
 				await smartCache.invalidate(CACHE_KEYS.USER_ROLE);
 				break;
-			case 'pengaturan':
-				await smartCache.invalidate(CACHE_KEYS.SECURITY_SETTINGS);
-				break;
 		}
 	}
 
-	// SMART CACHE INVALIDATION: Invalidate semua report caches
 	async invalidateAllReportCaches() {
-		const reportTypes = ['daily', 'weekly', 'monthly', 'yearly'];
-		const invalidationPromises = reportTypes.map((type) => this.invalidateReportCache(type));
-		await Promise.allSettled(invalidationPromises);
+		await Promise.allSettled(
+			['daily', 'weekly', 'monthly', 'yearly'].map((type) => this.invalidateReportCache(type))
+		);
 	}
 
-	// Get cache statistics
-	getCacheStats() {
-		return smartCache.getStats();
+	async invalidateReportCache(type: string, dateRange?: string) {
+		const branch = selectedBranch.value || 'default';
+		if (dateRange) {
+			await smartCache.invalidate(this.generateSmartCacheKey(type, dateRange, branch));
+		} else {
+			await smartCache.invalidate(`smart_${type}_${branch}_*`);
+		}
 	}
 
-	// Clear all caches
-	async clearAllCaches() {
-		await smartCache.clear();
+	getCacheStats() { return smartCache.getStats(); }
+	async clearAllCaches() { await smartCache.clear(); }
+
+	// ── Helpers ───────────────────────────────────────────────────────────────
+
+	private generateSmartCacheKey(type: string, dateRange: string, branch: string) {
+		return `smart_${type}_${branch}_${this.normalizeDateRange(dateRange, type)}`;
 	}
 
-	// PARALLEL PAGINATION: Fetch all data using parallel queries
+	private normalizeDateRange(dateRange: string, type: string): string {
+		if (type === 'weekly') {
+			const d = new Date(dateRange);
+			const sow = new Date(d);
+			sow.setDate(d.getDate() - d.getDay());
+			return sow.toISOString().slice(0, 10);
+		}
+		return dateRange;
+	}
+
+	private getCacheOptionsForType(type: string): any {
+		const base = { backgroundRefresh: true, staleWhileRevalidate: true };
+		const ttlMap: Record<string, number> = { daily: 300000, weekly: 900000, monthly: 1800000, yearly: 3600000 };
+		return { ...base, ttl: ttlMap[type] || 300000 };
+	}
+
+	// ── Parallel fetch (kept for API compatibility) ───────────────────────────
+
 	async fetchAllDataParallel(
 		table: string,
 		startTime: string,
 		endTime: string,
-		additionalFilters: Record<string, unknown> = {}
+		_filters: Record<string, unknown> = {}
 	): Promise<Record<string, unknown>[]> {
-		try {
-			// First, get total count to determine how many batches we need
-			let query = this.supabase
-				.from(table)
-				.select('*', { count: 'exact', head: true })
-				.gte('waktu', startTime)
-				.lte('waktu', endTime);
-
-			// Apply additional filters
-			Object.keys(additionalFilters).forEach((key) => {
-				const filter = additionalFilters[key];
-				if (key === 'cabang') {
-					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
-					return;
-				}
-				if (filter !== null && typeof filter === 'object' && 'neq' in filter) {
-					query = query.neq(key, (filter as { neq: unknown }).neq);
-				} else {
-					query = query.eq(key, filter);
-				}
-			});
-
-			const { count, error: countError } = await query;
-
-			if (countError) {
-				return [];
-			}
-
-			if (!count || count === 0) {
-				return [];
-			}
-
-			// Calculate number of batches needed
-			const batchSize = 1000;
-			const totalBatches = Math.ceil(count / batchSize);
-
-			// Create parallel queries for all batches
-			const batchPromises = [];
-
-			for (let i = 0; i < totalBatches; i++) {
-				const offset = i * batchSize;
-				const promise = this.fetchBatch(
-					table,
-					startTime,
-					endTime,
-					offset,
-					batchSize,
-					additionalFilters
-				);
-				batchPromises.push(promise);
-			}
-
-			// Execute all queries in parallel
-			const batchResults = await Promise.all(batchPromises);
-
-			// Combine all results
-			const allData = [];
-			for (const batchData of batchResults) {
-				if (batchData && batchData.length > 0) {
-					allData.push(...batchData);
-				}
-			}
-
-			return allData;
-		} catch (error) {
-			return [];
-		}
-	}
-
-	// Helper function to fetch a single batch
-	private async fetchBatch(
-		table: string,
-		startTime: string,
-		endTime: string,
-		offset: number,
-		limit: number,
-		additionalFilters: Record<string, unknown> = {}
-	): Promise<Record<string, unknown>[]> {
-		try {
-			let query = this.supabase
-				.from(table)
-				.select('*')
-				.gte('waktu', startTime)
-				.lte('waktu', endTime)
-				.range(offset, offset + limit - 1)
-				.order('waktu', { ascending: true });
-
-			// Apply additional filters
-			Object.keys(additionalFilters).forEach((key) => {
-				const filter = additionalFilters[key];
-				if (key === 'cabang') {
-					// Skip cabang filter - branch is handled by getSupabaseClient(branch)
-					return;
-				}
-				if (filter !== null && typeof filter === 'object' && 'neq' in filter) {
-					query = query.neq(key, (filter as { neq: unknown }).neq);
-				} else {
-					query = query.eq(key, filter);
-				}
-			});
-
-			const { data, error } = await query;
-
-			if (error) {
-				return [];
-			}
-
-			return data || [];
-		} catch (error) {
-			return [];
-		}
-	}
-
-	// SMART CACHING: Generate cache key yang lebih pintar
-	private generateSmartCacheKey(type: string, dateRange: string, branch: string): string {
-		// Normalize date range untuk konsistensi cache
-		const normalizedRange = this.normalizeDateRange(dateRange, type);
-		return `smart_${type}_${branch}_${normalizedRange}`;
-	}
-
-	// SMART CACHING: Normalize date range untuk cache consistency
-	private normalizeDateRange(dateRange: string, type: string): string {
-		switch (type) {
-			case 'daily':
-				if (dateRange.includes('_')) {
-					const [start, end] = dateRange.split('_');
-					return `${start}_${end}`;
-				}
-				return dateRange;
-			case 'weekly':
-				// Normalize ke start of week
-				const date = new Date(dateRange);
-				const startOfWeek = new Date(date);
-				startOfWeek.setDate(date.getDate() - date.getDay());
-				return startOfWeek.toISOString().split('T')[0];
-			case 'monthly':
-				// Normalize ke YYYY-MM format
-				return dateRange;
-			case 'yearly':
-				// Normalize ke YYYY format
-				return dateRange;
-			default:
-				return dateRange;
-		}
-	}
-
-	// SMART CACHING: Get cache options berdasarkan type
-	private getCacheOptionsForType(type: string): any {
-		const baseOptions = {
-			backgroundRefresh: true,
-			staleWhileRevalidate: true
-		};
-
-		switch (type) {
-			case 'daily':
-				return {
-					...baseOptions,
-					ttl: 300000, // 5 menit - data harian lebih sering berubah
-					backgroundRefreshInterval: 60000 // 1 menit
-				};
-			case 'weekly':
-				return {
-					...baseOptions,
-					ttl: 900000, // 15 menit - data mingguan lebih stabil
-					backgroundRefreshInterval: 300000 // 5 menit
-				};
-			case 'monthly':
-				return {
-					...baseOptions,
-					ttl: 1800000, // 30 menit - data bulanan sangat stabil
-					backgroundRefreshInterval: 900000 // 15 menit
-				};
-			case 'yearly':
-				return {
-					...baseOptions,
-					ttl: 3600000, // 1 jam - data tahunan sangat stabil
-					backgroundRefreshInterval: 1800000 // 30 menit
-				};
-			default:
-				return {
-					...baseOptions,
-					ttl: 300000, // 5 menit default
-					backgroundRefreshInterval: 60000
-				};
-		}
-	}
-
-	// SMART CACHING: Invalidate cache berdasarkan date range
-	async invalidateReportCache(type: string, dateRange?: string) {
-		const branch = selectedBranch.value || 'default';
-		if (dateRange) {
-			// Invalidate specific date range
-			const cacheKey = this.generateSmartCacheKey(type, dateRange, branch);
-			await smartCache.invalidate(cacheKey);
-		} else {
-			// Invalidate all report caches for this type
-			const pattern = `smart_${type}_${branch}_*`;
-			await smartCache.invalidate(pattern);
-		}
-	}
-
-	// SMART CACHING: Preload data untuk date ranges yang sering digunakan
-	async preloadCommonDateRanges() {
-		const today = new Date();
-		const commonRanges = [
-			// Hari ini
-			{ type: 'daily', range: today.toISOString().split('T')[0] },
-			// Kemarin
-			{
-				type: 'daily',
-				range: new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-			},
-			// Minggu ini
-			{ type: 'weekly', range: today.toISOString().split('T')[0] },
-			// Bulan ini
-			{
-				type: 'monthly',
-				range: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
-			},
-			// Tahun ini
-			{ type: 'yearly', range: today.getFullYear().toString() }
-		];
-
-		// Preload secara parallel
-		const preloadPromises = commonRanges.map(({ type, range }) =>
-			this.getReportData(range, type as any).catch((error) => {
-				return null;
-			})
-		);
-
-		await Promise.allSettled(preloadPromises);
+		return dbGet(table, { start: startTime, end: endTime });
 	}
 }
 
-// Export singleton instance
 export const dataService = DataService.getInstance();
 
-// Real-time subscription manager
+// ─── RealtimeManager ─────────────────────────────────────────────────────────
+
 export class RealtimeManager {
-	private subscriptions = new Map<string, RealtimeChannel>();
+	private unsubFns = new Map<string, (() => void) | null>();
 	private pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	private latestPayload = new Map<string, Record<string, unknown>>();
 
 	subscribe(table: string, callback: (payload: Record<string, unknown>) => void) {
-		// Unsubscribe if already subscribed
-		if (this.subscriptions.has(table)) {
-			this.unsubscribe(table);
-		}
+		if (this.unsubFns.has(table)) this.unsubscribe(table);
 
-		const subscription = dataService.subscribeToRealtimeData(table, (payload) => {
+		const unsub = dataService.subscribeToRealtimeData(table, (payload) => {
 			this.latestPayload.set(table, payload);
-			if (this.pendingTimers.has(table)) {
-				return;
-			}
+			if (this.pendingTimers.has(table)) return;
 
-			const timerId = setTimeout(async () => {
+			const id = setTimeout(async () => {
 				this.pendingTimers.delete(table);
 				const latest = this.latestPayload.get(table);
 				this.latestPayload.delete(table);
-
 				await dataService.invalidateCacheOnChange(table);
 				if (latest !== undefined) callback(latest);
 			}, 250);
-
-			this.pendingTimers.set(table, timerId);
+			this.pendingTimers.set(table, id);
 		});
 
-		if (subscription) {
-			this.subscriptions.set(table, subscription);
-		}
+		this.unsubFns.set(table, unsub);
 	}
 
 	unsubscribe(table: string) {
-		const pending = this.pendingTimers.get(table);
-		if (pending) {
-			clearTimeout(pending);
-			this.pendingTimers.delete(table);
-		}
+		const timer = this.pendingTimers.get(table);
+		if (timer) { clearTimeout(timer); this.pendingTimers.delete(table); }
 		this.latestPayload.delete(table);
-
-		const subscription = this.subscriptions.get(table);
-		if (subscription) {
-			subscription.unsubscribe();
-			this.subscriptions.delete(table);
-		}
+		const unsub = this.unsubFns.get(table);
+		if (unsub) { unsub(); this.unsubFns.delete(table); }
 	}
 
 	unsubscribeAll() {
-		for (const timerId of this.pendingTimers.values()) {
-			clearTimeout(timerId);
-		}
+		for (const id of this.pendingTimers.values()) clearTimeout(id);
 		this.pendingTimers.clear();
 		this.latestPayload.clear();
-
-		for (const [table, subscription] of this.subscriptions.entries()) {
-			subscription.unsubscribe();
-		}
-		this.subscriptions.clear();
+		for (const unsub of this.unsubFns.values()) unsub?.();
+		this.unsubFns.clear();
 	}
 }
 
 export const realtimeManager = new RealtimeManager();
 
-// Auto-cleanup on page unload
 if (browser) {
-	window.addEventListener('beforeunload', () => {
-		realtimeManager.unsubscribeAll();
-	});
+	window.addEventListener('beforeunload', () => realtimeManager.unsubscribeAll());
 }
+
+// ─── Offline sync ─────────────────────────────────────────────────────────────
 
 export async function syncPendingTransactions() {
 	const pendings = await getPendingTransactions();
 	if (!pendings.length) return;
+
 	for (const trx of pendings) {
 		let attempt = 0;
-		const maxAttempts = 3;
-		const baseDelay = 800;
-		while (attempt < maxAttempts) {
+		while (attempt < 3) {
 			try {
-				let bukuKasId = null;
 				if (trx.bukuKas) {
-					await dataService.supabaseClient.from('buku_kas').insert(trx.bukuKas);
-					const { data: lastBukuKas } = await dataService.supabaseClient
-						.from('buku_kas')
-						.select('id')
-						.eq('transaction_id', trx.bukuKas.transaction_id)
-						.order('waktu', { ascending: false })
-						.limit(1)
-						.maybeSingle();
-					bukuKasId = lastBukuKas?.id || null;
+					await dbPost('buku_kas', 'insert', trx.bukuKas);
+					if (trx.transaksiKasir?.length) {
+						const tkRows = trx.transaksiKasir.map((item: any) => ({
+							...item,
+							buku_kas_id: trx.bukuKas.id
+						}));
+						await dbPost('transaksi_kasir', 'insert', tkRows);
+					}
 				} else {
-					await dataService.supabaseClient.from('buku_kas').insert(trx);
+					await dbPost('buku_kas', 'insert', trx);
 				}
-				if (trx.transaksiKasir && Array.isArray(trx.transaksiKasir) && trx.transaksiKasir.length) {
-					const transaksiKasirWithId = trx.transaksiKasir.map((item: Record<string, unknown>) => ({
-						...item,
-						buku_kas_id: bukuKasId
-					}));
-					await dataService.supabaseClient.from('transaksi_kasir').insert(transaksiKasirWithId);
-				}
-				break; // sukses
-			} catch (e) {
+				break;
+			} catch {
 				attempt++;
-				if (attempt >= maxAttempts) {
-					// Gagal permanen pada item ini, lanjutkan item berikutnya
-					break;
-				}
-				await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt - 1)));
+				if (attempt >= 3) break;
+				await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt - 1)));
 			}
 		}
 	}
+
 	await clearPendingTransactions();
-	if (typeof window !== 'undefined') {
-		window.dispatchEvent(new CustomEvent('pending-synced'));
-	}
+	window?.dispatchEvent(new CustomEvent('pending-synced'));
 }
 
 if (typeof window !== 'undefined') {

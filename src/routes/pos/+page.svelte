@@ -78,7 +78,7 @@
 	let kategoriData: PosCategory[] = [];
 	let tambahanData: PosAddOn[] = [];
 
-	let isLoadingProducts = true;
+	let isLoadingProducts = $state(true);
 
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching

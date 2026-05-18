@@ -270,7 +270,7 @@
 			onclick={() => goto('/pengaturan')}
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 		>
-			<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+			<ArrowLeft class="h-5 w-5 text-gray-600" />
 		</button>
 		<h1 class="flex-1 text-xl font-bold text-gray-800">Riwayat Transaksi Hari Ini</h1>
 		<button
@@ -278,10 +278,7 @@
 			class="ml-2 rounded-xl bg-pink-50 p-2 transition-colors hover:bg-pink-100"
 			aria-label="Refresh"
 		>
-			<svelte:component
-				this={RefreshCw}
-				class="h-5 w-5 text-pink-500 {loading ? 'animate-spin' : ''}"
-			/>
+			<RefreshCw class="h-5 w-5 text-pink-500 {loading ? 'animate-spin' : ''}" />
 		</button>
 	</div>
 
@@ -351,7 +348,7 @@
 			</div>
 		{:else}
 			<div class="flex flex-col gap-2">
-				{#each transaksiHariIni as trx}
+				{#each transaksiHariIni as trx, _i (_i)}
 					<div
 						class="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow transition-colors hover:bg-pink-50"
 						onclick={() => openDetail(trx)}

@@ -47,7 +47,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('X-Frame-Options', 'DENY');
 	response.headers.set('X-Content-Type-Options', 'nosniff');
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-	response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+	response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+	response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 	response.headers.set(
 		'Content-Security-Policy',
 		"default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://openrouter.ai https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; media-src 'self' data: blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
