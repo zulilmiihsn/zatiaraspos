@@ -21,7 +21,7 @@
 
 	// PWA Installation - Web Component
 	let pwaElement: any = null;
-	let isPwaLibraryLoaded = false;
+	let isPwaLibraryLoaded = $state(false);
 
 	// Type definitions
 	interface PengaturanData {
@@ -32,20 +32,20 @@
 	let pengaturanData = null;
 
 	// State untuk loading
-	let isLoading = true;
-	let isProfileLoaded = false;
+	let isLoading = $state(true);
+	let isProfileLoaded = $state(false);
 	let isPengaturanLoaded = false;
 
 	let currentUserRole = $derived(userRole.value || '');
-	let showLogoutModal = false;
+	let showLogoutModal = $state(false);
 	let currentPage = 'security';
 
 	// Removed showPinModal, pin, errorTimeout, isClosing
-	let showPwaInstalledToast = false;
+	let showPwaInstalledToast = $state(false);
 	let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
 
-	let showNotification = false;
-	let notificationMessage = '';
+	let showNotification = $state(false);
+	let notificationMessage = $state('');
 	let notificationTimeout: any = null;
 
 	// Toast notification state
@@ -62,16 +62,16 @@
 		showToast = true;
 	}
 
-	let LogOut: any,
-		Shield: any,
-		Palette: any,
-		Database: any,
-		HelpCircle: any,
-		Settings: any,
-		Bell: any,
-		Download: any,
-		Printer: any,
-		History: any;
+	let LogOut: any = $state(null),
+		Shield: any = $state(null),
+		Palette: any = $state(null),
+		Database: any = $state(null),
+		HelpCircle: any = $state(null),
+		Settings: any = $state(null),
+		Bell: any = $state(null),
+		Download: any = $state(null),
+		Printer: any = $state(null),
+		History: any = $state(null);
 
 	function showNotif(message: string) {
 		notificationMessage = message;
@@ -352,21 +352,7 @@
 	// Get role icon once and store it
 	let roleIcon = $derived(getRoleIcon());
 
-	// Tambahkan fungsi upload gambar menu ke bucket 'gambar-menu' Supabase Storage
-	async function uploadMenuImage(file: File, menuId: string) {
-		const ext = file.name.split('.').pop();
-		const filePath = `menu-${menuId}-${Date.now()}.${ext}`;
-		// Upload ke bucket 'gambar-menu'
-		const { data, error } = await getSupabaseClient(selectedBranch.value)
-			.storage.from('gambar-menu')
-			.upload(filePath, file, { upsert: true });
-		if (error) throw error;
-		// Dapatkan public URL
-		const { data: publicUrlData } = getSupabaseClient(selectedBranch.value)
-			.storage.from('gambar-menu')
-			.getPublicUrl(filePath);
-		return publicUrlData.publicUrl;
-	}
+
 </script>
 
 <div class="page-content flex min-h-screen flex-col bg-gray-50">

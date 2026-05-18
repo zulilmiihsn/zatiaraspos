@@ -353,11 +353,24 @@
 			try {
 				const menu = menus.find((m) => m.id === menuIdToDelete);
 				if (menu?.gambar) {
-					const path = menu.gambar.split('/').pop();
-					if (path) {
-						await getSupabaseClient(selectedBranch.value)
-							.storage.from('gambar-menu')
-							.remove([path]);
+					let key = '';
+					if (menu.gambar.includes('/produk/')) {
+						key = 'produk/' + menu.gambar.split('/produk/').pop();
+					} else {
+						const parts = menu.gambar.split('/');
+						const filename = parts.pop();
+						if (filename) {
+							key = `produk/${filename}`;
+						}
+					}
+					if (key) {
+						await fetch('/api/upload', {
+							method: 'DELETE',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({ key })
+						});
 					}
 				}
 				const { error } = await getSupabaseClient(selectedBranch.value)
@@ -748,15 +761,22 @@
 	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: number) {
 		const res = await fetch(dataUrl);
 		const blob = await res.blob();
-		const filePath = `menu-${menuId}-${Date.now()}.jpg`;
-		const { data, error } = await getSupabaseClient(selectedBranch.value)
-			.storage.from('gambar-menu')
-			.upload(filePath, blob, { upsert: true });
-		if (error) throw error;
-		const { data: publicUrlData } = getSupabaseClient(selectedBranch.value)
-			.storage.from('gambar-menu')
-			.getPublicUrl(filePath);
-		return publicUrlData.publicUrl;
+		const file = new File([blob], `menu-${menuId}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+		const formData = new FormData();
+		formData.append('file', file);
+
+		const uploadRes = await fetch('/api/upload', {
+			method: 'POST',
+			body: formData
+		});
+
+		if (!uploadRes.ok) {
+			const err = await uploadRes.json();
+			throw new Error(err.error || 'Gagal mengunggah gambar');
+		}
+
+		const data = await uploadRes.json();
+		return data.url;
 	}
 
 	function blockNextClick(e: Event) {
