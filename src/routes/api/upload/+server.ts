@@ -5,7 +5,27 @@ import { v4 as uuidv4 } from 'uuid';
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
-export async function POST({ request }) {
+export async function GET({ url, platform }) {
+	const key = url.searchParams.get('key');
+	const bucket = platform?.env?.STORAGE;
+	if (!key || !bucket) {
+		return json({ error: 'Not found' }, { status: 404 });
+	}
+
+	const object = await bucket.get(key);
+	if (!object) {
+		return json({ error: 'Not found' }, { status: 404 });
+	}
+
+	return new Response(object.body, {
+		headers: {
+			'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+			'Cache-Control': 'public, max-age=31536000, immutable'
+		}
+	});
+}
+
+export async function POST({ request, platform }) {
 	try {
 		const formData = await request.formData();
 		const file = formData.get('file') as File | null;
@@ -26,7 +46,7 @@ export async function POST({ request }) {
 		const key = `produk/${uuidv4()}.${ext}`;
 		const buffer = await file.arrayBuffer();
 
-		const publicUrl = await uploadToR2(key, buffer, file.type);
+		const publicUrl = await uploadToR2(key, buffer, file.type, platform?.env?.STORAGE);
 
 		return json({ url: publicUrl, key });
 	} catch (err) {
@@ -35,15 +55,15 @@ export async function POST({ request }) {
 	}
 }
 
-export async function DELETE({ request }) {
+export async function DELETE({ request, platform }) {
 	try {
-		const { key } = await request.json() as { key: string };
+		const { key } = (await request.json()) as { key: string };
 
 		if (!key) {
 			return json({ error: 'No key provided' }, { status: 400 });
 		}
 
-		await deleteFromR2(key);
+		await deleteFromR2(key, platform?.env?.STORAGE);
 		return json({ success: true });
 	} catch (err) {
 		console.error('[upload] Delete error:', err);

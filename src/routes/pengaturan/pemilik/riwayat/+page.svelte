@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { onMount, onDestroy } from 'svelte';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -14,6 +12,7 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import { dataService } from '$lib/services/dataService';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
@@ -66,15 +65,10 @@
 
 		try {
 			// Ambil data dari buku_kas
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('buku_kas')
-				.select('*')
-				.gte('waktu', start)
-				.lte('waktu', end)
-				.order('waktu', { ascending: false });
+			const data = await dataService.getRows('buku_kas', { start, end });
 
 			transaksiHariIni = [];
-			if (data && !error) {
+			if (data) {
 				transaksiHariIni.push(
 					...data.map((t: BukuKasRecord) => ({
 						id: t.id,
@@ -144,55 +138,24 @@
 		try {
 			if (transaksiToDelete.sumber === 'catat') {
 				// Untuk transaksi manual/catat, hapus dari buku_kas saja
-				const { error } = await getSupabaseClient(selectedBranch.value)
-					.from('buku_kas')
-					.delete()
-					.eq('id', transaksiToDelete.id);
-
-				if (error) {
-					throw error;
-				}
+				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
 			} else if (transaksiToDelete.sumber === 'pos') {
 				// Untuk transaksi POS, hapus detail items dulu, lalu hapus total pembayaran
 				const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
 
 				// Hapus detail transaksi dari transaksi_kasir
-				const { error: kasirError } = await getSupabaseClient(selectedBranch.value)
-					.from('transaksi_kasir')
-					.delete()
-					.eq('transaction_id', transactionId);
-
-				if (kasirError) {
-					// Jangan throw error karena mungkin tidak ada items
-				}
+				await dataService.deleteRows('transaksi_kasir', { transaction_id: transactionId });
 
 				// Hapus total pembayaran dari buku_kas - coba dengan ID langsung dulu
-				const { error: bukuError } = await getSupabaseClient(selectedBranch.value)
-					.from('buku_kas')
-					.delete()
-					.eq('id', transaksiToDelete.id);
-
-				if (bukuError) {
+				try {
+					await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
+				} catch {
 					// Coba dengan transaction_id sebagai fallback
-					const { error: bukuError2 } = await getSupabaseClient(selectedBranch.value)
-						.from('buku_kas')
-						.delete()
-						.eq('transaction_id', transactionId);
-
-					if (bukuError2) {
-						throw bukuError2;
-					}
+					await dataService.deleteRows('buku_kas', { transaction_id: transactionId });
 				}
 			} else {
 				// Fallback: hapus berdasarkan ID langsung
-				const { error } = await getSupabaseClient(selectedBranch.value)
-					.from('buku_kas')
-					.delete()
-					.eq('id', transaksiToDelete.id);
-
-				if (error) {
-					throw error;
-				}
+				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
 			}
 
 			showDeleteModal = false;
@@ -228,11 +191,11 @@
 		if (currentMethod === dbMethod) return;
 		loading = true;
 		try {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('buku_kas')
-				.update({ payment_method: dbMethod })
-				.eq('id', selectedTransaksi.id);
-			if (error) throw error;
+			await dataService.updateRows(
+				'buku_kas',
+				{ payment_method: dbMethod },
+				{ id: selectedTransaksi.id }
+			);
 			selectedTransaksi = { ...selectedTransaksi, payment_method: dbMethod };
 			toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
 			setTimeout(() => {
@@ -255,14 +218,10 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.select('*')
-				.eq('id', 1)
-				.single();
+			const data = await dataService.getOne('pengaturan');
 			if (data) {
 				pengaturanStruk = data;
-			} else if (error) {
+			} else {
 				const local = localStorage.getItem('pengaturan_struk');
 				if (local) pengaturanStruk = JSON.parse(local);
 			}
@@ -279,12 +238,9 @@
 		try {
 			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				const { data } = await getSupabaseClient(selectedBranch.value)
-					.from('transaksi_kasir')
-					.select('*, produk:produk_id(name)')
-					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
-
-				if (data) items = data;
+				items = await dataService.getRows('transaksi_kasir', {
+					transaction_id: selectedTransaksi.transaction_id || selectedTransaksi.id
+				});
 			}
 
 			const pengaturan = pengaturanStruk || {

@@ -88,20 +88,12 @@
 		// Setup real-time subscriptions
 		setupRealtimeSubscriptions();
 
-		// Jika role belum ada di store, coba validasi dengan Supabase
+		// Jika role belum ada di store, validasi dari session backend.
 		if (!currentUserRole) {
-			const {
-				data: { session }
-			} = await dataService.supabaseClient.auth.getSession();
-			if (session?.user) {
-				const { data: profile } = await dataService.supabaseClient
-					.from('profil')
-					.select('role, username')
-					.eq('id', session.user.id)
-					.single();
-				if (profile) {
-					setUserRole(profile.role, profile);
-				}
+			const res = await fetch('/api/session');
+			if (res.ok) {
+				const session = await res.json();
+				if (session?.user) setUserRole(session.user.role, session.user);
 			}
 		}
 	});

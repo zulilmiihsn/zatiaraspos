@@ -34,6 +34,42 @@ export function getTodayWita(): string {
 	return `${year}-${month}-${day}`;
 }
 
+function parseYmd(dateStr: string): { year: number; month: number; day: number } {
+	const [year, month, day] = dateStr.split('-').map(Number);
+	if (!year || !month || !day) throw new Error(`Invalid date: ${dateStr}`);
+	return { year, month, day };
+}
+
+function formatUtcYmd(date: Date): string {
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+	const day = String(date.getUTCDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
+export function addDaysYmd(dateStr: string, days: number): string {
+	const { year, month, day } = parseYmd(dateStr);
+	return formatUtcYmd(new Date(Date.UTC(year, month - 1, day + days)));
+}
+
+export function getLastDaysYmdWita(days: number): string[] {
+	const today = getTodayWita();
+	const total = Math.max(1, Math.floor(days));
+	return Array.from({ length: total }, (_, index) => addDaysYmd(today, index - total + 1));
+}
+
+export function getMonthEndYmd(monthStr: string): string {
+	const [year, month] = monthStr.split('-').map(Number);
+	if (!year || !month) throw new Error(`Invalid month: ${monthStr}`);
+	return formatUtcYmd(new Date(Date.UTC(year, month, 0)));
+}
+
+export function formatDateYmdWita(date: string | Date): string {
+	return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Makassar' }).format(
+		typeof date === 'string' ? new Date(date) : date
+	);
+}
+
 // STANDAR: Dapatkan waktu sekarang dalam WITA (YYYY-MM-DDTHH:mm:ss)
 export function getNowWita(): string {
 	const now = new Date();

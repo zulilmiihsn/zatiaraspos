@@ -2,6 +2,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { dataService } from '$lib/services/dataService';
+	import { bukaToko, tutupToko } from '$lib/services/sesiTokoService';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import type { BukuKasRecord, TokoSession } from '$lib/types';
 
@@ -39,10 +40,7 @@
 
 	async function hitungRingkasanTutup() {
 		if (!sesiAktif) return;
-		const { data: kasRaw } = await dataService.supabaseClient
-			.from('buku_kas')
-			.select('*')
-			.eq('id_sesi_toko', sesiAktif.id);
+		const kasRaw = await dataService.getRows('buku_kas', { id_sesi_toko: sesiAktif.id });
 
 		let kas: BukuKasRecord[] = Array.isArray(kasRaw) ? kasRaw : [];
 
@@ -76,24 +74,14 @@
 			pinErrorToko = 'Modal awal wajib diisi dan valid';
 			return;
 		}
-		await dataService.supabaseClient.from('sesi_toko').insert({
-			opening_cash: modalAwalRaw,
-			opening_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
-			is_active: true
-		});
+		await bukaToko(modalAwalRaw, witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]));
 		show = false;
 		onTokoStatusChanged();
 	}
 
 	async function handleTutupToko() {
 		if (!sesiAktif) return;
-		await dataService.supabaseClient
-			.from('sesi_toko')
-			.update({
-				closing_time: witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]),
-				is_active: false
-			})
-			.eq('id', sesiAktif.id);
+		await tutupToko(sesiAktif.id, witaToUtcISO(getTodayWita(), getNowWita().split('T')[1]));
 		show = false;
 		onTokoStatusChanged();
 	}

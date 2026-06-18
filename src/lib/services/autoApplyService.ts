@@ -69,9 +69,47 @@ export class AutoApplyService {
 
 	private async createTransaction(data: any): Promise<void> {
 		if (!data.type) throw new Error('Type transaksi tidak valid');
-		if (!data.amount || data.amount <= 0) throw new Error('Amount transaksi tidak valid atau kosong');
+		if (!data.amount || data.amount <= 0)
+			throw new Error('Amount transaksi tidak valid atau kosong');
 		if (!data.description || data.description.trim() === '')
 			throw new Error('Description transaksi tidak valid atau kosong');
+
+		if (data.type === 'penjualan') {
+			const products = Array.isArray(data.products) && data.products.length ? data.products : [];
+			const res = await apiFetch('/api/pos/transaction', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					idempotency_key: crypto.randomUUID(),
+					customer_name: data.customerName || null,
+					payment_method: data.payment_method || 'tunai',
+					cash_received: Number(data.amount),
+					items: products.length
+						? products.map((product: any) => ({
+								product_id: product.id || null,
+								custom_name: product.id ? null : product.name || data.description,
+								custom_price: product.id ? null : Number(product.price || data.amount),
+								qty: product.quantity || product.qty || 1,
+								add_on_ids: (product.addOns || []).map((addOn: any) => addOn.id).filter(Boolean)
+							}))
+						: [
+								{
+									product_id: null,
+									custom_name: String(data.description).trim(),
+									custom_price: Number(data.amount),
+									qty: 1,
+									add_on_ids: []
+								}
+							]
+				})
+			});
+
+			if (!res.ok) {
+				const err = await res.json().catch(() => ({}));
+				throw new Error(`Gagal menyimpan transaksi POS: ${err?.error ?? res.statusText}`);
+			}
+			return;
+		}
 
 		const branch = selectedBranch.value;
 		const tipe = data.type === 'pemasukan' ? 'in' : data.type === 'penjualan' ? 'in' : 'out';
@@ -210,7 +248,10 @@ export class AutoApplyService {
 		return map[type] || 'lainnya';
 	}
 
-	validateRecommendations(recommendations: AiRecommendation[]): { valid: boolean; errors: string[] } {
+	validateRecommendations(recommendations: AiRecommendation[]): {
+		valid: boolean;
+		errors: string[];
+	} {
 		const errors: string[] = [];
 		recommendations.forEach((rec, i) => {
 			if (!rec.id) errors.push(`Rekomendasi ${i + 1}: ID tidak valid`);

@@ -1,6 +1,9 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { getSupabaseClient, isValidBranch } from '$lib/database/supabaseClient';
 import bcrypt from 'bcryptjs';
+import { and, eq } from 'drizzle-orm';
+import { profil } from '$lib/database/schema';
+import { getDrizzleDb, normalizeBranch, type BranchId } from '$lib/server/branchResolver';
+import { publishBranchEvent } from '$lib/server/realtimePublisher';
 
 const SECURITY_WINDOW_MS = 15 * 60 * 1000;
 const SECURITY_MAX_ATTEMPTS = 3;
@@ -34,7 +37,7 @@ function isStrongPassword(password: string): boolean {
 	return !commonPasswords.some((item) => lowered.includes(item));
 }
 
-export const POST: RequestHandler = async ({ request, getClientAddress, locals }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress, locals, platform }) => {
 	try {
 		const requesterRole = locals.authSession?.role;
 		if (requesterRole !== 'pemilik' && requesterRole !== 'admin') {
@@ -74,7 +77,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 			);
 		}
 
-		if (!isValidBranch(branch)) {
+		let branchId: BranchId;
+		try {
+			branchId = normalizeBranch(branch);
+		} catch {
 			return new Response(
 				JSON.stringify({ success: false, code: 'INVALID_BRANCH', message: 'Branch tidak valid.' }),
 				{
@@ -95,17 +101,22 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 			);
 		}
 
-		const supabase = getSupabaseClient(branch);
-		// Ambil user dari tabel profil
-		let query = supabase
-			.from('profil')
-			.select('id, username, password, role')
-			.eq('username', usernameLama);
-		if (targetRole) {
-			query = query.eq('role', targetRole);
-		}
-		const { data: user, error } = await query.single();
-		if (error || !user) {
+		const db = getDrizzleDb(platform, branchId);
+		const filters = [eq(profil.branch_id, branchId), eq(profil.username, usernameLama)];
+		if (targetRole) filters.push(eq(profil.role, targetRole));
+
+		const user = await db
+			.select({
+				id: profil.id,
+				username: profil.username,
+				password: profil.password,
+				role: profil.role
+			})
+			.from(profil)
+			.where(and(...filters))
+			.get();
+
+		if (!user) {
 			return new Response(
 				JSON.stringify({
 					success: false,
@@ -132,20 +143,22 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 		// Hash password baru
 		const hashedPassword = await bcrypt.hash(passwordBaru, 10);
 		// Update username dan password
-		const { error: updateError } = await supabase
-			.from('profil')
-			.update({ username: usernameBaru, password: hashedPassword })
-			.eq('id', user.id);
-		if (updateError) {
-			return new Response(
-				JSON.stringify({
-					success: false,
-					code: 'UPDATE_FAILED',
-					message: 'Gagal update username/password.'
-				}),
-				{ status: 500 }
-			);
-		}
+		await db
+			.update(profil)
+			.set({
+				username: usernameBaru,
+				password: hashedPassword,
+				updated_at: new Date().toISOString()
+			})
+			.where(and(eq(profil.branch_id, branchId), eq(profil.id, user.id)));
+
+		await publishBranchEvent(
+			platform?.env as Record<string, unknown> | undefined,
+			branchId,
+			'profil',
+			'update',
+			{ id: user.id }
+		);
 
 		securityAttempts.delete(clientIp);
 

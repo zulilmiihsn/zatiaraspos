@@ -15,13 +15,12 @@
 	import { auth } from '$lib/auth/auth';
 	import { witaToUtcISO } from '$lib/utils/dateTime';
 	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { dataService } from '$lib/services/dataService';
 	import { createToastManager } from '$lib/utils/ui';
+	import { getSesiAktif } from '$lib/services/sesiTokoService';
 
 	import type { TokoSession } from '$lib/types';
 
@@ -73,14 +72,7 @@
 
 	let sesiAktif = $state<TokoSession | null>(null);
 	async function cekSesiTokoAktif() {
-		const { data } = await getSupabaseClient(selectedBranch.value)
-			.from('sesi_toko')
-			.select('*')
-			.eq('is_active', true)
-			.order('opening_time', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		sesiAktif = (data as TokoSession) || null;
+		sesiAktif = await getSesiAktif();
 	}
 
 	onMount(async () => {
@@ -89,20 +81,12 @@
 			loadRouteIcons('catat');
 		});
 
-		// Jika role belum ada di store, coba validasi dengan Supabase
+		// Jika role belum ada di store, validasi dari session backend.
 		if (!currentUserRole) {
-			const {
-				data: { session }
-			} = await getSupabaseClient(selectedBranch.value).auth.getSession();
-			if (session?.user) {
-				const { data: profile } = await getSupabaseClient(selectedBranch.value)
-					.from('profil')
-					.select('role, username')
-					.eq('id', session.user.id)
-					.single();
-				if (profile) {
-					setUserRole(profile.role, profile);
-				}
+			const res = await fetch('/api/session');
+			if (res.ok) {
+				const session = await res.json();
+				if (session?.user) setUserRole(session.user.role, session.user);
 			}
 		}
 
@@ -150,6 +134,7 @@
 			tipe: mode === 'pemasukan' ? 'in' : 'out',
 			sumber: 'catat',
 			payment_method: form.payment_method,
+			amount: form.amount,
 			nominal: form.amount,
 			description: form.description,
 			id_sesi_toko,
@@ -157,11 +142,12 @@
 			jenis: form.jenis
 		};
 		if (navigator.onLine) {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('buku_kas')
-				.insert([trx]);
-			if (error) {
-				notifModalMsg = 'Gagal menyimpan transaksi ke database: ' + error.message;
+			try {
+				await dataService.insertRows('buku_kas', trx);
+			} catch (error) {
+				notifModalMsg =
+					'Gagal menyimpan transaksi ke database: ' +
+					(error instanceof Error ? error.message : 'Unknown error');
 				notifModalType = 'error';
 				showNotifModal = true;
 				return;

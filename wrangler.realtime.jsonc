@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "zatiaraspos-realtime",
+	"main": "src/lib/server/realtimeWorker.js",
+	"compatibility_date": "2024-05-18",
+	"compatibility_flags": ["nodejs_compat"],
+
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "REALTIME_HUB",
+				"class_name": "RealtimeDurableObject"
+			}
+		]
+	},
+
+	"migrations": [
+		{
+			"tag": "v1_realtime_hub",
+			"new_sqlite_classes": ["RealtimeDurableObject"]
+		}
+	]
+}

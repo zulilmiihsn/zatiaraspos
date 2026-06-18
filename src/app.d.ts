@@ -6,9 +6,22 @@ declare global {
 				userId: string;
 				username: string;
 				role: string;
+				branch?: string;
 				createdAt: number;
 				expiresAt: number;
 			} | null;
+		}
+
+		interface Platform {
+			env: {
+				DB?: any;
+				DB_SAMARINDA_GROUP?: any;
+				DB_BALIKPAPAN_GROUP?: any;
+				DB_BERAU_GROUP?: any;
+				STORAGE?: any;
+				REALTIME_HUB?: any;
+				R2_PUBLIC_URL?: string;
+			};
 		}
 	}
 

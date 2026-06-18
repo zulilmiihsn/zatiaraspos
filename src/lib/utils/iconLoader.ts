@@ -108,7 +108,7 @@ export const ROUTE_ICONS = {
 		'receipt',
 		'calculator'
 	],
-	laporan: ['wallet', 'arrow-down-circle', 'arrow-up-circle', 'filter'],
+	laporan: ['filter'],
 	catat: [
 		// Saat ini banyak pakai SVG inline; siapkan ikon umum jika nanti dipakai
 		'edit-3',

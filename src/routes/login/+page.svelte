@@ -119,8 +119,7 @@
 		}
 
 		if (userRole === 'kasir') {
-			// Removed supabase reference - use dataService instead
-			// const { data } = await supabase.from('pengaturan').select('locked_pages').eq('id', 1).single();
+			// Session and security settings are loaded through backend APIs.
 			// const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
 			// if (lockedPages.includes('beranda')) {
 			//   // showPinModal = true; // Hapus semua logic showPinModal

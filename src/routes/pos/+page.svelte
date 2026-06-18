@@ -74,9 +74,9 @@
 		note: string;
 	}
 
-	let produkData: PosProduct[] = [];
-	let kategoriData: PosCategory[] = [];
-	let tambahanData: PosAddOn[] = [];
+	let produkData = $state<PosProduct[]>([]);
+	let kategoriData = $state<PosCategory[]>([]);
+	let tambahanData = $state<PosAddOn[]>([]);
 
 	let isLoadingProducts = $state(true);
 
@@ -138,14 +138,11 @@
 	// Load POS data dengan smart caching
 	async function loadPOSData() {
 		try {
-			// Load products dengan cache
-			const nextProducts = await dataService.getProducts();
-
-			// Load categories dengan cache
-			const nextCategories = await dataService.getCategories();
-
-			// Load add-ons dengan cache
-			const nextAddons = await dataService.getAddOns();
+			const [nextProducts, nextCategories, nextAddons] = await Promise.all([
+				dataService.getProducts(),
+				dataService.getCategories(),
+				dataService.getAddOns()
+			]);
 
 			const nextFingerprint = [
 				(nextProducts || []).length,

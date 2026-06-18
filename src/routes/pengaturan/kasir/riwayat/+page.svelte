@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { onMount, onDestroy } from 'svelte';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -14,6 +12,7 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import { dataService } from '$lib/services/dataService';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
@@ -58,15 +57,10 @@
 		const { startUtc: start, endUtc: end } = todayRange();
 
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('buku_kas')
-				.select('*')
-				.gte('waktu', start)
-				.lte('waktu', end)
-				.order('waktu', { ascending: false });
+			const data = await dataService.getRows('buku_kas', { start, end });
 
 			transaksiHariIni = [];
-			if (data && !error) {
+			if (data) {
 				transaksiHariIni.push(
 					...data.map((t) => ({
 						id: t.id,
@@ -128,14 +122,10 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.select('*')
-				.eq('id', 1)
-				.single();
+			const data = await dataService.getOne('pengaturan');
 			if (data) {
 				pengaturanStruk = data;
-			} else if (error) {
+			} else {
 				const local = localStorage.getItem('pengaturan_struk');
 				if (local) pengaturanStruk = JSON.parse(local);
 			}
@@ -152,12 +142,9 @@
 		try {
 			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				const { data } = await getSupabaseClient(selectedBranch.value)
-					.from('transaksi_kasir')
-					.select('*, produk:produk_id(name)')
-					.eq('transaction_id', selectedTransaksi.transaction_id || selectedTransaksi.id);
-
-				if (data) items = data;
+				items = await dataService.getRows('transaksi_kasir', {
+					transaction_id: selectedTransaksi.transaction_id || selectedTransaksi.id
+				});
 			}
 
 			const pengaturan = pengaturanStruk || {

@@ -1,7 +1,7 @@
 /**
  * 🚀 OPTIMIZED DATA SERVICE
  * Caching layer atas /api/data endpoint (Cloudflare D1 via Drizzle).
- * Tidak ada Supabase dependency.
+ * Tidak ada dependency database browser langsung.
  */
 
 import { advancedCache, cacheKeys } from '$lib/utils/advancedCache';
@@ -29,7 +29,11 @@ interface QueryStats {
 	errors: number;
 }
 
-async function apiFetch(table: string, branch: string, params?: Record<string, string>): Promise<any[]> {
+async function apiFetch(
+	table: string,
+	branch: string,
+	params?: Record<string, string>
+): Promise<any[]> {
 	const qs = new URLSearchParams({ table, branch, ...params }).toString();
 	const res = await fetch(`/api/data?${qs}`);
 	if (!res.ok) throw new Error(`API error ${res.status} for table ${table}`);
@@ -58,10 +62,19 @@ export class OptimizedDataService {
 		return branch || selectedBranch.value || 'default';
 	}
 
-	async executeQuery<T>(key: string, queryFn: () => Promise<T>, options: QueryOptions = {}): Promise<T> {
+	async executeQuery<T>(
+		key: string,
+		queryFn: () => Promise<T>,
+		options: QueryOptions = {}
+	): Promise<T> {
 		const startTime = performance.now();
 		try {
-			const { ttl = 5 * 60 * 1000, backgroundRefresh = true, compression = true, timeout = 30000 } = options;
+			const {
+				ttl = 5 * 60 * 1000,
+				backgroundRefresh = true,
+				compression = true,
+				timeout = 30000
+			} = options;
 			const timeoutPromise = new Promise<never>((_, reject) =>
 				setTimeout(() => reject(new Error('Query timeout')), timeout)
 			);
@@ -114,13 +127,19 @@ export class OptimizedDataService {
 	async getCategories(branch?: string, options: QueryOptions = {}): Promise<any[]> {
 		const b = this.branch(branch);
 		const key = cacheKeys.categories(b);
-		return this.executeQuery(key, () => apiFetch('kategori', b), { ttl: 15 * 60 * 1000, ...options });
+		return this.executeQuery(key, () => apiFetch('kategori', b), {
+			ttl: 15 * 60 * 1000,
+			...options
+		});
 	}
 
 	async getAddOns(branch?: string, options: QueryOptions = {}): Promise<any[]> {
 		const b = this.branch(branch);
 		const key = cacheKeys.addOns(b);
-		return this.executeQuery(key, () => apiFetch('tambahan', b), { ttl: 15 * 60 * 1000, ...options });
+		return this.executeQuery(key, () => apiFetch('tambahan', b), {
+			ttl: 15 * 60 * 1000,
+			...options
+		});
 	}
 
 	async fetchAllEssentialData(branch?: string): Promise<{
@@ -131,17 +150,38 @@ export class OptimizedDataService {
 	}> {
 		const b = this.branch(branch);
 		const queries: BatchQuery[] = [
-			{ key: cacheKeys.products(b), query: () => this.getProducts(b, { ttl: 0 }), options: { ttl: 10 * 60 * 1000 } },
-			{ key: cacheKeys.categories(b), query: () => this.getCategories(b, { ttl: 0 }), options: { ttl: 15 * 60 * 1000 } },
-			{ key: cacheKeys.addOns(b), query: () => this.getAddOns(b, { ttl: 0 }), options: { ttl: 15 * 60 * 1000 } },
-			{ key: cacheKeys.userProfile('current'), query: () => this.getUserProfile(b), options: { ttl: 30 * 60 * 1000 } }
+			{
+				key: cacheKeys.products(b),
+				query: () => this.getProducts(b, { ttl: 0 }),
+				options: { ttl: 10 * 60 * 1000 }
+			},
+			{
+				key: cacheKeys.categories(b),
+				query: () => this.getCategories(b, { ttl: 0 }),
+				options: { ttl: 15 * 60 * 1000 }
+			},
+			{
+				key: cacheKeys.addOns(b),
+				query: () => this.getAddOns(b, { ttl: 0 }),
+				options: { ttl: 15 * 60 * 1000 }
+			},
+			{
+				key: cacheKeys.userProfile('current'),
+				query: () => this.getUserProfile(b),
+				options: { ttl: 30 * 60 * 1000 }
+			}
 		];
 
 		const [products, categories, addOns, userProfile] = await this.executeBatchQueries(queries);
 		return { products, categories, addOns, userProfile };
 	}
 
-	async getTransactionData(startDate: string, endDate: string, branch?: string, options: QueryOptions = {}): Promise<any[]> {
+	async getTransactionData(
+		startDate: string,
+		endDate: string,
+		branch?: string,
+		options: QueryOptions = {}
+	): Promise<any[]> {
 		const b = this.branch(branch);
 		const key = cacheKeys.transactionData(`${startDate}_${endDate}`, b);
 		return this.executeQuery(
@@ -151,7 +191,12 @@ export class OptimizedDataService {
 		);
 	}
 
-	async getReportData(date: string, type: 'daily' | 'weekly' | 'monthly', branch?: string, options: QueryOptions = {}): Promise<any> {
+	async getReportData(
+		date: string,
+		type: 'daily' | 'weekly' | 'monthly',
+		branch?: string,
+		options: QueryOptions = {}
+	): Promise<any> {
 		const b = this.branch(branch);
 		const key = cacheKeys.reportData(date, type, b);
 		return this.executeQuery(
@@ -163,7 +208,13 @@ export class OptimizedDataService {
 					apiFetch('transaksi_kasir', b, { start, end }),
 					this.getProducts(b, { ttl: 0 })
 				]);
-				return { bukuKas, transaksiKasir, produk, summary: this.calculateSummary(bukuKas, transaksiKasir), type };
+				return {
+					bukuKas,
+					transaksiKasir,
+					produk,
+					summary: this.calculateSummary(bukuKas, transaksiKasir),
+					type
+				};
 			},
 			{ ttl: 2 * 60 * 1000, ...options }
 		);
@@ -182,12 +233,18 @@ export class OptimizedDataService {
 				ws.setDate(d.getDate() - d.getDay());
 				const we = new Date(ws);
 				we.setDate(ws.getDate() + 6);
-				return { start: ws.toISOString().split('T')[0] + 'T00:00:00.000Z', end: we.toISOString().split('T')[0] + 'T23:59:59.999Z' };
+				return {
+					start: ws.toISOString().split('T')[0] + 'T00:00:00.000Z',
+					end: we.toISOString().split('T')[0] + 'T23:59:59.999Z'
+				};
 			}
 			case 'monthly': {
 				const ms = new Date(d.getFullYear(), d.getMonth(), 1);
 				const me = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-				return { start: ms.toISOString().split('T')[0] + 'T00:00:00.000Z', end: me.toISOString().split('T')[0] + 'T23:59:59.999Z' };
+				return {
+					start: ms.toISOString().split('T')[0] + 'T00:00:00.000Z',
+					end: me.toISOString().split('T')[0] + 'T23:59:59.999Z'
+				};
 			}
 			default:
 				return {
@@ -198,8 +255,12 @@ export class OptimizedDataService {
 	}
 
 	private calculateSummary(bukuKasData: any[], transaksiKasirData: any[]): any {
-		const totalPemasukan = bukuKasData.filter((t) => t.tipe === 'in').reduce((s, t) => s + (t.amount || 0), 0);
-		const totalPengeluaran = bukuKasData.filter((t) => t.tipe === 'out').reduce((s, t) => s + (t.amount || 0), 0);
+		const totalPemasukan = bukuKasData
+			.filter((t) => t.tipe === 'in')
+			.reduce((s, t) => s + (t.amount || 0), 0);
+		const totalPengeluaran = bukuKasData
+			.filter((t) => t.tipe === 'out')
+			.reduce((s, t) => s + (t.amount || 0), 0);
 		return {
 			totalPemasukan,
 			totalPengeluaran,
@@ -213,7 +274,8 @@ export class OptimizedDataService {
 		this.queryStats.totalQueries++;
 		this.responseTimes.push(responseTime);
 		if (this.responseTimes.length > 100) this.responseTimes.shift();
-		this.queryStats.averageResponseTime = this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
+		this.queryStats.averageResponseTime =
+			this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
 		if (!success) this.queryStats.errors++;
 	}
 

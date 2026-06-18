@@ -106,10 +106,16 @@ export async function loginWithUsername(username: string, password: string, bran
 			if (row) {
 				setSecuritySettings({ pin: row.pin, lockedPages: row.locked_pages });
 			} else {
-				setSecuritySettings({ pin: '1234', lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat'] });
+				setSecuritySettings({
+					pin: '1234',
+					lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
+				});
 			}
 		} catch {
-			setSecuritySettings({ pin: '1234', lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat'] });
+			setSecuritySettings({
+				pin: '1234',
+				lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
+			});
 		}
 	} else {
 		clearSecuritySettings();
@@ -124,7 +130,7 @@ export async function loginWithUsername(username: string, password: string, bran
 	const sessionData = {
 		isAuthenticated: true,
 		user: result.user,
-		token: null // Tidak pakai token Supabase Auth
+		token: null // Session dikelola cookie backend
 	};
 	session.set(sessionData);
 

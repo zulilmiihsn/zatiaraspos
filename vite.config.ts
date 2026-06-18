@@ -1,16 +1,76 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+
+const pwaPrerenderPlaceholder = '__pwa-placeholder.json';
+
+function ensurePwaPrerenderPlaceholder() {
+	return {
+		name: 'ensure-pwa-prerender-placeholder',
+		apply: 'build' as const,
+		closeBundle() {
+			const placeholderPath = join(
+				process.cwd(),
+				'.svelte-kit',
+				'output',
+				'prerendered',
+				pwaPrerenderPlaceholder
+			);
+
+			mkdirSync(dirname(placeholderPath), { recursive: true });
+			writeFileSync(placeholderPath, '{}\n');
+		}
+	};
+}
 
 export default defineConfig({
 	plugins: [
 		sveltekit(),
+		ensurePwaPrerenderPlaceholder(),
 		SvelteKitPWA({
 			registerType: 'prompt',
 			injectRegister: 'auto',
+			integration: {
+				closeBundleOrder: 'post'
+			},
 			workbox: {
 				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,woff2,woff}'],
+				navigateFallback: null,
+				globPatterns: [
+					'client/**/*.{js,css,html,ico,png,svg,webp,avif,woff2,woff,webmanifest}',
+					'prerendered/**/*.{html,json}'
+				],
+				manifestTransforms: [
+					async (entries) => ({
+						manifest: entries
+							.filter((entry) => !entry.url.endsWith(pwaPrerenderPlaceholder))
+							.map((entry) => {
+								let url = entry.url;
+								if (url.startsWith('client/')) {
+									url = url.slice(7);
+								} else if (url.startsWith('prerendered/dependencies/')) {
+									url = url.slice(25);
+								} else if (url.startsWith('prerendered/pages/')) {
+									url = url.slice(18);
+								}
+
+								if (url.endsWith('.html')) {
+									if (url === 'index.html') {
+										url = '/';
+									} else if (url.endsWith('/index.html')) {
+										url = url.slice(0, -'/index.html'.length);
+									} else {
+										url = url.slice(0, -'.html'.length);
+									}
+								}
+
+								return { ...entry, url };
+							}),
+						warnings: []
+					})
+				],
 				runtimeCaching: [
 					{
 						urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif)$/,
@@ -122,7 +182,7 @@ export default defineConfig({
 		postcss: './postcss.config.cjs'
 	},
 	optimizeDeps: {
-		include: ['svelte', '@supabase/supabase-js'],
+		include: ['svelte'],
 		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os', 'lucide-svelte']
 	},
 	server: {

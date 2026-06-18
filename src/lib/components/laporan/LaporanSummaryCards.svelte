@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { LaporanSummary } from '$lib/types/laporan';
+	import Wallet from 'lucide-svelte/icons/wallet';
+	import ArrowDownCircle from 'lucide-svelte/icons/arrow-down-circle';
+	import ArrowUpCircle from 'lucide-svelte/icons/arrow-up-circle';
 
 	let {
 		isLoadingReport,
@@ -13,21 +15,6 @@
 		totalQrisAll: number;
 		totalTunaiAll: number;
 	} = $props();
-
-	// Lazy load icons
-
-	let Wallet: any = $state(null);
-
-	let ArrowDownCircle: any = $state(null);
-
-	let ArrowUpCircle: any = $state(null);
-
-	onMount(async () => {
-		const icons = await import('lucide-svelte');
-		Wallet = icons.Wallet;
-		ArrowDownCircle = icons.ArrowDownCircle;
-		ArrowUpCircle = icons.ArrowUpCircle;
-	});
 </script>
 
 <!-- Ringkasan Keuangan ala Beranda -->
@@ -37,19 +24,9 @@
 			<div
 				class="flex flex-col items-start rounded-xl bg-gradient-to-br from-green-100 to-green-300 p-3 shadow-sm md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
-				{#if ArrowDownCircle}
-					<ArrowDownCircle
-						class="mb-2 h-6 w-6 text-green-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					/>
-				{:else}
-					<div
-						class="mb-2 flex h-6 w-6 items-center justify-center md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					>
-						<span
-							class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-						></span>
-					</div>
-				{/if}
+				<ArrowDownCircle
+					class="mb-2 h-6 w-6 text-green-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
+				/>
 				<div class="text-sm font-medium text-green-900/80 md:text-center md:text-base lg:text-sm">
 					Pemasukan
 				</div>
@@ -66,19 +43,9 @@
 			<div
 				class="flex flex-col items-start rounded-xl bg-gradient-to-br from-red-100 to-red-300 p-3 shadow-sm md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
-				{#if ArrowUpCircle}
-					<ArrowUpCircle
-						class="mb-2 h-6 w-6 text-red-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					/>
-				{:else}
-					<div
-						class="mb-2 flex h-6 w-6 items-center justify-center md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					>
-						<span
-							class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-						></span>
-					</div>
-				{/if}
+				<ArrowUpCircle
+					class="mb-2 h-6 w-6 text-red-500 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
+				/>
 				<div class="text-sm font-medium text-red-900/80 md:text-center md:text-base lg:text-sm">
 					Pengeluaran
 				</div>
@@ -95,17 +62,7 @@
 			<div
 				class="col-span-2 flex flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-3 shadow-sm md:col-span-1 md:items-center md:justify-center md:gap-1 md:rounded-2xl md:p-4 lg:p-3"
 			>
-				{#if Wallet}
-					<Wallet class="mb-2 h-6 w-6 text-cyan-900 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6" />
-				{:else}
-					<div
-						class="mb-2 flex h-6 w-6 items-center justify-center md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6"
-					>
-						<span
-							class="block h-4 w-4 animate-spin rounded-full border-2 border-pink-200 border-t-pink-500"
-						></span>
-					</div>
-				{/if}
+				<Wallet class="mb-2 h-6 w-6 text-cyan-900 md:mb-2 md:h-8 md:w-8 lg:mb-1 lg:h-6 lg:w-6" />
 				<div class="text-sm font-medium text-cyan-900/80 md:text-center md:text-base lg:text-sm">
 					Laba (Rugi)
 				</div>

@@ -1,9 +1,11 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { getSupabaseClient, isValidBranch } from '$lib/database/supabaseClient';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { productAnalysisService } from '$lib/services/productAnalysisService';
+import { getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
+import { bukuKas, kategori, produk, tambahan, transaksiKasir } from '$lib/database/schema';
+import { and, asc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
 
 // OpenRouter API configuration
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -793,7 +795,8 @@ Teks user: "${text}"`
 }
 
 // Endpoint untuk analisis transaksi AI
-export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, url, getClientAddress } = event;
 	const clientIp = getClientAddress();
 	if (isRateLimited(clientIp)) {
 		return json(
@@ -899,8 +902,10 @@ async function handleRegularChat(request: Request) {
 			);
 		}
 
-		const requestedBranch = branch || 'Balikpapan';
-		if (!isValidBranch(requestedBranch)) {
+		let requestedBranch: ReturnType<typeof normalizeBranch>;
+		try {
+			requestedBranch = normalizeBranch(branch || 'balikpapan');
+		} catch {
 			return json(
 				{ success: false, error: 'Branch tidak valid', code: 'INVALID_BRANCH' },
 				{ status: 400 }
@@ -910,8 +915,7 @@ async function handleRegularChat(request: Request) {
 		// AI 1: Identifikasi kebutuhan data
 		const dataRequirements = await identifyDataRequirements(question, apiKey);
 
-		// Ambil data langsung dari database sesuai branch & range yang diidentifikasi AI 1
-		const supabase = getSupabaseClient(requestedBranch);
+		const db = getDrizzleDb((event as any).platform, requestedBranch);
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database
@@ -950,8 +954,7 @@ async function handleRegularChat(request: Request) {
 			}
 		};
 
-		// Function untuk fetch data dengan pagination dan timeout handling
-		async function fetchAllData(table: string, filters: Record<string, unknown>) {
+		async function fetchAllData(filters: Record<string, unknown>) {
 			let allData: Record<string, unknown>[] = [];
 			let page = 0;
 			const pageSize = 500; // Reduce page size untuk menghindari timeout
@@ -960,40 +963,33 @@ async function handleRegularChat(request: Request) {
 
 			while (hasMore && page < maxPages) {
 				try {
-					// Add timeout wrapper - gunakan query yang lebih sederhana dulu
-					const queryPromise = supabase
-						.from(table)
-						.select('*')
-						.gte('waktu', startDate)
-						.lte('waktu', endDate)
-						.range(page * pageSize, (page + 1) * pageSize - 1)
-						.order('waktu', { ascending: true });
-
-					// Apply filters
+					const conditions = [
+						eq(bukuKas.branch_id, requestedBranch),
+						gte(bukuKas.waktu, startDate),
+						lte(bukuKas.waktu, endDate)
+					];
 					if (filters.sumber) {
-						queryPromise.eq('sumber', filters.sumber);
+						conditions.push(eq(bukuKas.sumber, String(filters.sumber)));
 					}
 					if (filters.excludeSumber) {
-						queryPromise.neq('sumber', filters.excludeSumber);
+						conditions.push(ne(bukuKas.sumber, String(filters.excludeSumber)));
 					}
-					// Note: Branch filtering is handled by getSupabaseClient(branch), not by column
 
-					// Add timeout (30 seconds)
+					const queryPromise = db
+						.select()
+						.from(bukuKas)
+						.where(and(...conditions))
+						.orderBy(asc(bukuKas.waktu))
+						.limit(pageSize)
+						.offset(page * pageSize);
+
 					const timeoutPromise = new Promise((_, reject) =>
 						setTimeout(() => reject(new Error('Query timeout')), 30000)
 					);
 
-					const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as {
-						data: Record<string, unknown>[] | null;
-						error: { code?: string; message?: string } | null;
-					};
-
-					if (error) {
-						if (error.code === '57014' || error.message?.includes('timeout')) {
-							break;
-						}
-						break;
-					}
+					const data = (await Promise.race([queryPromise, timeoutPromise])) as
+						| Record<string, unknown>[]
+						| null;
 
 					if (data && data.length > 0) {
 						allData = [...allData, ...data];
@@ -1016,8 +1012,8 @@ async function handleRegularChat(request: Request) {
 
 		// Ambil data untuk periode yang diminta dengan pagination
 		const [bukuKasPos, bukuKasManual] = await Promise.all([
-			fetchAllData('buku_kas', { sumber: 'pos' }),
-			fetchAllData('buku_kas', { excludeSumber: 'pos' })
+			fetchAllData({ sumber: 'pos' }),
+			fetchAllData({ excludeSumber: 'pos' })
 		]);
 
 		// Ambil data transaksi_kasir dengan relasi produk untuk data POS
@@ -1028,14 +1024,15 @@ async function handleRegularChat(request: Request) {
 
 			if (bukuKasIds.length > 0) {
 				try {
-					const { data: transaksiKasir, error: errorTransaksiKasir } = await supabase
-						.from('transaksi_kasir')
-						.select('*, produk(name)')
-						.in('buku_kas_id', bukuKasIds);
-
-					if (!errorTransaksiKasir) {
-						transaksiKasirData = transaksiKasir || [];
-					}
+					transaksiKasirData = await db
+						.select()
+						.from(transaksiKasir)
+						.where(
+							and(
+								eq(transaksiKasir.branch_id, requestedBranch),
+								inArray(transaksiKasir.buku_kas_id, bukuKasIds.map(String))
+							)
+						);
 				} catch (error) {
 					// Silent error handling
 				}
@@ -1309,39 +1306,44 @@ async function handleRegularChat(request: Request) {
 		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
-		let products: { id: string; name: string; price: number; category_id?: string }[] = [];
+		let products: { id: string; name: string; price: number; category_id?: string | null }[] = [];
 		let categories: { id: string; name: string }[] = [];
 		let addons: { id: string; name: string; price: number }[] = [];
 
 		// Fetch data berdasarkan jenis data yang diperlukan
 		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
-			const { data: productsData } = await supabase
-				.from('produk')
-				.select('id, name, price, category_id')
+			products = await db
+				.select({
+					id: produk.id,
+					name: produk.name,
+					price: produk.price,
+					category_id: produk.category_id
+				})
+				.from(produk)
+				.where(eq(produk.branch_id, requestedBranch))
 				.limit(1000);
-			products = productsData || [];
 		}
 
 		if (
 			dataRequirements.jenisData.includes('kategori') ||
 			dataRequirements.jenisData.length === 0
 		) {
-			const { data: categoriesData } = await supabase
-				.from('kategori')
-				.select('id, name')
+			categories = await db
+				.select({ id: kategori.id, name: kategori.name })
+				.from(kategori)
+				.where(eq(kategori.branch_id, requestedBranch))
 				.limit(1000);
-			categories = categoriesData || [];
 		}
 
 		if (
 			dataRequirements.jenisData.includes('tambahan') ||
 			dataRequirements.jenisData.length === 0
 		) {
-			const { data: addonsData } = await supabase
-				.from('tambahan')
-				.select('id, name, price')
+			addons = await db
+				.select({ id: tambahan.id, name: tambahan.name, price: tambahan.price })
+				.from(tambahan)
+				.where(eq(tambahan.branch_id, requestedBranch))
 				.limit(1000);
-			addons = addonsData || [];
 		}
 
 		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil

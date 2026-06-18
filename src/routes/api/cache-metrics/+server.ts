@@ -157,7 +157,7 @@ function summarize(cutoff: number) {
 
 export const POST: RequestHandler = async ({ request, getClientAddress, locals }) => {
 	if (!locals.authSession) {
-		return json({ success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' }, { status: 401 });
+		return new Response(null, { status: 204 });
 	}
 
 	const clientIp = getClientAddress();
@@ -232,7 +232,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.authSession) {
-		return json({ success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' }, { status: 401 });
+		return json({
+			success: true,
+			authenticated: false,
+			summary: null
+		});
 	}
 
 	if (locals.authSession.role !== 'admin' && locals.authSession.role !== 'pemilik') {

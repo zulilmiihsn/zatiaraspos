@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { goto } from '$app/navigation';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
+	import { dataService } from '$lib/services/dataService';
 	let namaToko = '';
 	let alamat = '';
 	let telepon = '';
@@ -22,13 +21,8 @@
 	};
 
 	async function loadPengaturan() {
-		// Coba load dari Supabase, fallback ke localStorage
 		try {
-			const { data, error: _error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.select('*')
-				.eq('id', 1)
-				.single();
+			const data = await dataService.getOne('pengaturan');
 			if (data) {
 				namaToko = data.nama_toko || defaultData.namaToko;
 				alamat = data.alamat || defaultData.alamat;
@@ -61,13 +55,15 @@
 			ucapan
 		};
 		try {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.upsert([data]);
-			if (error) throw error;
+			const existing = await dataService.getOne('pengaturan');
+			if (existing) {
+				await dataService.updateRows('pengaturan', data, { id: '1' });
+			} else {
+				await dataService.insertRows('pengaturan', data);
+			}
 			toastManager.showToastNotification('Pengaturan berhasil disimpan!', 'success');
 		} catch (e) {
-			toastManager.showToastNotification('Gagal menyimpan ke Supabase.', 'error');
+			toastManager.showToastNotification('Gagal menyimpan pengaturan.', 'error');
 		} finally {
 			isSaving = false;
 		}

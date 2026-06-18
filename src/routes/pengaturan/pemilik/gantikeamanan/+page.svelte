@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -11,6 +10,7 @@
 	import User from 'lucide-svelte/icons/user';
 	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
+	import { dataService } from '$lib/services/dataService';
 
 	let oldUsername = '';
 	let newUsername = '';
@@ -44,13 +44,8 @@
 			goto('/unauthorized');
 		}
 
-		// Fetch PIN dan lockedPages dari Supabase
-		const { data, error } = await getSupabaseClient(selectedBranch.value)
-			.from('pengaturan')
-			.select('id, pin, locked_pages')
-			.eq('id', 1)
-			.single();
-		if (!error && data) {
+		const data = await dataService.getOne('pengaturan');
+		if (data) {
 			pin = data.pin || '';
 			lockedPages = data.locked_pages || [];
 			pengaturanKeamananId = data.id;
@@ -183,11 +178,7 @@
 			return;
 		}
 		try {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.update({ pin: newPin })
-				.eq('id', pengaturanKeamananId);
-			if (error) throw error;
+			await dataService.updateRows('pengaturan', { pin: newPin }, { id: pengaturanKeamananId });
 			notifModalMsg = 'Perubahan PIN berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;
@@ -215,14 +206,13 @@
 		activeSecurityTab = 'kasir';
 	}
 
-	// Simpan pengaturan lockedPages ke Supabase
 	async function saveLockedPages() {
 		try {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.update({ locked_pages: lockedPages })
-				.eq('id', pengaturanKeamananId);
-			if (error) throw error;
+			await dataService.updateRows(
+				'pengaturan',
+				{ locked_pages: lockedPages },
+				{ id: pengaturanKeamananId }
+			);
 			notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;

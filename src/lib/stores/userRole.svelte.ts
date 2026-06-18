@@ -39,10 +39,7 @@ export function clearUserRole() {
 	userProfile.value = null;
 }
 
-/**
- * Memvalidasi sesi dan peran pengguna dengan Supabase.
- */
-export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 'network_error'> {
+export async function validateRoleWithBackend(): Promise<'valid' | 'invalid' | 'network_error'> {
 	try {
 		const res = await fetch('/api/session');
 		if (!res.ok) return 'network_error';
@@ -64,7 +61,7 @@ export async function validateRoleWithSupabase(): Promise<'valid' | 'invalid' | 
 export async function getCurrentRole(): Promise<string | null> {
 	if (userRole.value) return userRole.value;
 
-	const validationStatus = await validateRoleWithSupabase();
+	const validationStatus = await validateRoleWithBackend();
 	if (validationStatus === 'valid') return userRole.value;
 
 	return null;
@@ -76,7 +73,7 @@ export async function getCurrentRole(): Promise<string | null> {
 export async function getCurrentProfile(): Promise<unknown | null> {
 	if (userProfile.value) return userProfile.value;
 
-	const validationStatus = await validateRoleWithSupabase();
+	const validationStatus = await validateRoleWithBackend();
 	if (validationStatus === 'valid') return userProfile.value;
 
 	return null;

@@ -27,3 +27,13 @@ gemini.md
 error.md
 zatiarasposapp/
 bin/
+
+# Dev artifacts (jangan ke-commit)
+scratch/
+check*.txt
+.check_output.txt
+.lint_full.txt
+*.log
+test-report.md
+code-quality-report.md
+svelte_check*.txt

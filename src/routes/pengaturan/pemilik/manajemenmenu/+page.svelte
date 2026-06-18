@@ -6,7 +6,6 @@
 	import CropperDialog from '$lib/components/shared/cropperDialog.svelte';
 	import { fly, fade, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { get as getCache, set as setCache } from 'idb-keyval';
 
@@ -21,34 +20,81 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 
-	import type { Product, Category, AddOn } from '$lib/types/product';
+	import type {
+		Product,
+		Category,
+		AddOn,
+		Ingredient,
+		ProductRecipe,
+		HppSettings
+	} from '$lib/types/product';
 
 	// Data Menu
 	let menus = $state<Product[]>([]);
 	let imageError = $state<Record<string, boolean>>({});
 	let kategoriList = $state<Category[]>([]);
 	let ekstraList = $state<(AddOn & { harga: number })[]>([]);
+	let bahanList = $state<Ingredient[]>([]);
+	let allRecipes = $state<ProductRecipe[]>([]);
+	let hppSettings = $state<HppSettings | null>(null);
 	let showMenuForm = $state(false);
 
 	let showEkstraForm = $state(false);
-	let editMenuId = $state<number | null>(null);
+	let showBahanForm = $state(false);
+	let showMutasiBahanForm = $state(false);
+	let editMenuId = $state<string | number | null>(null);
 
-	let editEkstraId = $state<number | null>(null);
+	let editEkstraId = $state<string | number | null>(null);
+	let editBahanId = $state<string | number | null>(null);
+	let mutasiBahanId = $state<string | number | null>(null);
 
 	let menuForm = $state({
 		name: '',
-		kategori_id: null as number | null,
+		kategori_id: null as string | number | null,
 		tipe: 'minuman' as 'minuman' | 'makanan' | 'snack',
 		price: '',
-		ekstra_ids: [] as number[],
+		stok: '',
+		track_stock: false,
+		track_ingredients: false,
+		ekstra_ids: [] as Array<string | number>,
 		gambar: ''
 	});
 
 	let ekstraForm = $state({ name: '', harga: '' });
+	let bahanForm = $state({
+		name: '',
+		unit: 'gram',
+		current_stock: '',
+		low_stock_threshold: '',
+		last_purchase_qty: '',
+		last_purchase_cost: ''
+	});
+	let hppForm = $state({
+		rent_monthly: '',
+		electricity_monthly: '',
+		water_monthly: '',
+		salary_monthly: '',
+		other_monthly: '',
+		target_items_monthly: '1000'
+	});
+	let hppPurchaseText = $state('');
+	let hppParsedItems = $state<
+		Array<{
+			name: string;
+			unit: string;
+			purchase_qty: number;
+			purchase_cost: number;
+			cost_per_unit: number;
+		}>
+	>([]);
+	let isParsingHpp = $state(false);
+	let mutasiBahanForm = $state({ quantity_delta: '', note: '' });
+	let recipeItems = $state<Array<{ bahan_id: string | number; qty_per_item: string }>>([]);
+	let recipeDraft = $state({ bahan_id: '', qty_per_item: '' });
 	let selectedKategori = $state<string | number>('Semua');
 	let searchKeyword = $state('');
 	let showDeleteModal = $state(false);
-	let menuIdToDelete = $state<number | null>(null);
+	let menuIdToDelete = $state<string | number | null>(null);
 
 	let selectedImage = $state<File | null>(null);
 	let showCropperDialog = $state(false);
@@ -57,16 +103,19 @@
 	let touchEndX = $state(0);
 
 	let showDeleteKategoriModal = $state(false);
-	let kategoriIdToDelete = $state<number | null>(null);
+	let kategoriIdToDelete = $state<string | number | null>(null);
 	let showKategoriDetailModal = $state(false);
 	let kategoriDetail = $state<Category | null>(null);
-	let selectedMenuIds = $state<number[]>([]);
-	let unselectedMenuIds = $state<number[]>([]);
+	let selectedMenuIds = $state<Array<string | number>>([]);
+	let unselectedMenuIds = $state<Array<string | number>>([]);
 	let kategoriDetailName = $state('');
 	let searchKategoriKeyword = $state('');
 	let searchEkstra = $state('');
+	let searchBahan = $state('');
 	let showDeleteEkstraModal = $state(false);
-	let ekstraIdToDelete = $state<number | null>(null);
+	let ekstraIdToDelete = $state<string | number | null>(null);
+	let showDeleteBahanModal = $state(false);
+	let bahanIdToDelete = $state<string | number | null>(null);
 
 	let isGridView = $state(true);
 	let showNotifModal = $state(false);
@@ -78,6 +127,7 @@
 	let isLoadingMenus = $state(true);
 	let isLoadingKategori = $state(true);
 	let isLoadingEkstra = $state(true);
+	let isLoadingBahan = $state(true);
 
 	// Toast management
 	const toastManager = createToastManager();
@@ -137,12 +187,7 @@
 	async function fetchMenus() {
 		isLoadingMenus = true;
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('produk')
-				.select('*')
-				.order('created_at', { ascending: false });
-			if (error) throw error;
-			menus = data || [];
+			menus = await dataService.getProducts();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data menu: ' + (e?.message || 'Unknown error');
@@ -155,12 +200,7 @@
 	async function fetchKategori() {
 		isLoadingKategori = true;
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('kategori')
-				.select('*')
-				.order('created_at', { ascending: false });
-			if (error) throw error;
-			kategoriList = data || [];
+			kategoriList = await dataService.getCategories();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data kategori: ' + (e?.message || 'Unknown error');
@@ -173,11 +213,7 @@
 	async function fetchEkstra() {
 		isLoadingEkstra = true;
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('tambahan')
-				.select('*')
-				.order('created_at', { ascending: false });
-			if (error) throw error;
+			const data = await dataService.getAddOns();
 			ekstraList = (data || []).map((e: AddOn) => ({ ...e, harga: e.price }));
 		} catch (error) {
 			const e = error as Error;
@@ -188,11 +224,52 @@
 		isLoadingEkstra = false;
 	}
 
+	async function fetchBahan() {
+		isLoadingBahan = true;
+		try {
+			bahanList = await dataService.getIngredients();
+		} catch (error) {
+			const e = error as Error;
+			notifModalMsg = 'Gagal mengambil data bahan: ' + (e?.message || 'Unknown error');
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+		isLoadingBahan = false;
+	}
+
+	async function fetchRecipes() {
+		try {
+			allRecipes = await dataService.getProductRecipes();
+		} catch {
+			allRecipes = [];
+		}
+	}
+
+	async function fetchHppSettings() {
+		try {
+			hppSettings = await dataService.getHppSettings();
+			const settings = hppSettings || ({} as Partial<HppSettings>);
+			hppForm = {
+				rent_monthly: String(settings.rent_monthly || ''),
+				electricity_monthly: String(settings.electricity_monthly || ''),
+				water_monthly: String(settings.water_monthly || ''),
+				salary_monthly: String(settings.salary_monthly || ''),
+				other_monthly: String(settings.other_monthly || ''),
+				target_items_monthly: String(settings.target_items_monthly || 1000)
+			};
+		} catch {
+			hppSettings = null;
+		}
+	}
+
 	onMount(async () => {
 		let first = true;
 		await fetchMenus();
 		await fetchKategori();
 		await fetchEkstra();
+		await fetchBahan();
+		await fetchRecipes();
+		await fetchHppSettings();
 
 		// 2. Update cache POS setelah fetch sukses
 		await setCache('pos-data', {
@@ -221,6 +298,9 @@
 			fetchMenus();
 			fetchKategori();
 			fetchEkstra();
+			fetchBahan();
+			fetchRecipes();
+			fetchHppSettings();
 		}
 	});
 
@@ -230,11 +310,13 @@
 		}
 	});
 
-	function openMenuForm(menu: Product | null = null): void {
+	async function openMenuForm(menu: Product | null = null): Promise<void> {
 		if (showMenuForm && menu && editMenuId === menu.id) {
 			return;
 		}
 		showMenuForm = true;
+		recipeItems = [];
+		recipeDraft = { bahan_id: '', qty_per_item: '' };
 		if (menu) {
 			editMenuId = menu.id;
 			// Format harga untuk display jika ada
@@ -243,14 +325,28 @@
 			menuForm.kategori_id = menu.kategori_id as number;
 			menuForm.tipe = menu.tipe;
 			menuForm.price = formattedPrice;
+			menuForm.stok =
+				menu.stok !== null && menu.stok !== undefined ? String(Number(menu.stok || 0)) : '';
+			menuForm.track_stock = Boolean(menu.track_stock);
+			menuForm.track_ingredients = Boolean(menu.track_ingredients);
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
 			menuForm.gambar = menu.gambar || '';
+			if (menuForm.track_ingredients) {
+				const recipes = (await dataService.getProductRecipes(menu.id)) as ProductRecipe[];
+				recipeItems = recipes.map((recipe) => ({
+					bahan_id: recipe.bahan_id,
+					qty_per_item: String(recipe.qty_per_item || '')
+				}));
+			}
 		} else {
 			editMenuId = null;
 			menuForm.name = '';
 			menuForm.kategori_id = null;
 			menuForm.tipe = 'minuman';
 			menuForm.price = '';
+			menuForm.stok = '';
+			menuForm.track_stock = false;
+			menuForm.track_ingredients = false;
 			menuForm.ekstra_ids = [];
 			menuForm.gambar = '';
 		}
@@ -263,8 +359,13 @@
 		menuForm.kategori_id = null;
 		menuForm.tipe = 'minuman';
 		menuForm.price = '';
+		menuForm.stok = '';
+		menuForm.track_stock = false;
+		menuForm.track_ingredients = false;
 		menuForm.ekstra_ids = [];
 		menuForm.gambar = '';
+		recipeItems = [];
+		recipeDraft = { bahan_id: '', qty_per_item: '' };
 	}
 
 	async function saveMenu() {
@@ -280,11 +381,17 @@
 			showNotifModal = true;
 			return;
 		}
+		if (menuForm.track_ingredients && recipeItems.length === 0) {
+			notifModalMsg = 'Resep bahan wajib diisi untuk menu jus.';
+			notifModalType = 'warning';
+			showNotifModal = true;
+			return;
+		}
 
 		let imageUrl = menuForm.gambar;
 		if (imageUrl && imageUrl.startsWith('data:image/')) {
 			try {
-				imageUrl = await uploadMenuImageFromDataUrl(imageUrl, editMenuId || Date.now());
+				imageUrl = await uploadMenuImageFromDataUrl(imageUrl, String(editMenuId || Date.now()));
 			} catch (err) {
 				notifModalMsg = 'Gagal upload gambar: ' + ErrorHandler.extractErrorMessage(err);
 				notifModalType = 'error';
@@ -303,21 +410,22 @@
 			kategori_id: menuForm.kategori_id,
 			tipe: menuForm.tipe,
 			price: priceValue,
+			stok: menuForm.track_stock ? Math.max(0, parseInt(menuForm.stok || '0', 10) || 0) : 0,
+			track_stock: menuForm.track_stock && !menuForm.track_ingredients,
+			track_ingredients: menuForm.track_ingredients,
 			ekstra_ids: menuForm.ekstra_ids,
 			gambar: imageUrl
 		};
 		let result;
 		try {
 			if (editMenuId) {
-				result = await getSupabaseClient(selectedBranch.value)
-					.from('produk')
-					.update(payload)
-					.eq('id', editMenuId);
+				result = await dataService.updateRows('produk', payload, { id: String(editMenuId) });
 			} else {
-				result = await getSupabaseClient(selectedBranch.value).from('produk').insert([payload]);
+				result = await dataService.insertRows('produk', payload);
 			}
-			if (result.error) {
-				throw result.error;
+			const productId = editMenuId ?? result?.data?.[0]?.id;
+			if (productId) {
+				await saveMenuRecipe(productId);
 			}
 		} catch (error) {
 			notifModalMsg = 'Gagal menyimpan menu: ' + ErrorHandler.extractErrorMessage(error);
@@ -333,12 +441,100 @@
 
 		// Force refresh data dan clear memoization
 		await fetchMenus();
+		await fetchRecipes();
 
 		await afterUpdateCachePOS();
 		clearMemoizationCache();
 	}
 
-	function confirmDeleteMenu(id: number) {
+	async function saveMenuRecipe(productId: string | number) {
+		await dataService.deleteRows('resep_produk', { product_id: String(productId) });
+		if (!menuForm.track_ingredients || recipeItems.length === 0) return;
+
+		const rows = recipeItems.map((item) => ({
+			product_id: String(productId),
+			bahan_id: String(item.bahan_id),
+			qty_per_item: Number(item.qty_per_item || 0)
+		}));
+		await dataService.insertRows('resep_produk', rows);
+	}
+
+	function addRecipeItem() {
+		const bahanId = recipeDraft.bahan_id;
+		const qty = Number(recipeDraft.qty_per_item || 0);
+		if (!bahanId || !Number.isFinite(qty) || qty <= 0) {
+			notifModalMsg = 'Pilih bahan dan isi takaran resep.';
+			notifModalType = 'warning';
+			showNotifModal = true;
+			return;
+		}
+		const existing = recipeItems.find((item) => String(item.bahan_id) === String(bahanId));
+		if (existing) {
+			existing.qty_per_item = String(qty);
+			recipeItems = [...recipeItems];
+		} else {
+			recipeItems = [...recipeItems, { bahan_id: bahanId, qty_per_item: String(qty) }];
+		}
+		recipeDraft = { bahan_id: '', qty_per_item: '' };
+	}
+
+	function removeRecipeItem(bahanId: string | number) {
+		recipeItems = recipeItems.filter((item) => String(item.bahan_id) !== String(bahanId));
+	}
+
+	function getBahanName(id: string | number) {
+		return bahanList.find((item) => String(item.id) === String(id))?.name || 'Bahan';
+	}
+
+	function getBahanUnit(id: string | number) {
+		return bahanList.find((item) => String(item.id) === String(id))?.unit || '';
+	}
+
+	function getBahanCostPerUnit(id: string | number) {
+		return Number(bahanList.find((item) => String(item.id) === String(id))?.cost_per_unit || 0);
+	}
+
+	function getOverheadMonthly() {
+		const settings = hppSettings || ({} as Partial<HppSettings>);
+		return (
+			Number(settings.rent_monthly || 0) +
+			Number(settings.electricity_monthly || 0) +
+			Number(settings.water_monthly || 0) +
+			Number(settings.salary_monthly || 0) +
+			Number(settings.other_monthly || 0)
+		);
+	}
+
+	function getOverheadPerItem() {
+		const target = Math.max(1, Number(hppSettings?.target_items_monthly || 1000));
+		return Math.round(getOverheadMonthly() / target);
+	}
+
+	function getProductRecipeCost(productId: string | number) {
+		return allRecipes
+			.filter((recipe) => String(recipe.product_id) === String(productId))
+			.reduce(
+				(sum, recipe) =>
+					sum + Number(recipe.qty_per_item || 0) * getBahanCostPerUnit(recipe.bahan_id),
+				0
+			);
+	}
+
+	function getProductHpp(menu: Product) {
+		const bahanCost = getProductRecipeCost(menu.id);
+		return Math.round(bahanCost + getOverheadPerItem());
+	}
+
+	function getProductMargin(menu: Product) {
+		const price = Number(menu.price || menu.harga || 0);
+		return price - getProductHpp(menu);
+	}
+
+	function formatCurrency(value: number) {
+		return `Rp ${Math.round(Number(value || 0)).toLocaleString('id-ID')}`;
+	}
+
+	function confirmDeleteMenu(id: string | number) {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('click', blockNextClick, true);
 		}
@@ -373,13 +569,7 @@
 						});
 					}
 				}
-				const { error } = await getSupabaseClient(selectedBranch.value)
-					.from('produk')
-					.delete()
-					.eq('id', menuIdToDelete);
-				if (error) {
-					throw error;
-				}
+				await dataService.deleteRows('produk', { id: String(menuIdToDelete) });
 				notifModalMsg = 'Menu berhasil dihapus!';
 				notifModalType = 'success';
 				showNotifModal = true;
@@ -443,28 +633,14 @@
 
 	async function saveKategoriDetail() {
 		if (kategoriDetail) {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('kategori')
-				.update({ name: kategoriDetailName })
-				.eq('id', kategoriDetail.id);
-			if (error) {
-				notifModalMsg = 'Gagal menyimpan kategori: ' + error.message;
-				notifModalType = 'error';
-				showNotifModal = true;
-				return;
-			}
+			await dataService.updateRows(
+				'kategori',
+				{ name: kategoriDetailName },
+				{ id: String(kategoriDetail.id) }
+			);
 			await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
 		} else {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('kategori')
-				.insert([{ name: kategoriDetailName }])
-				.select();
-			if (error) {
-				notifModalMsg = 'Gagal menambah kategori: ' + error.message;
-				notifModalType = 'error';
-				showNotifModal = true;
-				return;
-			}
+			const { data } = await dataService.insertRows('kategori', { name: kategoriDetailName });
 			const newKategoriId = data?.[0]?.id ?? null;
 			await updateMenusKategori(newKategoriId, selectedMenuIds, null);
 		}
@@ -484,7 +660,7 @@
 		await forceRefreshAfterCategoryChange();
 	}
 
-	function confirmDeleteKategori(id: number) {
+	function confirmDeleteKategori(id: string | number) {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('click', blockNextClick, true);
 		}
@@ -498,30 +674,14 @@
 		if (kategoriIdToDelete !== null) {
 			try {
 				// Pertama, update semua menu yang menggunakan kategori ini menjadi null
-				const { error: updateError } = await getSupabaseClient(selectedBranch.value)
-					.from('produk')
-					.update({ kategori_id: null })
-					.eq('kategori_id', kategoriIdToDelete);
-
-				if (updateError) {
-					notifModalMsg = 'Gagal mengupdate menu: ' + updateError.message;
-					notifModalType = 'error';
-					showNotifModal = true;
-					return;
-				}
+				await dataService.updateRows(
+					'produk',
+					{ kategori_id: null },
+					{ kategori_id: String(kategoriIdToDelete) }
+				);
 
 				// Kemudian hapus kategori
-				const { error: deleteError } = await getSupabaseClient(selectedBranch.value)
-					.from('kategori')
-					.delete()
-					.eq('id', kategoriIdToDelete);
-
-				if (deleteError) {
-					notifModalMsg = 'Gagal menghapus kategori: ' + deleteError.message;
-					notifModalType = 'error';
-					showNotifModal = true;
-					return;
-				}
+				await dataService.deleteRows('kategori', { id: String(kategoriIdToDelete) });
 
 				showDeleteKategoriModal = false;
 				kategoriIdToDelete = null;
@@ -587,16 +747,13 @@
 		}
 		try {
 			if (editEkstraId) {
-				const { error } = await getSupabaseClient(selectedBranch.value)
-					.from('tambahan')
-					.update({ name: ekstraForm.name, price: harga })
-					.eq('id', editEkstraId);
-				if (error) throw error;
+				await dataService.updateRows(
+					'tambahan',
+					{ name: ekstraForm.name, price: harga },
+					{ id: String(editEkstraId) }
+				);
 			} else {
-				const { error } = await getSupabaseClient(selectedBranch.value)
-					.from('tambahan')
-					.insert([{ name: ekstraForm.name, price: harga }]);
-				if (error) throw error;
+				await dataService.insertRows('tambahan', { name: ekstraForm.name, price: harga });
 			}
 			await fetchEkstra();
 			showEkstraForm = false;
@@ -611,7 +768,7 @@
 		await afterUpdateCachePOS();
 	}
 
-	function confirmDeleteEkstra(id: number) {
+	function confirmDeleteEkstra(id: string | number) {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('click', blockNextClick, true);
 		}
@@ -623,10 +780,7 @@
 
 	async function doDeleteEkstra() {
 		if (ekstraIdToDelete !== null) {
-			await getSupabaseClient(selectedBranch.value)
-				.from('tambahan')
-				.delete()
-				.eq('id', ekstraIdToDelete);
+			await dataService.deleteRows('tambahan', { id: String(ekstraIdToDelete) });
 			showDeleteEkstraModal = false;
 			ekstraIdToDelete = null;
 
@@ -646,6 +800,246 @@
 		}
 		touchStartX = 0;
 		touchEndX = 0;
+	}
+
+	function openBahanForm(bahan: Ingredient | null = null) {
+		showBahanForm = true;
+		if (bahan) {
+			editBahanId = bahan.id;
+			bahanForm = {
+				name: bahan.name,
+				unit: bahan.unit || 'gram',
+				current_stock: String(Number(bahan.current_stock || 0)),
+				low_stock_threshold: String(Number(bahan.low_stock_threshold || 0)),
+				last_purchase_qty: String(Number(bahan.last_purchase_qty || 0) || ''),
+				last_purchase_cost: String(Number(bahan.last_purchase_cost || 0) || '')
+			};
+		} else {
+			editBahanId = null;
+			bahanForm = {
+				name: '',
+				unit: 'gram',
+				current_stock: '',
+				low_stock_threshold: '',
+				last_purchase_qty: '',
+				last_purchase_cost: ''
+			};
+		}
+	}
+
+	function closeBahanForm() {
+		showBahanForm = false;
+		editBahanId = null;
+		bahanForm = {
+			name: '',
+			unit: 'gram',
+			current_stock: '',
+			low_stock_threshold: '',
+			last_purchase_qty: '',
+			last_purchase_cost: ''
+		};
+	}
+
+	async function saveBahan() {
+		if (!bahanForm.name.trim()) {
+			notifModalMsg = 'Nama bahan wajib diisi';
+			notifModalType = 'warning';
+			showNotifModal = true;
+			return;
+		}
+		const payload = {
+			name: bahanForm.name.trim(),
+			unit: bahanForm.unit || 'gram',
+			current_stock: Math.max(0, Number(bahanForm.current_stock || 0)),
+			low_stock_threshold: Math.max(0, Number(bahanForm.low_stock_threshold || 0)),
+			last_purchase_qty: Math.max(0, Number(bahanForm.last_purchase_qty || 0)),
+			last_purchase_cost: Math.max(0, Number(bahanForm.last_purchase_cost || 0)),
+			cost_per_unit:
+				Number(bahanForm.last_purchase_qty || 0) > 0
+					? Math.round(
+							(Number(bahanForm.last_purchase_cost || 0) /
+								Number(bahanForm.last_purchase_qty || 0)) *
+								100
+						) / 100
+					: 0
+		};
+		try {
+			if (editBahanId) {
+				await dataService.updateRows('bahan', payload, { id: String(editBahanId) });
+			} else {
+				await dataService.insertRows('bahan', payload);
+			}
+			closeBahanForm();
+			await dataService.invalidateCacheOnChange('bahan');
+			await fetchBahan();
+		} catch (error) {
+			notifModalMsg = 'Gagal menyimpan bahan: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+	}
+
+	async function saveHppSettings() {
+		const payload = {
+			rent_monthly: Number(hppForm.rent_monthly || 0),
+			electricity_monthly: Number(hppForm.electricity_monthly || 0),
+			water_monthly: Number(hppForm.water_monthly || 0),
+			salary_monthly: Number(hppForm.salary_monthly || 0),
+			other_monthly: Number(hppForm.other_monthly || 0),
+			target_items_monthly: Math.max(1, Number(hppForm.target_items_monthly || 1000))
+		};
+		try {
+			const result = await dataService.insertRows('hpp_settings', payload);
+			hppSettings = result.data?.[0] || ({ ...payload } as HppSettings);
+			await dataService.invalidateCacheOnChange('hpp_settings');
+			await fetchHppSettings();
+			notifModalMsg = 'Pengaturan HPP tersimpan';
+			notifModalType = 'success';
+			showNotifModal = true;
+		} catch (error) {
+			notifModalMsg = 'Gagal menyimpan HPP: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+	}
+
+	async function parseHppPurchaseText() {
+		if (!hppPurchaseText.trim()) {
+			notifModalMsg = 'Isi catatan belanja dulu';
+			notifModalType = 'warning';
+			showNotifModal = true;
+			return;
+		}
+		isParsingHpp = true;
+		try {
+			const res = await fetch('/api/hpp/parse', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: hppPurchaseText })
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data?.message || 'Gagal parse belanja');
+			hppParsedItems = data.items || [];
+		} catch (error) {
+			notifModalMsg = 'Gagal membaca catatan belanja: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+		isParsingHpp = false;
+	}
+
+	async function saveParsedHppItem(item: {
+		name: string;
+		unit: string;
+		purchase_qty: number;
+		purchase_cost: number;
+		cost_per_unit: number;
+	}) {
+		const existing = bahanList.find(
+			(bahan) => bahan.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+		);
+		try {
+			if (existing) {
+				await dataService.updateRows(
+					'bahan',
+					{
+						unit: item.unit,
+						last_purchase_qty: item.purchase_qty,
+						last_purchase_cost: item.purchase_cost,
+						cost_per_unit: item.cost_per_unit
+					},
+					{ id: String(existing.id) }
+				);
+				await dataService.insertRows('bahan_mutasi', {
+					bahan_id: String(existing.id),
+					quantity_delta: item.purchase_qty,
+					source: 'purchase',
+					note: `Belanja ${formatCurrency(item.purchase_cost)}`
+				});
+			} else {
+				await dataService.insertRows('bahan', {
+					name: item.name,
+					unit: item.unit,
+					current_stock: item.purchase_qty,
+					low_stock_threshold: 0,
+					last_purchase_qty: item.purchase_qty,
+					last_purchase_cost: item.purchase_cost,
+					cost_per_unit: item.cost_per_unit
+				});
+			}
+			await dataService.invalidateCacheOnChange('bahan');
+			await fetchBahan();
+			notifModalMsg = 'Bahan HPP tersimpan';
+			notifModalType = 'success';
+			showNotifModal = true;
+		} catch (error) {
+			notifModalMsg = 'Gagal menyimpan bahan HPP: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+	}
+
+	function openMutasiBahanForm(bahan: Ingredient) {
+		mutasiBahanId = bahan.id;
+		mutasiBahanForm = { quantity_delta: '', note: '' };
+		showMutasiBahanForm = true;
+	}
+
+	function closeMutasiBahanForm() {
+		showMutasiBahanForm = false;
+		mutasiBahanId = null;
+		mutasiBahanForm = { quantity_delta: '', note: '' };
+	}
+
+	async function saveMutasiBahan() {
+		if (!mutasiBahanId) return;
+		const delta = Number(mutasiBahanForm.quantity_delta || 0);
+		if (!Number.isFinite(delta) || delta === 0) {
+			notifModalMsg = 'Jumlah stok masuk atau keluar wajib diisi';
+			notifModalType = 'warning';
+			showNotifModal = true;
+			return;
+		}
+		try {
+			await dataService.insertRows('bahan_mutasi', {
+				bahan_id: String(mutasiBahanId),
+				quantity_delta: delta,
+				source: 'manual',
+				note: mutasiBahanForm.note
+			});
+			closeMutasiBahanForm();
+			await dataService.invalidateCacheOnChange('bahan');
+			await fetchBahan();
+		} catch (error) {
+			notifModalMsg = 'Gagal menyimpan stok bahan: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+	}
+
+	function confirmDeleteBahan(id: string | number) {
+		bahanIdToDelete = id;
+		showDeleteBahanModal = true;
+	}
+
+	async function doDeleteBahan() {
+		if (bahanIdToDelete === null) return;
+		try {
+			await dataService.deleteRows('bahan', { id: String(bahanIdToDelete) });
+			showDeleteBahanModal = false;
+			bahanIdToDelete = null;
+			await dataService.invalidateCacheOnChange('bahan');
+			await fetchBahan();
+		} catch (error) {
+			notifModalMsg = 'Gagal menghapus bahan: ' + ErrorHandler.extractErrorMessage(error);
+			notifModalType = 'error';
+			showNotifModal = true;
+		}
+	}
+
+	function cancelDeleteBahan() {
+		showDeleteBahanModal = false;
+		bahanIdToDelete = null;
 	}
 
 	// Helper functions for menu form
@@ -714,7 +1108,7 @@
 		// Handle ekstra click if needed
 	}
 
-	function toggleMenuInKategoriRealtime(menuId: number) {
+	function toggleMenuInKategoriRealtime(menuId: string | number) {
 		if (selectedMenuIds.includes(menuId)) {
 			selectedMenuIds = selectedMenuIds.filter((id) => id !== menuId);
 			unselectedMenuIds = [...unselectedMenuIds, menuId];
@@ -725,17 +1119,14 @@
 	}
 
 	async function updateMenusKategori(
-		kategoriId: number | null,
-		menuIds: number[],
-		oldKategoriId: number | null
+		kategoriId: string | number | null,
+		menuIds: Array<string | number>,
+		oldKategoriId: string | number | null
 	) {
 		try {
 			// Update menu kategori untuk menu yang dipilih
 			for (const menuId of menuIds) {
-				await getSupabaseClient(selectedBranch.value)
-					.from('produk')
-					.update({ kategori_id: kategoriId })
-					.eq('id', menuId);
+				await dataService.updateRows('produk', { kategori_id: kategoriId }, { id: String(menuId) });
 			}
 
 			// Jika ada kategori lama, update menu yang tidak dipilih untuk kembali ke kategori lama
@@ -746,10 +1137,7 @@
 				);
 
 				for (const menu of menusToRemoveFromOldKategori) {
-					await getSupabaseClient(selectedBranch.value)
-						.from('produk')
-						.update({ kategori_id: null })
-						.eq('id', menu.id);
+					await dataService.updateRows('produk', { kategori_id: null }, { id: String(menu.id) });
 				}
 			}
 		} catch (error) {
@@ -758,7 +1146,7 @@
 		}
 	}
 
-	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: number) {
+	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: string | number) {
 		const res = await fetch(dataUrl);
 		const blob = await res.blob();
 		const file = new File([blob], `menu-${menuId}-${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -789,16 +1177,26 @@
 		menuForm.tipe = type;
 	}
 
-	function setMenuKategori(kategoriId: number | null) {
+	function setMenuKategori(kategoriId: string | number | null) {
 		menuForm.kategori_id = kategoriId;
 	}
 
-	function toggleEkstra(ekstraId: number) {
+	function toggleEkstra(ekstraId: string | number) {
 		if (menuForm.ekstra_ids.includes(ekstraId)) {
 			menuForm.ekstra_ids = menuForm.ekstra_ids.filter((id) => id !== ekstraId);
 		} else {
 			menuForm.ekstra_ids = [...menuForm.ekstra_ids, ekstraId];
 		}
+	}
+
+	function setTrackStock(value: boolean) {
+		menuForm.track_stock = value;
+		if (value) menuForm.track_ingredients = false;
+	}
+
+	function setTrackIngredients(value: boolean) {
+		menuForm.track_ingredients = value;
+		if (value) menuForm.track_stock = false;
 	}
 
 	async function afterUpdateCachePOS() {
@@ -815,6 +1213,7 @@
 			await dataService.invalidateCacheOnChange('produk');
 			await dataService.invalidateCacheOnChange('kategori');
 			await dataService.invalidateCacheOnChange('tambahan');
+			await dataService.invalidateCacheOnChange('bahan');
 		} catch (error) {
 			ErrorHandler.logError(error, 'clearDataServiceCache');
 		}
@@ -882,7 +1281,7 @@
 		<h1 class="text-xl font-bold text-gray-800">Manajemen Menu</h1>
 	</div>
 
-	<!-- Navigasi Tab Menu/Kategori/Ekstra -->
+	<!-- Navigasi Tab Menu/Kategori/Ekstra/Bahan -->
 	<div class="mx-auto max-w-4xl px-4 pt-3">
 		<div
 			class="relative mb-3 flex overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow md:h-16 md:gap-6 md:text-lg"
@@ -891,10 +1290,14 @@
 			<div
 				class="absolute top-1 bottom-1 rounded-lg transition-all duration-300 ease-out {activeTab ===
 				'menu'
-					? 'left-1 w-[calc(33.333%-0.25rem)] bg-pink-500'
+					? 'left-1 w-[calc(20%-0.25rem)] bg-pink-500'
 					: activeTab === 'kategori'
-						? 'left-[calc(33.333%+0.125rem)] w-[calc(33.333%-0.25rem)] bg-blue-500'
-						: 'left-[calc(66.666%+0.125rem)] w-[calc(33.333%-0.25rem)] bg-green-500'}"
+						? 'left-[calc(20%+0.125rem)] w-[calc(20%-0.25rem)] bg-blue-500'
+						: activeTab === 'ekstra'
+							? 'left-[calc(40%+0.125rem)] w-[calc(20%-0.25rem)] bg-green-500'
+							: activeTab === 'bahan'
+								? 'left-[calc(60%+0.125rem)] w-[calc(20%-0.25rem)] bg-amber-500'
+								: 'left-[calc(80%+0.125rem)] w-[calc(20%-0.25rem)] bg-gray-700'}"
 			></div>
 			<button
 				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
@@ -916,6 +1319,20 @@
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'ekstra')}>Tambahan</button
+			>
+			<button
+				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				'bahan'
+					? 'text-white'
+					: 'text-gray-700'} md:px-8 md:py-4"
+				onclick={() => (activeTab = 'bahan')}>Bahan</button
+			>
+			<button
+				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				'hpp'
+					? 'text-white'
+					: 'text-gray-700'} md:px-8 md:py-4"
+				onclick={() => (activeTab = 'hpp')}>HPP</button
 			>
 		</div>
 	</div>
@@ -942,6 +1359,14 @@
 			class="fixed right-6 bottom-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-green-500 text-white shadow-lg transition-colors hover:bg-green-600"
 			onclick={() => openEkstraForm()}
 			aria-label="Tambah Tambahan"
+		>
+			<svelte:component this={Plus} class="h-8 w-8" />
+		</button>
+	{:else if activeTab === 'bahan'}
+		<button
+			class="fixed right-6 bottom-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition-colors hover:bg-amber-600"
+			onclick={() => openBahanForm()}
+			aria-label="Tambah Bahan"
 		>
 			<svelte:component this={Plus} class="h-8 w-8" />
 		</button>
@@ -1351,6 +1776,270 @@
 					</div>
 				</div>
 			</div>
+		{:else if activeTab === 'bahan'}
+			<div transition:slide|local class="flex min-h-0 flex-1 flex-col">
+				<div class="flex-shrink-0 bg-white px-4">
+					<div class="relative mb-3 flex items-center">
+						<svg
+							class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							viewBox="0 0 24 24"
+							><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
+						>
+						<input
+							type="text"
+							class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+							placeholder="Cari bahan..."
+							bind:value={searchBahan}
+						/>
+					</div>
+					<div class="mb-2 flex items-center justify-between">
+						<h2 class="text-lg font-bold text-gray-800">Stok Bahan</h2>
+					</div>
+				</div>
+
+				<div class="flex-1 overflow-y-auto">
+					<div class="px-4 pb-6">
+						{#if isLoadingBahan}
+							<div class="flex min-h-[60dvh] flex-col gap-2">
+								{#each Array(4) as _, i}
+									<div
+										class="flex animate-pulse items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-md"
+									></div>
+								{/each}
+							</div>
+						{:else if bahanList.length === 0}
+							<div
+								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
+							>
+								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Bahan</div>
+								<div class="text-sm text-gray-400">
+									Tambahkan buah, gula, susu, cup, dan bahan lain.
+								</div>
+							</div>
+						{:else}
+							<div class="flex flex-col gap-2">
+								{#each bahanList.filter((bahan) => bahan.name
+										.toLowerCase()
+										.includes(searchBahan.trim().toLowerCase())) as bahan}
+									<div
+										class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm transition-all hover:bg-amber-100"
+									>
+										<div class="flex items-start justify-between gap-3">
+											<button
+												type="button"
+												class="min-w-0 flex-1 text-left"
+												onclick={() => openBahanForm(bahan)}
+											>
+												<span class="mb-0.5 block truncate text-base font-semibold text-amber-950"
+													>{bahan.name}</span
+												>
+												<span class="block text-xs text-amber-800">
+													Stok {Number(bahan.current_stock || 0).toLocaleString('id-ID')}
+													{bahan.unit}
+													{#if Number(bahan.low_stock_threshold || 0) > 0}
+														/ minimum {Number(bahan.low_stock_threshold || 0).toLocaleString(
+															'id-ID'
+														)}
+														{bahan.unit}
+													{/if}
+												</span>
+												<span class="block text-xs text-amber-700">
+													HPP {formatCurrency(Number(bahan.cost_per_unit || 0))} per {bahan.unit}
+												</span>
+												{#if Number(bahan.low_stock_threshold || 0) > 0 && Number(bahan.current_stock || 0) <= Number(bahan.low_stock_threshold || 0)}
+													<span
+														class="mt-1 inline-flex rounded-md bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700"
+													>
+														Stok rendah
+													</span>
+												{/if}
+											</button>
+											<div class="flex shrink-0 gap-2">
+												<button
+													type="button"
+													class="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800"
+													onclick={() => openMutasiBahanForm(bahan)}
+												>
+													Stok
+												</button>
+												<button
+													class="rounded-full border border-red-200 bg-red-50 p-3 hover:bg-red-100"
+													onclick={() => confirmDeleteBahan(bahan.id)}
+													aria-label="Hapus Bahan"
+												>
+													<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
+												</button>
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{:else if activeTab === 'hpp'}
+			<div transition:slide|local class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8">
+				<div class="mb-4 grid gap-3 md:grid-cols-3">
+					<div class="rounded-xl border border-gray-200 bg-white p-4">
+						<div class="text-xs font-semibold text-gray-500">Biaya tetap bulanan</div>
+						<div class="mt-1 text-xl font-bold text-gray-900">
+							{formatCurrency(getOverheadMonthly())}
+						</div>
+					</div>
+					<div class="rounded-xl border border-gray-200 bg-white p-4">
+						<div class="text-xs font-semibold text-gray-500">Alokasi per item</div>
+						<div class="mt-1 text-xl font-bold text-gray-900">
+							{formatCurrency(getOverheadPerItem())}
+						</div>
+					</div>
+					<div class="rounded-xl border border-gray-200 bg-white p-4">
+						<div class="text-xs font-semibold text-gray-500">Target item per bulan</div>
+						<div class="mt-1 text-xl font-bold text-gray-900">
+							{Number(hppSettings?.target_items_monthly || 1000).toLocaleString('id-ID')}
+						</div>
+					</div>
+				</div>
+
+				<form
+					class="mb-4 rounded-xl border border-gray-200 bg-white p-4"
+					onsubmit={saveHppSettings}
+				>
+					<h2 class="mb-3 text-lg font-bold text-gray-800">Biaya Tetap</h2>
+					<div class="grid gap-3 md:grid-cols-3">
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="0"
+							placeholder="Kios per bulan"
+							bind:value={hppForm.rent_monthly}
+						/>
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="0"
+							placeholder="Listrik per bulan"
+							bind:value={hppForm.electricity_monthly}
+						/>
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="0"
+							placeholder="Air bersih per bulan"
+							bind:value={hppForm.water_monthly}
+						/>
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="0"
+							placeholder="Gaji per bulan"
+							bind:value={hppForm.salary_monthly}
+						/>
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="0"
+							placeholder="Biaya lain"
+							bind:value={hppForm.other_monthly}
+						/>
+						<input
+							class="rounded-lg border border-gray-300 px-3 py-2"
+							type="number"
+							min="1"
+							placeholder="Target item/bulan"
+							bind:value={hppForm.target_items_monthly}
+						/>
+					</div>
+					<button
+						type="submit"
+						class="mt-3 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+					>
+						Simpan HPP
+					</button>
+				</form>
+
+				<div class="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+					<h2 class="mb-3 text-lg font-bold text-gray-800">AI Baca Cerita Belanja</h2>
+					<textarea
+						class="min-h-24 w-full rounded-lg border border-gray-300 px-3 py-2"
+						placeholder="Contoh: aku tadi belanja buat minggu ini, alpukat 10 kg kena 35000, gula 1 kg 18000, cup 50 pcs 25000"
+						bind:value={hppPurchaseText}
+					></textarea>
+					<button
+						type="button"
+						class="mt-3 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+						disabled={isParsingHpp}
+						onclick={parseHppPurchaseText}
+					>
+						{isParsingHpp ? 'Membaca...' : 'Baca dengan AI'}
+					</button>
+					{#if hppParsedItems.length > 0}
+						<div class="mt-3 flex flex-col gap-2">
+							{#each hppParsedItems as item}
+								<div
+									class="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+								>
+									<div class="min-w-0">
+										<div class="truncate text-sm font-semibold text-gray-800">{item.name}</div>
+										<div class="text-xs text-gray-600">
+											{Number(item.purchase_qty).toLocaleString('id-ID')}
+											{item.unit} /
+											{formatCurrency(item.purchase_cost)} =
+											{formatCurrency(item.cost_per_unit)} per {item.unit}
+										</div>
+									</div>
+									<button
+										type="button"
+										class="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-amber-800"
+										onclick={() => saveParsedHppItem(item)}
+									>
+										Simpan
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+
+				<div class="rounded-xl border border-gray-200 bg-white p-4">
+					<h2 class="mb-3 text-lg font-bold text-gray-800">Estimasi HPP Menu</h2>
+					<div class="flex flex-col gap-2">
+						{#each menus.filter((menu) => menu.track_ingredients) as menu}
+							<div class="rounded-lg border border-gray-200 px-3 py-3">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0">
+										<div class="truncate text-sm font-semibold text-gray-900">{menu.name}</div>
+										<div class="text-xs text-gray-500">
+											Bahan {formatCurrency(getProductRecipeCost(menu.id))} + overhead
+											{formatCurrency(getOverheadPerItem())}
+										</div>
+									</div>
+									<div class="text-right">
+										<div class="text-sm font-bold text-gray-900">
+											HPP {formatCurrency(getProductHpp(menu))}
+										</div>
+										<div
+											class="text-xs font-semibold {getProductMargin(menu) >= 0
+												? 'text-green-700'
+												: 'text-red-700'}"
+										>
+											Margin {formatCurrency(getProductMargin(menu))}
+										</div>
+									</div>
+								</div>
+							</div>
+						{/each}
+						{#if menus.filter((menu) => menu.track_ingredients).length === 0}
+							<div class="rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500">
+								Belum ada menu dengan resep bahan.
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
 		{/if}
 	</div>
 
@@ -1514,6 +2203,116 @@
 								placeholder="0"
 							/>
 						</div>
+					</div>
+
+					<!-- Stok Menu -->
+					<div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+						<label class="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
+							<span>
+								<span class="block text-sm font-semibold text-gray-800">Stok barang jadi</span>
+								<span class="mt-1 block text-xs text-gray-500"
+									>Untuk snack, pudding, makanan siap jual.</span
+								>
+							</span>
+							<input
+								type="checkbox"
+								class="h-5 w-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
+								bind:checked={menuForm.track_stock}
+								onchange={(event) =>
+									setTrackStock((event.currentTarget as HTMLInputElement).checked)}
+							/>
+						</label>
+						{#if menuForm.track_stock}
+							<div class="mt-4 flex flex-col gap-2">
+								<label for="menu-stok" class="text-sm font-semibold text-gray-700"
+									>Stok Saat Ini</label
+								>
+								<input
+									type="number"
+									id="menu-stok"
+									min="0"
+									step="1"
+									class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
+									bind:value={menuForm.stok}
+									placeholder="0"
+								/>
+							</div>
+						{/if}
+						<label class="mt-4 flex items-center justify-between gap-4">
+							<span>
+								<span class="block text-sm font-semibold text-gray-800">Pakai resep bahan</span>
+								<span class="mt-1 block text-xs text-gray-500"
+									>Untuk jus made by order. Checkout potong stok buah, gula, susu, cup.</span
+								>
+							</span>
+							<input
+								type="checkbox"
+								class="h-5 w-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+								bind:checked={menuForm.track_ingredients}
+								onchange={(event) =>
+									setTrackIngredients((event.currentTarget as HTMLInputElement).checked)}
+							/>
+						</label>
+						{#if menuForm.track_ingredients}
+							<div class="mt-4 rounded-xl border border-amber-200 bg-white p-3">
+								<div class="mb-3 grid grid-cols-[1fr_96px_auto] gap-2">
+									<select
+										class="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+										bind:value={recipeDraft.bahan_id}
+									>
+										<option value="">Pilih bahan</option>
+										{#each bahanList as bahan}
+											<option value={bahan.id}>{bahan.name} ({bahan.unit})</option>
+										{/each}
+									</select>
+									<input
+										type="number"
+										min="0"
+										step="0.01"
+										class="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+										bind:value={recipeDraft.qty_per_item}
+										placeholder="Takaran"
+									/>
+									<button
+										type="button"
+										class="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white"
+										onclick={addRecipeItem}
+									>
+										Tambah
+									</button>
+								</div>
+								{#if recipeItems.length === 0}
+									<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+										Belum ada bahan resep.
+									</div>
+								{:else}
+									<div class="flex flex-col gap-2">
+										{#each recipeItems as recipe}
+											<div
+												class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2"
+											>
+												<div class="min-w-0">
+													<div class="truncate text-sm font-semibold text-gray-800">
+														{getBahanName(recipe.bahan_id)}
+													</div>
+													<div class="text-xs text-gray-500">
+														{Number(recipe.qty_per_item || 0).toLocaleString('id-ID')}
+														{getBahanUnit(recipe.bahan_id)} per item
+													</div>
+												</div>
+												<button
+													type="button"
+													class="rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-700"
+													onclick={() => removeRecipeItem(recipe.bahan_id)}
+												>
+													Hapus
+												</button>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 
 					<!-- Tipe Menu -->
@@ -1807,6 +2606,185 @@
 		</div>
 	{/if}
 
+	{#if showBahanForm}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+			role="dialog"
+			aria-modal="true"
+			onclick={(e) => e.target === e.currentTarget && closeBahanForm()}
+			onkeydown={(e) => e.key === 'Escape' && closeBahanForm()}
+			tabindex="-1"
+		>
+			<div
+				class="animate-slideUpModal relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h2 class="mb-4 text-center text-lg font-bold text-gray-800">
+					{editBahanId ? 'Edit Bahan' : 'Tambah Bahan'}
+				</h2>
+				<form class="flex flex-col gap-4" onsubmit={saveBahan} autocomplete="off">
+					<div class="flex flex-col gap-2">
+						<label for="bahan-name" class="font-semibold text-gray-700">Nama Bahan</label>
+						<input
+							id="bahan-name"
+							type="text"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+							bind:value={bahanForm.name}
+							required
+							placeholder="Contoh: Alpukat"
+						/>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="flex flex-col gap-2">
+							<label for="bahan-unit" class="font-semibold text-gray-700">Satuan</label>
+							<select
+								id="bahan-unit"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+								bind:value={bahanForm.unit}
+							>
+								<option value="gram">gram</option>
+								<option value="ml">ml</option>
+								<option value="pcs">pcs</option>
+								<option value="buah">buah</option>
+							</select>
+						</div>
+						<div class="flex flex-col gap-2">
+							<label for="bahan-stock" class="font-semibold text-gray-700">Stok Awal</label>
+							<input
+								id="bahan-stock"
+								type="number"
+								min="0"
+								step="0.01"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+								bind:value={bahanForm.current_stock}
+								placeholder="0"
+							/>
+						</div>
+					</div>
+					<div class="flex flex-col gap-2">
+						<label for="bahan-low" class="font-semibold text-gray-700">Minimum Stok</label>
+						<input
+							id="bahan-low"
+							type="number"
+							min="0"
+							step="0.01"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+							bind:value={bahanForm.low_stock_threshold}
+							placeholder="0"
+						/>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="flex flex-col gap-2">
+							<label for="bahan-purchase-qty" class="font-semibold text-gray-700">Jumlah Beli</label
+							>
+							<input
+								id="bahan-purchase-qty"
+								type="number"
+								min="0"
+								step="0.01"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+								bind:value={bahanForm.last_purchase_qty}
+								placeholder="Contoh: 1000"
+							/>
+						</div>
+						<div class="flex flex-col gap-2">
+							<label for="bahan-purchase-cost" class="font-semibold text-gray-700">Harga Beli</label
+							>
+							<input
+								id="bahan-purchase-cost"
+								type="number"
+								min="0"
+								step="1"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+								bind:value={bahanForm.last_purchase_cost}
+								placeholder="Contoh: 18000"
+							/>
+						</div>
+					</div>
+					{#if Number(bahanForm.last_purchase_qty || 0) > 0}
+						<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+							HPP bahan {formatCurrency(
+								Number(bahanForm.last_purchase_cost || 0) / Number(bahanForm.last_purchase_qty || 1)
+							)}
+							per {bahanForm.unit}
+						</div>
+					{/if}
+					<div class="mt-4 flex gap-2">
+						<button
+							type="submit"
+							class="flex-1 rounded-xl bg-amber-500 py-3 font-semibold text-white transition-colors hover:bg-amber-600"
+							>Simpan</button
+						>
+						<button
+							type="button"
+							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+							onclick={closeBahanForm}>Batal</button
+						>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	{#if showMutasiBahanForm}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+			role="dialog"
+			aria-modal="true"
+			onclick={(e) => e.target === e.currentTarget && closeMutasiBahanForm()}
+			onkeydown={(e) => e.key === 'Escape' && closeMutasiBahanForm()}
+			tabindex="-1"
+		>
+			<div
+				class="animate-slideUpModal relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+				role="document"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h2 class="mb-4 text-center text-lg font-bold text-gray-800">Ubah Stok Bahan</h2>
+				<form class="flex flex-col gap-4" onsubmit={saveMutasiBahan} autocomplete="off">
+					<div class="flex flex-col gap-2">
+						<label for="mutasi-delta" class="font-semibold text-gray-700">Jumlah</label>
+						<input
+							id="mutasi-delta"
+							type="number"
+							step="0.01"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+							bind:value={mutasiBahanForm.quantity_delta}
+							required
+							placeholder="Contoh: 500 atau -100"
+						/>
+						<p class="text-xs text-gray-500">
+							Angka positif untuk stok masuk, negatif untuk koreksi keluar.
+						</p>
+					</div>
+					<div class="flex flex-col gap-2">
+						<label for="mutasi-note" class="font-semibold text-gray-700">Catatan</label>
+						<input
+							id="mutasi-note"
+							type="text"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
+							bind:value={mutasiBahanForm.note}
+							placeholder="Belanja bahan / koreksi opname"
+						/>
+					</div>
+					<div class="mt-4 flex gap-2">
+						<button
+							type="submit"
+							class="flex-1 rounded-xl bg-amber-500 py-3 font-semibold text-white transition-colors hover:bg-amber-600"
+							>Simpan</button
+						>
+						<button
+							type="button"
+							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+							onclick={closeMutasiBahanForm}>Batal</button
+						>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Modal konfirmasi hapus menu -->
 	{#if showDeleteModal}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1874,6 +2852,29 @@
 					<button
 						class="flex-1 rounded-xl bg-red-500 px-4 py-2 font-medium text-white transition-colors hover:bg-red-600"
 						onclick={doDeleteEkstra}>Hapus</button
+					>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if showDeleteBahanModal}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+			<div
+				class="animate-slideUpModal relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-white p-6 shadow-xl"
+			>
+				<h2 class="mb-2 text-center text-lg font-bold text-gray-800">Hapus Bahan?</h2>
+				<p class="mb-6 text-center text-sm text-gray-500">
+					Bahan tidak bisa dihapus kalau masih dipakai resep menu.
+				</p>
+				<div class="flex w-full gap-3">
+					<button
+						class="flex-1 rounded-xl border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+						onclick={cancelDeleteBahan}>Batal</button
+					>
+					<button
+						class="flex-1 rounded-xl bg-red-500 px-4 py-2 font-medium text-white transition-colors hover:bg-red-600"
+						onclick={doDeleteBahan}>Hapus</button
 					>
 				</div>
 			</div>

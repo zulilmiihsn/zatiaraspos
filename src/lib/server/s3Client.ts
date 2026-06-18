@@ -14,7 +14,9 @@ import { env } from '$env/dynamic/private';
  */
 export const createR2Client = () => {
 	if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
-		throw new Error('R2 credentials are not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.');
+		throw new Error(
+			'R2 credentials are not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.'
+		);
 	}
 
 	return new S3Client({
@@ -22,8 +24,8 @@ export const createR2Client = () => {
 		endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
 		credentials: {
 			accessKeyId: env.R2_ACCESS_KEY_ID,
-			secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-		},
+			secretAccessKey: env.R2_SECRET_ACCESS_KEY
+		}
 	});
 };
 
@@ -36,8 +38,17 @@ export const createR2Client = () => {
 export const uploadToR2 = async (
 	key: string,
 	body: ArrayBuffer | Uint8Array,
-	contentType: string
+	contentType: string,
+	bucketBinding?: any
 ): Promise<string> => {
+	if (bucketBinding) {
+		await bucketBinding.put(key, body, {
+			httpMetadata: { contentType }
+		});
+		const publicUrl = env.R2_PUBLIC_URL || '';
+		return publicUrl ? `${publicUrl}/${key}` : `/api/upload?key=${encodeURIComponent(key)}`;
+	}
+
 	const client = createR2Client();
 	const bucket = env.R2_BUCKET_NAME || 'zatiaras-assets';
 	const publicUrl = env.R2_PUBLIC_URL || '';
@@ -47,7 +58,7 @@ export const uploadToR2 = async (
 			Bucket: bucket,
 			Key: key,
 			Body: new Uint8Array(body),
-			ContentType: contentType,
+			ContentType: contentType
 		})
 	);
 
@@ -57,14 +68,19 @@ export const uploadToR2 = async (
 /**
  * Delete an object from R2 by key.
  */
-export const deleteFromR2 = async (key: string): Promise<void> => {
+export const deleteFromR2 = async (key: string, bucketBinding?: any): Promise<void> => {
+	if (bucketBinding) {
+		await bucketBinding.delete(key);
+		return;
+	}
+
 	const client = createR2Client();
 	const bucket = env.R2_BUCKET_NAME || 'zatiaras-assets';
 
 	await client.send(
 		new DeleteObjectCommand({
 			Bucket: bucket,
-			Key: key,
+			Key: key
 		})
 	);
 };

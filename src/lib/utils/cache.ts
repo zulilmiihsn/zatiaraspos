@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { get as getCache, set as setCache, del as delCache } from 'idb-keyval';
+import { clear as clearCache, get as getCache, set as setCache, del as delCache } from 'idb-keyval';
 
 // Cache configuration
 const CACHE_CONFIG = {
@@ -163,9 +163,7 @@ class IndexedDBCache {
 		if (!browser) return;
 		// Hapus seluruh data cache IndexedDB
 		try {
-			// idb-keyval menyediakan clear() untuk menghapus semua key
-			const { clear } = await import('idb-keyval');
-			await clear();
+			await clearCache();
 		} catch (error) {
 			// Silent error handling
 		}

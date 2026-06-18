@@ -106,7 +106,7 @@ export class BundleOptimizer {
 	private async findDuplicateModules(): Promise<string[]> {
 		// This would require more sophisticated analysis in a real implementation
 		// For now, return common duplicates
-		return ['lucide-svelte', '@supabase/supabase-js'];
+		return ['lucide-svelte'];
 	}
 
 	/**

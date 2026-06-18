@@ -98,7 +98,16 @@ export class ErrorHandler {
 		const timestamp = new Date().toISOString();
 		const contextStr = context ? ` [${context}]` : '';
 
-		// Error logging disabled for production
+		if (typeof window !== 'undefined') {
+			securityUtils.logSecurityEvent('client_error', {
+				message: errorMessage,
+				context,
+				timestamp
+			});
+			return;
+		}
+
+		console.error(`[APP_ERROR]${contextStr}`, { message: errorMessage, timestamp });
 	}
 
 	/**

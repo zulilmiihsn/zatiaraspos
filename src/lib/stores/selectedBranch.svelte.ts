@@ -23,6 +23,7 @@ class BranchState {
 		this.#value = v;
 		if (typeof window !== 'undefined') {
 			localStorage.setItem('selectedBranch', v);
+			window.dispatchEvent(new CustomEvent('selected-branch-changed', { detail: { branch: v } }));
 		}
 	}
 }

@@ -1,10 +1,14 @@
 import { json } from '@sveltejs/kit';
+import { getD1Database } from '$lib/server/branchResolver';
+import { appendAuditLog } from '$lib/server/auditLog';
+import { branchFromObservation } from '$lib/server/observability';
 import type { RequestHandler } from './$types';
 
 const WINDOW_MS = 5 * 60 * 1000;
 const MAX_EVENTS_PER_WINDOW = 60;
 const MAX_EVENT_DATA_BYTES = 4096;
 const MAX_EVENT_HISTORY = 2000;
+const textEncoder = new TextEncoder();
 const eventRateLimit = new Map<string, { count: number; resetAt: number }>();
 const securityEventHistory: Array<{
 	eventType: string;
@@ -25,7 +29,8 @@ const ALLOWED_EVENT_TYPES = new Set([
 	'suspicious_cart_activity',
 	'product_added_to_cart',
 	'suspicious_input_blocked',
-	'api_request_failed'
+	'api_request_failed',
+	'client_error'
 ]);
 
 function pushSecurityEvent(entry: {
@@ -150,7 +155,15 @@ function sanitizeEventType(eventType: unknown): string | null {
 	return normalized;
 }
 
-export const POST: RequestHandler = async ({ request, getClientAddress, locals }) => {
+async function hashIdentifier(value: string): Promise<string> {
+	const bytes = new TextEncoder().encode(value);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((byte) => byte.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+export const POST: RequestHandler = async ({ request, getClientAddress, locals, platform }) => {
 	const clientIp = getClientAddress();
 	if (isRateLimited(clientIp)) {
 		return json(
@@ -192,7 +205,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 	const receivedAt = Date.now();
 	const timestamp = typeof payload.timestamp === 'number' ? payload.timestamp : receivedAt;
 	const eventData = payload.data ?? {};
-	const dataBytes = Buffer.byteLength(JSON.stringify(eventData), 'utf8');
+	const dataBytes = textEncoder.encode(JSON.stringify(eventData)).byteLength;
 	if (dataBytes > MAX_EVENT_DATA_BYTES) {
 		return json(
 			{ success: false, code: 'PAYLOAD_TOO_LARGE', message: 'Event payload too large' },
@@ -208,6 +221,22 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals }
 		role: locals.authSession?.role ?? null,
 		data: eventData
 	});
+
+	const branch = branchFromObservation(platform, locals.authSession);
+	if (branch) {
+		const db = getD1Database(platform?.env as Record<string, unknown> | undefined, branch);
+		await appendAuditLog(db, branch, {
+			action: `security.${eventType}`,
+			entityType: 'security_event',
+			ipHash: await hashIdentifier(clientIp),
+			session: locals.authSession,
+			metadata: {
+				eventType,
+				data: eventData,
+				timestamp
+			}
+		});
+	}
 
 	const normalizedData =
 		eventData && typeof eventData === 'object'

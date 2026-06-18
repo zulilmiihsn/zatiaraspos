@@ -40,33 +40,11 @@ export class ProductAnalysisService {
 			let categories: any[] = [];
 			let addOns: any[] = [];
 
-			// Check if we're in browser environment
-			if (typeof window === 'undefined') {
-				// For server-side, use getSupabaseClient with the provided branch
-				const { getSupabaseClient } = await import('$lib/database/supabaseClient');
-				const supabase = getSupabaseClient((branch || 'default') as any);
-
-				if (!supabase) {
-					throw new Error(`Supabase client not available for branch: ${branch || 'default'}`);
-				}
-
-				const [productsResult, categoriesResult, addOnsResult] = await Promise.all([
-					supabase.from('produk').select('*').order('created_at', { ascending: false }),
-					supabase.from('kategori').select('*').order('created_at', { ascending: false }),
-					supabase.from('tambahan').select('*').order('created_at', { ascending: false })
-				]);
-
-				products = productsResult.data || [];
-				categories = categoriesResult.data || [];
-				addOns = addOnsResult.data || [];
-			} else {
-				// Browser environment - use dataService with cache
-				[products, categories, addOns] = await Promise.all([
-					dataService.getProducts(),
-					dataService.getCategories(),
-					dataService.getAddOns()
-				]);
-			}
+			[products, categories, addOns] = await Promise.all([
+				dataService.getProducts(),
+				dataService.getCategories(),
+				dataService.getAddOns()
+			]);
 
 			// Enrich products dengan add-ons yang tersedia
 			const productsWithAddOns: ProductWithAddOns[] = products.map((product) => ({

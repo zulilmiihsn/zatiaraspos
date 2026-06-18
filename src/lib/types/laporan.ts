@@ -9,7 +9,7 @@
 // ============================================================================
 
 /**
- * Representasi satu baris dari tabel `buku_kas` di Supabase.
+ * Representasi satu baris dari tabel `buku_kas`.
  * Digunakan di laporan, riwayat, dan kalkulasi keuangan.
  */
 export interface BukuKasRecord {

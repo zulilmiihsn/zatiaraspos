@@ -9,23 +9,26 @@
 // ============================================================================
 
 export interface Product {
-	id: number;
+	id: string | number;
 	name: string;
 	price: number;
 	harga?: number; // Alternative price field
-	category_id: number;
-	kategori_id?: number; // Indonesian field name from DB
+	stok?: number | null;
+	track_stock?: boolean | number | null;
+	track_ingredients?: boolean | number | null;
+	category_id: string | number;
+	kategori_id?: string | number | null; // Indonesian field name from DB
 	tipe: 'minuman' | 'makanan' | 'snack';
 	gambar?: string;
 	deskripsi?: string;
-	ekstra_ids: number[];
+	ekstra_ids: Array<string | number>;
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
 }
 
 export interface Category {
-	id: number;
+	id: string | number;
 	name: string;
 	description?: string;
 	is_active: boolean;
@@ -34,11 +37,47 @@ export interface Category {
 }
 
 export interface AddOn {
-	id: number;
+	id: string | number;
 	name: string;
 	price: number;
 	harga?: number; // Alternative price field
 	is_active: boolean;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface Ingredient {
+	id: string | number;
+	name: string;
+	unit: string;
+	current_stock: number;
+	low_stock_threshold?: number;
+	cost_per_unit?: number;
+	last_purchase_qty?: number;
+	last_purchase_cost?: number;
+	is_active: boolean;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface HppSettings {
+	id: string;
+	branch_id: string;
+	rent_monthly: number;
+	electricity_monthly: number;
+	water_monthly: number;
+	salary_monthly: number;
+	other_monthly: number;
+	target_items_monthly: number;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface ProductRecipe {
+	id: string | number;
+	product_id: string | number;
+	bahan_id: string | number;
+	qty_per_item: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -67,14 +106,17 @@ export interface CartSummary {
 // ============================================================================
 
 export interface MenuForm {
-	id?: number;
+	id?: string | number;
 	name: string;
 	price: number;
+	stok?: number | null;
+	track_stock?: boolean | number | null;
+	track_ingredients?: boolean | number | null;
 	tipe: 'minuman' | 'makanan' | 'snack';
-	kategori_id: number;
+	kategori_id: string | number;
 	gambar: string;
 	deskripsi: string;
-	ekstra_ids: number[];
+	ekstra_ids: Array<string | number>;
 	is_active: boolean;
 }
 

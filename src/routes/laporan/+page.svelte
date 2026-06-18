@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { refreshBus } from '$lib/utils/refreshBus';
 
-	import { getTodayWita, getNowWita } from '$lib/utils/dateTime';
+	import { formatDateYmdWita, getTodayWita, getNowWita } from '$lib/utils/dateTime';
 
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 	import { memoize } from '$lib/utils/performance';
@@ -25,9 +25,6 @@
 	// Lazy load icons — using `any` is acceptable here since Lucide icon types
 	// are complex and vary by version; they're only used in template rendering.
 
-	let Wallet: any = $state(null);
-	let ArrowDownCircle: any = $state(null);
-	let ArrowUpCircle: any = $state(null);
 	let FilterIcon: any = $state(null);
 
 	// Subscribe ke store
@@ -55,11 +52,15 @@
 
 		let totalNominal = 0;
 		let latestTs = '';
+		let paymentSignature = '';
+		let detailSignature = '';
 
 		for (const tx of transactions) {
 			totalNominal += Number(tx?.nominal ?? tx?.amount ?? 0) || 0;
 			const ts = String(tx?.waktu || tx?.created_at || '');
 			if (ts > latestTs) latestTs = ts;
+			paymentSignature += `|${tx?.id || ''}:${tx?.payment_method || ''}`;
+			detailSignature += `|${tx?.id || ''}:${tx?.tipe || ''}:${tx?.jenis || ''}:${tx?.description || ''}`;
 		}
 
 		return [
@@ -71,7 +72,9 @@
 			Number(summaryData?.labaBersih || 0),
 			txLength,
 			totalNominal,
-			latestTs
+			latestTs,
+			paymentSignature,
+			detailSignature
 		].join('|');
 	}
 
@@ -230,16 +233,8 @@
 		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
 			loadRouteIcons('laporan');
 		});
-		Promise.all([
-			import('lucide-svelte/icons/wallet'),
-			import('lucide-svelte/icons/arrow-down-circle'),
-			import('lucide-svelte/icons/arrow-up-circle'),
-			import('lucide-svelte/icons/filter')
-		]).then((icons) => {
-			Wallet = icons[0].default;
-			ArrowDownCircle = icons[1].default;
-			ArrowUpCircle = icons[2].default;
-			FilterIcon = icons[3].default;
+		import('lucide-svelte/icons/filter').then((icon) => {
+			FilterIcon = icon.default;
 		});
 
 		// Set default values untuk filter - gunakan WITA langsung
@@ -252,27 +247,13 @@
 
 		// Removed fetchPin() and locked_pages check
 		initializePageData().then(() => {
-			// SMART CACHING: Preload common date ranges untuk performa yang lebih baik
-			dataService.preloadCommonDateRanges().catch((error) => {
-				// Silent error handling
-			});
-
-			// Jika role belum ada di store, coba validasi dengan Supabase
+			// Jika role belum ada di store, validasi dari session backend.
 			if (!currentUserRole) {
-				dataService.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-					if (session?.user) {
-						dataService.supabaseClient
-							.from('profil')
-							.select('role, username')
-							.eq('id', session.user.id)
-							.single()
-							.then(({ data: profile }) => {
-								if (profile) {
-									setUserRole(profile.role, profile);
-								}
-							});
-					}
-				});
+				fetch('/api/session')
+					.then((res) => (res.ok ? res.json() : null))
+					.then((session) => {
+						if (session?.user) setUserRole(session.user.role, session.user);
+					});
 			}
 		});
 
@@ -398,74 +379,103 @@
 	let produkTerlaris: { name: string; total: number }[] = [];
 	let kategoriTerlaris: { name: string; total: number }[] = [];
 
-	let laporan: BukuKasRecord[] = [];
+	let laporan: BukuKasRecord[] = $state([]);
+
+	function normalizeReportJenis(t: BukuKasRecord): 'pendapatan_usaha' | 'beban_usaha' | 'lainnya' {
+		const jenis = String(t?.jenis || '')
+			.trim()
+			.toLowerCase();
+		if (jenis === 'pendapatan_usaha' || jenis === 'beban_usaha' || jenis === 'lainnya') {
+			return jenis;
+		}
+		return t?.tipe === 'out' ? 'beban_usaha' : 'pendapatan_usaha';
+	}
+
+	function normalizePaymentMethod(t: BukuKasRecord): 'tunai' | 'non-tunai' {
+		const method = String(t?.payment_method || '')
+			.trim()
+			.toLowerCase();
+		return method === 'tunai' ? 'tunai' : 'non-tunai';
+	}
 
 	// Tambahan: Data transaksi kas terstruktur untuk accordion
 	let pemasukanUsahaDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'pendapatan_usaha')
+		laporan.filter(
+			(t: BukuKasRecord) => t.tipe === 'in' && normalizeReportJenis(t) === 'pendapatan_usaha'
+		)
 	);
 	let pemasukanLainDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && t.jenis === 'lainnya')
+		laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && normalizeReportJenis(t) === 'lainnya')
 	);
 	let bebanUsahaDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'beban_usaha')
+		laporan.filter(
+			(t: BukuKasRecord) => t.tipe === 'out' && normalizeReportJenis(t) === 'beban_usaha'
+		)
 	);
 	let bebanLainDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && t.jenis === 'lainnya')
+		laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && normalizeReportJenis(t) === 'lainnya')
 	);
 
 	let pemasukanUsahaQris = $derived(
-		pemasukanUsahaDetail.filter((t) => t.payment_method === 'non-tunai')
+		pemasukanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 	);
 	let pemasukanUsahaTunai = $derived(
-		pemasukanUsahaDetail.filter((t) => t.payment_method === 'tunai')
+		pemasukanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
 	);
 	let pemasukanLainQris = $derived(
-		pemasukanLainDetail.filter((t) => t.payment_method === 'non-tunai')
+		pemasukanLainDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 	);
 	let pemasukanLainTunai = $derived(
-		pemasukanLainDetail.filter((t) => t.payment_method === 'tunai')
+		pemasukanLainDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
 	);
 
-	let bebanUsahaQris = $derived(bebanUsahaDetail.filter((t) => t.payment_method === 'non-tunai'));
-	let bebanUsahaTunai = $derived(bebanUsahaDetail.filter((t) => t.payment_method === 'tunai'));
-	let bebanLainQris = $derived(bebanLainDetail.filter((t) => t.payment_method === 'non-tunai'));
-	let bebanLainTunai = $derived(bebanLainDetail.filter((t) => t.payment_method === 'tunai'));
+	let bebanUsahaQris = $derived(
+		bebanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
+	);
+	let bebanUsahaTunai = $derived(
+		bebanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
+	);
+	let bebanLainQris = $derived(
+		bebanLainDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
+	);
+	let bebanLainTunai = $derived(
+		bebanLainDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
+	);
 
 	// Reactive statements untuk total QRIS/Tunai
 	let totalQrisAll = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiAll = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalQrisPemasukan = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiPemasukan = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalQrisPengeluaran = $derived(
 		[...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiPengeluaran = $derived(
 		[...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
@@ -597,49 +607,49 @@
 	// Reactive statements untuk total QRIS/Tunai per sub-group
 	let totalQrisPendapatanUsaha = $derived(
 		pemasukanUsahaDetail
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiPendapatanUsaha = $derived(
 		pemasukanUsahaDetail
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalQrisPemasukanLain = $derived(
 		pemasukanLainDetail
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiPemasukanLain = $derived(
 		pemasukanLainDetail
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalQrisBebanUsaha = $derived(
 		bebanUsahaDetail
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiBebanUsaha = $derived(
 		bebanUsahaDetail
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalQrisBebanLain = $derived(
 		bebanLainDetail
-			.filter((t) => t.payment_method === 'qris' || t.payment_method === 'non-tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
 	let totalTunaiBebanLain = $derived(
 		bebanLainDetail
-			.filter((t) => t.payment_method === 'tunai')
+			.filter((t) => normalizePaymentMethod(t) === 'tunai')
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || t.amount || 0), 0)
 	);
 
@@ -700,7 +710,7 @@
 	// Tambahkan helper untuk normalisasi tanggal ke YYYY-MM-DD
 	function toYMD(date: string | Date): string {
 		if (typeof date === 'string') return date.slice(0, 10);
-		return date.toISOString().slice(0, 10);
+		return formatDateYmdWita(date);
 	}
 
 	// Toast notification state

@@ -4,7 +4,6 @@
 	import { loadRouteIcons } from '$lib/utils/iconLoader';
 	import { auth } from '$lib/auth/auth';
 	import { securityUtils } from '$lib/utils/security';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -18,6 +17,7 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { browser } from '$app/environment';
+	import { dataService } from '$lib/services/dataService';
 
 	// PWA Installation - Web Component
 	let pwaElement: any = null;
@@ -83,46 +83,19 @@
 	}
 
 	async function fetchPengaturan() {
-		const { data, error } = await getSupabaseClient(selectedBranch.value)
-			.from('pengaturan')
-			.select('locked_pages, pin')
-			.eq('id', 1)
-			.single();
-		pengaturanData = !error ? data : null;
+		pengaturanData = await dataService.getOne('pengaturan');
 	}
 
 	onMount(async () => {
 		// Mulai preload ikon untuk seluruh route pengaturan (non-blocking)
 		loadRouteIcons('pengaturan');
 		try {
-			// Hapus query profile dari Supabase, gunakan store
-			// const { data: { session } } = await supabase.auth.getSession();
-			// const userId = session?.user?.id;
-			//
-			// if (userId) {
-			//   const { data: profile, error } = await supabase
-			//     .from('profil')
-			//     .select('role, username')
-			//     .eq('id', userId)
-			//     .single();
-			//   userRole = profile?.role || '';
-			//   userName = profile?.username || '';
-			// }
-
-			// Jika role belum ada di store, coba validasi dengan Supabase
+			// Jika role belum ada di store, validasi dari session backend.
 			if (!currentUserRole) {
-				const {
-					data: { session }
-				} = await getSupabaseClient(selectedBranch.value).auth.getSession();
-				if (session?.user) {
-					const { data: profile } = await getSupabaseClient(selectedBranch.value)
-						.from('profil')
-						.select('role, username')
-						.eq('id', session.user.id)
-						.single();
-					if (profile) {
-						setUserRole(profile.role, profile);
-					}
+				const res = await fetch('/api/session');
+				if (res.ok) {
+					const session = await res.json();
+					if (session?.user) setUserRole(session.user.role, session.user);
 				}
 			}
 
@@ -314,9 +287,9 @@
 					action: () => showNotif('Fitur import data belum tersedia')
 				},
 				{
-					label: 'Backup Otomatis',
+					label: 'Monitoring Produksi',
 					icon: Settings,
-					action: () => showNotif('Fitur backup belum tersedia')
+					action: () => goto('/monitoring')
 				}
 			]
 		},
@@ -342,17 +315,12 @@
 	// Filter sections based on user role
 	let filteredSections = $derived(
 		settingsSections.filter(
-			(section) =>
-				section.title !== 'Data & Backup' ||
-				currentUserRole === 'admin' ||
-				currentUserRole === 'pemilik'
+			(section) => section.title !== 'Data & Backup' || currentUserRole === 'admin'
 		)
 	);
 
 	// Get role icon once and store it
 	let roleIcon = $derived(getRoleIcon());
-
-
 </script>
 
 <div class="page-content flex min-h-screen flex-col bg-gray-50">

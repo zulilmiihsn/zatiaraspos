@@ -3,11 +3,10 @@
 	import Topbar from '$lib/components/shared/topBar.svelte';
 	import BottomNav from '$lib/components/shared/bottomNav.svelte';
 	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 	import { onMount, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import Download from 'lucide-svelte/icons/download';
 	import { posGridView } from '$lib/stores/posGridView.svelte';
 
@@ -25,8 +24,9 @@
 	let showUpdateNotification = $state(false);
 	let updateAvailable = false;
 
-	let hasPrefetched = false;
-	let isOffline = $state(!navigator.onLine);
+	let hasPrefetchedMenu = false;
+	let hasPrefetchedOwnerInsights = false;
+	let isOffline = $state(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 	let pendingCount = $state(0);
 	let showToast = $state(false);
 
@@ -34,30 +34,48 @@
 		pendingCount = (await getPendingTransactions()).length;
 	}
 
-	async function prefetchAllData() {
-		if (hasPrefetched || !navigator.onLine) return;
-		hasPrefetched = true;
+	function scheduleIdleTask(task: () => void, timeout = 1200) {
+		if ('requestIdleCallback' in window) {
+			(window as any).requestIdleCallback(task, { timeout });
+		} else {
+			setTimeout(task, timeout);
+		}
+	}
+
+	function shouldPrefetchOwnerInsights(path: string) {
+		const role = userRole.value;
+		const isOwner = role === 'pemilik' || role === 'admin';
+		return isOwner && (path === '/' || path.startsWith('/laporan'));
+	}
+
+	async function prefetchMenuData() {
+		if (hasPrefetchedMenu || !navigator.onLine) return;
+		hasPrefetchedMenu = true;
 		try {
-			const today = new Date();
-			const dateStrings = [];
-			for (let i = 0; i < 7; i++) {
-				const d = new Date(today);
-				d.setDate(today.getDate() - i);
-				dateStrings.push(d.toISOString().slice(0, 10));
-			}
-			const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 			await Promise.all([
-				// Critical path untuk dashboard + POS
 				dataService.getProducts(),
 				dataService.getCategories(),
-				dataService.getAddOns(),
+				dataService.getAddOns()
+			]);
+		} catch {
+			// Ignore prefetch error
+		}
+	}
+
+	async function prefetchOwnerInsights() {
+		const path = $page.url.pathname;
+		if (hasPrefetchedOwnerInsights || !navigator.onLine || !shouldPrefetchOwnerInsights(path))
+			return;
+		hasPrefetchedOwnerInsights = true;
+		try {
+			const today = new Date();
+			const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+			await Promise.all([
 				dataService.getBestSellers(),
 				dataService.getWeeklyIncome(),
-				// Laporan: prefetch terbatas untuk menjaga startup tetap ringan
-				...dateStrings.map((date) => dataService.getReportData(date, 'daily')),
 				dataService.getReportData(currentMonth, 'monthly')
 			]);
-		} catch (e) {
+		} catch {
 			// Ignore prefetch error
 		}
 	}
@@ -90,23 +108,20 @@
 
 		isOffline = !navigator.onLine;
 		updatePending();
-		// Tunda prefetch berat ke idle agar tidak menambah critical path
-		if ('requestIdleCallback' in window) {
-			(window as any).requestIdleCallback(() => prefetchAllData());
-		} else {
-			setTimeout(() => prefetchAllData(), 500);
-		}
+		scheduleIdleTask(() => {
+			void prefetchMenuData();
+			void prefetchOwnerInsights();
+		});
 		window.addEventListener('offline', () => {
 			isOffline = true;
 		});
 		window.addEventListener('online', () => {
 			isOffline = false;
 			updatePending();
-			if ('requestIdleCallback' in window) {
-				(window as any).requestIdleCallback(() => prefetchAllData());
-			} else {
-				setTimeout(() => prefetchAllData(), 500);
-			}
+			scheduleIdleTask(() => {
+				void prefetchMenuData();
+				void prefetchOwnerInsights();
+			});
 		});
 		window.addEventListener('storage', () => {
 			updatePending();
@@ -122,7 +137,7 @@
 	let showNav = $state(true);
 	$effect(() => {
 		const path = $page.url.pathname;
-		const noNavRoutes = ['/login', '/unauthorized', '/pos/bayar'];
+		const noNavRoutes = ['/login', '/unauthorized', '/pos/bayar', '/offline'];
 		if (noNavRoutes.includes(path) || path.startsWith('/pengaturan')) {
 			showNav = false;
 		} else {
@@ -142,13 +157,9 @@
 		isLoadingSecuritySettings = true;
 
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.select('pin, locked_pages')
-				.eq('id', 1)
-				.single();
+			const data = await dataService.getOne('pengaturan');
 
-			if (!error && data) {
+			if (data) {
 				setSecuritySettings({
 					pin: data.pin || null,
 					lockedPages: data.locked_pages || []
@@ -178,6 +189,8 @@
 
 	// Reactive statement untuk menangani PIN modal
 	$effect(() => {
+		if (!browser) return;
+
 		const currentUserRole = userRole.value;
 		const currentSecuritySettings = securitySettings.value;
 		const currentPath = $page.url.pathname;
@@ -304,7 +317,7 @@
 
 {#if showNav}
 	<!-- Layout standar dengan navigasi -->
-	<div class="page-transition flex h-screen min-h-0 flex-col bg-white">
+	<div class="page-transition flex min-h-[100dvh] flex-col bg-white">
 		<div class="sticky top-0 z-30 bg-white shadow-md">
 			<Topbar>
 				<svelte:fragment slot="actions">
@@ -379,7 +392,7 @@
 	</div>
 {:else}
 	<!-- Layout tanpa navigasi -->
-	<div class="page-transition flex h-screen min-h-0 flex-col bg-white">
+	<div class="page-transition flex min-h-[100dvh] flex-col bg-white">
 		<div class="min-h-0 flex-1 overflow-y-auto">
 			{@render children()}
 		</div>

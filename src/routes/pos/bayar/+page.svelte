@@ -4,14 +4,11 @@
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { validateNumber, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
-	import { getSupabaseClient } from '$lib/database/supabaseClient';
 	import { v4 as uuidv4 } from 'uuid';
-	import { getNowWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
 
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 	import { memoize } from '$lib/utils/performance';
@@ -19,6 +16,7 @@
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { dataService } from '$lib/services/dataService';
 	import { refreshBus } from '$lib/utils/refreshBus';
+	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import type { ReceiptSettings } from '$lib/types/laporan';
 	import type { TokoSession } from '$lib/types/store';
 
@@ -105,26 +103,15 @@
 
 	let sesiAktif: TokoSession | null = null;
 	async function cekSesiTokoAktif() {
-		const { data } = await getSupabaseClient(selectedBranch.value)
-			.from('sesi_toko')
-			.select('*')
-			.eq('is_active', true)
-			.order('opening_time', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		sesiAktif = data || null;
+		sesiAktif = await getSesiAktif();
 	}
 
 	async function fetchPengaturanStruk() {
 		try {
-			const { data, error } = await getSupabaseClient(selectedBranch.value)
-				.from('pengaturan')
-				.select('*')
-				.eq('id', 1)
-				.single();
+			const data = await dataService.getOne('pengaturan');
 			if (data) {
 				pengaturanStruk = data;
-			} else if (error) {
+			} else {
 				// fallback ke localStorage
 				const local = localStorage.getItem('pengaturan_struk');
 				if (local) pengaturanStruk = JSON.parse(local);
@@ -256,15 +243,6 @@
 		}
 	}
 
-	function getLocalOffsetString() {
-		const offset = -new Date().getTimezoneOffset();
-		const sign = offset >= 0 ? '+' : '-';
-		const pad = (n: number) => n.toString().padStart(2, '0');
-		const hours = pad(Math.floor(Math.abs(offset) / 60));
-		const minutes = pad(Math.abs(offset) % 60);
-		return `${sign}${hours}:${minutes}`;
-	}
-
 	async function catatTransaksiKeLaporan() {
 		await cekSesiTokoAktif();
 		if (!cart || cart.length === 0 || totalHarga <= 0) {
@@ -286,115 +264,58 @@
 			notifModalType = 'warning';
 			showNotifModal = true;
 		}
-		// Gunakan WITA timezone yang konsisten
-		const nowWita = getNowWita();
-		const waktu = witaToUtcISO(nowWita.split('T')[0], nowWita.split('T')[1]);
 		const payment = paymentMethod === 'qris' ? 'non-tunai' : paymentMethod;
-		// Generate transaction_id sekali per transaksi
-		const transactionId =
-			typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : uuidv4();
-		// Satu row summary untuk buku_kas
-		const totalAmount = cart.reduce(
-			(sum: number, item: BayarCartItem) =>
-				sum +
-				item.qty *
-					((item.product.price ?? item.product.harga ?? 0) +
-						(item.addOns
-							? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
-							: 0)),
-			0
-		);
-		const description =
-			'Penjualan ' + cart.map((item: BayarCartItem) => item.product.name).join(', ');
-		const totalQty = cart.reduce((sum: number, item: BayarCartItem) => sum + item.qty, 0);
-		const insert = {
-			tipe: 'in',
-			sumber: 'pos',
-			payment_method: payment,
-			amount: totalAmount,
-			description,
-			customer_name: customerName || null,
-			id_sesi_toko,
-			waktu,
-			jenis: 'pendapatan_usaha',
-			qty: totalQty,
-			transaction_id: transactionId
-		};
-		// Detail transaksi untuk transaksi_kasir
-		const transaksiKasirInserts = cart.map((item: BayarCartItem) => {
-			const addOnTotal = item.addOns
-				? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
-				: 0;
-			const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
-			return {
-				// buku_kas_id: diisi saat online, biarkan null saat offline
-				// Untuk custom item, set produk_id ke null dan simpan nama di custom_name
-				produk_id: item.product.id.toString().startsWith('custom-') ? null : item.product.id,
-				qty: item.qty,
-				amount: unitPrice * item.qty,
-				price: unitPrice,
-				transaction_id: transactionId,
-				// Tambahkan nama custom item jika ini adalah custom item
-				custom_name: item.product.id.toString().startsWith('custom-') ? item.product.name : null
-			};
-		});
 		if (!payment) {
 			notifModalMsg = 'Metode pembayaran tidak valid!';
 			notifModalType = 'error';
 			showNotifModal = true;
 			return;
 		}
+
+		const requestPayload = {
+			idempotency_key: transactionId || uuidv4(),
+			customer_name: customerName || null,
+			payment_method: payment,
+			cash_received: cashReceived ? Number(cashReceived) : null,
+			items: cart.map((item: BayarCartItem) => {
+				const isCustom = item.product.id.toString().startsWith('custom-');
+				return {
+					product_id: isCustom ? null : item.product.id,
+					custom_name: isCustom ? item.product.name : null,
+					custom_price: isCustom ? (item.product.price ?? item.product.harga ?? 0) : null,
+					qty: item.qty,
+					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
+					sugar: item.sugar || null,
+					ice: item.ice || null,
+					note: item.note || null
+				};
+			})
+		};
+
 		if (navigator.onLine) {
-			const { error } = await getSupabaseClient(selectedBranch.value)
-				.from('buku_kas')
-				.insert(insert);
-			if (error) {
+			try {
+				const response = await fetch('/api/pos/transaction', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(requestPayload)
+				});
+				if (!response.ok) {
+					const errorBody = await response.json().catch(() => ({}));
+					throw new Error(errorBody?.message || errorBody?.error || `HTTP ${response.status}`);
+				}
+			} catch (error) {
 				notifModalMsg = 'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
 				notifModalType = 'error';
 				showNotifModal = true;
 				return;
-			}
-			const { data: lastBukuKas, error: lastBukuKasError } = await getSupabaseClient(
-				selectedBranch.value
-			)
-				.from('buku_kas')
-				.select('id, transaction_id, sumber, waktu')
-				.eq('customer_name', customerName || null)
-				.eq('transaction_id', transactionId)
-				.order('waktu', { ascending: false })
-				.limit(1)
-				.maybeSingle();
-			if (lastBukuKas && lastBukuKas.id) {
-				const transaksiKasirInserts = cart.map((item: BayarCartItem) => {
-					const addOnTotal = item.addOns
-						? item.addOns.reduce((a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0), 0)
-						: 0;
-					const unitPrice = (item.product.price ?? item.product.harga ?? 0) + addOnTotal;
-					return {
-						buku_kas_id: lastBukuKas.id,
-						// Untuk custom item, set produk_id ke null dan simpan nama di custom_name
-						produk_id: item.product.id.toString().startsWith('custom-') ? null : item.product.id,
-						qty: item.qty,
-						amount: unitPrice * item.qty,
-						price: unitPrice,
-						transaction_id: transactionId,
-						// Tambahkan nama custom item jika ini adalah custom item
-						custom_name: item.product.id.toString().startsWith('custom-') ? item.product.name : null
-					};
-				});
-				if (transaksiKasirInserts.length) {
-					const { error: errorKasir } = await getSupabaseClient(selectedBranch.value)
-						.from('transaksi_kasir')
-						.insert(transaksiKasirInserts);
-				}
 			}
 			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
 			await dataService.invalidateCacheOnChange('buku_kas');
 			await dataService.invalidateCacheOnChange('transaksi_kasir');
 			refreshBus.emit('dashboard');
 		} else {
-			// Offline mode: simpan summary dan detail ke pending
-			addPendingTransaction({ bukuKas: insert, transaksiKasir: transaksiKasirInserts });
+			// Offline mode: simpan request POS mentah, server tetap menghitung harga saat sync.
+			addPendingTransaction({ type: 'pos_transaction', request: requestPayload });
 			notifModalMsg = 'Transaksi disimpan offline dan akan otomatis sync saat online.';
 			notifModalType = 'success';
 			showNotifModal = true;
