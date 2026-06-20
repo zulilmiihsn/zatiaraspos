@@ -19,7 +19,6 @@ import {
 	hppSettings,
 	bukuKas,
 	transaksiKasir,
-	dailySalesSummary,
 	profil,
 	pengaturan,
 	sesiToko
@@ -37,6 +36,12 @@ import {
 import { hasDatabaseColumn } from '$lib/server/schemaCapabilities';
 import { reverseDailySummaryForTransaction } from '$lib/server/dailySummary';
 import { buildLaporanAggregate } from '$lib/server/reportQueries';
+import {
+	getDashboardStats,
+	getWeeklyIncomeSummary,
+	getBestSellersSummary,
+	getPosKas7Hari
+} from '$lib/server/dashboardQueries';
 import type { RequestHandler } from './$types';
 
 // ---------- helpers ----------
@@ -306,152 +311,19 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 		case 'dashboard_stats': {
 			if (!branch) throw kitError(400, 'branch required');
 			if (!startTime || !endTime) throw kitError(400, 'start and end required');
-
-			try {
-				const startDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(startTime));
-				const endDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(endTime));
-				const summary = await db
-					.select()
-					.from(dailySalesSummary)
-					.where(
-						and(
-							eq(dailySalesSummary.branch_id, branch),
-							gte(dailySalesSummary.sales_date, startDate),
-							lte(dailySalesSummary.sales_date, endDate)
-						)
-					)
-					.orderBy(asc(dailySalesSummary.sales_date));
-				if (summary.length) {
-					// hpp_total kini kolom di daily_sales_summary (diisi saat checkout +
-					// backfill data lama), jadi tidak perlu scan transaksi_kasir lagi.
-					return json({ summary });
-				}
-			} catch {
-				// Summary tables may not exist until the latest migration is applied.
-			}
-
-			const [kasir, kas] = await Promise.all([
-				db
-					.select({ qty: transaksiKasir.qty, transaction_id: bukuKas.transaction_id })
-					.from(transaksiKasir)
-					.innerJoin(bukuKas, eq(transaksiKasir.buku_kas_id, bukuKas.id))
-					.where(
-						and(
-							eq(transaksiKasir.branch_id, branch),
-							gte(transaksiKasir.created_at, startTime),
-							lte(transaksiKasir.created_at, endTime)
-						)
-					),
-				db
-					.select({
-						amount: bukuKas.amount,
-						tipe: bukuKas.tipe,
-						transaction_id: bukuKas.transaction_id
-					})
-					.from(bukuKas)
-					.where(
-						and(
-							eq(bukuKas.branch_id, branch),
-							eq(bukuKas.sumber, 'pos'),
-							gte(bukuKas.waktu, startTime),
-							lte(bukuKas.waktu, endTime)
-						)
-					)
-			]);
-
-			return json({ kasir, kas });
+			return json(await getDashboardStats(db, branch, startTime, endTime));
 		}
-
 		case 'weekly_income_summary': {
 			if (!branch || !startTime || !endTime) throw kitError(400, 'branch, start, end required');
-			try {
-				const startDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(startTime));
-				const endDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(endTime));
-				const rows = await db
-					.select()
-					.from(dailySalesSummary)
-					.where(
-						and(
-							eq(dailySalesSummary.branch_id, branch),
-							gte(dailySalesSummary.sales_date, startDate),
-							lte(dailySalesSummary.sales_date, endDate)
-						)
-					)
-					.orderBy(asc(dailySalesSummary.sales_date));
-				return json(rows);
-			} catch {
-				return json([]);
-			}
+			return json(await getWeeklyIncomeSummary(db, branch, startTime, endTime));
 		}
-
 		case 'best_sellers_summary': {
 			if (!branch || !startTime || !endTime) throw kitError(400, 'branch, start, end required');
-			try {
-				const startDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(startTime));
-				const endDate = new Intl.DateTimeFormat('sv-SE', {
-					timeZone: 'Asia/Makassar',
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit'
-				}).format(new Date(endTime));
-				const rows = await rawDb
-					.prepare(
-						`SELECT product_id, product_name, SUM(qty) AS total_qty, SUM(gross_sales) AS gross_sales
-						 FROM daily_product_sales
-						 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
-						 GROUP BY product_id, product_name
-						 ORDER BY total_qty DESC
-						 LIMIT 3`
-					)
-					.bind(branch, startDate, endDate)
-					.all();
-				return json(rows.results || []);
-			} catch {
-				return json([]);
-			}
+			return json(await getBestSellersSummary(rawDb, branch, startTime, endTime));
 		}
-
 		case 'pos_kas_7hari': {
 			if (!branch || !startTime || !endTime) throw kitError(400, 'branch, start, end required');
-
-			const rows = await db
-				.select({ transaction_id: bukuKas.transaction_id, waktu: bukuKas.waktu })
-				.from(bukuKas)
-				.where(
-					and(
-						eq(bukuKas.branch_id, branch),
-						eq(bukuKas.sumber, 'pos'),
-						gte(bukuKas.waktu, startTime),
-						lte(bukuKas.waktu, endTime)
-					)
-				);
-
-			return json(rows);
+			return json(await getPosKas7Hari(db, branch, startTime, endTime));
 		}
 
 		case 'sesi_toko': {
