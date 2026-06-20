@@ -119,7 +119,7 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const data = await dataService.getOne('pengaturan');
+			const data = (await dataService.getOne('pengaturan')) as unknown as ReceiptSettings | null;
 			if (data) {
 				pengaturanStruk = data;
 				localStorage.setItem('pengaturan_struk', JSON.stringify(data));

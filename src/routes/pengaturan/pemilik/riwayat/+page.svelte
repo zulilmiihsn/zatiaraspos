@@ -65,7 +65,10 @@
 
 		try {
 			// Ambil data dari buku_kas
-			const data = await dataService.getRows('buku_kas', { start, end });
+			const data = (await dataService.getRows('buku_kas', {
+				start,
+				end
+			})) as unknown as BukuKasRecord[];
 
 			transaksiHariIni = [];
 			if (data) {
@@ -218,7 +221,7 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const data = await dataService.getOne('pengaturan');
+			const data = (await dataService.getOne('pengaturan')) as unknown as ReceiptSettings | null;
 			if (data) {
 				pengaturanStruk = data;
 			} else {

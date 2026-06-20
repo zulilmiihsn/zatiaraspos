@@ -75,7 +75,7 @@ export async function dbGetAll<T extends DataRecord = DataRecord>(
 	const rows: T[] = [];
 	let cursor: string | null = null;
 	do {
-		const page = await dbGetPage<T>(table, params, cursor);
+		const page: DataPage<T> = await dbGetPage<T>(table, params, cursor);
 		rows.push(...page.data);
 		if (rows.length > MAX_ACCUMULATED_ROWS) {
 			throw new Error(`GET ${table} melebihi batas ${MAX_ACCUMULATED_ROWS} baris`);

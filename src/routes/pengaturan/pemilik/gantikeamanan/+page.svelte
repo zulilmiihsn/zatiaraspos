@@ -44,11 +44,15 @@
 			goto('/unauthorized');
 		}
 
-		const data = await dataService.getOne('pengaturan');
+		const data = (await dataService.getOne('pengaturan')) as {
+			pin?: string;
+			locked_pages?: string[];
+			id?: string;
+		} | null;
 		if (data) {
 			pin = data.pin || '';
 			lockedPages = data.locked_pages || [];
-			pengaturanKeamananId = data.id;
+			pengaturanKeamananId = data.id ?? '';
 		}
 	});
 

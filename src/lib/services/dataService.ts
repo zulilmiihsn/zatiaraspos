@@ -210,7 +210,10 @@ export class DataService {
 					}));
 				}
 
-				const items = await dbGet('transaksi_kasir', { start: startUtc, end: endUtc });
+				const items = await dbGet<Record<string, any>>('transaksi_kasir', {
+					start: startUtc,
+					end: endUtc
+				});
 				const grouped: Record<string, number> = {};
 				for (const item of items) {
 					if (!item.produk_id) continue;
@@ -223,9 +226,9 @@ export class DataService {
 					.map(([id]) => id);
 				if (!topIds.length) return [];
 
-				const allProducts = await dbGet('produk', {});
+				const allProducts = await dbGet<Record<string, any>>('produk', {});
 				return topIds.map((id) => {
-					const prod = allProducts.find((p: any) => p.id === id);
+					const prod = allProducts.find((p) => p.id === id);
 					return { name: prod?.name || '-', image: prod?.gambar || '', total_qty: grouped[id] };
 				});
 			},
@@ -260,7 +263,7 @@ export class DataService {
 					return { weeklyIncome, weeklyMax: Math.max(1, ...weeklyIncome) };
 				}
 
-				const rows = await dbGet('buku_kas', {
+				const rows = await dbGet<Record<string, any>>('buku_kas', {
 					start: startUtc,
 					end: endUtc,
 					sumber: 'pos',
@@ -363,8 +366,11 @@ export class DataService {
 		return rows?.[0] || null;
 	}
 
-	async getRows(table: string, params: Record<string, string> = {}) {
-		return dbGet(table, params);
+	async getRows(
+		table: string,
+		params: Record<string, string> = {}
+	): Promise<Record<string, any>[]> {
+		return dbGet(table, params) as Promise<Record<string, any>[]>;
 	}
 
 	async getRowsPage<T extends DataRecord = DataRecord>(
@@ -375,9 +381,12 @@ export class DataService {
 		return dbGetPage<T>(table, params, cursor);
 	}
 
-	async getOne(table: string, params: Record<string, string> = {}) {
+	async getOne(
+		table: string,
+		params: Record<string, string> = {}
+	): Promise<Record<string, any> | null> {
 		const rows = await dbGet(table, { limit: '1', ...params });
-		return rows[0] || null;
+		return (rows[0] as Record<string, any>) || null;
 	}
 
 	async insertRows(table: string, payload: Record<string, unknown> | Record<string, unknown>[]) {

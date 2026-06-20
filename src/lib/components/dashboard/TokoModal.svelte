@@ -40,7 +40,9 @@
 
 	async function hitungRingkasanTutup() {
 		if (!sesiAktif) return;
-		const kasRaw = await dataService.getRows('buku_kas', { id_sesi_toko: sesiAktif.id });
+		const kasRaw = (await dataService.getRows('buku_kas', {
+			id_sesi_toko: sesiAktif.id
+		})) as unknown as BukuKasRecord[];
 
 		let kas: BukuKasRecord[] = Array.isArray(kasRaw) ? kasRaw : [];
 

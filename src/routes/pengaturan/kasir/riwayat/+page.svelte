@@ -122,7 +122,7 @@
 
 	async function fetchPengaturanStruk() {
 		try {
-			const data = await dataService.getOne('pengaturan');
+			const data = (await dataService.getOne('pengaturan')) as any;
 			if (data) {
 				pengaturanStruk = data;
 			} else {

@@ -17,7 +17,7 @@ export async function GET({ url, platform }) {
 		return json({ error: 'Not found' }, { status: 404 });
 	}
 
-	return new Response(object.body, {
+	return new Response(object.body as unknown as ReadableStream, {
 		headers: {
 			'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
 			'Cache-Control': 'public, max-age=31536000, immutable'

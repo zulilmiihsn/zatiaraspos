@@ -50,7 +50,10 @@
 		const { startUtc: start, endUtc: end } = todayRange();
 
 		try {
-			const data = await dataService.getRows('buku_kas', { start, end });
+			const data = (await dataService.getRows('buku_kas', {
+				start,
+				end
+			})) as unknown as BukuKasRecord[];
 
 			if (data) {
 				let hasil: HistoryItem[] = data.map((t: BukuKasRecord) => ({
@@ -113,7 +116,7 @@
 	// ─── Fetch pengaturan struk ────────────────────────────────────────────
 	async function fetchPengaturanStruk() {
 		try {
-			const data = await dataService.getOne('pengaturan');
+			const data = (await dataService.getOne('pengaturan')) as unknown as ReceiptSettings | null;
 			if (data) {
 				pengaturanStruk = data;
 			} else {

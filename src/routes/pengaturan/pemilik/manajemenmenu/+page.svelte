@@ -227,7 +227,7 @@
 	async function fetchBahan() {
 		isLoadingBahan = true;
 		try {
-			bahanList = await dataService.getIngredients();
+			bahanList = (await dataService.getIngredients()) as unknown as Ingredient[];
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data bahan: ' + (e?.message || 'Unknown error');
@@ -239,7 +239,7 @@
 
 	async function fetchRecipes() {
 		try {
-			allRecipes = await dataService.getProductRecipes();
+			allRecipes = (await dataService.getProductRecipes()) as unknown as ProductRecipe[];
 		} catch {
 			allRecipes = [];
 		}
@@ -247,7 +247,7 @@
 
 	async function fetchHppSettings() {
 		try {
-			hppSettings = await dataService.getHppSettings();
+			hppSettings = (await dataService.getHppSettings()) as unknown as HppSettings | null;
 			const settings = hppSettings || ({} as Partial<HppSettings>);
 			hppForm = {
 				rent_monthly: String(settings.rent_monthly || ''),
@@ -332,7 +332,7 @@
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
 			menuForm.gambar = menu.gambar || '';
 			if (menuForm.track_ingredients) {
-				const recipes = (await dataService.getProductRecipes(menu.id)) as ProductRecipe[];
+				const recipes = (await dataService.getProductRecipes(menu.id)) as unknown as ProductRecipe[];
 				recipeItems = recipes.map((recipe) => ({
 					bahan_id: recipe.bahan_id,
 					qty_per_item: String(recipe.qty_per_item || '')
@@ -423,7 +423,7 @@
 			} else {
 				result = await dataService.insertRows('produk', payload);
 			}
-			const productId = editMenuId ?? result?.data?.[0]?.id;
+			const productId = editMenuId ?? (result?.data?.[0]?.id as string);
 			if (productId) {
 				await saveMenuRecipe(productId);
 			}
@@ -641,7 +641,7 @@
 			await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
 		} else {
 			const { data } = await dataService.insertRows('kategori', { name: kategoriDetailName });
-			const newKategoriId = data?.[0]?.id ?? null;
+			const newKategoriId = (data?.[0]?.id as string) ?? null;
 			await updateMenusKategori(newKategoriId, selectedMenuIds, null);
 		}
 		showKategoriDetailModal = false;
@@ -890,7 +890,7 @@
 		};
 		try {
 			const result = await dataService.insertRows('hpp_settings', payload);
-			hppSettings = result.data?.[0] || ({ ...payload } as HppSettings);
+			hppSettings = (result.data?.[0] as unknown as HppSettings) || ({ ...payload } as HppSettings);
 			await dataService.invalidateCacheOnChange('hpp_settings');
 			await fetchHppSettings();
 			notifModalMsg = 'Pengaturan HPP tersimpan';

@@ -22,7 +22,7 @@
 
 	async function loadPengaturan() {
 		try {
-			const data = await dataService.getOne('pengaturan');
+			const data = (await dataService.getOne('pengaturan')) as Record<string, string> | null;
 			if (data) {
 				namaToko = data.nama_toko || defaultData.namaToko;
 				alamat = data.alamat || defaultData.alamat;
