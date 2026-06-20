@@ -8,7 +8,7 @@
  */
 
 import { json, error as kitError } from '@sveltejs/kit';
-import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, or, gt, gte, lte, desc, asc, sql, type SQL } from 'drizzle-orm';
 import {
 	produk,
 	kategori,
@@ -28,6 +28,13 @@ import { getD1Database, getDrizzleDb, requireBranch } from '$lib/server/branchRe
 import { publishBranchEvent, type RealtimeTable } from '$lib/server/realtimePublisher';
 import { requireDataWriteAccess, requireSessionBranch } from '$lib/server/apiAuth';
 import { appendAuditLog } from '$lib/server/auditLog';
+import {
+	DataQueryValidationError,
+	decodeDataCursor,
+	parseDataLimit,
+	toCursorPage
+} from '$lib/server/dataPagination';
+import { hasDatabaseColumn } from '$lib/server/schemaCapabilities';
 import type { RequestHandler } from './$types';
 
 // ---------- helpers ----------
@@ -42,17 +49,6 @@ function getRawDb(platform: App.Platform | undefined, branch: string) {
 
 function newId() {
 	return crypto.randomUUID();
-}
-
-async function rawHasColumn(db: any, table: string, column: string): Promise<boolean> {
-	try {
-		const { results = [] } = (await db.prepare(`PRAGMA table_info(${table})`).all()) as {
-			results?: Array<{ name?: string }>;
-		};
-		return results.some((row) => row.name === column);
-	} catch {
-		return false;
-	}
 }
 
 function payloadRows(payload: Record<string, unknown> | Record<string, unknown>[], branch: string) {
@@ -107,7 +103,16 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	const startTime = url.searchParams.get('start');
 	const endTime = url.searchParams.get('end');
-	const limit = Number(url.searchParams.get('limit') || 1000);
+	let limit: number;
+	let cursor: ReturnType<typeof decodeDataCursor>;
+	try {
+		limit = parseDataLimit(url.searchParams.get('limit'));
+		cursor = decodeDataCursor(url.searchParams.get('cursor'));
+	} catch (error) {
+		if (error instanceof DataQueryValidationError) throw kitError(400, error.message);
+		throw error;
+	}
+	const cursorPagination = url.searchParams.get('pagination') === 'cursor' || cursor !== null;
 	const sumber = url.searchParams.get('sumber');
 	const tipe = url.searchParams.get('tipe');
 	const id = url.searchParams.get('id');
@@ -158,7 +163,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 		case 'resep_produk': {
 			const productId = url.searchParams.get('product_id');
-			const filters: any[] = [eq(resepProduk.branch_id, branch)];
+			const filters: SQL[] = [eq(resepProduk.branch_id, branch)];
 			if (productId) filters.push(eq(resepProduk.product_id, productId));
 
 			const rows = await db
@@ -172,7 +177,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 		case 'bahan_mutasi': {
 			const bahanId = url.searchParams.get('bahan_id');
-			const filters: any[] = [eq(bahanMutasi.branch_id, branch)];
+			const filters: SQL[] = [eq(bahanMutasi.branch_id, branch)];
 			if (bahanId) filters.push(eq(bahanMutasi.bahan_id, bahanId));
 
 			const rows = await db
@@ -194,7 +199,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 		}
 
 		case 'buku_kas': {
-			const filters: any[] = [eq(bukuKas.branch_id, branch)];
+			const filters: SQL[] = [eq(bukuKas.branch_id, branch)];
 			if (startTime) filters.push(gte(bukuKas.waktu, startTime));
 			if (endTime) filters.push(lte(bukuKas.waktu, endTime));
 			if (sumber) filters.push(eq(bukuKas.sumber, sumber));
@@ -202,14 +207,25 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			if (id) filters.push(eq(bukuKas.id, id));
 			if (transactionId) filters.push(eq(bukuKas.transaction_id, transactionId));
 			if (idSesiToko) filters.push(eq(bukuKas.id_sesi_toko, idSesiToko));
+			if (cursor) {
+				filters.push(
+					or(
+						gt(bukuKas.waktu, cursor.sortValue),
+						and(eq(bukuKas.waktu, cursor.sortValue), gt(bukuKas.id, cursor.id))
+					)!
+				);
+			}
 
 			const rows = await db
 				.select()
 				.from(bukuKas)
 				.where(and(...filters))
-				.orderBy(asc(bukuKas.waktu))
-				.limit(limit);
-			return json(rows);
+				.orderBy(asc(bukuKas.waktu), asc(bukuKas.id))
+				.limit(cursorPagination ? limit + 1 : limit);
+			if (!cursorPagination) return json(rows);
+			return json(
+				toCursorPage(rows, limit, (row) => ({ sortValue: row.waktu, id: String(row.id) }))
+			);
 		}
 
 		case 'transaksi_kasir': {
@@ -231,6 +247,10 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				filters.push('transaction_id = ?');
 				values.push(transactionId);
 			}
+			if (cursor) {
+				filters.push('(created_at > ? OR (created_at = ? AND id > ?))');
+				values.push(cursor.sortValue, cursor.sortValue, cursor.id);
+			}
 			const bukuKasIdsParam = url.searchParams.get('buku_kas_ids');
 			if (bukuKasIdsParam) {
 				const ids = bukuKasIdsParam.split(',').filter(Boolean);
@@ -240,7 +260,12 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				}
 			}
 
-			const hasSnapshots = await rawHasColumn(rawDb, 'transaksi_kasir', 'product_name');
+			const hasSnapshots = await hasDatabaseColumn(
+				rawDb,
+				branch,
+				'transaksi_kasir',
+				'product_name'
+			);
 			const snapshotSelect = hasSnapshots
 				? `product_name, base_price, add_on_total, add_on_snapshot, sugar, ice, note, hpp_snapshot, hpp_amount`
 				: `NULL AS product_name, NULL AS base_price, 0 AS add_on_total, NULL AS add_on_snapshot,
@@ -253,12 +278,16 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 						transaction_id, created_at, updated_at
 					 FROM transaksi_kasir
 					 WHERE ${filters.join(' AND ')}
-					 ORDER BY created_at ASC
-					 LIMIT ?`
-				)
-				.bind(...values, Math.min(Math.max(limit, 1), 1000))
-				.all();
-			return json(rows.results || []);
+						 ORDER BY created_at ASC, id ASC
+						 LIMIT ?`
+					)
+					.bind(...values, cursorPagination ? limit + 1 : limit)
+					.all();
+			const data = (rows.results || []) as Array<{ id: string; created_at: string }>;
+			if (!cursorPagination) return json(data);
+			return json(
+				toCursorPage(data, limit, (row) => ({ sortValue: row.created_at, id: String(row.id) }))
+			);
 		}
 
 		case 'dashboard_stats': {
@@ -290,32 +319,9 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 					)
 					.orderBy(asc(dailySalesSummary.sales_date));
 				if (summary.length) {
-					const hasHppAmount = await rawHasColumn(rawDb, 'transaksi_kasir', 'hpp_amount');
-					if (!hasHppAmount) return json({ summary });
-
-					const hppRows = await rawDb
-						.prepare(
-							`SELECT
-								date(datetime(created_at, '+8 hours')) AS sales_date,
-								COALESCE(SUM(hpp_amount), 0) AS hpp_total
-							 FROM transaksi_kasir
-							 WHERE branch_id = ? AND created_at >= ? AND created_at <= ?
-							 GROUP BY date(datetime(created_at, '+8 hours'))`
-						)
-						.bind(branch, startTime, endTime)
-						.all()
-						.catch(() => ({ results: [] }));
-					const hppByDate = new Map(
-						((hppRows.results || []) as Array<{ sales_date?: string; hpp_total?: number }>).map(
-							(row) => [row.sales_date, Number(row.hpp_total || 0)]
-						)
-					);
-					return json({
-						summary: summary.map((row) => ({
-							...row,
-							hpp_total: hppByDate.get(row.sales_date) || 0
-						}))
-					});
+					// hpp_total kini kolom di daily_sales_summary (diisi saat checkout +
+					// backfill data lama), jadi tidak perlu scan transaksi_kasir lagi.
+					return json({ summary });
 				}
 			} catch {
 				// Summary tables may not exist until the latest migration is applied.
@@ -436,7 +442,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 		}
 
 		case 'sesi_toko': {
-			const filters: any[] = [eq(sesiToko.branch_id, branch)];
+			const filters: SQL[] = [eq(sesiToko.branch_id, branch)];
 			if (id) filters.push(eq(sesiToko.id, id));
 			if (active === 'true') filters.push(eq(sesiToko.is_active, true));
 			if (active === 'false') filters.push(eq(sesiToko.is_active, false));
@@ -859,14 +865,27 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					amount: row.amount ?? row.nominal ?? 0,
 					nominal: row.nominal ?? row.amount ?? 0
 				}));
-				await db.insert(bukuKas).values(rows as any);
+				const newRows: Array<Record<string, any>> = [];
+				for (const row of rows) {
+					const existing = await rawDb
+						.prepare('SELECT id FROM buku_kas WHERE branch_id = ? AND id = ? LIMIT 1')
+						.bind(branch, String(row.id))
+						.first();
+					if (!existing) newRows.push(row);
+				}
+
+				if (newRows.length === 0) {
+					return json({ ok: true, data: rows, duplicate: true });
+				}
+
+				await db.insert(bukuKas).values(newRows as any);
 				await publish(platform, branch, 'buku_kas', 'insert', {
-					id: rows[0]?.id,
-					transaction_id: rows[0]?.transaction_id as string | undefined
+					id: newRows[0]?.id,
+					transaction_id: newRows[0]?.transaction_id as string | undefined
 				});
-				await auditDataChange(rawDb, branch, session, 'buku_kas', 'insert', rows[0]?.id, {
-					count: rows.length,
-					transaction_id: rows[0]?.transaction_id
+				await auditDataChange(rawDb, branch, session, 'buku_kas', 'insert', newRows[0]?.id, {
+					count: newRows.length,
+					transaction_id: newRows[0]?.transaction_id
 				});
 				return json({ ok: true, data: rows });
 			}
