@@ -451,8 +451,8 @@ export class DataService {
 
 				const pemasukan = laporan.filter((t) => t.tipe === 'in');
 				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
-				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.nominal || 0), 0);
-				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.nominal || 0), 0);
+				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.amount || 0), 0);
+				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.amount || 0), 0);
 				const labaKotor = totalPemasukan - totalPengeluaran;
 				const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 

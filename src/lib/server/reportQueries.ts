@@ -116,16 +116,18 @@ export async function buildLaporanAggregate(
 	let manualIncome = 0;
 	let manualExpense = 0;
 	for (const m of manualRows) {
-		const nominal = Number(m.nominal ?? m.amount ?? 0) || 0;
+		// `amount` adalah field kanonik (notNull). `nominal` diisi = amount hanya
+		// sebagai kompat UI lama; akan dihapus saat UI bermigrasi ke amount.
+		const value = Number(m.amount) || 0;
 		transactions.push({
 			...m,
 			sumber: m.sumber || 'catat',
-			nominal,
-			amount: Number(m.amount ?? nominal) || nominal,
+			amount: value,
+			nominal: value,
 			description: m.description || 'Transaksi Lainnya'
 		});
-		if (m.tipe === 'in') manualIncome += nominal;
-		else if (m.tipe === 'out') manualExpense += nominal;
+		if (m.tipe === 'in') manualIncome += value;
+		else if (m.tipe === 'out') manualExpense += value;
 	}
 
 	const posGross = Number(summaryRow?.gross || 0);
