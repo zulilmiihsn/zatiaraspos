@@ -6,41 +6,31 @@ import {
 	getLastDaysYmdWita,
 	getMonthEndYmd,
 	getTodayWita,
-	witaToUtcRange,
-	witaRangeToWitaQuery
+	witaToUtcRange
 } from '$lib/utils/dateTime';
 import { browser } from '$app/environment';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
-import { getPendingTransactions, clearPendingTransactions } from '$lib/utils/offline';
+import {
+	getPendingTransactions,
+	markPendingTransactionFailed,
+	markPendingTransactionSyncing,
+	removePendingTransaction,
+	retryFailedPendingTransactions
+} from '$lib/utils/offline';
+import { classifySyncFailure, getRetryDelayMs, isPendingReady } from '$lib/utils/offlineQueue';
 import { subscribeToRealtimeTable } from '$lib/realtime/durableObjectClient';
+import {
+	dbGet,
+	dbGetPage,
+	dbGetStrict,
+	dbPost,
+	type DataPage,
+	type DataRecord
+} from '$lib/services/dataApiClient';
 
 const REPORT_CACHE_VERSION = 'v4';
 
 // ─── Internal API helpers ─────────────────────────────────────────────────────
-
-async function dbGet(table: string, params: Record<string, string> = {}): Promise<any[]> {
-	const branch = selectedBranch.value || 'default';
-	const qs = new URLSearchParams({ table, branch, ...params }).toString();
-	const res = await fetch(`/api/data?${qs}`);
-	if (!res.ok) return [];
-	return res.json();
-}
-
-async function dbPost(
-	table: string,
-	action: 'insert' | 'update' | 'delete',
-	payload: Record<string, unknown> | Record<string, unknown>[],
-	where?: Record<string, string>
-): Promise<{ ok: boolean; data?: any[] }> {
-	const branch = selectedBranch.value || 'default';
-	const res = await fetch('/api/data', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ table, action, payload, branch, where })
-	});
-	if (!res.ok) throw new Error(`dbPost ${table}/${action} failed: ${res.status}`);
-	return res.json();
-}
 
 // ─── 7-day cache helpers ──────────────────────────────────────────────────────
 
@@ -301,44 +291,62 @@ export class DataService {
 
 	async getProducts() {
 		const branch = selectedBranch.value || 'default';
+		const offlineKey = `products_${branch}`;
+		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			return (await idbGet('products')) || [];
+			return offlineData;
 		}
-		const data = await smartCache.get(
-			`${CACHE_KEYS.PRODUCTS}_${branch}`,
-			async () => dbGet('produk'),
-			{ ttl: 180000, backgroundRefresh: true }
-		);
-		await idbSet('products', data || []);
-		return data || [];
+		try {
+			const data = await smartCache.get(
+				`${CACHE_KEYS.PRODUCTS}_${branch}`,
+				async () => dbGetStrict('produk'),
+				{ ttl: 180000, backgroundRefresh: true }
+			);
+			await idbSet(offlineKey, data || []);
+			return data || [];
+		} catch {
+			return offlineData;
+		}
 	}
 
 	async getCategories() {
 		const branch = selectedBranch.value || 'default';
+		const offlineKey = `categories_${branch}`;
+		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			return (await idbGet('categories')) || [];
+			return offlineData;
 		}
-		const data = await smartCache.get(
-			`${CACHE_KEYS.CATEGORIES}_${branch}`,
-			async () => dbGet('kategori'),
-			{ ttl: 180000, backgroundRefresh: true }
-		);
-		await idbSet('categories', data || []);
-		return data || [];
+		try {
+			const data = await smartCache.get(
+				`${CACHE_KEYS.CATEGORIES}_${branch}`,
+				async () => dbGetStrict('kategori'),
+				{ ttl: 180000, backgroundRefresh: true }
+			);
+			await idbSet(offlineKey, data || []);
+			return data || [];
+		} catch {
+			return offlineData;
+		}
 	}
 
 	async getAddOns() {
 		const branch = selectedBranch.value || 'default';
+		const offlineKey = `addons_${branch}`;
+		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			return (await idbGet('addons')) || [];
+			return offlineData;
 		}
-		const data = await smartCache.get(
-			`${CACHE_KEYS.ADDONS}_${branch}`,
-			async () => dbGet('tambahan'),
-			{ ttl: 180000, backgroundRefresh: true }
-		);
-		await idbSet('addons', data || []);
-		return data || [];
+		try {
+			const data = await smartCache.get(
+				`${CACHE_KEYS.ADDONS}_${branch}`,
+				async () => dbGetStrict('tambahan'),
+				{ ttl: 180000, backgroundRefresh: true }
+			);
+			await idbSet(offlineKey, data || []);
+			return data || [];
+		} catch {
+			return offlineData;
+		}
 	}
 
 	async getIngredients() {
@@ -365,6 +373,14 @@ export class DataService {
 
 	async getRows(table: string, params: Record<string, string> = {}) {
 		return dbGet(table, params);
+	}
+
+	async getRowsPage<T extends DataRecord = DataRecord>(
+		table: 'buku_kas' | 'transaksi_kasir',
+		params: Record<string, string> = {},
+		cursor?: string | null
+	): Promise<DataPage<T>> {
+		return dbGetPage<T>(table, params, cursor);
 	}
 
 	async getOne(table: string, params: Record<string, string> = {}) {
@@ -418,61 +434,19 @@ export class DataService {
 						startDate = endDate = dateRange;
 				}
 
-				let startWita: string, endWita: string;
-				try {
-					({ startWita, endWita } = witaRangeToWitaQuery(startDate, endDate));
-				} catch {
-					const today = getTodayWita();
-					startWita = today + 'T00:00:00+08:00';
-					endWita = today + 'T23:59:59+08:00';
-				}
-
-				const allBukuKas = await dbGet('buku_kas', { start: startWita, end: endWita });
-				const posBukuKas = allBukuKas.filter((i: any) => i.sumber === 'pos');
-				const manualItems = allBukuKas.filter((i: any) => i.sumber && i.sumber !== 'pos');
-				const uncategorized = allBukuKas.filter((i: any) => !i.sumber);
-
-				let posItems: any[] = [];
-				if (posBukuKas.length) {
-					const bukuKasIds = posBukuKas.map((bk: any) => bk.id).filter(Boolean);
-					const bukuKasById = new Map(posBukuKas.map((bk: any) => [bk.id, bk]));
-
-					const tkParams: Record<string, string> = {};
-					if (bukuKasIds.length <= 80) {
-						tkParams.buku_kas_ids = bukuKasIds.join(',');
-					} else {
-						tkParams.start = startWita;
-						tkParams.end = endWita;
-					}
-					const tk = await dbGet('transaksi_kasir', tkParams);
-					posItems = tk
-						.map((t: any) => ({ ...t, buku_kas: bukuKasById.get(t.buku_kas_id) }))
-						.filter((t: any) => t.buku_kas);
-				}
-
-				const laporan: any[] = [
-					...posItems.map((item: any) => ({
-						...item,
-						sumber: 'pos',
-						payment_method: item.buku_kas?.payment_method,
-						waktu: item.buku_kas?.waktu,
-						jenis: item.buku_kas?.jenis,
-						tipe: item.buku_kas?.tipe,
-						description: item.product_name || item.custom_name || 'Item Custom',
-						nominal: item.amount || 0
-					})),
-					...manualItems.map((item: any) => ({
-						...item,
-						sumber: item.sumber || 'catat',
-						nominal: item.amount || 0
-					})),
-					...uncategorized.map((item: any) => ({
-						...item,
-						sumber: 'lainnya',
-						description: item.description || 'Transaksi Lainnya',
-						nominal: item.amount || 0
-					}))
-				];
+				// Ambil laporan ter-agregasi dari server (tabel harian) alih-alih menarik
+				// seluruh buku_kas + transaksi_kasir mentah. transactions sudah berupa
+				// baris ringkas (POS per produk x metode + entri manual), jadi
+				// perhitungan ringkasan di bawah tetap menghasilkan angka identik.
+				const aggParams = new URLSearchParams({
+					table: 'laporan_aggregate',
+					branch,
+					start_date: startDate,
+					end_date: endDate
+				}).toString();
+				const aggRes = await fetch(`/api/data?${aggParams}`);
+				const aggData = aggRes.ok ? await aggRes.json() : null;
+				const laporan: any[] = Array.isArray(aggData?.transactions) ? aggData.transactions : [];
 
 				const pemasukan = laporan.filter((t) => t.tipe === 'in');
 				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
@@ -684,68 +658,163 @@ if (browser) {
 
 // ─── Offline sync ─────────────────────────────────────────────────────────────
 
-export async function syncPendingTransactions() {
-	const pendings = await getPendingTransactions();
+class PendingSyncError extends Error {
+	constructor(
+		message: string,
+		readonly status?: number,
+		readonly retryAfterMs?: number
+	) {
+		super(message);
+		this.name = 'PendingSyncError';
+	}
+}
+
+let pendingSync: Promise<void> | null = null;
+let pendingSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function assertSyncResponse(response: Response, label: string): Promise<void> {
+	if (response.ok) return;
+	const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+	const message = String(body?.message || body?.error || `${label}: HTTP ${response.status}`);
+	const retryAfterSeconds = Number(response.headers.get('retry-after'));
+	throw new PendingSyncError(
+		message,
+		response.status,
+		Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+			? retryAfterSeconds * 1_000
+			: undefined
+	);
+}
+
+async function replayPendingTransaction(payload: Record<string, unknown>): Promise<void> {
+	if (payload.type === 'pos_transaction' && payload.request) {
+		const response = await fetch('/api/pos/transaction', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload.request)
+		});
+		await assertSyncResponse(response, 'Sinkronisasi transaksi POS gagal');
+		return;
+	}
+
+	if (
+		payload.bukuKas &&
+		typeof payload.bukuKas === 'object' &&
+		(payload.bukuKas as Record<string, unknown>).sumber === 'pos' &&
+		Array.isArray(payload.transaksiKasir)
+	) {
+		const bukuKas = payload.bukuKas as Record<string, any>;
+		const response = await fetch('/api/pos/transaction', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				idempotency_key: bukuKas.transaction_id || bukuKas.id,
+				customer_name: bukuKas.customer_name || null,
+				payment_method: bukuKas.payment_method,
+				items: payload.transaksiKasir.map((item: any) => ({
+					product_id: item.produk_id || null,
+					custom_name: item.custom_name || null,
+					custom_price: item.produk_id ? null : item.price || item.amount,
+					qty: item.qty || 1,
+					add_on_ids: []
+				}))
+			})
+		});
+		await assertSyncResponse(response, 'Sinkronisasi transaksi POS lama gagal');
+		return;
+	}
+
+	if (payload.bukuKas && typeof payload.bukuKas === 'object') {
+		const bukuKas = payload.bukuKas as Record<string, any>;
+		await dbPost('buku_kas', 'insert', bukuKas);
+		if (Array.isArray(payload.transaksiKasir) && payload.transaksiKasir.length) {
+			await dbPost(
+				'transaksi_kasir',
+				'insert',
+				payload.transaksiKasir.map((item: any) => ({ ...item, buku_kas_id: bukuKas.id }))
+			);
+		}
+		return;
+	}
+
+	await dbPost('buku_kas', 'insert', payload);
+}
+
+function schedulePendingSync(delayMs: number): void {
+	if (typeof window === 'undefined' || !navigator.onLine) return;
+	if (pendingSyncTimer) clearTimeout(pendingSyncTimer);
+	pendingSyncTimer = setTimeout(
+		() => {
+			pendingSyncTimer = null;
+			void syncPendingTransactions();
+		},
+		Math.max(250, delayMs)
+	);
+}
+
+async function scheduleNextPendingSync(): Promise<void> {
+	const retryable = (await getPendingTransactions()).filter(
+		(item) => item.failure_kind !== 'auth' && item.failure_kind !== 'conflict'
+	);
+	if (!retryable.length) return;
+	const nextAttemptAt = Math.min(...retryable.map((item) => item.next_attempt_at));
+	schedulePendingSync(Math.max(250, nextAttemptAt - Date.now()));
+}
+
+async function runPendingTransactionSync(force = false): Promise<void> {
+	if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+	const pendings = (await getPendingTransactions()).filter((item) => force || isPendingReady(item));
 	if (!pendings.length) return;
+	let synced = 0;
+	let failed = 0;
+
+	if (typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('pending-sync-start'));
+	}
 
 	for (const trx of pendings) {
-		let attempt = 0;
-		while (attempt < 3) {
-			try {
-				if (trx.type === 'pos_transaction' && trx.request) {
-					const response = await fetch('/api/pos/transaction', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(trx.request)
-					});
-					if (!response.ok) {
-						throw new Error(`sync pos_transaction failed: ${response.status}`);
-					}
-				} else if (trx.bukuKas?.sumber === 'pos' && Array.isArray(trx.transaksiKasir)) {
-					const response = await fetch('/api/pos/transaction', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							idempotency_key: trx.bukuKas.transaction_id || trx.bukuKas.id,
-							customer_name: trx.bukuKas.customer_name || null,
-							payment_method: trx.bukuKas.payment_method,
-							items: trx.transaksiKasir.map((item: any) => ({
-								product_id: item.produk_id || null,
-								custom_name: item.custom_name || null,
-								custom_price: item.produk_id ? null : item.price || item.amount,
-								qty: item.qty || 1,
-								add_on_ids: []
-							}))
-						})
-					});
-					if (!response.ok) {
-						throw new Error(`sync legacy pos_transaction failed: ${response.status}`);
-					}
-				} else if (trx.bukuKas) {
-					await dbPost('buku_kas', 'insert', trx.bukuKas);
-					if (trx.transaksiKasir?.length) {
-						const tkRows = trx.transaksiKasir.map((item: any) => ({
-							...item,
-							buku_kas_id: trx.bukuKas.id
-						}));
-						await dbPost('transaksi_kasir', 'insert', tkRows);
-					}
-				} else {
-					await dbPost('buku_kas', 'insert', trx);
-				}
-				break;
-			} catch {
-				attempt++;
-				if (attempt >= 3) break;
-				await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt - 1)));
-			}
+		const { queue_id: queueId, ...payload } = trx;
+		await markPendingTransactionSyncing(queueId);
+		try {
+			await replayPendingTransaction(payload);
+			await removePendingTransaction(queueId);
+			synced++;
+		} catch (error) {
+			const status = error instanceof PendingSyncError ? error.status : undefined;
+			const failureKind = classifySyncFailure(status);
+			const retryAfterMs =
+				error instanceof PendingSyncError && error.retryAfterMs
+					? error.retryAfterMs
+					: getRetryDelayMs(trx.attempt_count + 1);
+			const isPermanent = failureKind === 'auth' || failureKind === 'conflict';
+			await markPendingTransactionFailed(queueId, {
+				error: error instanceof Error ? error.message : 'Sinkronisasi transaksi gagal',
+				failureKind,
+				nextAttemptAt: isPermanent ? Number.MAX_SAFE_INTEGER : Date.now() + retryAfterMs
+			});
+			failed++;
 		}
 	}
 
-	await clearPendingTransactions();
-	window?.dispatchEvent(new CustomEvent('pending-synced'));
+	if (typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('pending-sync-result', { detail: { synced, failed } }));
+		if (synced > 0) window.dispatchEvent(new CustomEvent('pending-synced'));
+	}
+	await scheduleNextPendingSync();
+}
+
+export function syncPendingTransactions(options: { force?: boolean } = {}): Promise<void> {
+	if (pendingSync) return pendingSync;
+	pendingSync = runPendingTransactionSync(Boolean(options.force)).finally(() => {
+		pendingSync = null;
+	});
+	return pendingSync;
 }
 
 if (typeof window !== 'undefined') {
-	window.addEventListener('online', syncPendingTransactions);
+	window.addEventListener('online', () => void syncPendingTransactions());
+	window.addEventListener('pending-changed', () => schedulePendingSync(500));
+	window.addEventListener('auth-session-refreshed', () => {
+		void retryFailedPendingTransactions(['auth']).then(() => syncPendingTransactions());
+	});
 }
