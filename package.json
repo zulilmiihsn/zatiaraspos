@@ -33,7 +33,10 @@
 		"test:quality:linting": "tsx src/tests/code-quality-tests.ts linting",
 		"test:quality:structure": "tsx src/tests/code-quality-tests.ts structure",
 		"test:quality:dependencies": "tsx src/tests/code-quality-tests.ts dependencies",
-		"test:all": "pnpm test:quality && pnpm test:features"
+		"test:all": "pnpm test:quality && pnpm test:features",
+		"test:offline": "tsx src/tests/offline-pos-tests.ts",
+		"test:load:checkout": "node scripts/loadtest-checkout.mjs",
+		"d1:setup:local": "node scripts/setup-local-d1.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
