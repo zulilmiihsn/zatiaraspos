@@ -3,15 +3,15 @@
 </svelte:head>
 
 <main
-	class="flex min-h-screen items-center justify-center bg-pink-50 px-5 text-center text-slate-900"
+	class="flex min-h-[100dvh] items-center justify-center bg-[#faf8f6] px-5 text-center text-[#241f21]"
 >
 	<section class="max-w-sm space-y-3">
-		<h1 class="text-2xl font-bold">Koneksi terputus</h1>
-		<p class="text-sm leading-6 text-slate-600">
+		<h1 class="text-2xl font-bold tracking-normal">Koneksi terputus</h1>
+		<p class="text-sm leading-6 text-[#6d6165]">
 			Zatiaras POS sedang offline. Periksa koneksi internet, lalu buka ulang halaman ini.
 		</p>
 		<a
-			class="inline-flex min-h-11 items-center justify-center rounded-lg bg-pink-600 px-5 text-sm font-semibold text-white shadow-sm"
+			class="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#b85c72] px-5 text-sm font-semibold text-white shadow-sm transition-transform duration-200 active:scale-[0.98]"
 			href="/"
 		>
 			Coba lagi

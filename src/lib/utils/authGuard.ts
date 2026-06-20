@@ -1,5 +1,12 @@
 import { goto } from '$app/navigation';
 import { LoginSecurity, RateLimiter } from './security';
+import { setUserRole } from '$lib/stores/userRole.svelte';
+import {
+	clearOfflineSessionSnapshot,
+	isOfflinePosPath,
+	persistOfflineSessionSnapshot,
+	readOfflineSessionSnapshot
+} from '$lib/auth/offlineSession';
 
 /**
  * Enhanced auth guard dengan security features
@@ -34,11 +41,36 @@ export class AuthGuard {
 		return response.json();
 	}
 
+	private allowOfflinePosAccess(): boolean {
+		if (!isOfflinePosPath(window.location.pathname)) {
+			goto('/offline');
+			return false;
+		}
+		const snapshot = readOfflineSessionSnapshot();
+		if (!snapshot) {
+			clearOfflineSessionSnapshot();
+			goto('/login?reason=offline_session_expired');
+			return false;
+		}
+		setUserRole(String(snapshot.user.role || ''), snapshot.user);
+		return true;
+	}
+
+	private persistValidatedSession(payload: any): void {
+		if (!payload?.authenticated || !payload?.user || !Number.isFinite(Number(payload.expiresAt))) {
+			return;
+		}
+		persistOfflineSessionSnapshot(payload.user, Number(payload.expiresAt));
+		setUserRole(String(payload.user.role || ''), payload.user);
+		window.dispatchEvent(new CustomEvent('auth-session-refreshed'));
+	}
+
 	/**
 	 * Check authentication dengan security validation
 	 */
 	async requireAuth(): Promise<boolean> {
 		if (typeof window === 'undefined') return true;
+		if (!navigator.onLine) return this.allowOfflinePosAccess();
 
 		try {
 			// Rate limiting check
@@ -63,10 +95,10 @@ export class AuthGuard {
 				return false;
 			}
 
+			this.persistValidatedSession(payload);
 			return true;
-		} catch (error) {
-			goto('/login');
-			return false;
+		} catch {
+			return this.allowOfflinePosAccess();
 		}
 	}
 

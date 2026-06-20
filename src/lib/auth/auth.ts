@@ -5,12 +5,18 @@ type BranchKey = string;
 import { setSecuritySettings, clearSecuritySettings } from '$lib/stores/securitySettings.svelte';
 import { clearCsrfTokenCache, fetchWithCsrfRetry } from '$lib/utils/csrf';
 import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
+import {
+	clearOfflineSessionSnapshot,
+	persistOfflineSessionSnapshot,
+	readOfflineSessionSnapshot
+} from './offlineSession';
 
 // Session store
 export const session = writable<{
 	isAuthenticated: boolean;
 	user: unknown;
 	token: unknown;
+	expiresAt?: number;
 }>({
 	isAuthenticated: false,
 	user: null,
@@ -18,17 +24,8 @@ export const session = writable<{
 });
 
 if (typeof window !== 'undefined') {
-	const saved = localStorage.getItem('zatiaras_session');
-	if (saved) {
-		try {
-			const parsed = JSON.parse(saved);
-			if (parsed.isAuthenticated && parsed.user) {
-				session.set(parsed);
-			}
-		} catch (e) {
-			console.error('Gagal mem-parsing sesi dari localStorage:', e);
-		}
-	}
+	const saved = readOfflineSessionSnapshot();
+	if (saved) session.set(saved);
 }
 
 // Authentication functions
@@ -73,7 +70,7 @@ export const auth = {
 
 		// Clear localStorage
 		if (typeof window !== 'undefined') {
-			localStorage.removeItem('zatiaras_session');
+			clearOfflineSessionSnapshot();
 			localStorage.removeItem('selectedBranch');
 		}
 
@@ -130,14 +127,16 @@ export async function loginWithUsername(username: string, password: string, bran
 	const sessionData = {
 		isAuthenticated: true,
 		user: result.user,
-		token: null // Session dikelola cookie backend
+		token: null,
+		expiresAt: Number(result.session?.expiresAt)
 	};
 	session.set(sessionData);
 
 	// Simpan ke localStorage untuk persistensi setelah refresh
 	if (typeof window !== 'undefined') {
-		localStorage.setItem('zatiaras_session', JSON.stringify(sessionData));
+		persistOfflineSessionSnapshot(result.user, sessionData.expiresAt);
 		localStorage.setItem('selectedBranch', branch);
+		window.dispatchEvent(new CustomEvent('auth-session-refreshed'));
 	}
 
 	return result.user;
@@ -158,7 +157,7 @@ export async function logout() {
 	// Clear user role dari store saat logout
 	clearUserRole();
 	session.set({ isAuthenticated: false, user: null, token: null });
-	localStorage.removeItem('zatiaras_session'); // Changed to localStorage
+	clearOfflineSessionSnapshot();
 	localStorage.removeItem('selectedBranch');
 	clearSecuritySettings(); // Clear security settings on logout
 	clearCsrfTokenCache();

@@ -13,25 +13,46 @@
 	import { auth } from '$lib/auth/auth';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { dataService } from '$lib/services/dataService';
-	import { getPendingTransactions } from '$lib/utils/offline';
+	import { syncPendingTransactions } from '$lib/services/dataService';
+	import { getPendingTransactions, retryFailedPendingTransactions } from '$lib/utils/offline';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
 	import { securitySettings, setSecuritySettings } from '$lib/stores/securitySettings.svelte';
 	import { requireAuth } from '$lib/utils/authGuard';
+	import type { Workbox as WorkboxInstance } from 'workbox-window';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import WifiOff from 'lucide-svelte/icons/wifi-off';
 
 	let { children }: { children: Snippet } = $props();
 
 	// PWA Update Notification
 	let showUpdateNotification = $state(false);
 	let updateAvailable = false;
+	let pwaWorkbox: WorkboxInstance | null = null;
 
 	let hasPrefetchedMenu = false;
 	let hasPrefetchedOwnerInsights = false;
 	let isOffline = $state(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 	let pendingCount = $state(0);
+	let pendingFailedCount = $state(0);
+	let isPendingSyncing = $state(false);
 	let showToast = $state(false);
 
 	async function updatePending() {
-		pendingCount = (await getPendingTransactions()).length;
+		const pending = await getPendingTransactions();
+		pendingCount = pending.length;
+		pendingFailedCount = pending.filter((item) => item.status === 'failed').length;
+	}
+
+	async function retryPendingTransactions() {
+		if (isOffline || isPendingSyncing) return;
+		isPendingSyncing = true;
+		try {
+			await retryFailedPendingTransactions();
+			await syncPendingTransactions({ force: true });
+			await updatePending();
+		} finally {
+			isPendingSyncing = false;
+		}
 	}
 
 	function scheduleIdleTask(task: () => void, timeout = 1200) {
@@ -81,14 +102,12 @@
 	}
 
 	onMount(async () => {
-		// Cek auth sebelum lanjut
-		if (!(await requireAuth())) return;
-
 		// Setup PWA update notification (only in production)
 		if ('serviceWorker' in navigator && import.meta.env.PROD) {
 			try {
 				const { Workbox } = await import('workbox-window');
 				const wb = new Workbox('/sw.js');
+				pwaWorkbox = wb;
 
 				wb.addEventListener('waiting', () => {
 					updateAvailable = true;
@@ -105,6 +124,10 @@
 				console.log('PWA registration failed:', error);
 			}
 		}
+
+		// Public routes tetap hidup tanpa sesi, termasuk fallback offline.
+		const publicRoutes = ['/login', '/offline', '/unauthorized'];
+		if (!publicRoutes.includes($page.url.pathname) && !(await requireAuth())) return;
 
 		isOffline = !navigator.onLine;
 		updatePending();
@@ -131,6 +154,14 @@
 			updatePending();
 			setTimeout(() => (showToast = false), 3000);
 		});
+		window.addEventListener('pending-sync-start', () => {
+			isPendingSyncing = true;
+		});
+		window.addEventListener('pending-sync-result', () => {
+			isPendingSyncing = false;
+			void updatePending();
+		});
+		window.addEventListener('pending-changed', updatePending);
 	});
 
 	// --- Logika Tampilan Navigasi ---
@@ -248,11 +279,9 @@
 
 	// PWA Update handlers
 	async function applyUpdate() {
-		if ('serviceWorker' in navigator && import.meta.env.PROD) {
+		if (pwaWorkbox && import.meta.env.PROD) {
 			try {
-				const { Workbox } = await import('workbox-window');
-				const wb = new Workbox('/sw.js');
-				await wb.messageSkipWaiting();
+				pwaWorkbox.messageSkipWaiting();
 			} catch (error) {
 				console.log('Failed to apply update:', error);
 			}
@@ -267,9 +296,33 @@
 
 {#if pendingCount > 0}
 	<div
-		class="animate-fade-in fixed bottom-0 left-0 z-50 w-full animate-pulse bg-pink-500 py-2 text-center font-semibold text-white shadow"
+		class="animate-fade-in fixed right-3 bottom-3 left-3 z-50 mx-auto flex max-w-xl items-center gap-3 rounded-lg border border-stone-700 bg-[#282423] px-4 py-3 text-white shadow-xl"
 	>
-		{pendingCount} transaksi menunggu untuk dikirim ke server
+		{#if isOffline}
+			<WifiOff class="h-5 w-5 shrink-0 text-amber-300" />
+		{:else}
+			<RefreshCw class="h-5 w-5 shrink-0 text-[#e6a8b7] {isPendingSyncing ? 'animate-spin' : ''}" />
+		{/if}
+		<div class="min-w-0 flex-1">
+			<div class="text-sm font-bold">{pendingCount} transaksi belum tersinkron</div>
+			<div class="text-xs text-stone-300">
+				{isOffline
+					? 'Menunggu koneksi internet'
+					: pendingFailedCount > 0
+						? `${pendingFailedCount} transaksi perlu dicoba ulang`
+						: isPendingSyncing
+							? 'Sedang mengirim transaksi'
+							: 'Siap dikirim'}
+			</div>
+		</div>
+		<button
+			type="button"
+			class="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-stone-900 transition-transform duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+			disabled={isOffline || isPendingSyncing}
+			onclick={retryPendingTransactions}
+		>
+			{isPendingSyncing ? 'Mengirim' : 'Sinkronkan'}
+		</button>
 	</div>
 {/if}
 

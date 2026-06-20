@@ -26,6 +26,7 @@
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
+	import { Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
 	$effect(() => {
 		currentUserRole = userRole.value || '';
@@ -79,6 +80,7 @@
 	let tambahanData = $state<PosAddOn[]>([]);
 
 	let isLoadingProducts = $state(true);
+	let posLoadError = $state('');
 
 	let unsubscribeBranch: (() => void) | null = null;
 	let isInitialLoad = true; // Add flag to prevent double fetching
@@ -164,6 +166,7 @@
 			].join('|');
 
 			if (nextFingerprint === lastPOSPayloadFingerprint) {
+				posLoadError = '';
 				await reportCacheMetrics('pos');
 				return;
 			}
@@ -172,10 +175,17 @@
 			produkData = nextProducts || [];
 			kategoriData = nextCategories || [];
 			tambahanData = nextAddons || [];
+			posLoadError = '';
 			await reportCacheMetrics('pos');
 		} catch (error) {
-			// Handle error silently
+			posLoadError = 'Koneksi atau data POS bermasalah. Coba muat ulang daftar menu.';
 		}
+	}
+
+	async function retryLoadPOSData() {
+		isLoadingProducts = true;
+		await loadPOSData();
+		isLoadingProducts = false;
 	}
 
 	function schedulePOSRefresh(delayMs = 180) {
@@ -523,7 +533,7 @@
 </script>
 
 <div
-	class="h-100vh flex w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-white"
+	class="flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-[#faf8f6]"
 	ontouchstart={swipeNav.handleTouchStart}
 	ontouchmove={swipeNav.handleTouchMove}
 	ontouchend={swipeNav.handleTouchEnd}
@@ -536,24 +546,22 @@
 		class="page-content w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
-		<div class="flex items-center gap-3 bg-white px-4 py-4 md:py-8 lg:py-10">
+		<div class="bg-[#faf8f6] px-4 pt-4 pb-3 md:px-8 md:pt-8 lg:px-10">
+			<div class="mb-3 flex items-end justify-between gap-4">
+				<div>
+					<div class="text-xs font-semibold tracking-wide text-stone-500 uppercase">Kasir</div>
+					<div class="text-2xl font-bold text-stone-950">Pilih Menu</div>
+				</div>
+				<div class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-600 shadow-sm">
+					{totalItems} item
+				</div>
+			</div>
 			<div class="relative w-full">
-				<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-					<svg
-						class="h-5 w-5"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z"
-						/></svg
-					>
+				<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
+					<Search class="h-5 w-5" />
 				</span>
 				<input
-					class="w-full flex-1 rounded-lg border border-gray-200 bg-gray-50 py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-pink-400"
+					class="w-full flex-1 rounded-xl border border-stone-200 bg-white py-3 pr-3 pl-10 text-base text-stone-900 shadow-sm transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-[#b85c72] focus:ring-4 focus:ring-[#b85c72]/10"
 					type="text"
 					placeholder="Cari produk..."
 					bind:value={search}
@@ -563,14 +571,14 @@
 			</div>
 		</div>
 		<div
-			class="-mt-2 flex gap-2 overflow-x-auto bg-white px-4 py-2 md:-mt-4 lg:-mt-6"
+			class="flex gap-2 overflow-x-auto bg-[#faf8f6] px-4 py-2 md:px-8 lg:px-10"
 			style="scrollbar-width:none;-ms-overflow-style:none;"
 		>
 			<button
-				class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-lg border px-4 py-2 text-base font-medium transition-colors duration-150 {selectedCategory ===
+				class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 				'all'
-					? 'border-pink-500 bg-pink-500 text-white'
-					: 'border-pink-500 bg-white text-pink-500'}"
+					? 'border-[#b85c72] bg-[#b85c72] text-white shadow-sm'
+					: 'border-stone-200 bg-white text-stone-700'}"
 				type="button"
 				onclick={handleSelectCategoryAll}>Semua</button
 			>
@@ -583,21 +591,14 @@
 			{:else if (categories ?? []).length === 0}
 				<!-- Button Custom Item di samping 'Semua' jika tidak ada kategori -->
 				<button
-					class="mb-1 flex w-12 min-w-[48px] flex-shrink-0 cursor-pointer items-center justify-center rounded-lg border border-pink-500 bg-pink-500 px-3 py-2 text-base font-medium text-white transition-colors duration-150"
+					class="mb-1 flex w-12 min-w-[48px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#b85c72] bg-[#b85c72] px-3 py-2 text-base font-medium text-white transition-transform duration-200 active:scale-[0.98]"
 					type="button"
 					aria-label="Tambah item custom"
 					onclick={handleShowCustomItemModal}
 				>
-					<svg
-						class="h-5 w-5"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						viewBox="0 0 24 24"
-						><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg
-					>
+					<Plus class="h-5 w-5" />
 				</button>
-				<div class="flex h-[40px] items-center gap-2 px-4 text-sm text-gray-400">
+				<div class="flex h-[40px] items-center gap-2 px-4 text-sm text-stone-500">
 					<svg
 						class="h-4 w-4"
 						fill="none"
@@ -616,28 +617,21 @@
 			{:else}
 				{#each categories ?? [] as c}
 					<button
-						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-lg border px-4 py-2 text-base font-medium transition-colors duration-150 {selectedCategory ===
+						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 						String(c.id)
-							? 'border-pink-500 bg-pink-500 text-white'
-							: 'border-pink-500 bg-white text-pink-500'}"
+							? 'border-[#b85c72] bg-[#b85c72] text-white shadow-sm'
+							: 'border-stone-200 bg-white text-stone-700'}"
 						type="button"
 						onclick={() => handleSelectCategory(c.id)}>{c.name}</button
 					>
 				{/each}
 				<!-- Button Custom Item di paling kanan -->
 				<button
-					class="mb-1 flex min-w-[96px] flex-shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-pink-500 bg-pink-500 px-4 py-2 text-base font-medium text-white transition-colors duration-150"
+					class="mb-1 flex min-w-[96px] flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#b85c72] bg-[#b85c72] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
 					type="button"
 					onclick={handleShowCustomItemModal}
 				>
-					<svg
-						class="h-5 w-5"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						viewBox="0 0 24 24"
-						><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg
-					>
+					<Plus class="h-5 w-5" />
 					Menu Kustom
 				</button>
 			{/if}
@@ -649,8 +643,10 @@
 			{filteredProducts}
 			{categories}
 			{imageError}
+			loadError={posLoadError}
 			onSelectProduct={handleOpenAddOnModal}
 			onImgError={handleImgErrorId}
+			onRetry={retryLoadPOSData}
 		/>
 
 		<CustomItemModal bind:show={showCustomItemModal} onAdd={addCustomItemToCart} />

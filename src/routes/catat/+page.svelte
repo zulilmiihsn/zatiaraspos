@@ -131,6 +131,7 @@
 		const utcTime = witaToUtcISO(form.transaction_date, form.transaction_time || '00:00');
 
 		const trx = {
+			id: crypto.randomUUID(),
 			tipe: mode === 'pemasukan' ? 'in' : 'out',
 			sumber: 'catat',
 			payment_method: form.payment_method,
@@ -145,6 +146,13 @@
 			try {
 				await dataService.insertRows('buku_kas', trx);
 			} catch (error) {
+				if (error instanceof TypeError || !navigator.onLine) {
+					await addPendingTransaction(trx);
+					notifModalMsg = 'Koneksi terputus. Transaksi disimpan dan akan dikirim saat online.';
+					notifModalType = 'success';
+					showNotifModal = true;
+					return;
+				}
 				notifModalMsg =
 					'Gagal menyimpan transaksi ke database: ' +
 					(error instanceof Error ? error.message : 'Unknown error');
@@ -157,7 +165,7 @@
 			await dataService.invalidateCacheOnChange('transaksi_kasir');
 		} else {
 			// Offline mode: simpan transaksi ke pending
-			addPendingTransaction(trx);
+			await addPendingTransaction(trx);
 			notifModalMsg = 'Transaksi disimpan offline dan akan otomatis sync saat online.';
 			notifModalType = 'success';
 			showNotifModal = true;

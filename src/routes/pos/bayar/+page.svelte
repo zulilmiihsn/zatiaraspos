@@ -19,6 +19,15 @@
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import type { ReceiptSettings } from '$lib/types/laporan';
 	import type { TokoSession } from '$lib/types/store';
+	import {
+		ArrowLeft,
+		Banknote,
+		CreditCard,
+		ReceiptText,
+		ShoppingBag,
+		UserRound,
+		WifiOff
+	} from 'lucide-svelte';
 
 	interface BayarAddOn {
 		id: string;
@@ -38,6 +47,7 @@
 	let cart: BayarCartItem[] = $state([]);
 	let customerName = $state('');
 	let paymentMethod = $state('');
+	let isOffline = $state(false);
 	const paymentOptions = [
 		{ id: 'tunai', label: 'Tunai' },
 		{ id: 'qris', label: 'QRIS' }
@@ -56,6 +66,7 @@
 	let showQrisWarning = $state(false);
 	let transactionId = $state('');
 	let transactionCode = $state('');
+	let transactionQueuedOffline = $state(false);
 
 	let showErrorNotification = $state(false);
 	let errorNotificationMessage = $state('');
@@ -111,6 +122,7 @@
 			const data = await dataService.getOne('pengaturan');
 			if (data) {
 				pengaturanStruk = data;
+				localStorage.setItem('pengaturan_struk', JSON.stringify(data));
 			} else {
 				// fallback ke localStorage
 				const local = localStorage.getItem('pengaturan_struk');
@@ -123,6 +135,13 @@
 	}
 
 	onMount(() => {
+		const updateConnectionState = () => {
+			isOffline = !navigator.onLine;
+			if (isOffline && paymentMethod && paymentMethod !== 'tunai') paymentMethod = 'tunai';
+		};
+		updateConnectionState();
+		window.addEventListener('online', updateConnectionState);
+		window.addEventListener('offline', updateConnectionState);
 		cekSesiTokoAktif();
 		fetchPengaturanStruk();
 		const saved = localStorage.getItem('pos_cart');
@@ -133,6 +152,10 @@
 		}
 		transactionId = uuidv4(); // UUID untuk database
 		transactionCode = generateTransactionCode(); // Untuk tampilan/struk
+		return () => {
+			window.removeEventListener('online', updateConnectionState);
+			window.removeEventListener('offline', updateConnectionState);
+		};
 	});
 
 	const calculateCartSummary = memoize((cart: BayarCartItem[]) => {
@@ -156,6 +179,14 @@
 	let formattedCashReceived = $derived(
 		cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : ''
 	);
+	let canPay = $derived(
+		Boolean(
+			paymentMethod &&
+				customerName.trim() &&
+				cart.length > 0 &&
+				(!isOffline || paymentMethod === 'tunai')
+		)
+	);
 
 	function handleCancel() {
 		showCancelModal = true;
@@ -168,6 +199,10 @@
 		showCancelModal = false;
 	}
 	function handleBayar() {
+		if (isOffline && paymentMethod !== 'tunai') {
+			showErrorNotif('Saat offline, pembayaran hanya tersedia untuk tunai.');
+			return;
+		}
 		if (paymentMethod === 'tunai') {
 			showCashModal = true;
 			cashReceived = '';
@@ -176,13 +211,11 @@
 			showQrisWarning = true;
 		}
 	}
-	function confirmQrisChecked() {
+	async function confirmQrisChecked() {
 		showQrisWarning = false;
-		showSuccessModal = true;
 		cashReceived = totalHarga.toString(); // QRIS = dibayar pas
 		kembalian = 0;
-		// Catat ke laporan
-		catatTransaksiKeLaporan();
+		showSuccessModal = await catatTransaksiKeLaporan();
 	}
 	function addCashTemplate(nom: number) {
 		cashReceived = ((parseInt(cashReceived) || 0) + nom).toString();
@@ -190,7 +223,7 @@
 	function closeCashModal() {
 		showCashModal = false;
 	}
-	function finishCash() {
+	async function finishCash() {
 		// Validate cash received
 		const cashValidation = validateNumber(cashReceived, { required: true, min: totalHarga });
 		if (!cashValidation.isValid) {
@@ -220,20 +253,19 @@
 			return;
 		}
 
-		// Log successful payment
-		securityUtils.logSecurityEvent('payment_completed', {
-			paymentMethod: sanitizedPaymentMethod,
-			totalAmount: totalHarga,
-			cashReceived: parseInt(sanitizedCashReceived),
-			change: kembalian,
-			itemsCount: cart.length
-		});
-
 		// Proses pembayaran tunai selesai
-		showCashModal = false;
-		showSuccessModal = true;
-		// Catat ke laporan
-		catatTransaksiKeLaporan();
+		if (await catatTransaksiKeLaporan()) {
+			securityUtils.logSecurityEvent('payment_completed', {
+				paymentMethod: sanitizedPaymentMethod,
+				totalAmount: totalHarga,
+				cashReceived: parseInt(sanitizedCashReceived),
+				change: kembalian,
+				itemsCount: cart.length,
+				queuedOffline: transactionQueuedOffline
+			});
+			showCashModal = false;
+			showSuccessModal = true;
+		}
 	}
 	function handleKeypad(val: string | number) {
 		if (val === '⌫') {
@@ -243,20 +275,21 @@
 		}
 	}
 
-	async function catatTransaksiKeLaporan() {
+	async function catatTransaksiKeLaporan(): Promise<boolean> {
+		transactionQueuedOffline = false;
 		await cekSesiTokoAktif();
 		if (!cart || cart.length === 0 || totalHarga <= 0) {
 			notifModalMsg = 'Transaksi tidak valid: keranjang kosong atau total harga 0.';
 			notifModalType = 'error';
 			showNotifModal = true;
-			return;
+			return false;
 		}
 		const id_sesi_toko = sesiAktif?.id || null;
 		if (!id_sesi_toko && currentUserRole === 'kasir') {
 			notifModalMsg = 'Kasir tidak boleh melakukan transaksi saat toko tutup!';
 			notifModalType = 'error';
 			showNotifModal = true;
-			return;
+			return false;
 		}
 		if (!id_sesi_toko && currentUserRole === 'pemilik') {
 			notifModalMsg =
@@ -269,7 +302,7 @@
 			notifModalMsg = 'Metode pembayaran tidak valid!';
 			notifModalType = 'error';
 			showNotifModal = true;
-			return;
+			return false;
 		}
 
 		const requestPayload = {
@@ -304,10 +337,25 @@
 					throw new Error(errorBody?.message || errorBody?.error || `HTTP ${response.status}`);
 				}
 			} catch (error) {
+				if (error instanceof TypeError || !navigator.onLine) {
+					try {
+						await queueCurrentPosTransaction(requestPayload);
+					} catch (queueError) {
+						notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
+						notifModalType = 'error';
+						showNotifModal = true;
+						return false;
+					}
+					notifModalMsg = 'Transaksi tersimpan lokal. Status: menunggu sinkronisasi.';
+					notifModalType = 'success';
+					showNotifModal = true;
+					transactionQueuedOffline = true;
+					return true;
+				}
 				notifModalMsg = 'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
 				notifModalType = 'error';
 				showNotifModal = true;
-				return;
+				return false;
 			}
 			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
 			await dataService.invalidateCacheOnChange('buku_kas');
@@ -315,12 +363,33 @@
 			refreshBus.emit('dashboard');
 		} else {
 			// Offline mode: simpan request POS mentah, server tetap menghitung harga saat sync.
-			addPendingTransaction({ type: 'pos_transaction', request: requestPayload });
-			notifModalMsg = 'Transaksi disimpan offline dan akan otomatis sync saat online.';
+			try {
+				await queueCurrentPosTransaction(requestPayload);
+			} catch (queueError) {
+				notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
+				notifModalType = 'error';
+				showNotifModal = true;
+				return false;
+			}
+			notifModalMsg = 'Transaksi tersimpan lokal. Status: menunggu sinkronisasi.';
 			notifModalType = 'success';
 			showNotifModal = true;
+			transactionQueuedOffline = true;
 		}
-		// Hapus proses insert ke transaksi dan item_transaksi, karena sudah tidak digunakan
+		return true;
+	}
+
+	async function queueCurrentPosTransaction(request: Record<string, unknown>): Promise<void> {
+		await addPendingTransaction({
+			type: 'pos_transaction',
+			request,
+			summary: {
+				transaction_code: transactionCode,
+				total_amount: totalHarga,
+				item_count: totalQty,
+				created_at: new Date().toISOString()
+			}
+		});
 	}
 
 	function closeNotifModal() {
@@ -350,6 +419,9 @@
 		html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
 		html += `${customerName ? customerName + '<br/>' : ''}`;
 		html += `${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
+		if (transactionQueuedOffline) {
+			html += `<b>STATUS: MENUNGGU SINKRONISASI</b><br/>`;
+		}
 		html += `</div>`;
 		// Daftar pesanan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
@@ -421,6 +493,10 @@
 		else handleKeypad(key);
 	}
 	function handleSetPaymentMethod(id: string) {
+		if (isOffline && id !== 'tunai') {
+			showErrorNotif('QRIS membutuhkan koneksi internet.');
+			return;
+		}
 		paymentMethod = id;
 	}
 	function handleBackToKasir() {
@@ -432,127 +508,212 @@
 	}
 </script>
 
-<main class="page-content flex-1 overflow-y-auto px-2 pt-2">
-	<div class="px-2 py-4">
-		<div class="mb-3 text-sm font-semibold text-gray-700">Pembayaran: #{transactionCode}</div>
-		<!-- Input Nama Pelanggan -->
-		<div class="mb-4">
-			<div class="mb-2 block text-sm text-gray-500">Nama Pelanggan</div>
-			<input
-				type="text"
-				class="mb-1 w-full rounded-lg border-[1.5px] border-pink-200 bg-white px-3 py-2.5 text-base text-gray-800 transition-colors duration-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-				placeholder="Masukkan nama pelanggan..."
-				bind:value={customerName}
-				maxlength="50"
-			/>
+<main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-[#faf8f6] px-4 pt-4 pb-28">
+	<div class="mx-auto max-w-4xl">
+		<div class="mb-4 flex items-start justify-between gap-4">
+			<div>
+				<div class="text-xs font-semibold tracking-wide text-stone-500 uppercase">Pembayaran</div>
+				<div class="text-2xl font-bold text-stone-950">
+					{transactionCode ? `#${transactionCode}` : 'Draft'}
+				</div>
+			</div>
+			<button
+				class="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 shadow-sm transition-all duration-200 active:scale-[0.98]"
+				type="button"
+				aria-label="Kembali ke kasir"
+				onclick={handleCancel}
+			>
+				<ArrowLeft class="h-5 w-5" />
+			</button>
 		</div>
-		<!-- Info Pesanan -->
-		<div class="mb-4 rounded-xl bg-pink-50 p-4">
-			<div class="mb-2 font-semibold text-pink-500">Pesanan</div>
-			<ul class="divide-y divide-pink-100">
-				{#each cart as item}
-					<li class="flex flex-col gap-0.5 py-2">
-						<div class="flex items-center justify-between">
-							<div class="flex min-w-0 items-center gap-2">
-								<span class="truncate font-medium text-gray-900">{item.product.name}</span>
-								<span class="flex-shrink-0 text-sm text-gray-500">x{item.qty}</span>
+
+		{#if cart.length === 0}
+			<div
+				class="flex min-h-[62dvh] flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white px-6 py-12 text-center shadow-sm"
+			>
+				<ShoppingBag class="mb-4 h-12 w-12 text-stone-400" />
+				<div class="mb-2 text-xl font-bold text-stone-950">Keranjang kosong</div>
+				<div class="mb-5 max-w-xs text-sm text-stone-500">
+					Tambah menu dari layar kasir sebelum lanjut pembayaran.
+				</div>
+				<button
+					class="rounded-xl bg-[#b85c72] px-5 py-3 text-sm font-bold text-white shadow transition-all duration-200 active:scale-[0.98]"
+					type="button"
+					onclick={() => goto('/pos')}>Kembali ke Kasir</button
+				>
+			</div>
+		{:else}
+			<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+				<section class="space-y-4">
+					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+						<label
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+							for="nama"
+						>
+							<UserRound class="h-4 w-4 text-stone-400" />
+							Nama Pelanggan
+						</label>
+						<input
+							id="nama"
+							type="text"
+							class="mb-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-[#b85c72] focus:bg-white focus:ring-4 focus:ring-[#b85c72]/10"
+							placeholder="Nama pelanggan"
+							bind:value={customerName}
+							maxlength="50"
+						/>
+					</div>
+
+					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+						<div class="mb-3 flex items-center justify-between">
+							<div class="flex items-center gap-2 font-semibold text-stone-900">
+								<ReceiptText class="h-5 w-5 text-[#b85c72]" />
+								Pesanan
 							</div>
-							<span class="font-bold text-pink-500"
-								>Rp {((item.product.price ?? item.product.harga ?? 0) * item.qty).toLocaleString(
-									'id-ID'
-								)}</span
-							>
+							<div class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
+								{totalQty} item
+							</div>
 						</div>
-						{#if item.addOns && item.addOns.length > 0}
-							<div class="mt-1 ml-1 flex flex-col gap-0.5">
-								{#each item.addOns as ekstra}
-									<div class="flex justify-between text-xs font-medium text-gray-500">
-										<span>+ {ekstra.name}</span>
-										<span
-											>Rp {((ekstra.price ?? ekstra.harga ?? 0) * item.qty).toLocaleString(
-												'id-ID'
-											)}</span
+						<ul class="divide-y divide-stone-100">
+							{#each cart as item}
+								<li class="flex flex-col gap-1 py-3">
+									<div class="flex items-start justify-between gap-3">
+										<div class="min-w-0">
+											<div class="truncate font-semibold text-stone-950">{item.product.name}</div>
+											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.qty}</div>
+										</div>
+										<span class="shrink-0 font-bold text-[#b85c72]"
+											>Rp {(
+												(item.product.price ?? item.product.harga ?? 0) * item.qty
+											).toLocaleString('id-ID')}</span
 										>
 									</div>
-								{/each}
+									{#if item.addOns && item.addOns.length > 0}
+										<div class="mt-1 flex flex-col gap-0.5 rounded-lg bg-stone-50 px-3 py-2">
+											{#each item.addOns as ekstra}
+												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
+													<span class="truncate">+ {ekstra.name}</span>
+													<span class="shrink-0"
+														>Rp {((ekstra.price ?? ekstra.harga ?? 0) * item.qty).toLocaleString(
+															'id-ID'
+														)}</span
+													>
+												</div>
+											{/each}
+										</div>
+									{/if}
+									{#if (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
+										<div class="text-xs font-medium text-stone-500">
+											{[
+												item.sugar && item.sugar !== 'normal'
+													? item.sugar === 'no'
+														? 'Tanpa Gula'
+														: item.sugar === 'less'
+															? 'Sedikit Gula'
+															: item.sugar
+													: null,
+												item.ice && item.ice !== 'normal'
+													? item.ice === 'no'
+														? 'Tanpa Es'
+														: item.ice === 'less'
+															? 'Sedikit Es'
+															: item.ice
+													: null,
+												item.note && item.note.trim() ? item.note : null
+											]
+												.filter(Boolean)
+												.join(', ')}
+										</div>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				</section>
+
+				<aside class="space-y-4 lg:sticky lg:top-4 lg:self-start">
+					{#if isOffline}
+						<div
+							class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+						>
+							<WifiOff class="mt-0.5 h-5 w-5 shrink-0" />
+							<div>
+								<div class="text-sm font-bold">Mode offline</div>
+								<div class="mt-0.5 text-xs leading-5 text-amber-800">
+									Pembayaran tunai akan disimpan lokal sampai koneksi kembali.
+								</div>
 							</div>
-						{/if}
-						{#if (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
-							<div class="ml-1 text-xs font-medium text-gray-400">
-								{[
-									item.sugar && item.sugar !== 'normal'
-										? item.sugar === 'no'
-											? 'Tanpa Gula'
-											: item.sugar === 'less'
-												? 'Sedikit Gula'
-												: item.sugar
-										: null,
-									item.ice && item.ice !== 'normal'
-										? item.ice === 'no'
-											? 'Tanpa Es'
-											: item.ice === 'less'
-												? 'Sedikit Es'
-												: item.ice
-										: null,
-									item.note && item.note.trim() ? item.note : null
-								]
-									.filter(Boolean)
-									.join(', ')}
+						</div>
+					{/if}
+					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+						<div class="mb-3 text-sm font-semibold text-stone-700">Metode Pembayaran</div>
+						<div class="grid grid-cols-2 gap-3">
+							{#each paymentOptions as opt}
+								<button
+									type="button"
+									class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98]
+									{paymentMethod === opt.id
+										? 'border-[#b85c72] bg-[#fff8f9] text-[#b85c72] shadow-sm'
+										: 'border-stone-200 bg-white text-stone-700'}
+									{isOffline && opt.id !== 'tunai' ? 'cursor-not-allowed opacity-45' : ''}"
+									onclick={() => handleSetPaymentMethod(opt.id)}
+									disabled={isOffline && opt.id !== 'tunai'}
+								>
+									{#if opt.id === 'tunai'}
+										<Banknote class="h-5 w-5" />
+									{:else}
+										<CreditCard class="h-5 w-5" />
+									{/if}
+									{opt.label}{isOffline && opt.id !== 'tunai' ? ' (online)' : ''}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<div class="rounded-2xl bg-[#282423] p-5 text-white shadow-xl shadow-stone-900/10">
+						<div class="mb-1 text-sm font-semibold text-stone-300">Total Bayar</div>
+						<div class="text-3xl font-bold">Rp {totalHarga.toLocaleString('id-ID')}</div>
+						<div class="mt-4 grid grid-cols-2 gap-2 text-xs text-stone-300">
+							<div class="rounded-xl bg-white/10 px-3 py-2">
+								<div>Item</div>
+								<div class="text-base font-bold text-white">{totalQty}</div>
 							</div>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		</div>
-		<!-- Metode Pembayaran -->
-		<div class="mb-4">
-			<div class="mb-2 block text-sm text-gray-500">Metode Pembayaran</div>
-			<div class="grid grid-cols-2 gap-3">
-				{#each paymentOptions as opt}
+							<div class="rounded-xl bg-white/10 px-3 py-2">
+								<div>Metode</div>
+								<div class="truncate text-base font-bold text-white">
+									{paymentOptions.find((item) => item.id === paymentMethod)?.label || '-'}
+								</div>
+							</div>
+						</div>
+					</div>
+
 					<button
-						type="button"
-						class="rounded-lg border-2 px-4 py-3 text-base font-semibold transition-all
-            {paymentMethod === opt.id
-							? 'border-pink-500 bg-pink-50 text-pink-500'
-							: 'border-pink-200 bg-white text-gray-700'}"
-						onclick={() => handleSetPaymentMethod(opt.id)}
+						class="w-full rounded-xl bg-[#b85c72] py-4 text-lg font-bold text-white shadow-lg shadow-[#b85c72]/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
+						onclick={handleBayar}
+						disabled={!canPay}
 					>
-						{opt.label}
+						Konfirmasi & Bayar
 					</button>
-				{/each}
-			</div>
-		</div>
-		<!-- Summary Total -->
-		<div class="mt-6 mb-4 flex items-center justify-between rounded-xl bg-white p-4 shadow">
-			<div class="font-semibold text-gray-700">Total</div>
-			<div class="text-2xl font-bold text-pink-500">Rp {totalHarga.toLocaleString('id-ID')}</div>
-		</div>
-		<!-- Tombol Konfirmasi -->
-		<button
-			class="mt-2 w-full rounded-xl bg-pink-500 py-4 text-lg font-bold text-white shadow-lg transition-all active:bg-pink-600 disabled:opacity-50"
-			onclick={handleBayar}
-			disabled={!paymentMethod || !customerName.trim()}
-		>
-			Konfirmasi & Bayar
-		</button>
-		{#if !paymentMethod || !customerName.trim()}
-			<div class="mt-2 text-center text-xs text-red-400">
-				{#if !paymentMethod && !customerName.trim()}
-					Isi nama pelanggan & pilih metode pembayaran dulu
-				{:else if !paymentMethod}
-					Pilih metode pembayaran dulu
-				{:else}
-					Isi nama pelanggan dulu
-				{/if}
+					{#if !canPay}
+						<div class="text-center text-xs text-red-500">
+							{#if !paymentMethod && !customerName.trim()}
+								Isi nama pelanggan dan pilih metode pembayaran dulu
+							{:else if !paymentMethod}
+								Pilih metode pembayaran dulu
+							{:else}
+								Isi nama pelanggan dulu
+							{/if}
+						</div>
+					{/if}
+					<button
+						class="mx-auto block text-sm font-semibold text-stone-500 transition-colors duration-200 hover:text-[#b85c72]"
+						type="button"
+						onclick={handleCancel}
+					>
+						Batalkan pembayaran
+					</button>
+				</aside>
 			</div>
 		{/if}
-		<button
-			class="mx-auto mt-4 block text-sm text-gray-400 underline hover:text-pink-400"
-			type="button"
-			onclick={handleCancel}
-		>
-			Batalkan
-		</button>
 	</div>
 </main>
 
@@ -695,10 +856,16 @@
 					/></svg
 				>
 			</div>
-			<div class="mb-1 text-center text-2xl font-bold text-green-600">Transaksi Berhasil!</div>
+			<div class="mb-1 text-center text-2xl font-bold text-green-600">
+				{transactionQueuedOffline ? 'Transaksi Tersimpan' : 'Transaksi Berhasil!'}
+			</div>
 			<div class="mb-2 text-center text-gray-700">
-				Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br
-				/>
+				{#if transactionQueuedOffline}
+					Tersimpan di perangkat dan menunggu sinkronisasi.<br />
+				{:else}
+					Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br
+					/>
+				{/if}
 				{#if customerName.trim()}
 					<span class="font-semibold text-pink-500">{customerName.trim()}</span><br />
 				{/if}
