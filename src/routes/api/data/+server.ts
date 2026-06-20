@@ -35,6 +35,7 @@ import {
 	toCursorPage
 } from '$lib/server/dataPagination';
 import { hasDatabaseColumn } from '$lib/server/schemaCapabilities';
+import { reverseDailySummaryForTransaction } from '$lib/server/dailySummary';
 import type { RequestHandler } from './$types';
 
 // ---------- helpers ----------
@@ -943,6 +944,17 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				return json({ ok: true, data: rows });
 			}
 			if (action === 'delete' && whereClause?.transaction_id) {
+				// Balikkan kontribusi transaksi ke ringkasan harian SEBELUM item dihapus
+				// (item + buku_kas masih ada di sini). Jangan blok penghapusan bila gagal.
+				try {
+					await reverseDailySummaryForTransaction(
+						rawDb,
+						branch,
+						String(whereClause.transaction_id)
+					);
+				} catch {
+					// Tabel ringkasan mungkin belum ada / gagal sebagian — abaikan.
+				}
 				await db
 					.delete(transaksiKasir)
 					.where(
