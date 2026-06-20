@@ -93,11 +93,22 @@ export async function reverseDailySummaryForTransaction(
 					`UPDATE daily_product_sales SET
 						qty = MAX(0, qty - ?),
 						gross_sales = MAX(0, gross_sales - ?),
+						cash_sales = MAX(0, cash_sales - ?),
+						non_cash_sales = MAX(0, non_cash_sales - ?),
 						transaction_count = MAX(0, transaction_count - 1),
 						updated_at = ?
 					 WHERE branch_id = ? AND sales_date = ? AND product_id = ?`
 				)
-				.bind(Number(p.qty || 0), Number(p.gross || 0), now, branch, salesDate, String(p.product_id))
+				.bind(
+					Number(p.qty || 0),
+					Number(p.gross || 0),
+					isCash ? Number(p.gross || 0) : 0,
+					isCash ? 0 : Number(p.gross || 0),
+					now,
+					branch,
+					salesDate,
+					String(p.product_id)
+				)
 		)
 	];
 

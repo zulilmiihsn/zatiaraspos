@@ -811,13 +811,15 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 							.prepare(
 								`INSERT INTO daily_product_sales (
 									id, branch_id, sales_date, product_id, product_name, qty,
-									gross_sales, transaction_count, created_at, updated_at
+									gross_sales, cash_sales, non_cash_sales, transaction_count, created_at, updated_at
 								)
-								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 								ON CONFLICT(branch_id, sales_date, product_id) DO UPDATE SET
 									product_name = excluded.product_name,
 									qty = qty + excluded.qty,
 									gross_sales = gross_sales + excluded.gross_sales,
+									cash_sales = cash_sales + excluded.cash_sales,
+									non_cash_sales = non_cash_sales + excluded.non_cash_sales,
 									transaction_count = transaction_count + excluded.transaction_count,
 									updated_at = excluded.updated_at`
 							)
@@ -829,6 +831,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 								summary.productName,
 								summary.qty,
 								summary.grossSales,
+								paymentMethod === 'tunai' ? summary.grossSales : 0,
+								paymentMethod === 'tunai' ? 0 : summary.grossSales,
 								summary.transactionCount,
 								createdAt,
 								createdAt

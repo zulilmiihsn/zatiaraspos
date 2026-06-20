@@ -271,6 +271,8 @@ export const dailyProductSales = sqliteTable(
 		product_name: text('product_name').notNull(),
 		qty: integer('qty').notNull().default(0),
 		gross_sales: real('gross_sales').notNull().default(0),
+		cash_sales: real('cash_sales').notNull().default(0),
+		non_cash_sales: real('non_cash_sales').notNull().default(0),
 		transaction_count: integer('transaction_count').notNull().default(0),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
