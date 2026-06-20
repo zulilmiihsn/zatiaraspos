@@ -28,8 +28,14 @@ error.md
 zatiarasposapp/
 bin/
 
+# Tooling index cache (jangan ke-commit)
+.codegraph/
+
 # Dev artifacts (jangan ke-commit)
 scratch/
+.tmp-quality/
+.tmp-pwa/
+.tmp-chrome-offline/
 check*.txt
 .check_output.txt
 .lint_full.txt
