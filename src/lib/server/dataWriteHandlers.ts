@@ -14,11 +14,12 @@ import {
 } from '$lib/database/schema';
 import { payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
 import { reverseDailySummaryForTransaction } from '$lib/server/dailySummary';
-import type { BranchId } from '$lib/server/branchResolver';
+import type { BranchId, DrizzleDb } from '$lib/server/branchResolver';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export type DataWriteContext = {
-	db: any;
-	rawDb: any;
+	db: DrizzleDb;
+	rawDb: D1Database;
 	branch: BranchId;
 	table: string;
 	action: 'insert' | 'update' | 'delete';

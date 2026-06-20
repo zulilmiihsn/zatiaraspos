@@ -1,6 +1,7 @@
 import { getD1Database, getDrizzleDb, requireBranch } from '$lib/server/branchResolver';
 import { publishBranchEvent, type RealtimeTable } from '$lib/server/realtimePublisher';
 import { appendAuditLog } from '$lib/server/auditLog';
+import type { D1Database } from '@cloudflare/workers-types';
 
 /** Helper bersama untuk handler /api/data (GET reads & POST writes). */
 
@@ -45,7 +46,7 @@ export async function publish(
 }
 
 export async function auditDataChange(
-	db: any,
+	db: D1Database,
 	branch: string,
 	session: App.Locals['authSession'],
 	table: string,

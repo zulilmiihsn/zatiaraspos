@@ -1,6 +1,7 @@
 import { and, eq, gte, lte, asc } from 'drizzle-orm';
 import { dailySalesSummary, transaksiKasir, bukuKas } from '$lib/database/schema';
-import type { BranchId } from '$lib/server/branchResolver';
+import type { BranchId, DrizzleDb } from '$lib/server/branchResolver';
+import type { D1Database } from '@cloudflare/workers-types';
 
 /** Konversi timestamp ISO ke tanggal WITA 'YYYY-MM-DD' (zona Asia/Makassar). */
 function witaDate(ts: string): string {
@@ -18,7 +19,7 @@ function witaDate(ts: string): string {
  * ada): scan transaksi mentah seperti perilaku lama.
  */
 export async function getDashboardStats(
-	db: any,
+	db: DrizzleDb,
 	branch: BranchId,
 	startTime: string,
 	endTime: string
@@ -74,7 +75,7 @@ export async function getDashboardStats(
 
 /** Ringkasan pemasukan harian untuk grafik mingguan, dari daily_sales_summary. */
 export async function getWeeklyIncomeSummary(
-	db: any,
+	db: DrizzleDb,
 	branch: BranchId,
 	startTime: string,
 	endTime: string
@@ -100,7 +101,7 @@ export async function getWeeklyIncomeSummary(
 
 /** Top 3 produk terlaris untuk rentang, dari daily_product_sales. */
 export async function getBestSellersSummary(
-	rawDb: any,
+	rawDb: D1Database,
 	branch: BranchId,
 	startTime: string,
 	endTime: string
@@ -127,7 +128,7 @@ export async function getBestSellersSummary(
 
 /** Header transaksi POS dalam rentang (untuk agregasi kas 7 hari di klien). */
 export async function getPosKas7Hari(
-	db: any,
+	db: DrizzleDb,
 	branch: BranchId,
 	startTime: string,
 	endTime: string

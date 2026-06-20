@@ -1,4 +1,5 @@
 import type { BranchId } from '$lib/server/branchResolver';
+import type { D1Database } from '@cloudflare/workers-types';
 
 /**
  * Membalik (decrement) kontribusi sebuah transaksi POS terhadap tabel ringkasan
@@ -16,7 +17,7 @@ import type { BranchId } from '$lib/server/branchResolver';
  * Semua decrement di-clamp di 0 supaya ringkasan tidak pernah negatif.
  */
 export async function reverseDailySummaryForTransaction(
-	rawDb: any,
+	rawDb: D1Database,
 	branch: BranchId,
 	transactionId: string
 ): Promise<void> {

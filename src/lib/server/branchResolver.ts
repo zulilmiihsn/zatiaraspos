@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { drizzle } from 'drizzle-orm/d1';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export const BRANCH_GROUPS = {
 	DB_SAMARINDA_GROUP: ['samarinda', 'samarinda2'],
@@ -47,18 +48,21 @@ export function getBranchDbBinding(branch: BranchId): BranchDbBinding {
 	throw error(400, 'Branch tidak valid');
 }
 
-export function getD1Database(env: Record<string, unknown> | undefined, branch: BranchId): any {
+export function getD1Database(env: Record<string, unknown> | undefined, branch: BranchId): D1Database {
 	const binding = getBranchDbBinding(branch);
 	const db = env?.[binding] || env?.DB;
 	if (!db) {
 		throw error(503, `Database binding ${binding} tidak tersedia`);
 	}
-	return db;
+	return db as D1Database;
 }
 
 export function getDrizzleDb(platform: App.Platform | undefined, branch: BranchId) {
 	return drizzle(getD1Database(platform?.env as Record<string, unknown> | undefined, branch));
 }
+
+/** Tipe instance Drizzle D1 yang dipakai handler /api/data. */
+export type DrizzleDb = ReturnType<typeof getDrizzleDb>;
 
 export function requireBranch(input: unknown): BranchId {
 	return normalizeBranch(input);

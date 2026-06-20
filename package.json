@@ -39,6 +39,7 @@
 		"d1:setup:local": "node scripts/setup-local-d1.mjs"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260619.1",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",

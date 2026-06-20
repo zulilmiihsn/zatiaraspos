@@ -21,11 +21,12 @@ import {
 	getBestSellersSummary,
 	getPosKas7Hari
 } from '$lib/server/dashboardQueries';
-import type { BranchId } from '$lib/server/branchResolver';
+import type { BranchId, DrizzleDb } from '$lib/server/branchResolver';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export type DataReadContext = {
-	db: any;
-	rawDb: any;
+	db: DrizzleDb;
+	rawDb: D1Database;
 	branch: BranchId;
 	table: string | null;
 	url: URL;

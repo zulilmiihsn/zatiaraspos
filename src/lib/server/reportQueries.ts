@@ -1,4 +1,5 @@
 import type { BranchId } from '$lib/server/branchResolver';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export type LaporanAggregate = {
 	summary: {
@@ -28,7 +29,7 @@ export type LaporanAggregate = {
  * `startDate`/`endDate` adalah tanggal WITA 'YYYY-MM-DD'.
  */
 export async function buildLaporanAggregate(
-	rawDb: any,
+	rawDb: D1Database,
 	branch: BranchId,
 	startDate: string,
 	endDate: string
