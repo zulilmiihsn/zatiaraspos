@@ -380,6 +380,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		CHECKOUT_WINDOW_MS,
 		platform
 	);
+	if (!checkoutLimit.available) {
+		throw kitError(503, 'Checkout sementara tidak tersedia. Coba lagi beberapa saat.');
+	}
 	if (!checkoutLimit.allowed) {
 		throw kitError(
 			429,
@@ -414,11 +417,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		});
 	}
 
-	const idSesiToko = await getActiveSessionId(db, branch);
-	if (!idSesiToko && session.role === 'kasir') {
-		throw kitError(409, 'Kasir tidak boleh transaksi saat toko tutup');
-	}
-
 	const normalizedInputs: NormalizedItemInput[] = body.items.slice(0, 100).map((item) => {
 		const qty = Number(item.qty);
 		if (!Number.isInteger(qty) || qty <= 0 || qty > 99) {
@@ -434,14 +432,19 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	});
 	const productIds = uniqueStrings(normalizedInputs.map((item) => item.productId));
 	const addOnIds = uniqueStrings(normalizedInputs.flatMap((item) => item.addOnIds));
-	const productsById = await loadProducts(
-		db,
-		branch,
-		productIds,
-		stockTrackingAvailable,
-		ingredientTrackingAvailable
-	);
-	const addOnsById = await loadAddOns(db, branch, addOnIds);
+
+	// Fase baca paralel: sesi toko, produk, dan add-on saling independen —
+	// jalankan barengan agar tidak menumpuk round-trip D1 secara serial.
+	const [idSesiToko, productsById, addOnsById] = await Promise.all([
+		getActiveSessionId(db, branch),
+		loadProducts(db, branch, productIds, stockTrackingAvailable, ingredientTrackingAvailable),
+		loadAddOns(db, branch, addOnIds)
+	]);
+	if (!idSesiToko && session.role === 'kasir') {
+		throw kitError(409, 'Kasir tidak boleh transaksi saat toko tutup');
+	}
+
+	// Resep butuh hasil produk (flag track_ingredients), jadi wave kedua.
 	const recipeProductIds = ingredientTrackingAvailable
 		? productIds.filter((productId) => {
 				const product = productsById.get(productId);
@@ -585,6 +588,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 	const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+	const totalHpp = items.reduce((sum, item) => sum + (item.hpp_amount || 0), 0);
 	const cashReceived = normalizeMoney(body.cash_received);
 	if (paymentMethod === 'tunai' && cashReceived > 0 && cashReceived < totalAmount) {
 		throw kitError(400, 'Nominal tunai kurang dari total');
@@ -778,15 +782,16 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 						.prepare(
 							`INSERT INTO daily_sales_summary (
 								id, branch_id, sales_date, transaction_count, item_count,
-								gross_sales, cash_sales, non_cash_sales, created_at, updated_at
+								gross_sales, cash_sales, non_cash_sales, hpp_total, created_at, updated_at
 							)
-							VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+							VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
 							ON CONFLICT(branch_id, sales_date) DO UPDATE SET
 								transaction_count = transaction_count + 1,
 								item_count = item_count + excluded.item_count,
 								gross_sales = gross_sales + excluded.gross_sales,
 								cash_sales = cash_sales + excluded.cash_sales,
 								non_cash_sales = non_cash_sales + excluded.non_cash_sales,
+									hpp_total = hpp_total + excluded.hpp_total,
 								updated_at = excluded.updated_at`
 						)
 						.bind(
@@ -797,6 +802,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 							totalAmount,
 							paymentMethod === 'tunai' ? totalAmount : 0,
 							paymentMethod === 'non-tunai' ? totalAmount : 0,
+							totalHpp,
 							createdAt,
 							createdAt
 						),
@@ -887,24 +893,25 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error;
 	}
 
-	await appendAuditLog(db, branch, {
-		action: 'pos_transaction.created',
-		entityType: 'buku_kas',
-		entityId: bukuKasId,
-		transactionId,
-		amount: totalAmount,
-		session,
-		metadata: {
-			customerName,
-			paymentMethod,
-			totalQty,
-			itemCount: items.length,
-			stockDeductions: Object.fromEntries(stockDeductions),
-			ingredientDeductions: Object.fromEntries(ingredientDeductions)
-		}
-	});
-
+	// Audit log + publish realtime dijalankan paralel sesudah batch commit.
+	// appendAuditLog menelan error sendiri, jadi audit tetap tidak memblok UX.
 	await Promise.all([
+		appendAuditLog(db, branch, {
+			action: 'pos_transaction.created',
+			entityType: 'buku_kas',
+			entityId: bukuKasId,
+			transactionId,
+			amount: totalAmount,
+			session,
+			metadata: {
+				customerName,
+				paymentMethod,
+				totalQty,
+				itemCount: items.length,
+				stockDeductions: Object.fromEntries(stockDeductions),
+				ingredientDeductions: Object.fromEntries(ingredientDeductions)
+			}
+		}),
 		publishBranchEvent(
 			platform?.env as Record<string, unknown> | undefined,
 			branch,

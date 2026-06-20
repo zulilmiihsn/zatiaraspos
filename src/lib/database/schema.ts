@@ -197,6 +197,7 @@ export const bukuKas = sqliteTable(
 	},
 	(table) => [
 		index('idx_buku_kas_branch_waktu').on(table.branch_id, table.waktu),
+		index('idx_buku_kas_branch_waktu_id').on(table.branch_id, table.waktu, table.id),
 		index('idx_buku_kas_branch_transaction').on(table.branch_id, table.transaction_id),
 		index('idx_buku_kas_branch_sesi').on(table.branch_id, table.id_sesi_toko),
 		uniqueIndex('idx_buku_kas_branch_idempotency').on(table.branch_id, table.idempotency_key)
@@ -229,6 +230,11 @@ export const transaksiKasir = sqliteTable(
 	},
 	(table) => [
 		index('idx_transaksi_kasir_branch_created').on(table.branch_id, table.created_at),
+		index('idx_transaksi_kasir_branch_created_id').on(
+			table.branch_id,
+			table.created_at,
+			table.id
+		),
 		index('idx_transaksi_kasir_branch_transaction').on(table.branch_id, table.transaction_id),
 		index('idx_transaksi_kasir_branch_buku').on(table.branch_id, table.buku_kas_id)
 	]
@@ -245,6 +251,7 @@ export const dailySalesSummary = sqliteTable(
 		gross_sales: real('gross_sales').notNull().default(0),
 		cash_sales: real('cash_sales').notNull().default(0),
 		non_cash_sales: real('non_cash_sales').notNull().default(0),
+		hpp_total: real('hpp_total').notNull().default(0),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
