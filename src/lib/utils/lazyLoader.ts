@@ -284,13 +284,6 @@ export const lazyModules = {
 	productAnalysisService: () =>
 		lazyLoadModule(() => import('$lib/services/productAnalysisService'), 'productAnalysisService'),
 
-	// Data Services
-	optimizedDataService: () =>
-		lazyLoadModule(() => import('$lib/services/optimizedDataService'), 'optimizedDataService'),
-
-	// Utils
-	advancedCache: () => lazyLoadModule(() => import('$lib/utils/advancedCache'), 'advancedCache'),
-
 	performanceMonitor: () =>
 		lazyLoadModule(() => import('$lib/utils/performanceTracker'), 'performanceMonitor')
 };

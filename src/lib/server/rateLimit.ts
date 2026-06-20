@@ -53,6 +53,13 @@ async function consumeDurableRateLimit(
 	}
 }
 
+/**
+ * Rate limit dengan SATU fallback yang disengaja (wajib, 1 lapis):
+ *   Durable Object (utama, akurat lintas-isolate)  →  D1 (cadangan).
+ * D1 diperlukan karena DO tidak terikat di dev lokal & saat DO down; tanpa ini
+ * login/checkout lokal akan selalu ke-block. Bila keduanya gagal → fail-closed
+ * (tolak, available:false). Jangan tambah lapisan lain.
+ */
 export async function consumeRateLimit(
 	db: any,
 	branch: BranchId,

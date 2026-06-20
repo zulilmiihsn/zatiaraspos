@@ -42,11 +42,16 @@ export async function POST({ request, platform }) {
 			return json({ error: 'File too large. Max 5MB.' }, { status: 400 });
 		}
 
+		const bucket = platform?.env?.STORAGE;
+		if (!bucket) {
+			return json({ error: 'Storage unavailable' }, { status: 503 });
+		}
+
 		const ext = file.name.split('.').pop() ?? 'webp';
 		const key = `produk/${uuidv4()}.${ext}`;
 		const buffer = await file.arrayBuffer();
 
-		const publicUrl = await uploadToR2(key, buffer, file.type, platform?.env?.STORAGE);
+		const publicUrl = await uploadToR2(key, buffer, file.type, bucket);
 
 		return json({ url: publicUrl, key });
 	} catch (err) {
@@ -63,7 +68,12 @@ export async function DELETE({ request, platform }) {
 			return json({ error: 'No key provided' }, { status: 400 });
 		}
 
-		await deleteFromR2(key, platform?.env?.STORAGE);
+		const bucket = platform?.env?.STORAGE;
+		if (!bucket) {
+			return json({ error: 'Storage unavailable' }, { status: 503 });
+		}
+
+		await deleteFromR2(key, bucket);
 		return json({ success: true });
 	} catch (err) {
 		console.error('[upload] Delete error:', err);
