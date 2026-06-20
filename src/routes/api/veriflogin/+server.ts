@@ -74,6 +74,23 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies,
 			LOGIN_WINDOW_MS,
 			platform
 		);
+		if (!ipLimit.available || !userLimit.available) {
+			await appendAuditLog(rawDb, branchId, {
+				action: 'login.rate_limiter_unavailable',
+				entityType: 'profil',
+				entityId: username,
+				ipHash,
+				metadata: { username }
+			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'RATE_LIMITER_UNAVAILABLE',
+					message: 'Login sementara tidak tersedia. Coba lagi beberapa saat.'
+				}),
+				{ status: 503, headers: { 'Retry-After': '5' } }
+			);
+		}
 
 		if (!ipLimit.allowed || !userLimit.allowed) {
 			await appendAuditLog(rawDb, branchId, {

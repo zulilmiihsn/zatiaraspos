@@ -8,9 +8,46 @@
  * - Code formatting
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+
+const workspaceRoot = process.cwd();
+const qualityTempDir = path.join(workspaceRoot, '.tmp-quality');
+
+function localBinary(name: string): string {
+	return path.join(
+		workspaceRoot,
+		'node_modules',
+		'.bin',
+		`${name}${process.platform === 'win32' ? '.cmd' : ''}`
+	);
+}
+
+function runLocalBinary(name: string, args: string[]): string {
+	fs.mkdirSync(qualityTempDir, { recursive: true });
+	return execFileSync(localBinary(name), args, {
+		cwd: workspaceRoot,
+		encoding: 'utf8',
+		stdio: 'pipe',
+		shell: process.platform === 'win32',
+		env: { ...process.env, TEMP: qualityTempDir, TMP: qualityTempDir }
+	});
+}
+
+function runNodeScript(script: string): string {
+	return execFileSync(process.execPath, [path.join(workspaceRoot, script)], {
+		cwd: workspaceRoot,
+		encoding: 'utf8',
+		stdio: 'pipe',
+		env: { ...process.env, TEMP: qualityTempDir, TMP: qualityTempDir }
+	});
+}
+
+function commandErrorDetails(error: unknown): string {
+	const value = error as Error & { stdout?: string; stderr?: string };
+	return [value.stdout, value.stderr, value.message].filter(Boolean).join('\n').trim();
+}
 
 // ============================================================================
 // 📋 TEST INTERFACES
@@ -53,16 +90,14 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 	tests: [
 		{
 			name: 'TypeScript Check',
-			description: 'pnpm check harus berhasil tanpa error',
+			description: 'Svelte sync dan typecheck harus berhasil tanpa error',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
 				try {
 					console.log('🔍 Running TypeScript check...');
-					const result = execSync('pnpm check', {
-						encoding: 'utf8',
-						stdio: 'pipe'
-					});
+					runLocalBinary('svelte-kit', ['sync']);
+					runLocalBinary('svelte-check', ['--tsconfig', './tsconfig.json']);
 
 					const executionTime = Date.now() - startTime;
 
@@ -75,13 +110,11 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 					};
 				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
-					const e = error as Error & { stdout?: string };
-
 					return {
 						name: 'TypeScript Check',
 						success: false,
 						message: 'TypeScript compilation failed',
-						details: e.stdout || e.message,
+						details: commandErrorDetails(error),
 						executionTime
 					};
 				}
@@ -89,16 +122,14 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 		},
 		{
 			name: 'TypeScript Build',
-			description: 'pnpm build harus berhasil',
+			description: 'Production build harus berhasil',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
 				try {
 					console.log('🏗️ Running TypeScript build...');
-					const result = execSync('pnpm build', {
-						encoding: 'utf8',
-						stdio: 'pipe'
-					});
+					runLocalBinary('vite', ['build']);
+					runNodeScript('scripts/export-durable-objects.mjs');
 
 					const executionTime = Date.now() - startTime;
 
@@ -111,13 +142,11 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 					};
 				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
-					const e = error as Error & { stdout?: string };
-
 					return {
 						name: 'TypeScript Build',
 						success: false,
 						message: 'Build failed',
-						details: e.stdout || e.message,
+						details: commandErrorDetails(error),
 						executionTime
 					};
 				}
@@ -141,10 +170,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 
 				try {
 					console.log('🔍 Running ESLint check...');
-					const result = execSync('pnpm lint', {
-						encoding: 'utf8',
-						stdio: 'pipe'
-					});
+					runLocalBinary('eslint', ['.']);
 
 					const executionTime = Date.now() - startTime;
 
@@ -157,13 +183,11 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 					};
 				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
-					const e = error as Error & { stdout?: string };
-
 					return {
 						name: 'ESLint Check',
 						success: false,
 						message: 'ESLint failed',
-						details: e.stdout || e.message,
+						details: commandErrorDetails(error),
 						executionTime
 					};
 				}
@@ -177,10 +201,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 
 				try {
 					console.log('🎨 Checking code formatting...');
-					const result = execSync('pnpm format --check', {
-						encoding: 'utf8',
-						stdio: 'pipe'
-					});
+					runLocalBinary('prettier', ['--check', '.']);
 
 					const executionTime = Date.now() - startTime;
 
@@ -193,13 +214,11 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 					};
 				} catch (error: unknown) {
 					const executionTime = Date.now() - startTime;
-					const e = error as Error & { stdout?: string };
-
 					return {
 						name: 'Prettier Format Check',
 						success: false,
 						message: 'Code formatting issues found',
-						details: e.stdout || e.message,
+						details: commandErrorDetails(error),
 						executionTime
 					};
 				}
@@ -607,6 +626,10 @@ export async function runFullCodeQualityTestSuite(): Promise<string> {
 	return runner.generateReport(results);
 }
 
+export function hasCodeQualityFailures(results: CodeQualityTestSuite[]): boolean {
+	return results.some((suite) => suite.failedTests > 0);
+}
+
 /**
  * Test individual kategori
  */
@@ -644,7 +667,9 @@ async function main() {
 		if (!command || command === 'all') {
 			// Test semua code quality
 			console.log('🚀 Running all code quality tests...\n');
-			const report = await runFullCodeQualityTestSuite();
+			const runner = new CodeQualityTestRunner();
+			const results = await runner.runAllTests();
+			const report = runner.generateReport(results);
 
 			// Save report to file
 			const fs = await import('fs');
@@ -653,6 +678,10 @@ async function main() {
 			fs.writeFileSync(reportPath, report);
 
 			console.log(`\n📄 Code quality report saved to: ${reportPath}`);
+
+			if (hasCodeQualityFailures(results)) {
+				process.exit(1);
+			}
 		} else if (command === 'typescript') {
 			// Test TypeScript saja
 			console.log('🔍 Testing TypeScript Compilation...\n');

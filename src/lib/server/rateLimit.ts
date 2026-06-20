@@ -2,6 +2,8 @@ import type { BranchId } from '$lib/server/branchResolver';
 
 export type RateLimitResult = {
 	allowed: boolean;
+	available: boolean;
+	backend: 'durable-object' | 'd1' | 'unavailable';
 	limit: number;
 	count: number;
 	retryAfterSeconds: number;
@@ -39,6 +41,8 @@ async function consumeDurableRateLimit(
 
 		return {
 			allowed: payload.allowed,
+			available: true,
+			backend: 'durable-object',
 			limit: Number(payload.limit || limit),
 			count: Number(payload.count || 0),
 			retryAfterSeconds: Number(payload.retryAfterSeconds || 0),
@@ -88,12 +92,22 @@ export async function consumeRateLimit(
 				.bind(id, branch, identifier, resetAt, now)
 				.run();
 
-			return { allowed: true, limit, count: 1, retryAfterSeconds: 0, resetAt };
+			return {
+				allowed: true,
+				available: true,
+				backend: 'd1',
+				limit,
+				count: 1,
+				retryAfterSeconds: 0,
+				resetAt
+			};
 		}
 
 		if (current.count >= limit) {
 			return {
 				allowed: false,
+				available: true,
+				backend: 'd1',
 				limit,
 				count: current.count,
 				retryAfterSeconds: Math.ceil((current.reset_at - now) / 1000),
@@ -109,12 +123,22 @@ export async function consumeRateLimit(
 
 		return {
 			allowed: true,
+			available: true,
+			backend: 'd1',
 			limit,
 			count: nextCount,
 			retryAfterSeconds: 0,
 			resetAt: current.reset_at
 		};
 	} catch {
-		return { allowed: true, limit, count: 0, retryAfterSeconds: 0, resetAt };
+		return {
+			allowed: false,
+			available: false,
+			backend: 'unavailable',
+			limit,
+			count: 0,
+			retryAfterSeconds: Math.max(1, Math.ceil(windowMs / 1000)),
+			resetAt
+		};
 	}
 }
