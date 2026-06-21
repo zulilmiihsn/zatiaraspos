@@ -11,7 +11,7 @@ SELECT
 	'samarinda',
 	'pemilik',
 	'pemilik',
-	'$2b$10$ferbqptpukaJBWTtIM8ZV.fYoaWkvtzIouFBDczEnmbEOWBsKZa2m',
+	'$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy',
 	'Pemilik UAT Samarinda'
 WHERE NOT EXISTS (
 	SELECT 1 FROM profil WHERE branch_id = 'samarinda' AND username = 'pemilik'
@@ -30,7 +30,7 @@ SELECT
 	'samarinda',
 	'kasir',
 	'kasir',
-	'$2b$10$ferbqptpukaJBWTtIM8ZV.fYoaWkvtzIouFBDczEnmbEOWBsKZa2m',
+	'$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy',
 	'Kasir UAT Samarinda'
 WHERE NOT EXISTS (
 	SELECT 1 FROM profil WHERE branch_id = 'samarinda' AND username = 'kasir'
