@@ -16,8 +16,7 @@ export interface BukuKasRecord {
 	id: string;
 	tipe: 'in' | 'out';
 	jenis: 'pendapatan_usaha' | 'beban_usaha' | 'lainnya';
-	nominal: number;
-	amount?: number; // Alias legacy, gunakan `nominal`
+	amount: number;
 	catatan?: string;
 	description?: string; // Alias legacy
 	payment_method: 'tunai' | 'non-tunai' | 'qris';

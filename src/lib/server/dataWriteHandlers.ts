@@ -402,8 +402,7 @@ export async function handleDataWrite(ctx: DataWriteContext): Promise<Response> 
 			if (action === 'insert') {
 				const rows: Array<Record<string, any>> = payloadRows(payload, branch).map((row) => ({
 					...row,
-					amount: row.amount ?? row.nominal ?? 0,
-					nominal: row.nominal ?? row.amount ?? 0
+					amount: row.amount ?? row.nominal ?? 0
 				}));
 				const newRows: Array<Record<string, any>> = [];
 				for (const row of rows) {

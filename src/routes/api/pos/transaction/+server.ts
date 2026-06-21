@@ -666,7 +666,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					tipe,
 					jenis,
 					amount,
-					nominal,
 					qty,
 					description,
 					customer_name,
@@ -676,14 +675,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					id_sesi_toko,
 					created_at,
 					updated_at
-				) VALUES (?, ?, ?, 'pos', 'in', 'pendapatan_usaha', ?, ?, ?, ?, ?, ?, ?,
+				) VALUES (?, ?, ?, 'pos', 'in', 'pendapatan_usaha', ?, ?, ?, ?, ?, ?,
 					${idempotencyAvailable ? '?,' : ''} ?, ?, ?)`
 			)
 			.bind(
 				bukuKasId,
 				branch,
 				createdAt,
-				totalAmount,
 				totalAmount,
 				totalQty,
 				description,

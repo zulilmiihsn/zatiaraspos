@@ -64,6 +64,13 @@
 			"when": 1781930000000,
 			"tag": "0008_daily_product_payment_split",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "6",
+			"when": 1781940000000,
+			"tag": "0009_drop_bukukas_nominal",
+			"breakpoints": true
 		}
 	]
 }

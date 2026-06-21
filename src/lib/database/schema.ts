@@ -184,7 +184,6 @@ export const bukuKas = sqliteTable(
 		tipe: text('tipe').notNull(),
 		jenis: text('jenis').notNull(),
 		amount: real('amount').notNull(),
-		nominal: real('nominal'),
 		qty: integer('qty'),
 		description: text('description'),
 		customer_name: text('customer_name'),

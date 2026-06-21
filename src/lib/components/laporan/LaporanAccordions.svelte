@@ -56,7 +56,7 @@
 		if (!items || items.length === 0) return [];
 		const groups = items.reduce((acc: Record<string, number>, item) => {
 			const name = item.description?.trim() || item.catatan?.trim() || 'Lain-lain';
-			acc[name] = (acc[name] || 0) + (item.nominal || item.amount || 0);
+			acc[name] = (acc[name] || 0) + (item.amount || 0);
 			return acc;
 		}, {});
 		return Object.entries(groups).map(([name, total]) => ({ name, total }));

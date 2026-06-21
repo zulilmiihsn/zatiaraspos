@@ -24,7 +24,6 @@
 		transaction_id?: string;
 		waktu: string;
 		nama: string;
-		nominal: number;
 		amount: number;
 		tipe: string;
 		sumber: string;
@@ -78,8 +77,7 @@
 						transaction_id: t.ref_transaksi_kasir_id || t.transaction_id, // Tambahkan transaction_id untuk delete operation
 						waktu: t.waktu || t.created_at,
 						nama: t.description || t.customer_name || t.nama || '-',
-						nominal: t.amount || t.nominal || 0, // Support both amount and nominal fields
-						amount: t.amount || t.nominal || 0, // Keep both for compatibility
+						amount: t.amount || 0,
 						tipe: t.tipe || (t as unknown as Record<string, string>).type, // Handle kemungkinan perbedaan nama kolom
 						sumber: t.sumber || 'catat',
 						payment_method: t.payment_method || 'tunai',
@@ -92,9 +90,7 @@
 			transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 			// Filter hanya nominal > 0 (support both nominal and amount fields)
-			transaksiHariIni = transaksiHariIni.filter(
-				(t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0)
-			);
+			transaksiHariIni = transaksiHariIni.filter((t) => t.amount > 0);
 
 			// Filter berdasarkan search
 			if (searchKeyword.trim()) {
@@ -272,14 +268,14 @@
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
-				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			}
 
 			html += `</tbody></table>`;
 			html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
 
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
+			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
 
 			const methodLabels: Record<string, string> = {
 				tunai: 'Tunai',
@@ -480,7 +476,7 @@
 						</div>
 						<div class="flex flex-col items-end gap-2">
 							<div class="text-base font-bold text-pink-500">
-								Rp {trx.nominal?.toLocaleString('id-ID')}
+								Rp {trx.amount?.toLocaleString('id-ID')}
 							</div>
 							{#if canDeleteTransaction()}
 								<button
@@ -573,7 +569,7 @@
 				<div class="flex flex-col gap-1">
 					<span class="font-semibold text-gray-500">Nominal</span>
 					<div class="text-lg font-bold text-pink-500">
-						Rp {selectedTransaksi.nominal?.toLocaleString('id-ID')}
+						Rp {selectedTransaksi.amount?.toLocaleString('id-ID')}
 					</div>
 				</div>
 				<div class="mb-2 flex flex-col gap-1">

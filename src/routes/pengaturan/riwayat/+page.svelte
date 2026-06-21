@@ -20,7 +20,6 @@
 		transaction_id?: string;
 		waktu: string;
 		nama: string;
-		nominal: number;
 		amount: number;
 		tipe: string;
 		sumber: string;
@@ -61,8 +60,7 @@
 					transaction_id: t.ref_transaksi_kasir_id || t.transaction_id,
 					waktu: t.waktu || t.created_at,
 					nama: t.description || t.customer_name || t.nama || '-',
-					nominal: t.nominal || t.amount || 0,
-					amount: t.nominal || t.amount || 0,
+					amount: t.amount || 0,
 					tipe: t.tipe,
 					sumber: t.sumber || 'catat',
 					payment_method: t.payment_method || 'tunai',
@@ -73,7 +71,7 @@
 				hasil.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
 				// Filter nominal > 0
-				hasil = hasil.filter((t) => (t.nominal && t.nominal > 0) || (t.amount && t.amount > 0));
+				hasil = hasil.filter((t) => t.amount > 0);
 
 				// Filter search keyword
 				if (searchKeyword.trim()) {
@@ -176,14 +174,14 @@
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
-				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			}
 
 			html += `</tbody></table>`;
 			html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
 
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
+			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
 
 			const methodLabels: Record<string, string> = {
 				tunai: 'Tunai',
@@ -372,7 +370,7 @@
 									? 'text-pink-500'
 									: 'text-orange-500'}"
 							>
-								{trx.tipe === 'out' ? '-' : ''}Rp {trx.nominal?.toLocaleString('id-ID')}
+								{trx.tipe === 'out' ? '-' : ''}Rp {trx.amount?.toLocaleString('id-ID')}
 							</div>
 							<div class="text-xs text-gray-400">Tap untuk detail</div>
 						</div>
@@ -455,7 +453,7 @@
 				<div class="rounded-xl bg-pink-50 px-4 py-3">
 					<div class="mb-0.5 text-xs font-semibold text-gray-500">Nominal</div>
 					<div class="text-xl font-bold text-pink-600">
-						Rp {selectedTransaksi.nominal?.toLocaleString('id-ID')}
+						Rp {selectedTransaksi.amount?.toLocaleString('id-ID')}
 					</div>
 				</div>
 

@@ -63,7 +63,7 @@ export async function buildLaporanAggregate(
 	const manualRows =
 		((await rawDb
 			.prepare(
-				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, amount, nominal,
+				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, amount,
 					description, payment_method, customer_name
 				 FROM buku_kas
 				 WHERE branch_id = ?
@@ -92,7 +92,6 @@ export async function buildLaporanAggregate(
 				tipe: 'in',
 				jenis: 'pendapatan_usaha',
 				amount: cash,
-				nominal: cash,
 				description: name,
 				payment_method: 'tunai'
 			});
@@ -106,7 +105,6 @@ export async function buildLaporanAggregate(
 				tipe: 'in',
 				jenis: 'pendapatan_usaha',
 				amount: nonCash,
-				nominal: nonCash,
 				description: name,
 				payment_method: 'qris'
 			});
@@ -116,14 +114,12 @@ export async function buildLaporanAggregate(
 	let manualIncome = 0;
 	let manualExpense = 0;
 	for (const m of manualRows) {
-		// `amount` adalah field kanonik (notNull). `nominal` diisi = amount hanya
-		// sebagai kompat UI lama; akan dihapus saat UI bermigrasi ke amount.
+		// `amount` adalah field kanonik buku_kas (notNull).
 		const value = Number(m.amount) || 0;
 		transactions.push({
 			...m,
 			sumber: m.sumber || 'catat',
 			amount: value,
-			nominal: value,
 			description: m.description || 'Transaksi Lainnya'
 		});
 		if (m.tipe === 'in') manualIncome += value;

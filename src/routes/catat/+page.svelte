@@ -136,7 +136,6 @@
 			sumber: 'catat',
 			payment_method: form.payment_method,
 			amount: form.amount,
-			nominal: form.amount,
 			description: form.description,
 			id_sesi_toko,
 			waktu: utcTime,
