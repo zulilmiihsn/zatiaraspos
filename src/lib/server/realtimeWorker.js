@@ -23,7 +23,7 @@ export default {
 	/**
 	 * Cron terjadwal: hapus log sistem lama (audit_logs, request_metrics) dari
 	 * SEMUA database cabang. Hanya log/metrik — TIDAK menyentuh transaksi/menu.
-	 * @param {ScheduledController} _event
+	 * @param {unknown} _event
 	 * @param {Record<string, any>} env
 	 */
 	async scheduled(_event, env) {

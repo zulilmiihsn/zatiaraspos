@@ -4,6 +4,7 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Utensils from 'lucide-svelte/icons/utensils';
 	import Shield from 'lucide-svelte/icons/shield';
+	import Archive from 'lucide-svelte/icons/archive';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	onMount(() => {
 		if (userRole.value !== 'pemilik') {
@@ -83,7 +84,19 @@
 					Lihat & hapus transaksi hari ini
 				</p>
 			</a>
-			<div></div>
+			<a
+				href="/pengaturan/pemilik/arsip"
+				class="group flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm transition-all hover:border-emerald-300 hover:shadow-md md:h-48 md:items-center md:justify-center md:gap-3 md:rounded-2xl md:p-8 md:shadow-lg lg:text-base"
+				style="text-decoration:none;"
+			>
+				<div class="mb-2 flex items-center gap-2 md:mb-2 md:gap-2">
+					<svelte:component this={Archive} class="h-5 w-5 text-emerald-500 md:h-12 md:w-12" />
+					<h3 class="text-sm leading-tight font-semibold text-gray-800 lg:text-lg">Arsip Data</h3>
+				</div>
+				<p class="text-xs leading-tight text-gray-500 lg:text-sm">
+					Arsipkan transaksi lama agar database lega
+				</p>
+			</a>
 		</div>
 	</div>
 </div>
