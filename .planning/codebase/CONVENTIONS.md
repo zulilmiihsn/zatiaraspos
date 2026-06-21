@@ -68,13 +68,15 @@ try {
 }
 ```
 
-## ✅ Supabase Query Pattern
+## ✅ Data Access Pattern (Cloudflare D1)
 
 ```typescript
-// ✅ Selalu destructure error
-const { data, error } = await supabase.from('products').select('*');
-if (error) throw new Error(error.message);
-return data;
+// Client: lewat dataService → fetch('/api/data') (binding tidak diekspos ke browser)
+const rows = await dataService.getRows('produk', { branch });
+
+// Server (+server.ts): Drizzle ORM ke binding D1 (sharded per cabang)
+const db = getDrizzleDb(platform, branch);
+const rows = await db.select().from(produk).where(eq(produk.branch_id, branch));
 ```
 
 ## ✅ UI/UX Rules

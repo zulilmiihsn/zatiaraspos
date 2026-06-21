@@ -27,11 +27,12 @@
 - Side effects MUST use `$effect()`.
 - **NO** Svelte 4 `writable` stores or `$` syntax for reactive variables unless strictly necessary for legacy integration.
 
-### 2. Supabase & SSR
+### 2. Database & Edge (Cloudflare)
 
-- User `@supabase/ssr` for session management.
-- Enforce **Row Level Security (RLS)** on all tables.
-- All database queries should handle errors gracefully and provide feedback to the UI.
+- Akses DB lewat **Drizzle ORM → Cloudflare D1** (binding `platform.env.DB_*`), bukan client Supabase. Semua akses DB lewat endpoint server (`/api/...`) — binding **tidak** diekspos ke browser.
+- **Isolasi per cabang via sharding**: 3 database D1 terpisah per grup cabang (pengganti pola RLS/instance-per-cabang Supabase).
+- Sesi auth: cookie `zatiaras_sid` (httpOnly, SameSite=Lax) + PIN, divalidasi server-side (expiry dicek).
+- Semua query DB menangani error dengan baik dan memberi umpan balik ke UI.
 
 ### 3. PWA & Offline First
 

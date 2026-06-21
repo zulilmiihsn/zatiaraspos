@@ -1,12 +1,11 @@
 # 🔗 ZatiarasPOS — INTEGRATIONS.md
 
-## Supabase
+## Cloudflare (Database, Storage, Realtime)
 
-- **Project URL**: dari env `PUBLIC_SUPABASE_URL`
-- **Anon Key**: dari env `PUBLIC_SUPABASE_ANON_KEY`
-- **Client**: `src/lib/database/supabaseClient.ts` — singleton pattern
-- **RLS**: Wajib aktif di semua tabel (Row Level Security)
-- **Realtime**: Digunakan untuk sinkronisasi live data antar device
+- **D1 (Database)**: SQLite di edge. Binding `DB_SAMARINDA_GROUP` / `DB_BALIKPAPAN_GROUP` / `DB_BERAU_GROUP` — **sharded per grup cabang** (3 DB terpisah). Akses via Drizzle ORM di endpoint server; binding tidak diekspos ke browser.
+- **R2 (Storage)**: bucket `zatiaras-assets` (binding `STORAGE`) untuk gambar produk; disajikan via proxy same-origin `/api/upload?key=...`.
+- **Durable Objects**: `REALTIME_HUB` (worker `zatiaraspos-realtime`) untuk sinkronisasi live antar device (WebSocket Hibernation) + rate limiting.
+- **CLI/local**: wrangler pakai `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (di `.env`).
 
 ## OpenRouter AI
 
@@ -30,7 +29,7 @@
 - `fonts.googleapis.com` — Google Fonts CSS
 - `fonts.gstatic.com` — Google Fonts files
 - `unpkg.com` / `cdn.jsdelivr.net` — Worker scripts
-- `*.supabase.co` / `wss://*.supabase.co` — Supabase DB + Realtime
+- `*.workers.dev` / `wss://*.workers.dev` — worker realtime Cloudflare (Durable Object)
 
 ## Internal API Routes
 

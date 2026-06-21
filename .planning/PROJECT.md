@@ -2,7 +2,7 @@
 
 ## Visi
 
-ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis retail Zatiaras. Aplikasi ini dirancang mobile-first, mendukung multi-cabang, dan mampu beroperasi secara offline-first dengan sinkronisasi real-time ke Supabase.
+ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis retail Zatiaras. Aplikasi ini dirancang mobile-first, mendukung multi-cabang, dan mampu beroperasi secara offline-first dengan sinkronisasi real-time di edge Cloudflare.
 
 ## Target Pengguna
 
@@ -16,7 +16,7 @@ ZatiarasPOS adalah aplikasi Point of Sale (POS) modern berbasis PWA untuk bisnis
 
 - **Framework**: SvelteKit 5.0 (WAJIB pakai Runes: `$state`, `$derived`, `$effect`)
 - **Styling**: Tailwind CSS 4.x (utility-first, no arbitrary values kecuali perlu)
-- **Database**: Supabase (PostgreSQL) dengan RLS aktif di semua tabel
+- **Database**: Cloudflare D1 (SQLite di edge), **sharded per grup cabang** (3 DB terpisah), via Drizzle ORM. R2 untuk gambar, Durable Objects untuk realtime + rate limit
 - **Auth**: Custom session-based (cookie `zatiaras_sid`) + CSRF protection
 - **State Persistence**: `idb-keyval` (IndexedDB) untuk offline-first
 - **PWA**: `@vite-pwa/sveltekit` + Workbox

@@ -13,7 +13,8 @@
 | `@sveltejs/kit`         | ^2.16  | Full-stack web framework  |
 | `svelte`                | ^5.0   | UI components (Runes)     |
 | `tailwindcss`           | ^4.1   | Utility-first CSS         |
-| `@supabase/supabase-js` | ^2.50  | Database client           |
+| `drizzle-orm`           | ^0.4x  | ORM untuk Cloudflare D1   |
+| `@cloudflare/workers-types` | ^4.x | Tipe binding D1/R2     |
 | `@vite-pwa/sveltekit`   | ^1.0   | PWA support               |
 | `idb-keyval`            | ^6.2   | IndexedDB key-value store |
 | `lucide-svelte`         | ^0.535 | Icon library              |
@@ -40,7 +41,7 @@
 
 - `X-Frame-Options: DENY`
 - `X-Content-Type-Options: nosniff`
-- `Content-Security-Policy` — ketat, whitelist Supabase + Google Fonts
+- `Content-Security-Policy` — ketat, whitelist worker realtime Cloudflare + Google Fonts
 - `Referrer-Policy: strict-origin-when-cross-origin`
 
 ## Data Flow
@@ -50,9 +51,9 @@ Browser → SvelteKit Route → +page.svelte
                           ↓
                     Service Layer (dataService.ts)
                           ↓
-               Supabase Client (supabaseClient.ts)
+              fetch('/api/data') — endpoint server (Pages)
                           ↓
-                  PostgreSQL (Supabase Cloud)
-                          ↕ (realtime)
-               IndexedDB (idb-keyval) — offline cache
+        Drizzle ORM → Cloudflare D1 (SQLite, sharded per cabang)
+                          ↕ (realtime: Durable Object + WebSocket Hibernation)
+               IndexedDB (idb-keyval) — antrian offline
 ```
