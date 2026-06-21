@@ -56,9 +56,13 @@ ZatiarasPOS dibuat untuk menjadi solusi lengkap untuk mengelola operasional usah
 
 ### Backend & Database
 
-- **Supabase** - PostgreSQL database dengan real-time features
-- **Custom Auth System** - Authentication yang aman dan fleksibel
-- **Multi-branch Support** - Database terpisah per cabang
+- **Cloudflare Pages** - Edge SSR via SvelteKit `adapter-cloudflare`
+- **Cloudflare D1** - Database SQLite di edge, **di-shard per grup cabang** (3 DB terpisah: samarinda/balikpapan/berau)
+- **Cloudflare R2** - Penyimpanan gambar produk (disajikan via proxy same-origin `/api/upload?key=...`, di-cache 1 tahun)
+- **Durable Objects** - Realtime (WebSocket Hibernation) + rate limiting akurat lintas-isolate
+- **Drizzle ORM** - Query type-safe + generate migration; diterapkan via `wrangler d1 execute`
+- **Custom Auth System** - Sesi cookie (httpOnly, SameSite=Lax) + PIN, terisolasi per cabang
+- **Laporan via tabel agregat harian** - `daily_sales_summary` / `daily_product_sales` diisi saat checkout → laporan cepat tanpa scan transaksi mentah
 
 ### Performance & Security
 
@@ -90,6 +94,17 @@ ZatiarasPOS dibuat untuk menjadi solusi lengkap untuk mengelola operasional usah
 - **Manajer** - Laporan dan analisis yang detail
 - **Pemilik** - Overview bisnis yang komprehensif
 - **Admin** - Manajemen sistem yang powerful
+
+## 🛠️ Catatan Teknis & Perbaikan Mendatang
+
+Status arsitektur saat ini: type-safe (`svelte-check` 0 error), checkout idempoten, rate limiting **fail-closed**, laporan dibaca dari tabel agregat harian, dan **satu field kanonik `amount`** di `buku_kas` (kolom `nominal` redundan sudah dihapus, migrasi `0009`).
+
+Perbaikan **opsional** (tidak mendesak — aplikasi sudah berfungsi & teruji):
+
+- **Pecah god-endpoint `/api/data` menjadi resource routes per-tabel.**
+  Saat ini satu endpoint men-dispatch berdasarkan `?table=`. Memecah menjadi route RESTful per-resource (mis. `/api/produk`, `/api/buku-kas`) lebih lazim & mudah dipelihara. Logikanya sudah dimodularisasi internal ke `src/lib/server/dataReadHandlers.ts` & `dataWriteHandlers.ts`, jadi tinggal pemisahan route-nya.
+
+- **Otomasi migrasi 3-shard.** D1 di-shard menjadi 3 database (`DB_SAMARINDA_GROUP`, `DB_BALIKPAPAN_GROUP`, `DB_BERAU_GROUP`). Migrasi & backfill saat ini diterapkan manual ke tiap DB. Buat satu script yang menjalankan `wrangler d1 execute` untuk semua shard sekaligus (lokal `--local` & prod `--remote`) agar tidak ada DB yang terlewat.
 
 ## 🌟 Visi
 

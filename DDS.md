@@ -2,14 +2,19 @@
 
 ## 📋 Project Definition
 
-**ZatiarasPOS** is a modern, high-performance Point of Sale (POS) application built for the Zatiaras retail business. It leverages SvelteKit 5 and Supabase to provide a real-time, multi-branch, and offline-capable retail experience.
+**ZatiarasPOS** is a modern, high-performance Point of Sale (POS) application built for the Zatiaras retail business. It runs entirely on the **Cloudflare edge** (SvelteKit + D1 + R2 + Durable Objects) to provide a real-time, multi-branch, and offline-capable retail experience.
+
+> Catatan: Aplikasi telah **bermigrasi dari Supabase ke Cloudflare D1/R2** (branch `feat/r2-storage-migration`). Bagian lama yang menyebut Supabase di dokumen ini bersifat historis.
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: SvelteKit 5.0 (Runes: `$state`, `$derived`, `$effect`, etc.)
 - **Styling**: Tailwind CSS 4.x
-- **Backend/DB**: Supabase (PostgreSQL with RLS)
-- **Auth**: Custom PIN-based authentication + Supabase Auth
+- **Hosting**: Cloudflare Pages (edge SSR via `adapter-cloudflare`)
+- **Database**: Cloudflare D1 (SQLite di edge), **di-shard per grup cabang** (3 DB terpisah), diakses lewat Drizzle ORM
+- **Storage**: Cloudflare R2 (gambar produk; disajikan via proxy same-origin `/api/upload`)
+- **Realtime & Rate limit**: Cloudflare Durable Objects (WebSocket Hibernation)
+- **Auth**: Sesi cookie (httpOnly, SameSite=Lax) + PIN, terisolasi per cabang
 - **PWA**: `@vite-pwa/sveltekit` for offline support and native-like experience
 - **State Management**: Svelte 5 Runes + `idb-keyval` for persistent local state
 
