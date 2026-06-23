@@ -6,6 +6,7 @@ import type { BranchId } from '$lib/server/branchResolver';
 import { appendAuditLog } from '$lib/server/auditLog';
 import { consumeRateLimit } from '$lib/server/rateLimit';
 import { recordErrorEvent } from '$lib/server/observability';
+import { CUSTOM_PRODUCT_BUCKET_ID } from '$lib/server/dailySummary';
 import type { RequestHandler } from './$types';
 
 const CHECKOUT_WINDOW_MS = 60 * 1000;
@@ -596,9 +597,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		{ productName: string; qty: number; grossSales: number; transactionCount: number }
 	>();
 	for (const item of items) {
-		if (!item.produk_id) continue;
-		const current = productSummaries.get(item.produk_id) || {
-			productName: item.product_name,
+		// Item custom (produk_id NULL) dikelompokkan ke satu bucket sintetis agar
+		// tetap punya baris di daily_product_sales -> muncul di laporan, bukan
+		// cuma nyumbang ke total.
+		const summaryKey = item.produk_id || CUSTOM_PRODUCT_BUCKET_ID;
+		const current = productSummaries.get(summaryKey) || {
+			productName: item.produk_id ? item.product_name : 'Item Custom',
 			qty: 0,
 			grossSales: 0,
 			transactionCount: 0
@@ -606,7 +610,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		current.qty += item.qty;
 		current.grossSales += item.amount;
 		current.transactionCount = 1;
-		productSummaries.set(item.produk_id, current);
+		productSummaries.set(summaryKey, current);
 	}
 	const statements = [
 		...Array.from(stockDeductions.entries()).map(([productId, deduction]) =>
