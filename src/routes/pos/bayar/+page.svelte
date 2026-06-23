@@ -536,7 +536,7 @@
 					Tambah menu dari layar kasir sebelum lanjut pembayaran.
 				</div>
 				<button
-					class="rounded-xl bg-[#b85c72] px-5 py-3 text-sm font-bold text-white shadow transition-all duration-200 active:scale-[0.98]"
+					class="rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow transition-all duration-200 active:scale-[0.98]"
 					type="button"
 					onclick={() => goto('/pos')}>Kembali ke Kasir</button
 				>
@@ -555,7 +555,7 @@
 						<input
 							id="nama"
 							type="text"
-							class="mb-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-[#b85c72] focus:bg-white focus:ring-4 focus:ring-[#b85c72]/10"
+							class="mb-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-500/10"
 							placeholder="Nama pelanggan"
 							bind:value={customerName}
 							maxlength="50"
@@ -565,7 +565,7 @@
 					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
 						<div class="mb-3 flex items-center justify-between">
 							<div class="flex items-center gap-2 font-semibold text-stone-900">
-								<ReceiptText class="h-5 w-5 text-[#b85c72]" />
+								<ReceiptText class="h-5 w-5 text-pink-500" />
 								Pesanan
 							</div>
 							<div class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
@@ -580,7 +580,7 @@
 											<div class="truncate font-semibold text-stone-950">{item.product.name}</div>
 											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.qty}</div>
 										</div>
-										<span class="shrink-0 font-bold text-[#b85c72]"
+										<span class="shrink-0 font-bold text-pink-500"
 											>Rp {(
 												(item.product.price ?? 0) * item.qty
 											).toLocaleString('id-ID')}</span
@@ -651,7 +651,7 @@
 									type="button"
 									class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98]
 									{paymentMethod === opt.id
-										? 'border-[#b85c72] bg-[#fff8f9] text-[#b85c72] shadow-sm'
+										? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm'
 										: 'border-stone-200 bg-white text-stone-700'}
 									{isOffline && opt.id !== 'tunai' ? 'cursor-not-allowed opacity-45' : ''}"
 									onclick={() => handleSetPaymentMethod(opt.id)}
@@ -686,7 +686,7 @@
 					</div>
 
 					<button
-						class="w-full rounded-xl bg-[#b85c72] py-4 text-lg font-bold text-white shadow-lg shadow-[#b85c72]/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
+						class="w-full rounded-xl bg-pink-500 py-4 text-lg font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
 						onclick={handleBayar}
 						disabled={!canPay}
 					>
@@ -704,7 +704,7 @@
 						</div>
 					{/if}
 					<button
-						class="mx-auto block text-sm font-semibold text-stone-500 transition-colors duration-200 hover:text-[#b85c72]"
+						class="mx-auto block text-sm font-semibold text-stone-500 transition-colors duration-200 hover:text-pink-500"
 						type="button"
 						onclick={handleCancel}
 					>

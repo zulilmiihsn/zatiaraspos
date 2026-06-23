@@ -11,7 +11,7 @@
 			Zatiaras POS sedang offline. Periksa koneksi internet, lalu buka ulang halaman ini.
 		</p>
 		<a
-			class="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#b85c72] px-5 text-sm font-semibold text-white shadow-sm transition-transform duration-200 active:scale-[0.98]"
+			class="inline-flex min-h-11 items-center justify-center rounded-lg bg-pink-500 px-5 text-sm font-semibold text-white shadow-sm transition-transform duration-200 active:scale-[0.98]"
 			href="/"
 		>
 			Coba lagi

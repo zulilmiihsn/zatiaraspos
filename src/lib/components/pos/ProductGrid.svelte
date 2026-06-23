@@ -56,7 +56,7 @@
 						<div class="mb-4 max-w-xs text-sm text-stone-500">{loadError}</div>
 						<button
 							type="button"
-							class="rounded-lg bg-[#b85c72] px-4 py-2 text-sm font-semibold text-white transition-transform duration-200 active:scale-[0.98]"
+							class="rounded-lg bg-pink-500 px-4 py-2 text-sm font-semibold text-white transition-transform duration-200 active:scale-[0.98]"
 							onclick={() => onRetry?.()}>Coba lagi</button
 						>
 					</div>
@@ -71,7 +71,7 @@
 				{:else}
 					{#each filteredProducts as p}
 						<div
-							class="flex cursor-pointer items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-sm transition-all duration-200 hover:border-[#d4a0ad] hover:bg-[#fff8f9] active:scale-[0.98]"
+							class="flex cursor-pointer items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-sm transition-all duration-200 hover:border-pink-300 hover:bg-pink-50 active:scale-[0.98]"
 							tabindex="0"
 							onclick={() => onSelectProduct(p)}
 							onkeydown={(e) => {
@@ -87,7 +87,7 @@
 								>
 							</div>
 							<div class="flex items-center gap-2">
-								<span class="text-base font-bold whitespace-nowrap text-[#b85c72]"
+								<span class="text-base font-bold whitespace-nowrap text-pink-500"
 									>Rp {Number(p.price ?? 0).toLocaleString('id-ID')}</span
 								>
 							</div>
@@ -115,7 +115,7 @@
 						<div class="mb-4 max-w-xs text-sm text-stone-500">{loadError}</div>
 						<button
 							type="button"
-							class="rounded-lg bg-[#b85c72] px-4 py-2 text-sm font-semibold text-white transition-transform duration-200 active:scale-[0.98]"
+							class="rounded-lg bg-pink-500 px-4 py-2 text-sm font-semibold text-white transition-transform duration-200 active:scale-[0.98]"
 							onclick={() => onRetry?.()}>Coba lagi</button
 						>
 					</div>
@@ -130,7 +130,7 @@
 				{:else}
 					{#each filteredProducts as p}
 						<div
-							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:border-[#d4a0ad] hover:shadow-md active:scale-[0.98] md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6"
+							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:border-pink-300 hover:shadow-md active:scale-[0.98] md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6"
 							tabindex="0"
 							onclick={() => onSelectProduct(p)}
 							onkeydown={(e) => {
@@ -163,7 +163,7 @@
 								<span class="min-h-[18px] truncate text-xs text-stone-500 md:text-sm"
 									>{getKategoriNameById(p.kategori_id || '')}</span
 								>
-								<div class="text-base font-bold text-[#b85c72] md:mt-1 md:text-xl">
+								<div class="text-base font-bold text-pink-500 md:mt-1 md:text-xl">
 									Rp {Number(p.price ?? 0).toLocaleString('id-ID')}
 								</div>
 							</div>

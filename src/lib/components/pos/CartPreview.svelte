@@ -86,7 +86,7 @@
 		</div>
 		<div class="ml-4 flex items-center justify-center">
 			<button
-				class="flex items-center justify-center rounded-xl bg-[#b85c72] px-6 py-3 text-base font-bold text-white shadow transition-all duration-200 hover:bg-[#a94f64] active:scale-[0.98]"
+				class="flex items-center justify-center rounded-xl bg-pink-500 px-6 py-3 text-base font-bold text-white shadow transition-all duration-200 hover:bg-pink-600 active:scale-[0.98]"
 				onclick={onGoToBayar}>Bayar</button
 			>
 		</div>

@@ -559,7 +559,7 @@
 					<Search class="h-5 w-5" />
 				</span>
 				<input
-					class="w-full flex-1 rounded-xl border border-stone-200 bg-white py-3 pr-3 pl-10 text-base text-stone-900 shadow-sm transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-[#b85c72] focus:ring-4 focus:ring-[#b85c72]/10"
+					class="w-full flex-1 rounded-xl border border-stone-200 bg-white py-3 pr-3 pl-10 text-base text-stone-900 shadow-sm transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
 					type="text"
 					placeholder="Cari produk..."
 					bind:value={search}
@@ -575,7 +575,7 @@
 			<button
 				class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 				'all'
-					? 'border-[#b85c72] bg-[#b85c72] text-white shadow-sm'
+					? 'border-pink-500 bg-pink-500 text-white shadow-sm'
 					: 'border-stone-200 bg-white text-stone-700'}"
 				type="button"
 				onclick={handleSelectCategoryAll}>Semua</button
@@ -589,7 +589,7 @@
 			{:else if (categories ?? []).length === 0}
 				<!-- Button Custom Item di samping 'Semua' jika tidak ada kategori -->
 				<button
-					class="mb-1 flex w-12 min-w-[48px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#b85c72] bg-[#b85c72] px-3 py-2 text-base font-medium text-white transition-transform duration-200 active:scale-[0.98]"
+					class="mb-1 flex w-12 min-w-[48px] flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border border-pink-500 bg-pink-500 px-3 py-2 text-base font-medium text-white transition-transform duration-200 active:scale-[0.98]"
 					type="button"
 					aria-label="Tambah item custom"
 					onclick={handleShowCustomItemModal}
@@ -617,7 +617,7 @@
 					<button
 						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 						String(c.id)
-							? 'border-[#b85c72] bg-[#b85c72] text-white shadow-sm'
+							? 'border-pink-500 bg-pink-500 text-white shadow-sm'
 							: 'border-stone-200 bg-white text-stone-700'}"
 						type="button"
 						onclick={() => handleSelectCategory(c.id)}>{c.name}</button
@@ -625,7 +625,7 @@
 				{/each}
 				<!-- Button Custom Item di paling kanan -->
 				<button
-					class="mb-1 flex min-w-[96px] flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#b85c72] bg-[#b85c72] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
+					class="mb-1 flex min-w-[96px] flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-pink-500 bg-pink-500 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
 					type="button"
 					onclick={handleShowCustomItemModal}
 				>
