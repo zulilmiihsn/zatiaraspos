@@ -1,4 +1,4 @@
--- Backfill kolom daily_sales_summary.hpp_total dari data transaksi lama.
+-- Backfill kolom ringkasan_penjualan_harian.hpp_total dari data transaksi lama.
 --
 -- Diperlukan sekali setelah migration 0007_daily_sales_hpp diterapkan, supaya
 -- laporan/dashboard periode lama tetap menampilkan HPP & profit yang akurat
@@ -13,13 +13,13 @@
 --   npx wrangler d1 execute DB_SAMARINDA_GROUP --remote \
 --     --config=wrangler.pages.jsonc --file=scripts/backfill-daily-sales-hpp.sql
 
-UPDATE daily_sales_summary
+UPDATE ringkasan_penjualan_harian
 SET hpp_total = COALESCE(
 		(
 			SELECT SUM(tk.hpp_amount)
 			FROM transaksi_kasir tk
-			WHERE tk.branch_id = daily_sales_summary.branch_id
-				AND date(datetime(tk.created_at, '+8 hours')) = daily_sales_summary.sales_date
+			WHERE tk.branch_id = ringkasan_penjualan_harian.branch_id
+				AND date(datetime(tk.created_at, '+8 hours')) = ringkasan_penjualan_harian.sales_date
 		),
 		0
 	);

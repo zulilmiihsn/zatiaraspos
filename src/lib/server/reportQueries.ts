@@ -37,7 +37,7 @@ export async function buildLaporanAggregate(
 	const summaryRow = (await rawDb
 		.prepare(
 			`SELECT COALESCE(SUM(gross_sales),0) AS gross
-			 FROM daily_sales_summary
+			 FROM ringkasan_penjualan_harian
 			 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?`
 		)
 		.bind(branch, startDate, endDate)
@@ -50,7 +50,7 @@ export async function buildLaporanAggregate(
 				`SELECT product_name,
 					COALESCE(SUM(cash_sales),0) AS cash,
 					COALESCE(SUM(non_cash_sales),0) AS non_cash
-				 FROM daily_product_sales
+				 FROM penjualan_produk_harian
 				 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
 				 GROUP BY product_name`
 			)

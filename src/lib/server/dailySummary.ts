@@ -86,7 +86,7 @@ export async function reverseDailySummaryForTransaction(
 	const statements = [
 		rawDb
 			.prepare(
-				`UPDATE daily_sales_summary SET
+				`UPDATE ringkasan_penjualan_harian SET
 					transaction_count = MAX(0, transaction_count - 1),
 					item_count = MAX(0, item_count - ?),
 					gross_sales = MAX(0, gross_sales - ?),
@@ -100,7 +100,7 @@ export async function reverseDailySummaryForTransaction(
 		...products.map((p) =>
 			rawDb
 				.prepare(
-					`UPDATE daily_product_sales SET
+					`UPDATE penjualan_produk_harian SET
 						qty = MAX(0, qty - ?),
 						gross_sales = MAX(0, gross_sales - ?),
 						cash_sales = MAX(0, cash_sales - ?),

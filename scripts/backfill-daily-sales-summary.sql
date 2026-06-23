@@ -1,9 +1,9 @@
 -- Rebuild POS daily summary tables from historical buku_kas/transaksi_kasir rows.
--- Run after 0004_daily_sales_summary and 0005_transaction_snapshots are applied.
+-- Run after 0004_ringkasan_penjualan_harian and 0005_transaction_snapshots are applied.
 
-DELETE FROM daily_sales_summary;
+DELETE FROM ringkasan_penjualan_harian;
 --> statement-breakpoint
-INSERT INTO daily_sales_summary (
+INSERT INTO ringkasan_penjualan_harian (
 	id,
 	branch_id,
 	sales_date,
@@ -30,9 +30,9 @@ FROM buku_kas
 WHERE sumber = 'pos' AND tipe = 'in'
 GROUP BY branch_id, sales_date;
 --> statement-breakpoint
-DELETE FROM daily_product_sales;
+DELETE FROM penjualan_produk_harian;
 --> statement-breakpoint
-INSERT INTO daily_product_sales (
+INSERT INTO penjualan_produk_harian (
 	id,
 	branch_id,
 	sales_date,

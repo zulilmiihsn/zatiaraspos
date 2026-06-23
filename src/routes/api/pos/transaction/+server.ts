@@ -241,8 +241,8 @@ async function getCheckoutCapabilities(db: any, branch: BranchId): Promise<Check
 				hasTable(db, 'resep_produk'),
 				hasTable(db, 'bahan_mutasi'),
 				hasColumn(db, 'buku_kas', 'idempotency_key'),
-				hasTable(db, 'daily_sales_summary'),
-				hasTable(db, 'daily_product_sales'),
+				hasTable(db, 'ringkasan_penjualan_harian'),
+				hasTable(db, 'penjualan_produk_harian'),
 				hasColumn(db, 'transaksi_kasir', 'product_name'),
 				hasColumn(db, 'transaksi_kasir', 'hpp_amount')
 			]);
@@ -777,7 +777,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			? [
 					db
 						.prepare(
-							`INSERT INTO daily_sales_summary (
+							`INSERT INTO ringkasan_penjualan_harian (
 								id, branch_id, sales_date, transaction_count, item_count,
 								gross_sales, cash_sales, non_cash_sales, hpp_total, created_at, updated_at
 							)
@@ -806,7 +806,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					...Array.from(productSummaries.entries()).map(([productId, summary]) =>
 						db
 							.prepare(
-								`INSERT INTO daily_product_sales (
+								`INSERT INTO penjualan_produk_harian (
 									id, branch_id, sales_date, product_id, product_name, qty,
 									gross_sales, cash_sales, non_cash_sales, transaction_count, created_at, updated_at
 								)

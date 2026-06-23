@@ -83,7 +83,7 @@ export const bahan = sqliteTable(
 );
 
 export const hppSettings = sqliteTable(
-	'hpp_settings',
+	'pengaturan_hpp',
 	{
 		id: text('id').primaryKey(),
 		branch_id: text('branch_id').notNull(),
@@ -235,7 +235,7 @@ export const transaksiKasir = sqliteTable(
 );
 
 export const dailySalesSummary = sqliteTable(
-	'daily_sales_summary',
+	'ringkasan_penjualan_harian',
 	{
 		id: text('id').primaryKey(),
 		branch_id: text('branch_id').notNull(),
@@ -256,7 +256,7 @@ export const dailySalesSummary = sqliteTable(
 );
 
 export const dailyProductSales = sqliteTable(
-	'daily_product_sales',
+	'penjualan_produk_harian',
 	{
 		id: text('id').primaryKey(),
 		branch_id: text('branch_id').notNull(),

@@ -1,4 +1,4 @@
--- Backfill kolom daily_product_sales.cash_sales / non_cash_sales dari data lama.
+-- Backfill kolom penjualan_produk_harian.cash_sales / non_cash_sales dari data lama.
 --
 -- Diperlukan sekali setelah migration 0008_daily_product_payment_split, supaya
 -- rincian Pendapatan Usaha per produk (split QRIS/Tunai) di laporan periode lama
@@ -11,16 +11,16 @@
 --   npx wrangler d1 execute DB_SAMARINDA_GROUP --remote \
 --     --config=wrangler.pages.jsonc --file=scripts/backfill-daily-product-split.sql
 
-UPDATE daily_product_sales
+UPDATE penjualan_produk_harian
 SET
 	cash_sales = COALESCE(
 		(
 			SELECT SUM(tk.amount)
 			FROM transaksi_kasir tk
 			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-			WHERE tk.branch_id = daily_product_sales.branch_id
-				AND tk.produk_id = daily_product_sales.product_id
-				AND date(datetime(tk.created_at, '+8 hours')) = daily_product_sales.sales_date
+			WHERE tk.branch_id = penjualan_produk_harian.branch_id
+				AND tk.produk_id = penjualan_produk_harian.product_id
+				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method = 'tunai'
 		),
 		0
@@ -30,9 +30,9 @@ SET
 			SELECT SUM(tk.amount)
 			FROM transaksi_kasir tk
 			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-			WHERE tk.branch_id = daily_product_sales.branch_id
-				AND tk.produk_id = daily_product_sales.product_id
-				AND date(datetime(tk.created_at, '+8 hours')) = daily_product_sales.sales_date
+			WHERE tk.branch_id = penjualan_produk_harian.branch_id
+				AND tk.produk_id = penjualan_produk_harian.product_id
+				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method != 'tunai'
 		),
 		0
