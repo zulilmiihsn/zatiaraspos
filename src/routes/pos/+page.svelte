@@ -49,7 +49,6 @@
 		id: string;
 		name: string;
 		price: number;
-		harga: number;
 		tipe: string;
 		image?: string;
 		gambar?: string;
@@ -64,7 +63,6 @@
 		id: string;
 		name: string;
 		price: number;
-		harga: number;
 	}
 	interface PosCartItem {
 		product: PosProduct;
@@ -150,8 +148,8 @@
 				(nextProducts || []).length,
 				(nextProducts || [])
 					.map(
-						(item: { id?: string; harga?: number; price?: number }) =>
-							`${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`
+						(item: { id?: string; price?: number }) =>
+							`${item?.id || ''}:${item?.price ?? 0}`
 					)
 					.join(','),
 				(nextCategories || []).length,
@@ -159,8 +157,8 @@
 				(nextAddons || []).length,
 				(nextAddons || [])
 					.map(
-						(item: { id?: string; harga?: number; price?: number }) =>
-							`${item?.id || ''}:${item?.harga ?? item?.price ?? 0}`
+						(item: { id?: string; price?: number }) =>
+							`${item?.id || ''}:${item?.price ?? 0}`
 					)
 					.join(',')
 			].join('|');
@@ -661,7 +659,7 @@
 		/>
 
 		{#if showCartModal}
-			<ModalSheet bind:open={showCartModal} title="Keranjang" on:close={closeCartModal}>
+			<ModalSheet bind:open={showCartModal} title="Keranjang" onclose={closeCartModal}>
 				<div
 					class="min-h-0 flex-1 overflow-y-auto px-0 py-2"
 					onclick={handleStopPropagation}
@@ -695,7 +693,7 @@
 										.join(', ')}
 								</div>
 								<div class="mt-1 text-base font-bold text-pink-500">
-									Rp {Number(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}
+									Rp {Number(item.product.price ?? 0).toLocaleString('id-ID')}
 								</div>
 							</div>
 							<button
@@ -705,12 +703,14 @@
 						</div>
 					{/each}
 				</div>
-				<div slot="footer">
-					<button
-						class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
-						onclick={handleGoToBayar}>Bayar</button
-					>
-				</div>
+				{#snippet footer()}
+					<div>
+						<button
+							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
+							onclick={handleGoToBayar}>Bayar</button
+						>
+					</div>
+				{/snippet}
 			</ModalSheet>
 		{/if}
 
@@ -737,7 +737,7 @@
 			<ModalSheet
 				bind:open={showModal}
 				title={selectedProduct ? selectedProduct.name : ''}
-				on:close={closeModal}
+				onclose={closeModal}
 			>
 				<div
 					class="addon-list addon-modal-content min-h-0 flex-1 overflow-y-auto pb-48"
@@ -795,7 +795,7 @@
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
 											: 'text-pink-500'}"
-										>+Rp {Number(a.price ?? a.harga ?? 0).toLocaleString('id-ID')}</span
+										>+Rp {Number(a.price ?? 0).toLocaleString('id-ID')}</span
 									>
 								</button>
 							{/each}
@@ -818,32 +818,34 @@
 					></textarea>
 					<div class="mt-1 text-right text-xs text-gray-500">{selectedNote.length}/200</div>
 				</div>
-				<div slot="footer">
-					<div class="mt-0 mb-2 text-base font-semibold text-gray-800">Jumlah</div>
-					<div class="mb-4 flex items-center justify-center gap-3">
+				{#snippet footer()}
+					<div>
+						<div class="mt-0 mb-2 text-base font-semibold text-gray-800">Jumlah</div>
+						<div class="mb-4 flex items-center justify-center gap-3">
+							<button
+								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
+								type="button"
+								onclick={decQty}>-</button
+							>
+							<input
+								class="w-12 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-center text-lg font-semibold text-gray-800 outline-none"
+								type="number"
+								min="1"
+								max="99"
+								bind:value={qty}
+							/>
+							<button
+								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
+								type="button"
+								onclick={incQty}>+</button
+							>
+						</div>
 						<button
-							class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
-							type="button"
-							onclick={decQty}>-</button
-						>
-						<input
-							class="w-12 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-center text-lg font-semibold text-gray-800 outline-none"
-							type="number"
-							min="1"
-							max="99"
-							bind:value={qty}
-						/>
-						<button
-							class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
-							type="button"
-							onclick={incQty}>+</button
+							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
+							onclick={addToCart}>Tambah ke Keranjang</button
 						>
 					</div>
-					<button
-						class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
-						onclick={addToCart}>Tambah ke Keranjang</button
-					>
-				</div>
+				{/snippet}
 			</ModalSheet>
 		{/if}
 	</main>

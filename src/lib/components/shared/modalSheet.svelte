@@ -1,20 +1,30 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	export let open = false;
-	export let title = '';
-	const dispatch = createEventDispatcher();
+	import type { Snippet } from 'svelte';
+
+	let {
+		open = $bindable(false),
+		title = '',
+		onclose,
+		children,
+		footer
+	}: {
+		open?: boolean;
+		title?: string;
+		onclose?: () => void;
+		children?: Snippet;
+		footer?: Snippet;
+	} = $props();
 
 	function close() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	// Optional: close modal dengan swipe ke bawah (mobile UX)
 	let startY = 0;
 	let currentY = 0;
-	let sheet: HTMLDivElement;
+	let sheet: HTMLDivElement | undefined = $state();
 	let dragging = false;
 	let allowDrag = false;
-	let scrollable: HTMLDivElement;
 
 	function onTouchStart(e: TouchEvent) {
 		// Cek apakah gesture dimulai dari dragbar/header SAJA
@@ -76,13 +86,13 @@
 		>
 			<div class="sheet-dragbar" role="presentation"></div>
 			<div class="sheet-header" id="modal-title">{title}</div>
-			<div class="sheet-content min-h-0 flex-1 overflow-y-auto px-4 sm:px-6" bind:this={scrollable}>
-				<slot />
+			<div class="sheet-content min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
+				{@render children?.()}
 			</div>
 			<div
 				class="sheet-footer absolute right-0 bottom-0 left-0 z-20 w-full max-w-[100vw] bg-white px-4 pt-3 pb-4 shadow-[0_-2px_16px_rgba(0,0,0,0.08)] sm:px-6"
 			>
-				<slot name="footer" />
+				{@render footer?.()}
 			</div>
 		</div>
 	</div>

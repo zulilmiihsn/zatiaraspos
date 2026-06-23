@@ -33,10 +33,9 @@
 		id: string;
 		name: string;
 		price: number;
-		harga: number;
 	}
 	interface BayarCartItem {
-		product: { id: string; name: string; price: number; harga: number; tipe: string };
+		product: { id: string; name: string; price: number; tipe: string };
 		qty: number;
 		addOns: BayarAddOn[];
 		sugar: string;
@@ -163,10 +162,10 @@
 		let totalHarga = 0;
 		for (const item of cart) {
 			totalQty += item.qty;
-			totalHarga += item.qty * (item.product.price ?? item.product.harga ?? 0);
+			totalHarga += item.qty * (item.product.price ?? 0);
 			if (item.addOns) {
 				totalHarga += item.addOns.reduce(
-					(a: number, b: BayarAddOn) => a + (b.price ?? b.harga ?? 0) * item.qty,
+					(a: number, b: BayarAddOn) => a + (b.price ?? 0) * item.qty,
 					0
 				);
 			}
@@ -315,7 +314,7 @@
 				return {
 					product_id: isCustom ? null : item.product.id,
 					custom_name: isCustom ? item.product.name : null,
-					custom_price: isCustom ? (item.product.price ?? item.product.harga ?? 0) : null,
+					custom_price: isCustom ? (item.product.price ?? 0) : null,
 					qty: item.qty,
 					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
 					sugar: item.sugar || null,
@@ -426,10 +425,10 @@
 		// Daftar pesanan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 		cart.forEach((item: BayarCartItem, idx: number) => {
-			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
 				item.addOns.forEach((a: BayarAddOn) => {
-					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
+					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
 				});
 			}
 			const detail = [
@@ -583,7 +582,7 @@
 										</div>
 										<span class="shrink-0 font-bold text-[#b85c72]"
 											>Rp {(
-												(item.product.price ?? item.product.harga ?? 0) * item.qty
+												(item.product.price ?? 0) * item.qty
 											).toLocaleString('id-ID')}</span
 										>
 									</div>
@@ -593,7 +592,7 @@
 												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
 													<span class="truncate">+ {ekstra.name}</span>
 													<span class="shrink-0"
-														>Rp {((ekstra.price ?? ekstra.harga ?? 0) * item.qty).toLocaleString(
+														>Rp {((ekstra.price ?? 0) * item.qty).toLocaleString(
 															'id-ID'
 														)}</span
 													>
@@ -741,7 +740,7 @@
 {/if}
 
 {#if showCashModal}
-	<ModalSheet open={showCashModal} title="Pembayaran Tunai" on:close={closeCashModal}>
+	<ModalSheet open={showCashModal} title="Pembayaran Tunai" onclose={closeCashModal}>
 		<div class="pb-24 md:min-h-[60vh]">
 			<div class="mb-4 text-center text-gray-500 md:mb-6 md:text-lg">
 				Masukkan jumlah uang diterima
@@ -785,21 +784,23 @@
 				{/each}
 			</div>
 		</div>
-		<div slot="footer" class="flex flex-col gap-2 md:gap-4">
-			<div class="mb-2 text-center text-gray-700 md:mb-4 md:text-lg">
-				Kembalian:
-				<span class="font-bold {kembalian < 0 ? 'text-red-500' : 'text-green-500'}"
-					>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span
+		{#snippet footer()}
+			<div class="flex flex-col gap-2 md:gap-4">
+				<div class="mb-2 text-center text-gray-700 md:mb-4 md:text-lg">
+					Kembalian:
+					<span class="font-bold {kembalian < 0 ? 'text-red-500' : 'text-green-500'}"
+						>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span
+					>
+				</div>
+				<button
+					class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600 disabled:opacity-50 md:py-5 md:text-xl"
+					onclick={finishCash}
+					disabled={kembalian < 0 || !cashReceived}
 				>
+					Selesai
+				</button>
 			</div>
-			<button
-				class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600 disabled:opacity-50 md:py-5 md:text-xl"
-				onclick={finishCash}
-				disabled={kembalian < 0 || !cashReceived}
-			>
-				Selesai
-			</button>
-		</div>
+		{/snippet}
 	</ModalSheet>
 {/if}
 
@@ -928,14 +929,16 @@
 {/if}
 
 {#if showNoSessionModal}
-	<ModalSheet open={showNoSessionModal} title="Peringatan" on:close={handleCloseNoSessionModal}>
+	<ModalSheet open={showNoSessionModal} title="Peringatan" onclose={handleCloseNoSessionModal}>
 		<div class="py-6 text-center text-base text-gray-700">{noSessionModalMsg}</div>
-		<div slot="footer" class="flex flex-col gap-2">
-			<button
-				class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600"
-				onclick={handleCloseNoSessionModal}>Tutup</button
-			>
-		</div>
+		{#snippet footer()}
+			<div class="flex flex-col gap-2">
+				<button
+					class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600"
+					onclick={handleCloseNoSessionModal}>Tutup</button
+				>
+			</div>
+		{/snippet}
 	</ModalSheet>
 {/if}
 

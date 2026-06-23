@@ -45,7 +45,6 @@
 			product: {
 				id: `custom-${Date.now()}`,
 				name: customItemName.trim(),
-				harga: Number(customItemPriceRaw),
 				price: Number(customItemPriceRaw),
 				tipe: 'custom'
 			},
@@ -73,7 +72,7 @@
 	<ModalSheet
 		bind:open={show}
 		title={customItemName ? customItemName : 'Menu Kustom'}
-		on:close={() => (show = false)}
+		onclose={() => (show = false)}
 	>
 		<div
 			class="addon-list addon-modal-content min-h-0 flex-1 overflow-y-auto pb-48"
