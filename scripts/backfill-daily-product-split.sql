@@ -19,7 +19,7 @@ SET
 			FROM transaksi_kasir tk
 			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
 			WHERE tk.branch_id = penjualan_produk_harian.branch_id
-				AND tk.produk_id = penjualan_produk_harian.product_id
+				AND tk.produk_id = penjualan_produk_harian.produk_id
 				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method = 'tunai'
 		),
@@ -31,7 +31,7 @@ SET
 			FROM transaksi_kasir tk
 			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
 			WHERE tk.branch_id = penjualan_produk_harian.branch_id
-				AND tk.produk_id = penjualan_produk_harian.product_id
+				AND tk.produk_id = penjualan_produk_harian.produk_id
 				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method != 'tunai'
 		),

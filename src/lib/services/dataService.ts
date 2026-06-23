@@ -122,12 +122,11 @@ export class DataService {
 				const { startUtc: startUTC, endUtc: endUTC } = witaToUtcRange(getTodayWita());
 
 				const qs = new URLSearchParams({
-					table: 'dashboard_stats',
-					branch,
-					start: startUTC,
-					end: endUTC
-				}).toString();
-				const res = await fetch(`/api/data?${qs}`);
+						branch,
+						start: startUTC,
+						end: endUTC
+					}).toString();
+					const res = await fetch(`/api/dashboard/stats?${qs}`);
 				const payload = res.ok ? await res.json() : {};
 				const { kasir = [], kas = [], summary = [] } = payload;
 
@@ -204,7 +203,7 @@ export class DataService {
 				const summaryItems = await dbGet('best_sellers_summary', { start: startUtc, end: endUtc });
 				if (summaryItems.length) {
 					return summaryItems.map((item: any) => ({
-						name: item.product_name || '-',
+						name: item.nama_produk || '-',
 						image: '',
 						total_qty: Number(item.total_qty || 0)
 					}));
@@ -353,7 +352,7 @@ export class DataService {
 	}
 
 	async getProductRecipes(productId?: string | number) {
-		const params: Record<string, string> = productId ? { product_id: String(productId) } : {};
+		const params: Record<string, string> = productId ? { produk_id: String(productId) } : {};
 		return dbGet('resep_produk', params);
 	}
 
@@ -440,12 +439,11 @@ export class DataService {
 				// baris ringkas (POS per produk x metode + entri manual), jadi
 				// perhitungan ringkasan di bawah tetap menghasilkan angka identik.
 				const aggParams = new URLSearchParams({
-					table: 'laporan_aggregate',
 					branch,
 					start_date: startDate,
 					end_date: endDate
 				}).toString();
-				const aggRes = await fetch(`/api/data?${aggParams}`);
+				const aggRes = await fetch(`/api/reports/aggregate?${aggParams}`);
 				const aggData = aggRes.ok ? await aggRes.json() : null;
 				const laporan: any[] = Array.isArray(aggData?.transactions) ? aggData.transactions : [];
 

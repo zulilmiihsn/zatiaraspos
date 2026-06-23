@@ -85,6 +85,13 @@
 			"when": 1781960000000,
 			"tag": "0011_rename_domain_tables_id",
 			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "6",
+			"when": 1781970000000,
+			"tag": "0012_rename_product_cols_id",
+			"breakpoints": true
 		}
 	]
 }

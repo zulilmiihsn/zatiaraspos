@@ -72,7 +72,7 @@ export interface HppSettings {
 
 export interface ProductRecipe {
 	id: string | number;
-	product_id: string | number;
+	produk_id: string | number;
 	bahan_id: string | number;
 	qty_per_item: number;
 	created_at?: string;

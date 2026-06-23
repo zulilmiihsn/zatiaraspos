@@ -42,7 +42,7 @@ interface ProductRow {
 }
 
 interface RecipeRow {
-	product_id: string;
+	produk_id: string;
 	bahan_id: string;
 	bahan_name: string;
 	unit: string;
@@ -243,7 +243,7 @@ async function getCheckoutCapabilities(db: any, branch: BranchId): Promise<Check
 				hasColumn(db, 'buku_kas', 'idempotency_key'),
 				hasTable(db, 'ringkasan_penjualan_harian'),
 				hasTable(db, 'penjualan_produk_harian'),
-				hasColumn(db, 'transaksi_kasir', 'product_name'),
+				hasColumn(db, 'transaksi_kasir', 'nama_produk'),
 				hasColumn(db, 'transaksi_kasir', 'hpp_amount')
 			]);
 
@@ -309,20 +309,20 @@ async function loadRecipesByProduct(
 		const placeholders = part.map(() => '?').join(',');
 		const { results = [] } = (await db
 			.prepare(
-				`SELECT rp.product_id, rp.bahan_id, b.name AS bahan_name, b.unit, rp.qty_per_item
+				`SELECT rp.produk_id, rp.bahan_id, b.name AS bahan_name, b.unit, rp.qty_per_item
 					, COALESCE(b.cost_per_unit, 0) AS cost_per_unit
 				 FROM resep_produk rp
 				 INNER JOIN bahan b ON b.branch_id = rp.branch_id AND b.id = rp.bahan_id
-				 WHERE rp.branch_id = ? AND rp.product_id IN (${placeholders}) AND b.is_active = 1
-				 ORDER BY rp.product_id ASC, b.name ASC`
+				 WHERE rp.branch_id = ? AND rp.produk_id IN (${placeholders}) AND b.is_active = 1
+				 ORDER BY rp.produk_id ASC, b.name ASC`
 			)
 			.bind(branch, ...part)
 			.all()) as { results?: RecipeRow[] };
 
 		for (const row of results) {
-			const rows = grouped.get(row.product_id) || [];
+			const rows = grouped.get(row.produk_id) || [];
 			rows.push(row);
-			grouped.set(row.product_id, rows);
+			grouped.set(row.produk_id, rows);
 		}
 	}
 	return grouped;
@@ -736,7 +736,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 						qty,
 						amount,
 						price,
-						product_name,
+						nama_produk,
 						base_price,
 						add_on_total,
 						add_on_snapshot,
@@ -807,12 +807,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 						db
 							.prepare(
 								`INSERT INTO penjualan_produk_harian (
-									id, branch_id, sales_date, product_id, product_name, qty,
+									id, branch_id, sales_date, produk_id, nama_produk, qty,
 									gross_sales, cash_sales, non_cash_sales, transaction_count, created_at, updated_at
 								)
 								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-								ON CONFLICT(branch_id, sales_date, product_id) DO UPDATE SET
-									product_name = excluded.product_name,
+								ON CONFLICT(branch_id, sales_date, produk_id) DO UPDATE SET
+									nama_produk = excluded.nama_produk,
 									qty = qty + excluded.qty,
 									gross_sales = gross_sales + excluded.gross_sales,
 									cash_sales = cash_sales + excluded.cash_sales,

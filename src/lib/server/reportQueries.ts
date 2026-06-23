@@ -47,17 +47,17 @@ export async function buildLaporanAggregate(
 	const productRows =
 		((await rawDb
 			.prepare(
-				`SELECT product_name,
+				`SELECT nama_produk,
 					COALESCE(SUM(cash_sales),0) AS cash,
 					COALESCE(SUM(non_cash_sales),0) AS non_cash
 				 FROM penjualan_produk_harian
 				 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
-				 GROUP BY product_name`
+				 GROUP BY nama_produk`
 			)
 			.bind(branch, startDate, endDate)
 			.all()
 			.catch(() => ({ results: [] }))) as {
-			results?: Array<{ product_name?: string; cash?: number; non_cash?: number }>;
+			results?: Array<{ nama_produk?: string; cash?: number; non_cash?: number }>;
 		}).results || [];
 
 	const manualRows =
@@ -80,7 +80,7 @@ export async function buildLaporanAggregate(
 
 	const transactions: Array<Record<string, any>> = [];
 	for (const p of productRows) {
-		const name = p.product_name || 'Item';
+		const name = p.nama_produk || 'Item';
 		const cash = Number(p.cash || 0);
 		const nonCash = Number(p.non_cash || 0);
 		if (cash > 0) {

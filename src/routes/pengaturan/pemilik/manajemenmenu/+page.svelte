@@ -448,11 +448,11 @@
 	}
 
 	async function saveMenuRecipe(productId: string | number) {
-		await dataService.deleteRows('resep_produk', { product_id: String(productId) });
+		await dataService.deleteRows('resep_produk', { produk_id: String(productId) });
 		if (!menuForm.track_ingredients || recipeItems.length === 0) return;
 
 		const rows = recipeItems.map((item) => ({
-			product_id: String(productId),
+			produk_id: String(productId),
 			bahan_id: String(item.bahan_id),
 			qty_per_item: Number(item.qty_per_item || 0)
 		}));
@@ -512,7 +512,7 @@
 
 	function getProductRecipeCost(productId: string | number) {
 		return allRecipes
-			.filter((recipe) => String(recipe.product_id) === String(productId))
+			.filter((recipe) => String(recipe.produk_id) === String(productId))
 			.reduce(
 				(sum, recipe) =>
 					sum + Number(recipe.qty_per_item || 0) * getBahanCostPerUnit(recipe.bahan_id),

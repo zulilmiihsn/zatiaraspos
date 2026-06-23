@@ -80,11 +80,11 @@ export async function getBestSellersSummary(
 		const endDate = witaDate(endTime);
 		const rows = await rawDb
 			.prepare(
-				`SELECT product_id, product_name, SUM(qty) AS total_qty, SUM(gross_sales) AS gross_sales
+				`SELECT produk_id, nama_produk, SUM(qty) AS total_qty, SUM(gross_sales) AS gross_sales
 				 FROM penjualan_produk_harian
 				 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
-					AND product_id != '${CUSTOM_PRODUCT_BUCKET_ID}'
-				 GROUP BY product_id, product_name
+					AND produk_id != '${CUSTOM_PRODUCT_BUCKET_ID}'
+				 GROUP BY produk_id, nama_produk
 				 ORDER BY total_qty DESC
 				 LIMIT 3`
 			)

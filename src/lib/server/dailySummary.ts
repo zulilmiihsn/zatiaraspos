@@ -70,7 +70,7 @@ export async function reverseDailySummaryForTransaction(
 	// Kontribusi per produk untuk daily_product_sales.
 	const products = ((await rawDb
 		.prepare(
-			`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS product_id,
+			`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS produk_id,
 				COALESCE(SUM(qty), 0) AS qty,
 				COALESCE(SUM(amount), 0) AS gross
 			 FROM transaksi_kasir
@@ -80,7 +80,7 @@ export async function reverseDailySummaryForTransaction(
 		.bind(branch, transactionId)
 		.all()
 		.catch(() => ({ results: [] }))) as {
-		results?: Array<{ product_id?: string; qty?: number; gross?: number }>;
+		results?: Array<{ produk_id?: string; qty?: number; gross?: number }>;
 	}).results || [];
 
 	const statements = [
@@ -107,7 +107,7 @@ export async function reverseDailySummaryForTransaction(
 						non_cash_sales = MAX(0, non_cash_sales - ?),
 						transaction_count = MAX(0, transaction_count - 1),
 						updated_at = ?
-					 WHERE branch_id = ? AND sales_date = ? AND product_id = ?`
+					 WHERE branch_id = ? AND sales_date = ? AND produk_id = ?`
 				)
 				.bind(
 					Number(p.qty || 0),
@@ -117,7 +117,7 @@ export async function reverseDailySummaryForTransaction(
 					now,
 					branch,
 					salesDate,
-					String(p.product_id)
+					String(p.produk_id)
 				)
 		)
 	];

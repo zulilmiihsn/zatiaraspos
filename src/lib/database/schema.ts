@@ -104,18 +104,18 @@ export const resepProduk = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		branch_id: text('branch_id').notNull(),
-		product_id: text('product_id').notNull(),
+		produk_id: text('produk_id').notNull(),
 		bahan_id: text('bahan_id').notNull(),
 		qty_per_item: real('qty_per_item').notNull(),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_resep_produk_branch_product').on(table.branch_id, table.product_id),
+		index('idx_resep_produk_branch_product').on(table.branch_id, table.produk_id),
 		index('idx_resep_produk_branch_bahan').on(table.branch_id, table.bahan_id),
 		uniqueIndex('idx_resep_produk_product_bahan').on(
 			table.branch_id,
-			table.product_id,
+			table.produk_id,
 			table.bahan_id
 		)
 	]
@@ -209,7 +209,7 @@ export const transaksiKasir = sqliteTable(
 		qty: integer('qty').notNull(),
 		amount: real('amount').notNull(),
 		price: real('price'),
-		product_name: text('product_name'),
+		nama_produk: text('nama_produk'),
 		base_price: real('base_price'),
 		add_on_total: real('add_on_total').default(0),
 		add_on_snapshot: text('add_on_snapshot'),
@@ -261,8 +261,8 @@ export const dailyProductSales = sqliteTable(
 		id: text('id').primaryKey(),
 		branch_id: text('branch_id').notNull(),
 		sales_date: text('sales_date').notNull(),
-		product_id: text('product_id').notNull(),
-		product_name: text('product_name').notNull(),
+		produk_id: text('produk_id').notNull(),
+		nama_produk: text('nama_produk').notNull(),
 		qty: integer('qty').notNull().default(0),
 		gross_sales: real('gross_sales').notNull().default(0),
 		cash_sales: real('cash_sales').notNull().default(0),
@@ -275,10 +275,10 @@ export const dailyProductSales = sqliteTable(
 		uniqueIndex('idx_daily_product_sales_unique').on(
 			table.branch_id,
 			table.sales_date,
-			table.product_id
+			table.produk_id
 		),
 		index('idx_daily_product_sales_branch_date').on(table.branch_id, table.sales_date),
-		index('idx_daily_product_sales_branch_product').on(table.branch_id, table.product_id)
+		index('idx_daily_product_sales_branch_product').on(table.branch_id, table.produk_id)
 	]
 );
 
