@@ -526,7 +526,7 @@
 	}
 
 	function getProductMargin(menu: Product) {
-		const price = Number(menu.price || menu.harga || 0);
+		const price = Number(menu.price || 0);
 		return price - getProductHpp(menu);
 	}
 

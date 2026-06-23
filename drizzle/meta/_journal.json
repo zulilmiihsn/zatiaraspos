@@ -71,6 +71,13 @@
 			"when": 1781940000000,
 			"tag": "0009_drop_bukukas_nominal",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "6",
+			"when": 1781950000000,
+			"tag": "0010_drop_produk_legacy_cols",
+			"breakpoints": true
 		}
 	]
 }

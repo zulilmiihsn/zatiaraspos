@@ -65,14 +65,12 @@ INSERT INTO kategori (
 	id,
 	branch_id,
 	name,
-	nama,
 	description,
 	is_active
 )
 SELECT
 	'uat-cat-minuman',
 	'samarinda',
-	'Minuman',
 	'Minuman',
 	'Kategori UAT',
 	1
@@ -85,9 +83,7 @@ INSERT INTO produk (
 	branch_id,
 	name,
 	price,
-	harga,
 	stok,
-	category_id,
 	kategori_id,
 	tipe,
 	deskripsi,
@@ -99,9 +95,7 @@ SELECT
 	'samarinda',
 	'Es Teh UAT',
 	10000,
-	10000,
 	100,
-	'uat-cat-minuman',
 	'uat-cat-minuman',
 	'minuman',
 	'Produk UAT',

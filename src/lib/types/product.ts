@@ -12,12 +12,10 @@ export interface Product {
 	id: string | number;
 	name: string;
 	price: number;
-	harga?: number; // Alternative price field
 	stok?: number | null;
 	track_stock?: boolean | number | null;
 	track_ingredients?: boolean | number | null;
-	category_id: string | number;
-	kategori_id?: string | number | null; // Indonesian field name from DB
+	kategori_id?: string | number | null;
 	tipe: 'minuman' | 'makanan' | 'snack';
 	gambar?: string;
 	deskripsi?: string;
@@ -40,7 +38,6 @@ export interface AddOn {
 	id: string | number;
 	name: string;
 	price: number;
-	harga?: number; // Alternative price field
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;

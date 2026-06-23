@@ -76,7 +76,7 @@ export class ProductAnalysisService {
 		// Group products by category
 		const productsByCategory = data.products.reduce(
 			(acc, product) => {
-				const category = data.categories.find((cat) => cat.id === product.category_id);
+				const category = data.categories.find((cat) => cat.id === product.kategori_id);
 				const categoryName = category?.name || 'Lainnya';
 
 				if (!acc[categoryName]) {

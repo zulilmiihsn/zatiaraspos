@@ -60,12 +60,10 @@ export const calculateCartTotal = memoize((cart: any[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
-		const itemTotal = (item.product?.price ?? item.product?.harga ?? 0) * (item.qty ?? 1);
+		const itemTotal = (item.product?.price ?? 0) * (item.qty ?? 1);
 		const addOnsTotal =
-			(item.addOns || []).reduce(
-				(sum: number, addon: any) => sum + (addon.price ?? addon.harga ?? 0),
-				0
-			) * (item.qty ?? 1);
+			(item.addOns || []).reduce((sum: number, addon: any) => sum + (addon.price ?? 0), 0) *
+			(item.qty ?? 1);
 		total += itemTotal + addOnsTotal;
 		items += item.qty ?? 1;
 	}

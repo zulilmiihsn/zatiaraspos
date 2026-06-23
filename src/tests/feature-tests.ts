@@ -109,9 +109,9 @@ export const posTests = {
 			test: async () => {
 				try {
 					const mockProducts = [
-						{ id: 1, name: 'Es Teh Manis', price: 5000, category_id: 1 },
-						{ id: 2, name: 'Es Jeruk', price: 6000, category_id: 1 },
-						{ id: 3, name: 'Kopi Hitam', price: 8000, category_id: 2 }
+						{ id: 1, name: 'Es Teh Manis', price: 5000, kategori_id: 1 },
+						{ id: 2, name: 'Es Jeruk', price: 6000, kategori_id: 1 },
+						{ id: 3, name: 'Kopi Hitam', price: 8000, kategori_id: 2 }
 					];
 
 					return {

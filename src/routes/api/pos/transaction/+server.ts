@@ -34,7 +34,6 @@ interface ProductRow {
 	id: string;
 	name: string;
 	price: number;
-	harga: number | null;
 	stok: number | null;
 	track_stock?: number | boolean | null;
 	track_ingredients?: number | boolean | null;
@@ -54,7 +53,6 @@ interface AddOnRow {
 	id: string;
 	name: string;
 	price: number;
-	harga: number | null;
 	is_active: number | boolean | null;
 }
 
@@ -278,7 +276,7 @@ async function loadProducts(
 		const placeholders = part.map(() => '?').join(',');
 		const { results = [] } = (await db
 			.prepare(
-				`SELECT id, name, price, harga, stok,
+				`SELECT id, name, price, stok,
 				 ${stockTrackingAvailable ? 'track_stock,' : ''}
 				 ${ingredientTrackingAvailable ? 'track_ingredients,' : ''}
 				 is_active
@@ -341,7 +339,7 @@ async function loadAddOns(
 		const placeholders = part.map(() => '?').join(',');
 		const { results = [] } = (await db
 			.prepare(
-				`SELECT id, name, price, harga, is_active
+				`SELECT id, name, price, is_active
 				 FROM tambahan
 				 WHERE branch_id = ? AND id IN (${placeholders})`
 			)
@@ -485,14 +483,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	for (const input of normalizedInputs) {
 		const { source: item, productId, qty } = input;
 		const addOns = input.addOnIds.map((id) => addOnsById.get(id)!);
-		const addOnTotal = addOns.reduce(
-			(sum, addOn) => sum + normalizeMoney(addOn.price ?? addOn.harga),
-			0
-		);
+		const addOnTotal = addOns.reduce((sum, addOn) => sum + normalizeMoney(addOn.price), 0);
 		const addOnSnapshot = addOns.map((addOn) => ({
 			id: String(addOn.id),
 			name: addOn.name,
-			price: normalizeMoney(addOn.price ?? addOn.harga)
+			price: normalizeMoney(addOn.price)
 		}));
 		const sugar = sanitizeShortText(item.sugar, 24);
 		const ice = sanitizeShortText(item.ice, 24);
@@ -506,7 +501,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		if (productId) {
 			const product = productsById.get(productId)!;
 			productName = product.name;
-			productPrice = normalizeMoney(product.price ?? product.harga);
+			productPrice = normalizeMoney(product.price);
 			if (stockTrackingAvailable && (product.track_stock === true || product.track_stock === 1)) {
 				const current = stockDeductions.get(productId) || { name: productName, qty: 0 };
 				current.qty += qty;

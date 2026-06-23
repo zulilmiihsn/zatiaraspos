@@ -1306,7 +1306,7 @@ async function handleRegularChat(request: Request) {
 		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
-		let products: { id: string; name: string; price: number; category_id?: string | null }[] = [];
+		let products: { id: string; name: string; price: number; kategori_id?: string | null }[] = [];
 		let categories: { id: string; name: string }[] = [];
 		let addons: { id: string; name: string; price: number }[] = [];
 
@@ -1317,7 +1317,7 @@ async function handleRegularChat(request: Request) {
 					id: produk.id,
 					name: produk.name,
 					price: produk.price,
-					category_id: produk.category_id
+					kategori_id: produk.kategori_id
 				})
 				.from(produk)
 				.where(eq(produk.branch_id, requestedBranch))
