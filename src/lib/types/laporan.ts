@@ -25,7 +25,7 @@ export interface BukuKasRecord {
 	created_at: string;
 	transaction_date?: string;
 	id_sesi_toko?: string;
-	branch_id?: string;
+	cabang_id?: string;
 	user_id?: string;
 	// Fields dari join transaksi_kasir
 	ref_transaksi_kasir_id?: string;

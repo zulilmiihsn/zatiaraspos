@@ -31,7 +31,7 @@ export function auditLogStatement(db: any, branch: BranchId, input: AuditLogInpu
 		.prepare(
 			`INSERT INTO audit_logs (
 				id,
-				branch_id,
+				cabang_id,
 				actor_user_id,
 				actor_username,
 				actor_role,

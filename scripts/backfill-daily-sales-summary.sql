@@ -5,7 +5,7 @@ DELETE FROM ringkasan_penjualan_harian;
 --> statement-breakpoint
 INSERT INTO ringkasan_penjualan_harian (
 	id,
-	branch_id,
+	cabang_id,
 	sales_date,
 	transaction_count,
 	item_count,
@@ -16,8 +16,8 @@ INSERT INTO ringkasan_penjualan_harian (
 	updated_at
 )
 SELECT
-	branch_id || ':' || date(datetime(waktu, '+8 hours')) AS id,
-	branch_id,
+	cabang_id || ':' || date(datetime(waktu, '+8 hours')) AS id,
+	cabang_id,
 	date(datetime(waktu, '+8 hours')) AS sales_date,
 	COUNT(DISTINCT transaction_id) AS transaction_count,
 	COALESCE(SUM(qty), 0) AS item_count,
@@ -28,13 +28,13 @@ SELECT
 	CURRENT_TIMESTAMP
 FROM buku_kas
 WHERE sumber = 'pos' AND tipe = 'in'
-GROUP BY branch_id, sales_date;
+GROUP BY cabang_id, sales_date;
 --> statement-breakpoint
 DELETE FROM penjualan_produk_harian;
 --> statement-breakpoint
 INSERT INTO penjualan_produk_harian (
 	id,
-	branch_id,
+	cabang_id,
 	sales_date,
 	produk_id,
 	nama_produk,
@@ -45,8 +45,8 @@ INSERT INTO penjualan_produk_harian (
 	updated_at
 )
 SELECT
-	tk.branch_id || ':' || date(datetime(bk.waktu, '+8 hours')) || ':' || tk.produk_id AS id,
-	tk.branch_id,
+	tk.cabang_id || ':' || date(datetime(bk.waktu, '+8 hours')) || ':' || tk.produk_id AS id,
+	tk.cabang_id,
 	date(datetime(bk.waktu, '+8 hours')) AS sales_date,
 	tk.produk_id,
 	COALESCE(tk.nama_produk, p.name, tk.custom_name, 'Item Custom') AS nama_produk,
@@ -56,7 +56,7 @@ SELECT
 	CURRENT_TIMESTAMP,
 	CURRENT_TIMESTAMP
 FROM transaksi_kasir tk
-INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-LEFT JOIN produk p ON p.branch_id = tk.branch_id AND p.id = tk.produk_id
+INNER JOIN buku_kas bk ON bk.cabang_id = tk.cabang_id AND bk.id = tk.buku_kas_id
+LEFT JOIN produk p ON p.cabang_id = tk.cabang_id AND p.id = tk.produk_id
 WHERE tk.produk_id IS NOT NULL AND bk.sumber = 'pos' AND bk.tipe = 'in'
-GROUP BY tk.branch_id, sales_date, tk.produk_id;
+GROUP BY tk.cabang_id, sales_date, tk.produk_id;

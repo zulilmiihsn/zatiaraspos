@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const bukuKas =
 		((
 			await rawDb
-				.prepare('SELECT * FROM buku_kas WHERE branch_id = ? AND waktu < ?')
+				.prepare('SELECT * FROM buku_kas WHERE cabang_id = ? AND waktu < ?')
 				.bind(branch, cutoff)
 				.all()
 				.catch(() => ({ results: [] }))
@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const transaksiKasir =
 		((
 			await rawDb
-				.prepare('SELECT * FROM transaksi_kasir WHERE branch_id = ? AND created_at < ?')
+				.prepare('SELECT * FROM transaksi_kasir WHERE cabang_id = ? AND created_at < ?')
 				.bind(branch, cutoff)
 				.all()
 				.catch(() => ({ results: [] }))
@@ -50,7 +50,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const total = bukuKas.length + transaksiKasir.length;
 	if (total === 0) {
-		return json({ ok: true, count: 0, message: `Tidak ada transaksi sebelum ${year} untuk diarsipkan.` });
+		return json({
+			ok: true,
+			count: 0,
+			message: `Tidak ada transaksi sebelum ${year} untuk diarsipkan.`
+		});
 	}
 
 	const archive = {
@@ -72,9 +76,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	// Baru hapus dari DB.
 	await rawDb.batch([
-		rawDb.prepare('DELETE FROM buku_kas WHERE branch_id = ? AND waktu < ?').bind(branch, cutoff),
+		rawDb.prepare('DELETE FROM buku_kas WHERE cabang_id = ? AND waktu < ?').bind(branch, cutoff),
 		rawDb
-			.prepare('DELETE FROM transaksi_kasir WHERE branch_id = ? AND created_at < ?')
+			.prepare('DELETE FROM transaksi_kasir WHERE cabang_id = ? AND created_at < ?')
 			.bind(branch, cutoff)
 	]);
 

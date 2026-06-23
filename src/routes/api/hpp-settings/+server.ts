@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const rows = await db
 		.select()
 		.from(hppSettings)
-		.where(eq(hppSettings.branch_id, branch))
+		.where(eq(hppSettings.cabang_id, branch))
 		.limit(1);
 	return json(rows);
 };
@@ -46,7 +46,7 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
 	const now = new Date().toISOString();
 	const row = {
 		id,
-		branch_id: branch,
+		cabang_id: branch,
 		rent_monthly: Number(input.rent_monthly || 0),
 		electricity_monthly: Number(input.electricity_monthly || 0),
 		water_monthly: Number(input.water_monthly || 0),
@@ -59,7 +59,7 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
 	await rawDb
 		.prepare(
 			`INSERT INTO pengaturan_hpp (
-				id, branch_id, rent_monthly, electricity_monthly, water_monthly,
+				id, cabang_id, rent_monthly, electricity_monthly, water_monthly,
 				salary_monthly, other_monthly, target_items_monthly, created_at, updated_at
 			)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -74,7 +74,7 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
 		)
 		.bind(
 			row.id,
-			row.branch_id,
+			row.cabang_id,
 			row.rent_monthly,
 			row.electricity_monthly,
 			row.water_monthly,

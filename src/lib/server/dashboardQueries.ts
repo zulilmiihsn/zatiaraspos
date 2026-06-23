@@ -33,7 +33,7 @@ export async function getDashboardStats(
 		.from(dailySalesSummary)
 		.where(
 			and(
-				eq(dailySalesSummary.branch_id, branch),
+				eq(dailySalesSummary.cabang_id, branch),
 				gte(dailySalesSummary.sales_date, startDate),
 				lte(dailySalesSummary.sales_date, endDate)
 			)
@@ -57,7 +57,7 @@ export async function getWeeklyIncomeSummary(
 			.from(dailySalesSummary)
 			.where(
 				and(
-					eq(dailySalesSummary.branch_id, branch),
+					eq(dailySalesSummary.cabang_id, branch),
 					gte(dailySalesSummary.sales_date, startDate),
 					lte(dailySalesSummary.sales_date, endDate)
 				)
@@ -82,7 +82,7 @@ export async function getBestSellersSummary(
 			.prepare(
 				`SELECT produk_id, nama_produk, SUM(qty) AS total_qty, SUM(gross_sales) AS gross_sales
 				 FROM penjualan_produk_harian
-				 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
+				 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?
 					AND produk_id != '${CUSTOM_PRODUCT_BUCKET_ID}'
 				 GROUP BY produk_id, nama_produk
 				 ORDER BY total_qty DESC
@@ -108,7 +108,7 @@ export async function getPosKas7Hari(
 		.from(bukuKas)
 		.where(
 			and(
-				eq(bukuKas.branch_id, branch),
+				eq(bukuKas.cabang_id, branch),
 				eq(bukuKas.sumber, 'pos'),
 				gte(bukuKas.waktu, startTime),
 				lte(bukuKas.waktu, endTime)

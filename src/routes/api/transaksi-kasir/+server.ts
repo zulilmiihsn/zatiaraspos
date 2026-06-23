@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const cursor = decodeDataCursor(url.searchParams.get('cursor'));
 	const cursorPagination = url.searchParams.get('pagination') === 'cursor' || cursor !== null;
 
-	const filters = ['branch_id = ?'];
+	const filters = ['cabang_id = ?'];
 	const values: unknown[] = [branch];
 	if (startTime) {
 		filters.push('created_at >= ?');
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const rows = await rawDb
 		.prepare(
 			`SELECT
-				id, branch_id, buku_kas_id, produk_id, custom_name, qty, amount, price,
+				id, cabang_id, buku_kas_id, produk_id, custom_name, qty, amount, price,
 				${snapshotSelect},
 				transaction_id, created_at, updated_at
 			 FROM transaksi_kasir
@@ -130,7 +130,7 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 	await db
 		.delete(transaksiKasir)
 		.where(
-			and(eq(transaksiKasir.branch_id, branch), eq(transaksiKasir.transaction_id, transactionId))
+			and(eq(transaksiKasir.cabang_id, branch), eq(transaksiKasir.transaction_id, transactionId))
 		);
 	await publish(platform, branch, 'transaksi_kasir', 'delete', { transaction_id: transactionId });
 	await auditDataChange(rawDb, branch, session, 'transaksi_kasir', 'delete_by_transaction', null, {

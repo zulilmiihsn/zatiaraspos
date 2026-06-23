@@ -1,6 +1,6 @@
 INSERT INTO profil (
 	id,
-	branch_id,
+	cabang_id,
 	role,
 	username,
 	password,
@@ -14,12 +14,12 @@ SELECT
 	'$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy',
 	'Pemilik UAT Samarinda'
 WHERE NOT EXISTS (
-	SELECT 1 FROM profil WHERE branch_id = 'samarinda' AND username = 'pemilik'
+	SELECT 1 FROM profil WHERE cabang_id = 'samarinda' AND username = 'pemilik'
 );
 
 INSERT INTO profil (
 	id,
-	branch_id,
+	cabang_id,
 	role,
 	username,
 	password,
@@ -33,12 +33,12 @@ SELECT
 	'$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy',
 	'Kasir UAT Samarinda'
 WHERE NOT EXISTS (
-	SELECT 1 FROM profil WHERE branch_id = 'samarinda' AND username = 'kasir'
+	SELECT 1 FROM profil WHERE cabang_id = 'samarinda' AND username = 'kasir'
 );
 
 INSERT INTO pengaturan (
 	id,
-	branch_id,
+	cabang_id,
 	pin,
 	locked_pages,
 	nama_toko,
@@ -58,12 +58,12 @@ SELECT
 	'@zatiaras.uat',
 	'Terima kasih'
 WHERE NOT EXISTS (
-	SELECT 1 FROM pengaturan WHERE branch_id = 'samarinda'
+	SELECT 1 FROM pengaturan WHERE cabang_id = 'samarinda'
 );
 
 INSERT INTO kategori (
 	id,
-	branch_id,
+	cabang_id,
 	name,
 	description,
 	is_active
@@ -75,12 +75,12 @@ SELECT
 	'Kategori UAT',
 	1
 WHERE NOT EXISTS (
-	SELECT 1 FROM kategori WHERE branch_id = 'samarinda' AND id = 'uat-cat-minuman'
+	SELECT 1 FROM kategori WHERE cabang_id = 'samarinda' AND id = 'uat-cat-minuman'
 );
 
 INSERT INTO produk (
 	id,
-	branch_id,
+	cabang_id,
 	name,
 	price,
 	stok,
@@ -102,12 +102,12 @@ SELECT
 	'[]',
 	1
 WHERE NOT EXISTS (
-	SELECT 1 FROM produk WHERE branch_id = 'samarinda' AND id = 'uat-produk-es-teh'
+	SELECT 1 FROM produk WHERE cabang_id = 'samarinda' AND id = 'uat-produk-es-teh'
 );
 
 INSERT INTO sesi_toko (
 	id,
-	branch_id,
+	cabang_id,
 	opening_cash,
 	opening_time,
 	is_active
@@ -119,5 +119,5 @@ SELECT
 	CURRENT_TIMESTAMP,
 	1
 WHERE NOT EXISTS (
-	SELECT 1 FROM sesi_toko WHERE branch_id = 'samarinda' AND is_active = 1
+	SELECT 1 FROM sesi_toko WHERE cabang_id = 'samarinda' AND is_active = 1
 );

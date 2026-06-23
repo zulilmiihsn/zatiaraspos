@@ -40,7 +40,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			.prepare(
 				`SELECT path, method, status, duration_ms, created_at
 				 FROM request_metrics
-				 WHERE branch_id = ? AND created_at >= ?
+				 WHERE cabang_id = ? AND created_at >= ?
 				 ORDER BY created_at DESC
 				 LIMIT 1000`
 			)
@@ -51,7 +51,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			.prepare(
 				`SELECT source, message, status, created_at
 				 FROM error_events
-				 WHERE branch_id = ? AND created_at >= ?
+				 WHERE cabang_id = ? AND created_at >= ?
 				 ORDER BY created_at DESC
 				 LIMIT 100`
 			)
@@ -62,7 +62,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			.prepare(
 				`SELECT action, entity_type, transaction_id, amount, created_at
 				 FROM audit_logs
-				 WHERE branch_id = ? AND created_at >= ?
+				 WHERE cabang_id = ? AND created_at >= ?
 				 ORDER BY created_at DESC
 				 LIMIT 50`
 			)
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			.prepare(
 				`SELECT database_name, operation, status, file_path, file_size_bytes, message, started_at, finished_at
 				 FROM d1_backup_runs
-				 WHERE branch_id = ?
+				 WHERE cabang_id = ?
 				 ORDER BY started_at DESC
 				 LIMIT 10`
 			)

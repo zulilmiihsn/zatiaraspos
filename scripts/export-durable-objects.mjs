@@ -60,7 +60,7 @@ async function zatiarasHasRealtimeSession(req, env, branch) {
 
   const row = await db
     .prepare(
-      'SELECT id FROM auth_sessions WHERE id = ? AND branch_id = ? AND expires_at > ? LIMIT 1'
+      'SELECT id FROM auth_sessions WHERE id = ? AND cabang_id = ? AND expires_at > ? LIMIT 1'
     )
     .bind(sessionId, branch, Date.now())
     .first();

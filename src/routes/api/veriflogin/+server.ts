@@ -124,7 +124,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies,
 				role: profil.role
 			})
 			.from(profil)
-			.where(and(eq(profil.branch_id, branchId), eq(profil.username, username)))
+			.where(and(eq(profil.cabang_id, branchId), eq(profil.username, username)))
 			.get();
 
 		if (!user) {

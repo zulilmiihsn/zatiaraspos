@@ -58,7 +58,7 @@ export async function recordErrorEvent(
 			.prepare(
 				`INSERT INTO error_events (
 					id,
-					branch_id,
+					cabang_id,
 					source,
 					message,
 					stack,
@@ -107,7 +107,7 @@ export async function recordRequestMetric(
 			.prepare(
 				`INSERT INTO request_metrics (
 					id,
-					branch_id,
+					cabang_id,
 					method,
 					path,
 					status,

@@ -25,7 +25,7 @@ export function payloadRows(
 	return rows.map((row) => ({
 		id: typeof row.id === 'string' || typeof row.id === 'number' ? String(row.id) : newId(),
 		...row,
-		branch_id: branch
+		cabang_id: branch
 	})) as Array<Record<string, any>>;
 }
 

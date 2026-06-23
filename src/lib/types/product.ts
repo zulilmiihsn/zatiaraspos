@@ -59,7 +59,7 @@ export interface Ingredient {
 
 export interface HppSettings {
 	id: string;
-	branch_id: string;
+	cabang_id: string;
 	rent_monthly: number;
 	electricity_monthly: number;
 	water_monthly: number;

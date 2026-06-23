@@ -7,7 +7,7 @@ export const profil = sqliteTable(
 	'profil',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		role: text('role').notNull(),
 		username: text('username').notNull(),
 		password: text('password').notNull(),
@@ -15,14 +15,14 @@ export const profil = sqliteTable(
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
-	(table) => [index('idx_profil_branch_username').on(table.branch_id, table.username)]
+	(table) => [index('idx_profil_branch_username').on(table.cabang_id, table.username)]
 );
 
 export const authSessions = sqliteTable(
 	'auth_sessions',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		user_id: text('user_id').notNull(),
 		username: text('username').notNull(),
 		role: text('role').notNull(),
@@ -31,7 +31,7 @@ export const authSessions = sqliteTable(
 	},
 	(table) => [
 		index('idx_auth_sessions_expires').on(table.expires_at),
-		index('idx_auth_sessions_user').on(table.branch_id, table.user_id)
+		index('idx_auth_sessions_user').on(table.cabang_id, table.user_id)
 	]
 );
 
@@ -39,7 +39,7 @@ export const produk = sqliteTable(
 	'produk',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		name: text('name').notNull(),
 		price: real('price').notNull(),
 		stok: integer('stok').default(0),
@@ -55,8 +55,8 @@ export const produk = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_produk_branch_created').on(table.branch_id, table.created_at),
-		index('idx_produk_branch_kategori').on(table.branch_id, table.kategori_id)
+		index('idx_produk_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_produk_branch_kategori').on(table.cabang_id, table.kategori_id)
 	]
 );
 
@@ -64,7 +64,7 @@ export const bahan = sqliteTable(
 	'bahan',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		name: text('name').notNull(),
 		unit: text('unit').notNull().default('gram'),
 		current_stock: real('current_stock').notNull().default(0),
@@ -77,8 +77,8 @@ export const bahan = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_bahan_branch_created').on(table.branch_id, table.created_at),
-		index('idx_bahan_branch_name').on(table.branch_id, table.name)
+		index('idx_bahan_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_bahan_branch_name').on(table.cabang_id, table.name)
 	]
 );
 
@@ -86,7 +86,7 @@ export const hppSettings = sqliteTable(
 	'pengaturan_hpp',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		rent_monthly: real('rent_monthly').notNull().default(0),
 		electricity_monthly: real('electricity_monthly').notNull().default(0),
 		water_monthly: real('water_monthly').notNull().default(0),
@@ -96,14 +96,14 @@ export const hppSettings = sqliteTable(
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
-	(table) => [index('idx_hpp_settings_branch').on(table.branch_id)]
+	(table) => [index('idx_hpp_settings_branch').on(table.cabang_id)]
 );
 
 export const resepProduk = sqliteTable(
 	'resep_produk',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		produk_id: text('produk_id').notNull(),
 		bahan_id: text('bahan_id').notNull(),
 		qty_per_item: real('qty_per_item').notNull(),
@@ -111,10 +111,10 @@ export const resepProduk = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_resep_produk_branch_product').on(table.branch_id, table.produk_id),
-		index('idx_resep_produk_branch_bahan').on(table.branch_id, table.bahan_id),
+		index('idx_resep_produk_branch_product').on(table.cabang_id, table.produk_id),
+		index('idx_resep_produk_branch_bahan').on(table.cabang_id, table.bahan_id),
 		uniqueIndex('idx_resep_produk_product_bahan').on(
-			table.branch_id,
+			table.cabang_id,
 			table.produk_id,
 			table.bahan_id
 		)
@@ -125,7 +125,7 @@ export const bahanMutasi = sqliteTable(
 	'bahan_mutasi',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		bahan_id: text('bahan_id').notNull(),
 		quantity_delta: real('quantity_delta').notNull(),
 		stock_after: real('stock_after'),
@@ -136,8 +136,8 @@ export const bahanMutasi = sqliteTable(
 		created_at: text('created_at').default(now())
 	},
 	(table) => [
-		index('idx_bahan_mutasi_branch_created').on(table.branch_id, table.created_at),
-		index('idx_bahan_mutasi_branch_bahan').on(table.branch_id, table.bahan_id)
+		index('idx_bahan_mutasi_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_bahan_mutasi_branch_bahan').on(table.cabang_id, table.bahan_id)
 	]
 );
 
@@ -145,35 +145,35 @@ export const kategori = sqliteTable(
 	'kategori',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		name: text('name').notNull(),
 		description: text('description'),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
-	(table) => [index('idx_kategori_branch_created').on(table.branch_id, table.created_at)]
+	(table) => [index('idx_kategori_branch_created').on(table.cabang_id, table.created_at)]
 );
 
 export const tambahan = sqliteTable(
 	'tambahan',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		name: text('name').notNull(),
 		price: real('price').notNull(),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
-	(table) => [index('idx_tambahan_branch_created').on(table.branch_id, table.created_at)]
+	(table) => [index('idx_tambahan_branch_created').on(table.cabang_id, table.created_at)]
 );
 
 export const bukuKas = sqliteTable(
 	'buku_kas',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		waktu: text('waktu').notNull(),
 		sumber: text('sumber').notNull(),
 		tipe: text('tipe').notNull(),
@@ -190,11 +190,11 @@ export const bukuKas = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_buku_kas_branch_waktu').on(table.branch_id, table.waktu),
-		index('idx_buku_kas_branch_waktu_id').on(table.branch_id, table.waktu, table.id),
-		index('idx_buku_kas_branch_transaction').on(table.branch_id, table.transaction_id),
-		index('idx_buku_kas_branch_sesi').on(table.branch_id, table.id_sesi_toko),
-		uniqueIndex('idx_buku_kas_branch_idempotency').on(table.branch_id, table.idempotency_key)
+		index('idx_buku_kas_branch_waktu').on(table.cabang_id, table.waktu),
+		index('idx_buku_kas_branch_waktu_id').on(table.cabang_id, table.waktu, table.id),
+		index('idx_buku_kas_branch_transaction').on(table.cabang_id, table.transaction_id),
+		index('idx_buku_kas_branch_sesi').on(table.cabang_id, table.id_sesi_toko),
+		uniqueIndex('idx_buku_kas_cabang_idempotency').on(table.cabang_id, table.idempotency_key)
 	]
 );
 
@@ -202,7 +202,7 @@ export const transaksiKasir = sqliteTable(
 	'transaksi_kasir',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		buku_kas_id: text('buku_kas_id').notNull(),
 		produk_id: text('produk_id'),
 		custom_name: text('custom_name'),
@@ -223,14 +223,14 @@ export const transaksiKasir = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_transaksi_kasir_branch_created').on(table.branch_id, table.created_at),
+		index('idx_transaksi_kasir_branch_created').on(table.cabang_id, table.created_at),
 		index('idx_transaksi_kasir_branch_created_id').on(
-			table.branch_id,
+			table.cabang_id,
 			table.created_at,
 			table.id
 		),
-		index('idx_transaksi_kasir_branch_transaction').on(table.branch_id, table.transaction_id),
-		index('idx_transaksi_kasir_branch_buku').on(table.branch_id, table.buku_kas_id)
+		index('idx_transaksi_kasir_branch_transaction').on(table.cabang_id, table.transaction_id),
+		index('idx_transaksi_kasir_branch_buku').on(table.cabang_id, table.buku_kas_id)
 	]
 );
 
@@ -238,7 +238,7 @@ export const dailySalesSummary = sqliteTable(
 	'ringkasan_penjualan_harian',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		sales_date: text('sales_date').notNull(),
 		transaction_count: integer('transaction_count').notNull().default(0),
 		item_count: integer('item_count').notNull().default(0),
@@ -250,8 +250,8 @@ export const dailySalesSummary = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		uniqueIndex('idx_daily_sales_branch_date').on(table.branch_id, table.sales_date),
-		index('idx_daily_sales_branch_date_range').on(table.branch_id, table.sales_date)
+		uniqueIndex('idx_daily_sales_branch_date').on(table.cabang_id, table.sales_date),
+		index('idx_daily_sales_branch_date_range').on(table.cabang_id, table.sales_date)
 	]
 );
 
@@ -259,7 +259,7 @@ export const dailyProductSales = sqliteTable(
 	'penjualan_produk_harian',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		sales_date: text('sales_date').notNull(),
 		produk_id: text('produk_id').notNull(),
 		nama_produk: text('nama_produk').notNull(),
@@ -273,12 +273,12 @@ export const dailyProductSales = sqliteTable(
 	},
 	(table) => [
 		uniqueIndex('idx_daily_product_sales_unique').on(
-			table.branch_id,
+			table.cabang_id,
 			table.sales_date,
 			table.produk_id
 		),
-		index('idx_daily_product_sales_branch_date').on(table.branch_id, table.sales_date),
-		index('idx_daily_product_sales_branch_product').on(table.branch_id, table.produk_id)
+		index('idx_daily_product_sales_branch_date').on(table.cabang_id, table.sales_date),
+		index('idx_daily_product_sales_branch_product').on(table.cabang_id, table.produk_id)
 	]
 );
 
@@ -286,7 +286,7 @@ export const pengaturan = sqliteTable(
 	'pengaturan',
 	{
 		id: integer('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		pin: text('pin').default('1234'),
 		locked_pages: text('locked_pages', { mode: 'json' }).$type<string[]>().default([]),
 		nama_toko: text('nama_toko'),
@@ -297,14 +297,14 @@ export const pengaturan = sqliteTable(
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
-	(table) => [index('idx_pengaturan_branch').on(table.branch_id)]
+	(table) => [index('idx_pengaturan_branch').on(table.cabang_id)]
 );
 
 export const sesiToko = sqliteTable(
 	'sesi_toko',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		opening_cash: real('opening_cash').notNull(),
 		opening_time: text('opening_time').notNull(),
 		closing_time: text('closing_time'),
@@ -313,8 +313,8 @@ export const sesiToko = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		index('idx_sesi_toko_branch_active').on(table.branch_id, table.is_active),
-		index('idx_sesi_toko_branch_opening').on(table.branch_id, table.opening_time)
+		index('idx_sesi_toko_branch_active').on(table.cabang_id, table.is_active),
+		index('idx_sesi_toko_branch_opening').on(table.cabang_id, table.opening_time)
 	]
 );
 
@@ -322,7 +322,7 @@ export const auditLogs = sqliteTable(
 	'audit_logs',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		actor_user_id: text('actor_user_id'),
 		actor_username: text('actor_username'),
 		actor_role: text('actor_role'),
@@ -336,9 +336,9 @@ export const auditLogs = sqliteTable(
 		created_at: text('created_at').default(now())
 	},
 	(table) => [
-		index('idx_audit_logs_branch_created').on(table.branch_id, table.created_at),
-		index('idx_audit_logs_branch_action').on(table.branch_id, table.action),
-		index('idx_audit_logs_branch_transaction').on(table.branch_id, table.transaction_id)
+		index('idx_audit_logs_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_audit_logs_branch_action').on(table.cabang_id, table.action),
+		index('idx_audit_logs_branch_transaction').on(table.cabang_id, table.transaction_id)
 	]
 );
 
@@ -346,14 +346,14 @@ export const rateLimits = sqliteTable(
 	'rate_limits',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		identifier: text('identifier').notNull(),
 		count: integer('count').notNull(),
 		reset_at: integer('reset_at').notNull(),
 		updated_at: integer('updated_at').notNull()
 	},
 	(table) => [
-		index('idx_rate_limits_branch_identifier').on(table.branch_id, table.identifier),
+		index('idx_rate_limits_cabang_identifier').on(table.cabang_id, table.identifier),
 		index('idx_rate_limits_reset').on(table.reset_at)
 	]
 );
@@ -362,7 +362,7 @@ export const errorEvents = sqliteTable(
 	'error_events',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		source: text('source').notNull(),
 		message: text('message').notNull(),
 		stack: text('stack'),
@@ -373,8 +373,8 @@ export const errorEvents = sqliteTable(
 		created_at: text('created_at').default(now())
 	},
 	(table) => [
-		index('idx_error_events_branch_created').on(table.branch_id, table.created_at),
-		index('idx_error_events_branch_source').on(table.branch_id, table.source)
+		index('idx_error_events_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_error_events_branch_source').on(table.cabang_id, table.source)
 	]
 );
 
@@ -382,7 +382,7 @@ export const requestMetrics = sqliteTable(
 	'request_metrics',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		method: text('method').notNull(),
 		path: text('path').notNull(),
 		status: integer('status').notNull(),
@@ -393,8 +393,8 @@ export const requestMetrics = sqliteTable(
 		created_at: text('created_at').default(now())
 	},
 	(table) => [
-		index('idx_request_metrics_branch_created').on(table.branch_id, table.created_at),
-		index('idx_request_metrics_branch_path').on(table.branch_id, table.path)
+		index('idx_request_metrics_branch_created').on(table.cabang_id, table.created_at),
+		index('idx_request_metrics_branch_path').on(table.cabang_id, table.path)
 	]
 );
 
@@ -402,7 +402,7 @@ export const d1BackupRuns = sqliteTable(
 	'd1_backup_runs',
 	{
 		id: text('id').primaryKey(),
-		branch_id: text('branch_id').notNull(),
+		cabang_id: text('cabang_id').notNull(),
 		database_name: text('database_name').notNull(),
 		operation: text('operation').notNull(),
 		status: text('status').notNull(),
@@ -413,7 +413,7 @@ export const d1BackupRuns = sqliteTable(
 		finished_at: text('finished_at')
 	},
 	(table) => [
-		index('idx_d1_backup_runs_branch_started').on(table.branch_id, table.started_at),
+		index('idx_d1_backup_runs_branch_started').on(table.cabang_id, table.started_at),
 		index('idx_d1_backup_runs_db_started').on(table.database_name, table.started_at)
 	]
 );

@@ -964,7 +964,7 @@ async function handleRegularChat(request: Request) {
 			while (hasMore && page < maxPages) {
 				try {
 					const conditions = [
-						eq(bukuKas.branch_id, requestedBranch),
+						eq(bukuKas.cabang_id, requestedBranch),
 						gte(bukuKas.waktu, startDate),
 						lte(bukuKas.waktu, endDate)
 					];
@@ -1029,7 +1029,7 @@ async function handleRegularChat(request: Request) {
 						.from(transaksiKasir)
 						.where(
 							and(
-								eq(transaksiKasir.branch_id, requestedBranch),
+								eq(transaksiKasir.cabang_id, requestedBranch),
 								inArray(transaksiKasir.buku_kas_id, bukuKasIds.map(String))
 							)
 						);
@@ -1320,7 +1320,7 @@ async function handleRegularChat(request: Request) {
 					kategori_id: produk.kategori_id
 				})
 				.from(produk)
-				.where(eq(produk.branch_id, requestedBranch))
+				.where(eq(produk.cabang_id, requestedBranch))
 				.limit(1000);
 		}
 
@@ -1331,7 +1331,7 @@ async function handleRegularChat(request: Request) {
 			categories = await db
 				.select({ id: kategori.id, name: kategori.name })
 				.from(kategori)
-				.where(eq(kategori.branch_id, requestedBranch))
+				.where(eq(kategori.cabang_id, requestedBranch))
 				.limit(1000);
 		}
 
@@ -1342,7 +1342,7 @@ async function handleRegularChat(request: Request) {
 			addons = await db
 				.select({ id: tambahan.id, name: tambahan.name, price: tambahan.price })
 				.from(tambahan)
-				.where(eq(tambahan.branch_id, requestedBranch))
+				.where(eq(tambahan.cabang_id, requestedBranch))
 				.limit(1000);
 		}
 

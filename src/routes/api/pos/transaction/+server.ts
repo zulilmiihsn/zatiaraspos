@@ -167,7 +167,7 @@ async function getActiveSessionId(db: any, branch: BranchId): Promise<string | n
 		.prepare(
 			`SELECT id
 			 FROM sesi_toko
-			 WHERE branch_id = ? AND is_active = 1
+			 WHERE cabang_id = ? AND is_active = 1
 			 ORDER BY opening_time DESC
 			 LIMIT 1`
 		)
@@ -188,7 +188,7 @@ async function getExistingByIdempotency(
 		.prepare(
 			`SELECT id, transaction_id, amount, qty
 			 FROM buku_kas
-			 WHERE branch_id = ? AND idempotency_key = ?
+			 WHERE cabang_id = ? AND idempotency_key = ?
 			 LIMIT 1`
 		)
 		.bind(branch, idempotencyKey)
@@ -282,7 +282,7 @@ async function loadProducts(
 				 ${ingredientTrackingAvailable ? 'track_ingredients,' : ''}
 				 is_active
 				 FROM produk
-				 WHERE branch_id = ? AND id IN (${placeholders})`
+				 WHERE cabang_id = ? AND id IN (${placeholders})`
 			)
 			.bind(branch, ...part)
 			.all()) as { results?: ProductRow[] };
@@ -312,8 +312,8 @@ async function loadRecipesByProduct(
 				`SELECT rp.produk_id, rp.bahan_id, b.name AS bahan_name, b.unit, rp.qty_per_item
 					, COALESCE(b.cost_per_unit, 0) AS cost_per_unit
 				 FROM resep_produk rp
-				 INNER JOIN bahan b ON b.branch_id = rp.branch_id AND b.id = rp.bahan_id
-				 WHERE rp.branch_id = ? AND rp.produk_id IN (${placeholders}) AND b.is_active = 1
+				 INNER JOIN bahan b ON b.cabang_id = rp.cabang_id AND b.id = rp.bahan_id
+				 WHERE rp.cabang_id = ? AND rp.produk_id IN (${placeholders}) AND b.is_active = 1
 				 ORDER BY rp.produk_id ASC, b.name ASC`
 			)
 			.bind(branch, ...part)
@@ -342,7 +342,7 @@ async function loadAddOns(
 			.prepare(
 				`SELECT id, name, price, is_active
 				 FROM tambahan
-				 WHERE branch_id = ? AND id IN (${placeholders})`
+				 WHERE cabang_id = ? AND id IN (${placeholders})`
 			)
 			.bind(branch, ...part)
 			.all()) as { results?: AddOnRow[] };
@@ -618,7 +618,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				.prepare(
 					`UPDATE produk
 					 SET stok = COALESCE(stok, 0) - ?, updated_at = ?
-					 WHERE branch_id = ? AND id = ? AND track_stock = 1`
+					 WHERE cabang_id = ? AND id = ? AND track_stock = 1`
 				)
 				.bind(deduction.qty, createdAt, branch, productId)
 		),
@@ -627,18 +627,18 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				.prepare(
 					`UPDATE bahan
 					 SET current_stock = COALESCE(current_stock, 0) - ?, updated_at = ?
-					 WHERE branch_id = ? AND id = ?`
+					 WHERE cabang_id = ? AND id = ?`
 				)
 				.bind(deduction.qty, createdAt, branch, bahanId),
 			db
 				.prepare(
 					`INSERT INTO bahan_mutasi (
-						id, branch_id, bahan_id, quantity_delta, stock_after, source,
+						id, cabang_id, bahan_id, quantity_delta, stock_after, source,
 						reference_id, note, created_by, created_at
 					)
 					VALUES (
 						?, ?, ?, ?,
-						(SELECT current_stock FROM bahan WHERE branch_id = ? AND id = ?),
+						(SELECT current_stock FROM bahan WHERE cabang_id = ? AND id = ?),
 						'pos_transaction', ?, ?, ?, ?
 					)`
 				)
@@ -659,7 +659,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			.prepare(
 				`INSERT INTO buku_kas (
 					id,
-					branch_id,
+					cabang_id,
 					waktu,
 					sumber,
 					tipe,
@@ -698,7 +698,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					.prepare(
 						`INSERT INTO transaksi_kasir (
 							id,
-							branch_id,
+							cabang_id,
 							buku_kas_id,
 							produk_id,
 							custom_name,
@@ -729,7 +729,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				.prepare(
 					`INSERT INTO transaksi_kasir (
 						id,
-						branch_id,
+						cabang_id,
 						buku_kas_id,
 						produk_id,
 						custom_name,
@@ -778,11 +778,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					db
 						.prepare(
 							`INSERT INTO ringkasan_penjualan_harian (
-								id, branch_id, sales_date, transaction_count, item_count,
+								id, cabang_id, sales_date, transaction_count, item_count,
 								gross_sales, cash_sales, non_cash_sales, hpp_total, created_at, updated_at
 							)
 							VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
-							ON CONFLICT(branch_id, sales_date) DO UPDATE SET
+							ON CONFLICT(cabang_id, sales_date) DO UPDATE SET
 								transaction_count = transaction_count + 1,
 								item_count = item_count + excluded.item_count,
 								gross_sales = gross_sales + excluded.gross_sales,
@@ -807,11 +807,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 						db
 							.prepare(
 								`INSERT INTO penjualan_produk_harian (
-									id, branch_id, sales_date, produk_id, nama_produk, qty,
+									id, cabang_id, sales_date, produk_id, nama_produk, qty,
 									gross_sales, cash_sales, non_cash_sales, transaction_count, created_at, updated_at
 								)
 								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-								ON CONFLICT(branch_id, sales_date, produk_id) DO UPDATE SET
+								ON CONFLICT(cabang_id, sales_date, produk_id) DO UPDATE SET
 									nama_produk = excluded.nama_produk,
 									qty = qty + excluded.qty,
 									gross_sales = gross_sales + excluded.gross_sales,

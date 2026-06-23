@@ -38,7 +38,7 @@ export async function buildLaporanAggregate(
 		.prepare(
 			`SELECT COALESCE(SUM(gross_sales),0) AS gross
 			 FROM ringkasan_penjualan_harian
-			 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?`
+			 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?`
 		)
 		.bind(branch, startDate, endDate)
 		.first()
@@ -51,7 +51,7 @@ export async function buildLaporanAggregate(
 					COALESCE(SUM(cash_sales),0) AS cash,
 					COALESCE(SUM(non_cash_sales),0) AS non_cash
 				 FROM penjualan_produk_harian
-				 WHERE branch_id = ? AND sales_date >= ? AND sales_date <= ?
+				 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?
 				 GROUP BY nama_produk`
 			)
 			.bind(branch, startDate, endDate)
@@ -66,7 +66,7 @@ export async function buildLaporanAggregate(
 				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, amount,
 					description, payment_method, customer_name
 				 FROM buku_kas
-				 WHERE branch_id = ?
+				 WHERE cabang_id = ?
 					AND (sumber IS NULL OR sumber != 'pos')
 					AND date(datetime(waktu, '+8 hours')) >= ?
 					AND date(datetime(waktu, '+8 hours')) <= ?

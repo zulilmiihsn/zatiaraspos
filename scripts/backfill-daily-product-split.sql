@@ -17,8 +17,8 @@ SET
 		(
 			SELECT SUM(tk.amount)
 			FROM transaksi_kasir tk
-			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-			WHERE tk.branch_id = penjualan_produk_harian.branch_id
+			INNER JOIN buku_kas bk ON bk.cabang_id = tk.cabang_id AND bk.id = tk.buku_kas_id
+			WHERE tk.cabang_id = penjualan_produk_harian.cabang_id
 				AND tk.produk_id = penjualan_produk_harian.produk_id
 				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method = 'tunai'
@@ -29,8 +29,8 @@ SET
 		(
 			SELECT SUM(tk.amount)
 			FROM transaksi_kasir tk
-			INNER JOIN buku_kas bk ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-			WHERE tk.branch_id = penjualan_produk_harian.branch_id
+			INNER JOIN buku_kas bk ON bk.cabang_id = tk.cabang_id AND bk.id = tk.buku_kas_id
+			WHERE tk.cabang_id = penjualan_produk_harian.cabang_id
 				AND tk.produk_id = penjualan_produk_harian.produk_id
 				AND date(datetime(tk.created_at, '+8 hours')) = penjualan_produk_harian.sales_date
 				AND bk.payment_method != 'tunai'

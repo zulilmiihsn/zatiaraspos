@@ -92,7 +92,7 @@ export async function consumeRateLimit(
 		if (!current || current.reset_at <= now) {
 			await db
 				.prepare(
-					`INSERT INTO rate_limits (id, branch_id, identifier, count, reset_at, updated_at)
+					`INSERT INTO rate_limits (id, cabang_id, identifier, count, reset_at, updated_at)
 					 VALUES (?, ?, ?, 1, ?, ?)
 					 ON CONFLICT(id) DO UPDATE SET count = 1, reset_at = excluded.reset_at, updated_at = excluded.updated_at`
 				)

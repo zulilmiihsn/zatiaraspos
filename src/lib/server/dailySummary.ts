@@ -42,8 +42,8 @@ export async function reverseDailySummaryForTransaction(
 				COALESCE(SUM(tk.hpp_amount), 0) AS hpp
 			 FROM transaksi_kasir tk
 			 INNER JOIN buku_kas bk
-				ON bk.branch_id = tk.branch_id AND bk.id = tk.buku_kas_id
-			 WHERE tk.branch_id = ? AND tk.transaction_id = ?
+				ON bk.cabang_id = tk.cabang_id AND bk.id = tk.buku_kas_id
+			 WHERE tk.cabang_id = ? AND tk.transaction_id = ?
 			 GROUP BY sales_date, bk.payment_method
 			 LIMIT 1`
 		)
@@ -74,7 +74,7 @@ export async function reverseDailySummaryForTransaction(
 				COALESCE(SUM(qty), 0) AS qty,
 				COALESCE(SUM(amount), 0) AS gross
 			 FROM transaksi_kasir
-			 WHERE branch_id = ? AND transaction_id = ?
+			 WHERE cabang_id = ? AND transaction_id = ?
 			 GROUP BY COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}')`
 		)
 		.bind(branch, transactionId)
@@ -94,7 +94,7 @@ export async function reverseDailySummaryForTransaction(
 					non_cash_sales = MAX(0, non_cash_sales - ?),
 					hpp_total = MAX(0, hpp_total - ?),
 					updated_at = ?
-				 WHERE branch_id = ? AND sales_date = ?`
+				 WHERE cabang_id = ? AND sales_date = ?`
 			)
 			.bind(itemQty, gross, cashDelta, nonCashDelta, hpp, now, branch, salesDate),
 		...products.map((p) =>
@@ -107,7 +107,7 @@ export async function reverseDailySummaryForTransaction(
 						non_cash_sales = MAX(0, non_cash_sales - ?),
 						transaction_count = MAX(0, transaction_count - 1),
 						updated_at = ?
-					 WHERE branch_id = ? AND sales_date = ? AND produk_id = ?`
+					 WHERE cabang_id = ? AND sales_date = ? AND produk_id = ?`
 				)
 				.bind(
 					Number(p.qty || 0),

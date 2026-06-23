@@ -102,7 +102,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 		}
 
 		const db = getDrizzleDb(platform, branchId);
-		const filters = [eq(profil.branch_id, branchId), eq(profil.username, usernameLama)];
+		const filters = [eq(profil.cabang_id, branchId), eq(profil.username, usernameLama)];
 		if (targetRole) filters.push(eq(profil.role, targetRole));
 
 		const user = await db
@@ -150,7 +150,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 				password: hashedPassword,
 				updated_at: new Date().toISOString()
 			})
-			.where(and(eq(profil.branch_id, branchId), eq(profil.id, user.id)));
+			.where(and(eq(profil.cabang_id, branchId), eq(profil.id, user.id)));
 
 		await publishBranchEvent(
 			platform?.env as Record<string, unknown> | undefined,

@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const limit = Number(url.searchParams.get('limit') || 200);
 	const productId = url.searchParams.get('produk_id');
 
-	const filters: SQL[] = [eq(resepProduk.branch_id, branch)];
+	const filters: SQL[] = [eq(resepProduk.cabang_id, branch)];
 	if (productId) filters.push(eq(resepProduk.produk_id, productId));
 
 	const rows = await db
@@ -79,7 +79,7 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 		// Bulk delete: hapus semua resep untuk produk (dipakai sebelum insert resep baru).
 		await db
 			.delete(resepProduk)
-			.where(and(eq(resepProduk.branch_id, branch), eq(resepProduk.produk_id, productId)));
+			.where(and(eq(resepProduk.cabang_id, branch), eq(resepProduk.produk_id, productId)));
 		await publish(platform, branch, 'resep_produk', 'delete', { transaction_id: productId });
 		await auditDataChange(rawDb, branch, session, 'resep_produk', 'delete_by_product', null, {
 			produk_id: productId
@@ -89,7 +89,7 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	await db
 		.delete(resepProduk)
-		.where(and(eq(resepProduk.branch_id, branch), eq(resepProduk.id, String(id))));
+		.where(and(eq(resepProduk.cabang_id, branch), eq(resepProduk.id, String(id))));
 	await publish(platform, branch, 'resep_produk', 'delete', { id });
 	await auditDataChange(rawDb, branch, session, 'resep_produk', 'delete', id);
 	return json({ ok: true });

@@ -14,7 +14,7 @@ export interface Transaction {
 	id: string;
 	transaction_number: string;
 	user_id: string;
-	branch_id: string;
+	cabang_id: string;
 	customer_name?: string;
 	total_amount: number;
 	payment_method: PaymentMethod;
@@ -91,7 +91,7 @@ export interface FinancialRecord {
 	date: string;
 	time: string;
 	user_id: string;
-	branch_id: string;
+	cabang_id: string;
 	reference_id?: string;
 	created_at: string;
 }
@@ -124,7 +124,7 @@ export interface FinancialSummary {
 
 export interface StoreSession {
 	id: string;
-	branch_id: string;
+	cabang_id: string;
 	user_id: string;
 	opened_at: string;
 	closed_at?: string;
@@ -137,7 +137,7 @@ export interface StoreSession {
 
 export interface CashRegister {
 	id: string;
-	branch_id: string;
+	cabang_id: string;
 	session_id: string;
 	opening_balance: number;
 	current_balance: number;
@@ -257,7 +257,7 @@ export interface TransactionFilters {
 	payment_method?: PaymentMethod;
 	status?: TransactionStatus;
 	user_id?: string;
-	branch_id?: string;
+	cabang_id?: string;
 	min_amount?: number;
 	max_amount?: number;
 }

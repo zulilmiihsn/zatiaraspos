@@ -50,7 +50,7 @@ async function recordRun(databaseName, branches, row) {
 			CONFIG_FILE,
 			'--remote',
 			'--command',
-			`INSERT INTO d1_backup_runs (id, branch_id, database_name, operation, status, file_path, file_size_bytes, message, started_at, finished_at) VALUES ${values}`
+			`INSERT INTO d1_backup_runs (id, cabang_id, database_name, operation, status, file_path, file_size_bytes, message, started_at, finished_at) VALUES ${values}`
 		]);
 	} catch {
 		// Backup file is source of truth; DB run history is best effort.

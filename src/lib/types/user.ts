@@ -13,7 +13,7 @@ export interface User {
 	username: string;
 	email?: string;
 	role: UserRole;
-	branch_id: string;
+	cabang_id: string;
 	branch_name: string;
 	is_active: boolean;
 	last_login?: string;
@@ -77,7 +77,7 @@ export interface AuthSession {
 	user_id: string;
 	username: string;
 	role: UserRole;
-	branch_id: string;
+	cabang_id: string;
 	branch_name: string;
 	token: string;
 	expires_at: number;
@@ -87,7 +87,7 @@ export interface AuthSession {
 export interface LoginCredentials {
 	username: string;
 	password: string;
-	branch_id?: string;
+	cabang_id?: string;
 }
 
 export interface LoginResponse {
@@ -244,7 +244,7 @@ export interface UserForm {
 	full_name?: string;
 	phone?: string;
 	role: UserRole;
-	branch_id: string;
+	cabang_id: string;
 	password?: string;
 	confirm_password?: string;
 }

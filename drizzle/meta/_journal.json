@@ -92,6 +92,13 @@
 			"when": 1781970000000,
 			"tag": "0012_rename_product_cols_id",
 			"breakpoints": true
+		},
+		{
+			"idx": 13,
+			"version": "6",
+			"when": 1781980000000,
+			"tag": "0013_rename_branch_to_cabang",
+			"breakpoints": true
 		}
 	]
 }

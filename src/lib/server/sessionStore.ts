@@ -57,7 +57,7 @@ export async function createAuthSession(
 		.prepare(
 			`INSERT INTO auth_sessions (
 				id,
-				branch_id,
+				cabang_id,
 				user_id,
 				username,
 				role,
@@ -93,7 +93,7 @@ export async function getAuthSession(
 		.prepare(
 			`SELECT
 				id,
-				branch_id,
+				cabang_id,
 				user_id,
 				username,
 				role,
@@ -106,7 +106,7 @@ export async function getAuthSession(
 		.bind(sessionId, Date.now())
 		.first()) as {
 		id: string;
-		branch_id: BranchId;
+		cabang_id: BranchId;
 		user_id: string;
 		username: string;
 		role: string;
@@ -120,7 +120,7 @@ export async function getAuthSession(
 
 	return {
 		id: row.id,
-		branch: row.branch_id,
+		branch: row.cabang_id,
 		userId: row.user_id,
 		username: row.username,
 		role: row.role,

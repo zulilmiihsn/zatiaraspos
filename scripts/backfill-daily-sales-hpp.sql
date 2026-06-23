@@ -18,7 +18,7 @@ SET hpp_total = COALESCE(
 		(
 			SELECT SUM(tk.hpp_amount)
 			FROM transaksi_kasir tk
-			WHERE tk.branch_id = ringkasan_penjualan_harian.branch_id
+			WHERE tk.cabang_id = ringkasan_penjualan_harian.cabang_id
 				AND date(datetime(tk.created_at, '+8 hours')) = ringkasan_penjualan_harian.sales_date
 		),
 		0
