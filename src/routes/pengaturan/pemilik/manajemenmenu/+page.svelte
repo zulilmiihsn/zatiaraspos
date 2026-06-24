@@ -273,9 +273,9 @@
 
 		// 2. Update cache POS setelah fetch sukses
 		await setCache('pos-data', {
-			produkData: menus,
-			kategoriData: kategoriList,
-			tambahanData: ekstraList
+			produkData: $state.snapshot(menus),
+			kategoriData: $state.snapshot(kategoriList),
+			tambahanData: $state.snapshot(ekstraList)
 		});
 
 		if (typeof window !== 'undefined') {
@@ -1204,9 +1204,9 @@
 	async function afterUpdateCachePOS() {
 		// Update local cache
 		await setCache('pos-data', {
-			produkData: menus,
-			kategoriData: kategoriList,
-			tambahanData: ekstraList
+			produkData: $state.snapshot(menus),
+			kategoriData: $state.snapshot(kategoriList),
+			tambahanData: $state.snapshot(ekstraList)
 		});
 
 		// Clear dataService cache untuk memastikan data terbaru
