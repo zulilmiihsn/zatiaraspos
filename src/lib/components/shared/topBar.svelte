@@ -145,7 +145,7 @@
 <AiChatModal
 	bind:isOpen={showAiChat}
 	onClose={closeAiChat}
-	on:recommendationsApplied={handleRecommendationsApplied}
+	onRecommendationsApplied={handleRecommendationsApplied}
 />
 
 <style>
