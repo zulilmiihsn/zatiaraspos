@@ -147,19 +147,13 @@
 			const nextFingerprint = [
 				(nextProducts || []).length,
 				(nextProducts || [])
-					.map(
-						(item: { id?: string; harga?: number }) =>
-							`${item?.id || ''}:${item?.harga ?? 0}`
-					)
+					.map((item: { id?: string; harga?: number }) => `${item?.id || ''}:${item?.harga ?? 0}`)
 					.join(','),
 				(nextCategories || []).length,
 				(nextCategories || []).map((item: { id?: string }) => item?.id || '').join(','),
 				(nextAddons || []).length,
 				(nextAddons || [])
-					.map(
-						(item: { id?: string; harga?: number }) =>
-							`${item?.id || ''}:${item?.harga ?? 0}`
-					)
+					.map((item: { id?: string; harga?: number }) => `${item?.id || ''}:${item?.harga ?? 0}`)
 					.join(',')
 			].join('|');
 
@@ -794,8 +788,7 @@
 									<span
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
-											: 'text-pink-500'}"
-										>+Rp {Number(a.harga ?? 0).toLocaleString('id-ID')}</span
+											: 'text-pink-500'}">+Rp {Number(a.harga ?? 0).toLocaleString('id-ID')}</span
 									>
 								</button>
 							{/each}

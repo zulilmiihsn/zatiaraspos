@@ -390,7 +390,11 @@ export class SessionSecurity {
 			return false;
 		}
 
-		const { timestamp, userId, branchId } = sessionData as any;
+		const { timestamp, userId, branchId } = sessionData as {
+			timestamp?: number;
+			userId?: string;
+			branchId?: string;
+		};
 
 		if (!timestamp || !userId || !branchId) {
 			return false;
@@ -408,7 +412,10 @@ export class SessionSecurity {
 	/**
 	 * Generate secure session data
 	 */
-	static generateSession(userId: string, branchId: string): any {
+	static generateSession(
+		userId: string,
+		branchId: string
+	): { userId: string; branchId: string; timestamp: number; token: string } {
 		return {
 			userId,
 			branchId,

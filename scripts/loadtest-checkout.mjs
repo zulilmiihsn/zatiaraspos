@@ -67,7 +67,10 @@ async function login(username) {
 		body: JSON.stringify({ username, password, branch })
 	});
 	const loginJson = await loginResponse.json().catch(() => null);
-	assert(loginResponse.ok && loginJson?.success, `${username} login failed: ${loginResponse.status}`);
+	assert(
+		loginResponse.ok && loginJson?.success,
+		`${username} login failed: ${loginResponse.status}`
+	);
 	const sidCookie = cookiePair(getSetCookies(loginResponse.headers), 'zatiaras_sid');
 	return [csrfCookie, sidCookie].filter(Boolean).join('; ');
 }

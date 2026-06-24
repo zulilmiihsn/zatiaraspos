@@ -332,7 +332,9 @@
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
 			menuForm.gambar = menu.gambar || '';
 			if (menuForm.lacak_bahan) {
-				const recipes = (await dataService.getProductRecipes(menu.id)) as unknown as ProductRecipe[];
+				const recipes = (await dataService.getProductRecipes(
+					menu.id
+				)) as unknown as ProductRecipe[];
 				recipeItems = recipes.map((recipe) => ({
 					bahan_id: recipe.bahan_id,
 					jumlah_per_item: String(recipe.jumlah_per_item || '')
@@ -1840,9 +1842,7 @@
 													Stok {Number(bahan.stok_saat_ini || 0).toLocaleString('id-ID')}
 													{bahan.satuan}
 													{#if Number(bahan.ambang_stok || 0) > 0}
-														/ minimum {Number(bahan.ambang_stok || 0).toLocaleString(
-															'id-ID'
-														)}
+														/ minimum {Number(bahan.ambang_stok || 0).toLocaleString('id-ID')}
 														{bahan.satuan}
 													{/if}
 												</span>
@@ -2676,7 +2676,8 @@
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<div class="flex flex-col gap-2">
-							<label for="bahan-purchase-jumlah" class="font-semibold text-gray-700">Jumlah Beli</label
+							<label for="bahan-purchase-jumlah" class="font-semibold text-gray-700"
+								>Jumlah Beli</label
 							>
 							<input
 								id="bahan-purchase-jumlah"
@@ -2705,7 +2706,8 @@
 					{#if Number(bahanForm.jumlah_beli_terakhir || 0) > 0}
 						<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
 							HPP bahan {formatCurrency(
-								Number(bahanForm.biaya_beli_terakhir || 0) / Number(bahanForm.jumlah_beli_terakhir || 1)
+								Number(bahanForm.biaya_beli_terakhir || 0) /
+									Number(bahanForm.jumlah_beli_terakhir || 1)
 							)}
 							per {bahanForm.satuan}
 						</div>

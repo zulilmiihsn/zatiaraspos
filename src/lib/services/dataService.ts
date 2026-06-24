@@ -122,22 +122,31 @@ export class DataService {
 				const { startUtc: startUTC, endUtc: endUTC } = witaToUtcRange(getTodayWita());
 
 				const qs = new URLSearchParams({
-						branch,
-						start: startUTC,
-						end: endUTC
-					}).toString();
-					const res = await fetch(`/api/dashboard/stats?${qs}`);
+					branch,
+					start: startUTC,
+					end: endUTC
+				}).toString();
+				const res = await fetch(`/api/dashboard/stats?${qs}`);
 				const payload = res.ok ? await res.json() : {};
 				const { kasir = [], kas = [], summary = [] } = payload;
 
 				if (Array.isArray(summary) && summary.length) {
-					const itemTerjual = summary.reduce((s: number, row: any) => s + (row.jumlah_item || 0), 0);
-					const jumlahTransaksi = summary.reduce(
-						(s: number, row: any) => s + (row.jumlah_transaksi || 0),
+					const itemTerjual = summary.reduce(
+						(s: number, row: Record<string, any>) => s + (row.jumlah_item || 0),
 						0
 					);
-					const omzet = summary.reduce((s: number, row: any) => s + (row.penjualan_kotor || 0), 0);
-					const hppTotal = summary.reduce((s: number, row: any) => s + (row.total_hpp || 0), 0);
+					const jumlahTransaksi = summary.reduce(
+						(s: number, row: Record<string, any>) => s + (row.jumlah_transaksi || 0),
+						0
+					);
+					const omzet = summary.reduce(
+						(s: number, row: Record<string, any>) => s + (row.penjualan_kotor || 0),
+						0
+					);
+					const hppTotal = summary.reduce(
+						(s: number, row: Record<string, any>) => s + (row.total_hpp || 0),
+						0
+					);
 
 					const [avgTransaksi, jamRamai] = await Promise.all([
 						getAvgTransaksiHarian(),
@@ -158,16 +167,21 @@ export class DataService {
 					};
 				}
 
-				const itemTerjual = kasir.reduce((s: number, t: any) => s + (t.jumlah || 1), 0);
-				const txIds = new Set(kas.map((t: any) => t.transaction_id).filter(Boolean));
+				const itemTerjual = kasir.reduce(
+					(s: number, t: Record<string, any>) => s + (t.jumlah || 1),
+					0
+				);
+				const txIds = new Set(
+					kas.map((t: Record<string, any>) => t.transaction_id).filter(Boolean)
+				);
 				const jumlahTransaksi = txIds.size || kas.length;
-				const omzet = kas.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
+				const omzet = kas.reduce((s: number, t: Record<string, any>) => s + (t.nominal || 0), 0);
 				const pemasukan = kas
-					.filter((t: any) => t.tipe === 'in')
-					.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
+					.filter((t: Record<string, any>) => t.tipe === 'in')
+					.reduce((s: number, t: Record<string, any>) => s + (t.nominal || 0), 0);
 				const pengeluaran = kas
-					.filter((t: any) => t.tipe === 'out')
-					.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
+					.filter((t: Record<string, any>) => t.tipe === 'out')
+					.reduce((s: number, t: Record<string, any>) => s + (t.nominal || 0), 0);
 
 				const [avgTransaksi, jamRamai] = await Promise.all([
 					getAvgTransaksiHarian(),
@@ -202,7 +216,7 @@ export class DataService {
 
 				const summaryItems = await dbGet('best_sellers_summary', { start: startUtc, end: endUtc });
 				if (summaryItems.length) {
-					return summaryItems.map((item: any) => ({
+					return summaryItems.map((item: Record<string, any>) => ({
 						nama: item.nama_produk || '-',
 						image: '',
 						total_qty: Number(item.total_qty || 0)
@@ -286,7 +300,7 @@ export class DataService {
 	async getProducts() {
 		const branch = selectedBranch.value || 'default';
 		const offlineKey = `products_${branch}`;
-		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
+		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
 			return offlineData;
 		}
@@ -306,7 +320,7 @@ export class DataService {
 	async getCategories() {
 		const branch = selectedBranch.value || 'default';
 		const offlineKey = `categories_${branch}`;
-		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
+		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
 			return offlineData;
 		}
@@ -326,7 +340,7 @@ export class DataService {
 	async getAddOns() {
 		const branch = selectedBranch.value || 'default';
 		const offlineKey = `addons_${branch}`;
-		const offlineData = ((await idbGet(offlineKey)) as any[] | undefined) || [];
+		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
 			return offlineData;
 		}
@@ -445,7 +459,9 @@ export class DataService {
 				}).toString();
 				const aggRes = await fetch(`/api/reports/aggregate?${aggParams}`);
 				const aggData = aggRes.ok ? await aggRes.json() : null;
-				const laporan: any[] = Array.isArray(aggData?.transactions) ? aggData.transactions : [];
+				const laporan: Record<string, unknown>[] = Array.isArray(aggData?.transactions)
+					? aggData.transactions
+					: [];
 
 				const pemasukan = laporan.filter((t) => t.tipe === 'in');
 				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
@@ -574,7 +590,7 @@ export class DataService {
 		return dateRange;
 	}
 
-	private getCacheOptionsForType(type: string): any {
+	private getCacheOptionsForType(type: string): Record<string, unknown> {
 		const base = { backgroundRefresh: true, staleWhileRevalidate: true };
 		const ttlMap: Record<string, number> = {
 			daily: 300000,

@@ -688,6 +688,18 @@ export const dataManagementTests = {
 // 🧪 TEST RUNNER
 // ============================================================================
 
+export interface TestDefinition {
+	id: string;
+	name: string;
+	deskripsi?: string;
+	test: () => Promise<{ success: boolean; message: string; data?: unknown; error?: unknown }>;
+}
+
+export interface TestSuite {
+	name: string;
+	tests: TestDefinition[];
+}
+
 export interface TestResult {
 	id: string;
 	name: string;
@@ -744,11 +756,11 @@ export class FeatureTestRunner {
 	/**
 	 * Jalankan satu test suite
 	 */
-	private async runTestSuite(suite: unknown): Promise<TestSuiteResult> {
+	private async runTestSuite(suite: TestSuite): Promise<TestSuiteResult> {
 		const startTime = Date.now();
 		const results: TestResult[] = [];
 
-		for (const test of (suite as any).tests) {
+		for (const test of suite.tests) {
 			const testStartTime = Date.now();
 
 			try {
@@ -791,8 +803,8 @@ export class FeatureTestRunner {
 		const failedTests = results.filter((r) => !r.success).length;
 
 		return {
-			name: (suite as any).name,
-			totalTests: (suite as any).tests.length,
+			name: suite.name,
+			totalTests: suite.tests.length,
 			passedTests,
 			failedTests,
 			results,

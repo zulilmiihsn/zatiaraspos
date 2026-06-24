@@ -37,7 +37,8 @@ export default defineConfig({
 			},
 			workbox: {
 				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-				navigateFallback: null,
+				navigateFallback: '/offline',
+				navigateFallbackDenylist: [/^\/api\//, /^\/pos(?:\/|$)/],
 				globPatterns: [
 					'client/**/*.{js,css,html,ico,png,svg,webp,avif,woff2,woff,webmanifest}',
 					'prerendered/**/*.{html,json}'
@@ -72,6 +73,18 @@ export default defineConfig({
 					})
 				],
 				runtimeCaching: [
+					{
+						urlPattern: ({ request, url }) =>
+							request.mode === 'navigate' && /^\/pos(?:\/|$)/.test(url.pathname),
+						handler: 'NetworkFirst',
+						options: {
+							cacheName: 'pos-navigation-v1',
+							networkTimeoutSeconds: 3,
+							cacheableResponse: { statuses: [0, 200] },
+							expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 },
+							precacheFallback: { fallbackURL: '/offline' }
+						}
+					},
 					{
 						urlPattern: /\.(?:png|jpg|jpeg|svg|webp|avif)$/,
 						handler: 'StaleWhileRevalidate',

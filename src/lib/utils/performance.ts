@@ -1,5 +1,5 @@
 // Performance utilities
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
 	func: T,
 	wait: number
 ): (...args: Parameters<T>) => void {
@@ -10,7 +10,7 @@ export function debounce<T extends (...args: any[]) => any>(
 	};
 }
 
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
 	func: T,
 	limit: number
 ): (...args: Parameters<T>) => void {
@@ -25,7 +25,7 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 // Memoization untuk expensive calculations
-export function memoize<T extends (...args: any[]) => any>(
+export function memoize<T extends (...args: unknown[]) => unknown>(
 	func: T,
 	resolver?: (...args: Parameters<T>) => string
 ): T & { clearCache: () => void } {
@@ -56,14 +56,16 @@ export async function measureAsyncPerformance(_name: string, fn: () => Promise<v
 }
 
 // Cart calculations dengan memoization
-export const calculateCartTotal = memoize((cart: any[]) => {
+export const calculateCartTotal = memoize((cart: Record<string, unknown>[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
 		const itemTotal = (item.product?.harga ?? 0) * (item.jumlah ?? 1);
 		const addOnsTotal =
-			(item.addOns || []).reduce((sum: number, addon: any) => sum + (addon.harga ?? 0), 0) *
-			(item.jumlah ?? 1);
+			(item.addOns || []).reduce(
+				(sum: number, addon: Record<string, unknown>) => sum + (addon.harga ?? 0),
+				0
+			) * (item.jumlah ?? 1);
 		total += itemTotal + addOnsTotal;
 		items += item.jumlah ?? 1;
 	}
@@ -71,7 +73,11 @@ export const calculateCartTotal = memoize((cart: any[]) => {
 });
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch(query: string, items: any[], key: string = 'nama'): any[] {
+export function fuzzySearch(
+	query: string,
+	items: Record<string, unknown>[],
+	key: string = 'nama'
+): Record<string, unknown>[] {
 	if (!query.trim()) return items;
 	const searchTerm = query.toLowerCase();
 	// Cari di name dan kategori (jika ada)

@@ -86,7 +86,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		return json({ ok: true, data: rows, duplicate: true });
 	}
 
-	await db.insert(bukuKas).values(newRows as any);
+	await db.insert(bukuKas).values(newRows as (typeof bukuKas.$inferInsert)[]);
 	await publish(platform, branch, 'buku_kas', 'insert', {
 		id: newRows[0]?.id,
 		transaction_id: newRows[0]?.transaction_id as string | undefined
@@ -110,11 +110,11 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(bukuKas)
-		.set({ ...(body.payload as any) })
+		.set({ ...(body.payload as Partial<typeof bukuKas.$inferInsert>) })
 		.where(and(eq(bukuKas.cabang_id, branch), eq(bukuKas.id, String(body.where.id))));
 	await publish(platform, branch, 'buku_kas', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'buku_kas', 'update', body.where.id, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

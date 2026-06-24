@@ -13,9 +13,9 @@ export interface TopbarProps {
 }
 
 export interface TopbarSlots {
-	default: any;
-	actions?: any;
-	download?: any;
+	default: unknown;
+	actions?: unknown;
+	download?: unknown;
 }
 
 // ============================================================================
@@ -29,9 +29,9 @@ export interface ModalProps {
 }
 
 export interface ModalSlots {
-	default: any;
-	header?: any;
-	footer?: any;
+	default: unknown;
+	header?: unknown;
+	footer?: unknown;
 }
 
 export interface ButtonProps {

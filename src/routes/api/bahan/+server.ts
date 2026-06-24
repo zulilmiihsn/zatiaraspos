@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		jumlah_beli_terakhir: Number(row.jumlah_beli_terakhir || 0),
 		biaya_beli_terakhir: Number(row.biaya_beli_terakhir || 0)
 	})) as Array<Record<string, any>>;
-	await db.insert(bahan).values(rows as any);
+	await db.insert(bahan).values(rows as (typeof bahan.$inferInsert)[]);
 	await publish(platform, branch, 'bahan', 'insert', { id: rows[0]?.id });
 	await auditDataChange(rawDb, branch, session, 'bahan', 'insert', rows[0]?.id, {
 		count: rows.length
@@ -65,7 +65,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
-	const safePayload = { ...(body.payload as any) };
+	const safePayload = { ...(body.payload as Record<string, unknown>) };
 	// Coerce field numerik bila ada di payload.
 	if ('stok_saat_ini' in safePayload)
 		safePayload.stok_saat_ini = Number(safePayload.stok_saat_ini || 0);
@@ -86,7 +86,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 		.where(and(eq(bahan.cabang_id, branch), eq(bahan.id, String(body.where.id))));
 	await publish(platform, branch, 'bahan', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'bahan', 'update', body.where.id, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

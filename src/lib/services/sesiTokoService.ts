@@ -61,9 +61,8 @@ export async function getSesiAktif(): Promise<TokoSession | null> {
 		const active =
 			rows
 				.filter((r) => r.is_active)
-				.sort(
-					(a, b) => new Date(b.waktu_buka).getTime() - new Date(a.waktu_buka).getTime()
-				)[0] || null;
+				.sort((a, b) => new Date(b.waktu_buka).getTime() - new Date(a.waktu_buka).getTime())[0] ||
+			null;
 		cacheActiveSession(active);
 		return active;
 	} catch {

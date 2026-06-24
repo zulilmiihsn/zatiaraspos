@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 static/
+.tmp-quality/
+.tmp-pwa/
+.tmp-chrome-offline/

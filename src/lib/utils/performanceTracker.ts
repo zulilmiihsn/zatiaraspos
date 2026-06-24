@@ -325,7 +325,7 @@ export class PerformanceTracker {
 	 * Collect memory metrics
 	 */
 	private collectMemoryMetrics(): PerformanceMetrics['memory'] {
-		const memory = (performance as any).memory;
+		const memory = (performance as { memory?: unknown }).memory;
 
 		if (!memory) {
 			return {
@@ -381,12 +381,14 @@ export class PerformanceTracker {
 	private getFirstInputDelay(): number {
 		const fidEntries = performance.getEntriesByType('first-input');
 		const firstEntry = fidEntries[0];
-		return firstEntry ? (firstEntry as any).processingStart - firstEntry.startTime : 0;
+		return firstEntry
+			? (firstEntry as { processingStart?: number }).processingStart - firstEntry.startTime
+			: 0;
 	}
 
 	private getCumulativeLayoutShift(): number {
 		const clsEntries = performance.getEntriesByType('layout-shift');
-		return clsEntries.reduce((sum, entry) => sum + (entry as any).value, 0);
+		return clsEntries.reduce((sum, entry) => sum + (entry as { value?: number }).value, 0);
 	}
 
 	/**

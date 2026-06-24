@@ -241,7 +241,7 @@ export interface FormField {
 	nama: string;
 	label: string;
 	type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio';
-	value: any;
+	value: unknown;
 	required?: boolean;
 	validation?: ValidationRule[];
 	options?: SelectOption[];
@@ -252,9 +252,9 @@ export interface FormField {
 
 export interface ValidationRule {
 	type: 'required' | 'minLength' | 'maxLength' | 'pattern' | 'custom';
-	value?: any;
+	value?: unknown;
 	message: string;
-	validator?: (value: any) => boolean;
+	validator?: (value: unknown) => boolean;
 }
 
 export interface SelectOption {
@@ -291,7 +291,7 @@ export interface FilterOption {
 	options?: SelectOption[];
 	min?: number;
 	max?: number;
-	defaultValue?: any;
+	defaultValue?: unknown;
 }
 
 // ============================================================================
@@ -337,7 +337,7 @@ export interface AppError {
 export interface ValidationError {
 	field: string;
 	message: string;
-	value?: any;
+	value?: unknown;
 }
 
 export interface ApiError {
@@ -361,7 +361,7 @@ export interface AsyncState<T> {
 
 export interface AsyncAction {
 	type: 'pending' | 'success' | 'error';
-	payload?: any;
+	payload?: unknown;
 	error?: string;
 	timestamp: number;
 }
@@ -418,7 +418,7 @@ export interface TestCase {
 export interface TestResult {
 	success: boolean;
 	message: string;
-	data?: any;
+	data?: unknown;
 	error?: string;
 	executionTime?: number;
 }

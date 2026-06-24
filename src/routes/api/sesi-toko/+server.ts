@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
 	const rows = payloadRows(body.payload, branch);
-	await db.insert(sesiToko).values(rows as any);
+	await db.insert(sesiToko).values(rows as (typeof sesiToko.$inferInsert)[]);
 	await publish(platform, branch, 'sesi_toko', 'insert', { id: rows[0]?.id });
 	await auditDataChange(rawDb, branch, session, 'sesi_toko', 'insert', rows[0]?.id, {
 		count: rows.length
@@ -64,11 +64,11 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(sesiToko)
-		.set({ ...(body.payload as any) })
+		.set({ ...(body.payload as Partial<typeof sesiToko.$inferInsert>) })
 		.where(and(eq(sesiToko.cabang_id, branch), eq(sesiToko.id, String(body.where.id))));
 	await publish(platform, branch, 'sesi_toko', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'sesi_toko', 'update', body.where.id, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

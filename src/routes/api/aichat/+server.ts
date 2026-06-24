@@ -814,15 +814,16 @@ export const POST: RequestHandler = async (event) => {
 	const action = url.searchParams.get('action');
 
 	if (action === 'analyze') {
-		return await handleTransactionAnalysis(request);
+		return await handleTransactionAnalysis(event);
 	}
 
 	// Default: handle regular AI chat
-	return await handleRegularChat(request);
+	return await handleRegularChat(event);
 };
 
 // Handler untuk analisis transaksi
-async function handleTransactionAnalysis(request: Request) {
+async function handleTransactionAnalysis(event: import('./$types').RequestEvent) {
+	const request = event.request;
 	try {
 		const { text } = await request.json();
 
@@ -869,7 +870,8 @@ async function handleTransactionAnalysis(request: Request) {
 }
 
 // Handler untuk regular AI chat
-async function handleRegularChat(request: Request) {
+async function handleRegularChat(event: import('./$types').RequestEvent) {
+	const request = event.request;
 	try {
 		const { question, branch } = await request.json();
 
@@ -915,7 +917,7 @@ async function handleRegularChat(request: Request) {
 		// AI 1: Identifikasi kebutuhan data
 		const dataRequirements = await identifyDataRequirements(question, apiKey);
 
-		const db = getDrizzleDb((event as any).platform, requestedBranch);
+		const db = getDrizzleDb(event.platform, requestedBranch);
 
 		// Hitung waktu WITA dari rentang yang diidentifikasi AI 1
 		// STANDAR: Gunakan WITA untuk query database
@@ -1228,11 +1230,17 @@ async function handleRegularChat(request: Request) {
 
 		// Breakdown metode pembayaran & pola waktu
 		const paymentBreakdown: Record<string, { jumlah: number; nominal: number }> = {};
+		interface LaporanItem {
+			metode_bayar?: string;
+			amount?: number;
+			nominal?: number;
+		}
 		for (const t of laporan) {
-			const pm = (t as any)?.metode_bayar || 'lainnya';
+			const typedT = t as LaporanItem;
+			const pm = typedT.metode_bayar || 'lainnya';
 			if (!paymentBreakdown[pm]) paymentBreakdown[pm] = { jumlah: 0, nominal: 0 };
 			paymentBreakdown[pm].jumlah += 1;
-			paymentBreakdown[pm].nominal += (t.amount || t.nominal || 0) as number;
+			paymentBreakdown[pm].nominal += typedT.amount || typedT.nominal || 0;
 		}
 
 		// Hitung jam ramai dari transaksi POS
@@ -1350,15 +1358,24 @@ async function handleRegularChat(request: Request) {
 		const productIdToSale: Record<string, { jumlah: number; revenue: number; nama?: string }> = {};
 		// Prototype pollution guard: reject dangerous keys
 		const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+		interface TransaksiItem {
+			produk_id?: string;
+			jumlah?: number;
+			harga?: number;
+			amount?: number;
+			nama_kustom?: string;
+			produk?: { nama?: string };
+		}
 		for (const item of transaksiKasirData || []) {
-			const pid = (item as any)?.produk_id;
+			const typedItem = item as TransaksiItem;
+			const pid = typedItem.produk_id;
 			if (!pid || typeof pid !== 'string' || FORBIDDEN_KEYS.has(pid)) continue;
-			const jumlah = Number((item as any)?.jumlah || 0) || 0;
-			const satuan = Number((item as any)?.harga || (item as any)?.amount || 0) || 0;
+			const jumlah = Number(typedItem.jumlah || 0) || 0;
+			const satuan = Number(typedItem.harga || typedItem.amount || 0) || 0;
 			const revenue = satuan * (jumlah || 1);
 			// Ambil nama dari relasi produk atau nama_kustom
 			const productName =
-				(item as any)?.produk?.nama || (item as any)?.nama_kustom || `Produk ${pid.slice(0, 8)}`;
+				typedItem.produk?.nama || typedItem.nama_kustom || `Produk ${pid.slice(0, 8)}`;
 			if (!Object.prototype.hasOwnProperty.call(productIdToSale, pid)) {
 				productIdToSale[pid] = { jumlah: 0, revenue: 0, nama: productName };
 			}

@@ -4,7 +4,11 @@ import { randomBytes } from 'node:crypto';
 
 const baseUrl = (process.argv[2] || 'https://zatiaraspos.pages.dev').replace(/\/$/, '');
 const branch = process.argv[3] || 'samarinda';
-const password = process.env.UAT_PASSWORD || 'zatiaras123';
+const password = process.env.UAT_PASSWORD;
+
+if (!password) {
+	throw new Error('UAT_PASSWORD wajib diisi melalui environment');
+}
 
 function assert(condition, message) {
 	if (!condition) {

@@ -61,7 +61,7 @@ async function consumeDurableRateLimit(
  * (tolak, available:false). Jangan tambah lapisan lain.
  */
 export async function consumeRateLimit(
-	db: any,
+	db: import('@cloudflare/workers-types').D1Database,
 	branch: BranchId,
 	identifier: string,
 	limit: number,

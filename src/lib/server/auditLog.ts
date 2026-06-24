@@ -26,7 +26,11 @@ function toJson(value: Record<string, unknown> | null | undefined) {
 	}
 }
 
-export function auditLogStatement(db: any, branch: BranchId, input: AuditLogInput) {
+export function auditLogStatement(
+	db: import('@cloudflare/workers-types').D1Database,
+	branch: BranchId,
+	input: AuditLogInput
+) {
 	return db
 		.prepare(
 			`INSERT INTO audit_logs (
@@ -62,7 +66,11 @@ export function auditLogStatement(db: any, branch: BranchId, input: AuditLogInpu
 		);
 }
 
-export async function appendAuditLog(db: any, branch: BranchId, input: AuditLogInput) {
+export async function appendAuditLog(
+	db: import('@cloudflare/workers-types').D1Database,
+	branch: BranchId,
+	input: AuditLogInput
+) {
 	try {
 		await auditLogStatement(db, branch, input).run();
 	} catch {

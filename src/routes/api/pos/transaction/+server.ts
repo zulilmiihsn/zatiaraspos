@@ -1,4 +1,5 @@
 import { json, error as kitError } from '@sveltejs/kit';
+import type { D1Database } from '@cloudflare/workers-types';
 import { getD1Database } from '$lib/server/branchResolver';
 import { requireAnyRole, requireSessionBranch } from '$lib/server/apiAuth';
 import { publishBranchEvent } from '$lib/server/realtimePublisher';
@@ -162,7 +163,7 @@ function assertActive(row: { is_active: number | boolean | null }, label: string
 	}
 }
 
-async function getActiveSessionId(db: any, branch: BranchId): Promise<string | null> {
+async function getActiveSessionId(db: D1Database, branch: BranchId): Promise<string | null> {
 	const row = (await db
 		.prepare(
 			`SELECT id
@@ -177,7 +178,7 @@ async function getActiveSessionId(db: any, branch: BranchId): Promise<string | n
 }
 
 async function getExistingByIdempotency(
-	db: any,
+	db: D1Database,
 	branch: BranchId,
 	idempotencyKey: string,
 	idempotencyAvailable = true
@@ -195,7 +196,7 @@ async function getExistingByIdempotency(
 		.first()) as { id: string; transaction_id: string; nominal: number; jumlah: number } | null;
 }
 
-async function hasColumn(db: any, table: string, column: string): Promise<boolean> {
+async function hasColumn(db: D1Database, table: string, column: string): Promise<boolean> {
 	try {
 		const { results = [] } = (await db.prepare(`PRAGMA table_info(${table})`).all()) as {
 			results?: Array<{ name?: string }>;
@@ -206,7 +207,7 @@ async function hasColumn(db: any, table: string, column: string): Promise<boolea
 	}
 }
 
-async function hasTable(db: any, table: string): Promise<boolean> {
+async function hasTable(db: D1Database, table: string): Promise<boolean> {
 	try {
 		const row = (await db
 			.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1`)
@@ -218,7 +219,10 @@ async function hasTable(db: any, table: string): Promise<boolean> {
 	}
 }
 
-async function getCheckoutCapabilities(db: any, branch: BranchId): Promise<CheckoutCapabilities> {
+async function getCheckoutCapabilities(
+	db: D1Database,
+	branch: BranchId
+): Promise<CheckoutCapabilities> {
 	const key = String(branch);
 	let cached = checkoutCapabilityCache.get(key);
 	if (!cached) {
@@ -265,7 +269,7 @@ async function getCheckoutCapabilities(db: any, branch: BranchId): Promise<Check
 }
 
 async function loadProducts(
-	db: any,
+	db: D1Database,
 	branch: BranchId,
 	productIds: string[],
 	stockTrackingAvailable: boolean,
@@ -299,7 +303,7 @@ async function loadProducts(
 }
 
 async function loadRecipesByProduct(
-	db: any,
+	db: D1Database,
 	branch: BranchId,
 	productIds: string[]
 ): Promise<Map<string, RecipeRow[]>> {
@@ -329,7 +333,7 @@ async function loadRecipesByProduct(
 }
 
 async function loadAddOns(
-	db: any,
+	db: D1Database,
 	branch: BranchId,
 	ids: string[]
 ): Promise<Map<string, AddOnRow>> {

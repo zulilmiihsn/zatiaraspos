@@ -9,7 +9,11 @@ const chromePath =
 	process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const cdpPort = Number(process.env.CDP_PORT || 9333);
 const headless = process.env.HEADLESS !== '0';
-const password = process.env.UAT_PASSWORD || 'zatiaras123';
+const password = process.env.UAT_PASSWORD;
+
+if (!password) {
+	throw new Error('UAT_PASSWORD wajib diisi melalui environment');
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

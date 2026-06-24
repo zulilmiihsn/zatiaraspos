@@ -20,15 +20,18 @@
 - [x] Hapus semua `a11y-ignore` comments
 - [x] `pnpm check` → 0 errors ✅
 
-### 📋 Phase 2: Feature Improvement (MENUNGGU)
+### ✅ Phase 2: Feature Improvement (SELESAI)
 
-- [ ] Ditentukan berdasarkan kebutuhan user selanjutnya
+- [x] Scope Phase 3 ditentukan: POS checkout reliability, loading states, empty/error states, offline/realtime validation.
 
-### 📋 Phase 3: Performance & Polish (MENUNGGU)
+### 🔄 Phase 3: POS Production Polish (AKTIF)
 
-- [ ] Optimasi loading time
-- [ ] Audit aksesibilitas (sudah fix a11y-ignore, tapi perlu audit menyeluruh)
-- [ ] PWA offline reliability check
+- [x] Deploy config check: `pnpm deploy:check`
+- [x] Quality test runner failure propagation
+- [x] Local verification: `pnpm check`, `pnpm build`, `pnpm lint`, `pnpm test:features`
+- [x] PWA/offline reliability check
+- [x] Realtime auth-gate smoke check on live Pages endpoint
+- [ ] Premium UI polish for cashier-critical screens
 - [ ] Migrasi `modalSheet.svelte` dari Svelte 4 `createEventDispatcher` ke rune callbacks
 
 ---

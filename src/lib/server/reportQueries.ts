@@ -45,25 +45,28 @@ export async function buildLaporanAggregate(
 		.catch(() => null)) as { gross?: number } | null;
 
 	const productRows =
-		((await rawDb
-			.prepare(
-				`SELECT nama_produk,
+		(
+			(await rawDb
+				.prepare(
+					`SELECT nama_produk,
 					COALESCE(SUM(penjualan_tunai),0) AS cash,
 					COALESCE(SUM(penjualan_nontunai),0) AS non_cash
 				 FROM penjualan_produk_harian
 				 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?
 				 GROUP BY nama_produk`
-			)
-			.bind(branch, startDate, endDate)
-			.all()
-			.catch(() => ({ results: [] }))) as {
-			results?: Array<{ nama_produk?: string; cash?: number; non_cash?: number }>;
-		}).results || [];
+				)
+				.bind(branch, startDate, endDate)
+				.all()
+				.catch(() => ({ results: [] }))) as {
+				results?: Array<{ nama_produk?: string; cash?: number; non_cash?: number }>;
+			}
+		).results || [];
 
 	const manualRows =
-		((await rawDb
-			.prepare(
-				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, nominal,
+		(
+			(await rawDb
+				.prepare(
+					`SELECT id, transaction_id, waktu, sumber, tipe, jenis, nominal,
 					deskripsi, metode_bayar, nama_pelanggan
 				 FROM buku_kas
 				 WHERE cabang_id = ?
@@ -71,12 +74,13 @@ export async function buildLaporanAggregate(
 					AND date(datetime(waktu, '+8 hours')) >= ?
 					AND date(datetime(waktu, '+8 hours')) <= ?
 				 ORDER BY waktu DESC`
-			)
-			.bind(branch, startDate, endDate)
-			.all()
-			.catch(() => ({ results: [] }))) as {
-			results?: Array<Record<string, any>>;
-		}).results || [];
+				)
+				.bind(branch, startDate, endDate)
+				.all()
+				.catch(() => ({ results: [] }))) as {
+				results?: Array<Record<string, any>>;
+			}
+		).results || [];
 
 	const transactions: Array<Record<string, any>> = [];
 	for (const p of productRows) {

@@ -85,10 +85,20 @@
 				</div>
 			</div>
 			<ul class="space-y-1.5 text-sm text-gray-600">
-				<li class="flex gap-2"><span class="text-emerald-500">•</span> Transaksi lama diunduh sebagai file <b>.json</b> + disimpan ke cloud</li>
-				<li class="flex gap-2"><span class="text-emerald-500">•</span> File bisa <b>dipulihkan</b> kapan saja (tidak hilang)</li>
-				<li class="flex gap-2"><span class="text-emerald-500">•</span> Setelah itu dihapus dari database aktif agar ruang lega</li>
-				<li class="flex gap-2"><span class="text-emerald-500">•</span> <b>Laporan & ringkasan</b> tetap utuh</li>
+				<li class="flex gap-2">
+					<span class="text-emerald-500">•</span> Transaksi lama diunduh sebagai file <b>.json</b> +
+					disimpan ke cloud
+				</li>
+				<li class="flex gap-2">
+					<span class="text-emerald-500">•</span> File bisa <b>dipulihkan</b> kapan saja (tidak hilang)
+				</li>
+				<li class="flex gap-2">
+					<span class="text-emerald-500">•</span> Setelah itu dihapus dari database aktif agar ruang
+					lega
+				</li>
+				<li class="flex gap-2">
+					<span class="text-emerald-500">•</span> <b>Laporan & ringkasan</b> tetap utuh
+				</li>
 			</ul>
 		</div>
 
@@ -111,10 +121,11 @@
 			<button
 				onclick={() => (showConfirm = true)}
 				disabled={loading}
-				class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3.5 font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
+				class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3.5 font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
 			>
 				{#if loading}
-					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+					<span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+					></span>
 					Memproses...
 				{:else}
 					<svelte:component this={Download} class="h-5 w-5" />
@@ -127,12 +138,17 @@
 		{#if result}
 			<div class="mt-4" transition:slide|local>
 				{#if result.ok && result.count > 0}
-					<div class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-						<svelte:component this={CheckCircle2} class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+					<div
+						class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+					>
+						<svelte:component
+							this={CheckCircle2}
+							class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500"
+						/>
 						<div class="text-sm text-emerald-800">
-							<b>{result.count} baris</b> berhasil diarsipkan & diunduh
-							(<code class="text-xs">{result.filename}</code>). Salinan juga tersimpan di cloud.
-							Database kini lebih lega.
+							<b>{result.count} baris</b> berhasil diarsipkan & diunduh (<code class="text-xs"
+								>{result.filename}</code
+							>). Salinan juga tersimpan di cloud. Database kini lebih lega.
 						</div>
 					</div>
 				{:else if result.ok}
@@ -155,7 +171,10 @@
 		class="fixed inset-0 z-50 flex items-end justify-center bg-black/30"
 		transition:fade={{ duration: 150 }}
 	>
-		<div class="mx-auto w-full max-w-md rounded-t-2xl bg-white p-6 pb-8 shadow-lg" transition:slide|local>
+		<div
+			class="mx-auto w-full max-w-md rounded-t-2xl bg-white p-6 pb-8 shadow-lg"
+			transition:slide|local
+		>
 			<h3 class="mb-2 text-lg font-bold text-gray-800">Konfirmasi Arsip</h3>
 			<p class="mb-5 text-sm text-gray-600">
 				Semua transaksi <b>sebelum {beforeYear}</b> akan diunduh + disimpan ke cloud, lalu

@@ -51,7 +51,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (rows.some((row) => !row.produk_id || !row.bahan_id || row.jumlah_per_item <= 0)) {
 		throw kitError(400, 'Resep bahan tidak valid');
 	}
-	await db.insert(resepProduk).values(rows as any);
+	await db.insert(resepProduk).values(rows as (typeof resepProduk.$inferInsert)[]);
 	await publish(platform, branch, 'resep_produk', 'insert', {
 		id: rows[0]?.id,
 		transaction_id: rows[0]?.produk_id as string | undefined

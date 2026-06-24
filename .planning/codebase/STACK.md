@@ -8,19 +8,19 @@
 
 ## Frameworks & Libraries
 
-| Library                 | Versi  | Fungsi                    |
-| ----------------------- | ------ | ------------------------- |
-| `@sveltejs/kit`         | ^2.16  | Full-stack web framework  |
-| `svelte`                | ^5.0   | UI components (Runes)     |
-| `tailwindcss`           | ^4.1   | Utility-first CSS         |
-| `drizzle-orm`           | ^0.4x  | ORM untuk Cloudflare D1   |
-| `@cloudflare/workers-types` | ^4.x | Tipe binding D1/R2     |
-| `@vite-pwa/sveltekit`   | ^1.0   | PWA support               |
-| `idb-keyval`            | ^6.2   | IndexedDB key-value store |
-| `lucide-svelte`         | ^0.535 | Icon library              |
-| `pako`                  | ^2.1   | Compression               |
-| `bcryptjs`              | ^3.0   | Password hashing          |
-| `uuid`                  | ^11.1  | UUID generation           |
+| Library                     | Versi  | Fungsi                    |
+| --------------------------- | ------ | ------------------------- |
+| `@sveltejs/kit`             | ^2.16  | Full-stack web framework  |
+| `svelte`                    | ^5.0   | UI components (Runes)     |
+| `tailwindcss`               | ^4.1   | Utility-first CSS         |
+| `drizzle-orm`               | ^0.4x  | ORM untuk Cloudflare D1   |
+| `@cloudflare/workers-types` | ^4.x   | Tipe binding D1/R2        |
+| `@vite-pwa/sveltekit`       | ^1.0   | PWA support               |
+| `idb-keyval`                | ^6.2   | IndexedDB key-value store |
+| `lucide-svelte`             | ^0.535 | Icon library              |
+| `pako`                      | ^2.1   | Compression               |
+| `bcryptjs`                  | ^3.0   | Password hashing          |
+| `uuid`                      | ^11.1  | UUID generation           |
 
 ## Build & Dev Tools
 

@@ -35,7 +35,7 @@ declare global {
 	// Declare pwa-install web component
 	namespace JSX {
 		interface IntrinsicElements {
-			'pwa-install': any;
+			'pwa-install': unknown;
 		}
 	}
 }

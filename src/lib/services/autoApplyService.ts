@@ -67,7 +67,7 @@ export class AutoApplyService {
 		}
 	}
 
-	private async createTransaction(data: any): Promise<void> {
+	private async createTransaction(data: Record<string, unknown>): Promise<void> {
 		if (!data.type) throw new Error('Type transaksi tidak valid');
 		if (!data.amount || data.amount <= 0)
 			throw new Error('Amount transaksi tidak valid atau kosong');
@@ -85,12 +85,14 @@ export class AutoApplyService {
 					metode_bayar: data.metode_bayar || 'tunai',
 					cash_received: Number(data.amount),
 					items: products.length
-						? products.map((product: any) => ({
+						? products.map((product: Record<string, unknown>) => ({
 								product_id: product.id || null,
 								nama_kustom: product.id ? null : product.nama || data.deskripsi,
 								custom_price: product.id ? null : Number(product.harga || data.amount),
 								jumlah: product.quantity || product.jumlah || 1,
-								add_on_ids: (product.addOns || []).map((addOn: any) => addOn.id).filter(Boolean)
+								add_on_ids: (product.addOns || [])
+									.map((addOn: Record<string, unknown>) => addOn.id)
+									.filter(Boolean)
 							}))
 						: [
 								{
@@ -158,13 +160,13 @@ export class AutoApplyService {
 
 	private async createTransactionItems(
 		bukuKasId: string,
-		products: any[],
+		products: Record<string, unknown>[],
 		transactionId: string,
 		branch: string
 	): Promise<void> {
 		const items = products.map((product) => {
 			const addOnsTotal = (product.addOns || []).reduce(
-				(sum: number, addOn: any) => sum + (addOn.harga || 0),
+				(sum: number, addOn: Record<string, unknown>) => sum + (addOn.harga || 0),
 				0
 			);
 			const unitPrice = (product.harga || 0) + addOnsTotal;
@@ -190,7 +192,7 @@ export class AutoApplyService {
 		});
 	}
 
-	private async updateTransaction(data: any): Promise<void> {
+	private async updateTransaction(data: Record<string, unknown>): Promise<void> {
 		if (!data.id) throw new Error('ID transaksi diperlukan untuk update');
 		const branch = selectedBranch.value;
 		const payload = {
@@ -216,7 +218,7 @@ export class AutoApplyService {
 		}
 	}
 
-	private async createCategory(data: any): Promise<void> {
+	private async createCategory(data: Record<string, unknown>): Promise<void> {
 		const branch = selectedBranch.value;
 		const res = await apiFetch('/api/kategori', {
 			method: 'POST',

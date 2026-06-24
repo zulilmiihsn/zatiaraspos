@@ -31,9 +31,20 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
 	const row = Array.isArray(body.payload) ? body.payload : [body.payload];
-	await db.insert(pengaturan).values(row.map((r) => ({ ...r, cabang_id: branch }) as any));
-	await publish(platform, branch, 'pengaturan', 'insert', { id: (row[0] as any)?.id });
-	await auditDataChange(rawDb, branch, session, 'pengaturan', 'insert', (row[0] as any)?.id);
+	await db
+		.insert(pengaturan)
+		.values(row.map((r) => ({ ...r, cabang_id: branch }) as typeof pengaturan.$inferInsert));
+	await publish(platform, branch, 'pengaturan', 'insert', {
+		id: (row[0] as { id?: string | number })?.id
+	});
+	await auditDataChange(
+		rawDb,
+		branch,
+		session,
+		'pengaturan',
+		'insert',
+		(row[0] as { id?: string | number })?.id
+	);
 	return json({ ok: true, data: row });
 };
 
@@ -51,11 +62,11 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const idNum = Number(body.where!.id);
 	await db
 		.update(pengaturan)
-		.set({ ...(body.payload as any) })
+		.set({ ...(body.payload as Partial<typeof pengaturan.$inferInsert>) })
 		.where(and(eq(pengaturan.cabang_id, branch), eq(pengaturan.id, idNum)));
 	await publish(platform, branch, 'pengaturan', 'update', { id: idNum });
 	await auditDataChange(rawDb, branch, session, 'pengaturan', 'update', idNum, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

@@ -48,7 +48,10 @@ export function getBranchDbBinding(branch: BranchId): BranchDbBinding {
 	throw error(400, 'Branch tidak valid');
 }
 
-export function getD1Database(env: Record<string, unknown> | undefined, branch: BranchId): D1Database {
+export function getD1Database(
+	env: Record<string, unknown> | undefined,
+	branch: BranchId
+): D1Database {
 	const binding = getBranchDbBinding(branch);
 	const db = env?.[binding] || env?.DB;
 	if (!db) {

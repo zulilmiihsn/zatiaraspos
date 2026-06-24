@@ -4,10 +4,10 @@ _File ini adalah "memori" proyek. Update setiap kali ada perubahan signifikan._
 
 ## 📌 Status Saat Ini
 
-- **Tanggal**: 2026-05-17
+- **Tanggal**: 2026-06-19
 - **Milestone**: v2.0 — Stabilisasi & Quality
-- **Phase Aktif**: **Phase 5 SELESAI** — Deduplikasi & Polish
-- **Pekerjaan Terakhir**: Penyelesaian Fase 5 (5.4–5.10). Ekstrak `sesiTokoService.ts`, standardize toast ke `createToastManager()`, hapus semua `a11y-ignore` comments, update docs.
+- **Phase Aktif**: **Phase 3 AKTIF** — POS Production Polish
+- **Pekerjaan Terakhir**: Scope Phase 3 ditentukan, quality test runner diperbaiki, `pnpm test:all` lewat, dan live Cloudflare smoke check dasar selesai.
 
 ## 🎉 Milestone Tercapai
 
@@ -17,6 +17,17 @@ _File ini adalah "memori" proyek. Update setiap kali ada perubahan signifikan._
 - ✅ **Fase 4** — Component Extraction (13 komponen baru di `components/`)
 - ✅ **Fase 5** — Deduplikasi & Polish
 - ✅ **`pnpm check`** → 0 errors
+- 🔄 **Phase 3** — POS checkout reliability, loading/error states, offline/realtime smoke, premium cashier UI polish
+
+## ✅ Verifikasi Terakhir
+
+- `pnpm test:all` → 30/30 passed (8 code quality, 22 feature tests)
+- `pnpm deploy:check` → deploy config ready
+- `https://zatiaraspos.pages.dev` → 200 OK
+- `https://zatiaraspos.pages.dev/login` → 200 OK
+- `https://zatiaraspos.pages.dev/api/data?table=produk&branch=samarinda` tanpa session → 401 Unauthorized
+- `https://zatiaraspos.pages.dev/api/realtime?branch=samarinda` tanpa session → 401 Unauthorized
+- `wrangler deployments list --config wrangler.realtime.jsonc` → realtime worker deployments visible
 
 ## 🛠️ Setup Yang Sudah Selesai
 
@@ -41,7 +52,7 @@ src/
 │   │   └── pos/        # ProductGrid, CartPreview, CustomItemModal [NEW]
 │   ├── config/         # env.ts — environment variable access
 │   ├── constants/      # navigation.ts — NAV_ITEMS, getNavIndex [NEW]
-│   ├── database/       # supabaseClient.ts — Supabase client singleton
+│   ├── database/       # schema.ts — Cloudflare D1 schema via Drizzle
 │   ├── server/         # Server-side logic (sessionStore)
 │   ├── services/       # dataService, sesiTokoService [NEW], aiAnalysis
 │   ├── stores/         # Svelte 5 rune stores (userRole, selectedBranch, securitySettings, posGridView)
@@ -68,7 +79,7 @@ src/
 
 1. Auth pakai custom session (cookie-based), BUKAN Supabase Auth
 2. CSRF protection aktif untuk route POST `/api/veriflogin`, `/api/gantikeamanan`, `/api/logout`
-3. Supabase dipakai sebagai data store (bukan auth provider)
+3. Cloudflare D1 dipakai sebagai data store utama, dengan Drizzle schema dan branch-scoped server access
 4. Offline-first via IndexedDB (`idb-keyval`)
 5. Toast standardized ke `createToastManager()` dari `$lib/utils/ui`
 6. sesi_toko fetch centralized ke `$lib/services/sesiTokoService`

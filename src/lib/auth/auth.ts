@@ -32,7 +32,7 @@ if (typeof window !== 'undefined') {
 export const auth = {
 	// Check if user is authenticated
 	isAuthenticated(): boolean {
-		const currentSession = get(session) as any;
+		const currentSession = get(session) as { role?: string; id?: string } | null;
 		return Boolean(currentSession?.isAuthenticated);
 	},
 
@@ -45,7 +45,7 @@ export const auth = {
 	// Check if user has specific role
 	hasRole(role: string): boolean {
 		const user = this.getCurrentUser();
-		return (user as any)?.role === role;
+		return (user as { role?: string })?.role === role;
 	},
 
 	// Logout function

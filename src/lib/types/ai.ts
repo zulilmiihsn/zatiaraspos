@@ -19,7 +19,7 @@ export interface DetectedTransaction {
 	deskripsi: string;
 	category?: string;
 	confidence: number;
-	products?: any[]; // Product details for sales transactions
+	products?: unknown[]; // Product details for sales transactions
 }
 
 export interface AiRecommendation {
@@ -27,7 +27,7 @@ export interface AiRecommendation {
 	action: 'create_transaction' | 'update_transaction' | 'create_category' | 'other';
 	title: string;
 	deskripsi: string;
-	data: any;
+	data: unknown;
 	priority: 'high' | 'medium' | 'low';
 }
 

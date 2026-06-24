@@ -581,9 +581,7 @@
 											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
 										</div>
 										<span class="shrink-0 font-bold text-pink-500"
-											>Rp {(
-												(item.product.harga ?? 0) * item.jumlah
-											).toLocaleString('id-ID')}</span
+											>Rp {((item.product.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</span
 										>
 									</div>
 									{#if item.addOns && item.addOns.length > 0}
@@ -592,9 +590,7 @@
 												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
 													<span class="truncate">+ {ekstra.nama}</span>
 													<span class="shrink-0"
-														>Rp {((ekstra.harga ?? 0) * item.jumlah).toLocaleString(
-															'id-ID'
-														)}</span
+														>Rp {((ekstra.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</span
 													>
 												</div>
 											{/each}

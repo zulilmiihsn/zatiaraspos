@@ -68,20 +68,23 @@ export async function reverseDailySummaryForTransaction(
 	const now = new Date().toISOString();
 
 	// Kontribusi per produk untuk daily_product_sales.
-	const products = ((await rawDb
-		.prepare(
-			`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS produk_id,
+	const products =
+		(
+			(await rawDb
+				.prepare(
+					`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS produk_id,
 				COALESCE(SUM(jumlah), 0) AS jumlah,
 				COALESCE(SUM(nominal), 0) AS gross
 			 FROM transaksi_kasir
 			 WHERE cabang_id = ? AND transaction_id = ?
 			 GROUP BY COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}')`
-		)
-		.bind(branch, transactionId)
-		.all()
-		.catch(() => ({ results: [] }))) as {
-		results?: Array<{ produk_id?: string; jumlah?: number; gross?: number }>;
-	}).results || [];
+				)
+				.bind(branch, transactionId)
+				.all()
+				.catch(() => ({ results: [] }))) as {
+				results?: Array<{ produk_id?: string; jumlah?: number; gross?: number }>;
+			}
+		).results || [];
 
 	const statements = [
 		rawDb

@@ -120,7 +120,7 @@ class RouteLoader {
 	/**
 	 * Get cached route data
 	 */
-	getCachedRoute(path: string): any {
+	getCachedRoute(path: string): unknown {
 		const cached = this.cache[path];
 		if (!cached || !this.isRouteCached(path)) return null;
 

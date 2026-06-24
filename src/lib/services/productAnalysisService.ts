@@ -7,7 +7,7 @@ export interface ProductWithAddOns extends Product {
 
 export interface ProductAnalysisData {
 	products: ProductWithAddOns[];
-	categories: any[];
+	categories: unknown[];
 	addOns: AddOn[];
 }
 
@@ -36,9 +36,9 @@ export class ProductAnalysisService {
 		}
 
 		try {
-			let products: any[] = [];
-			let categories: any[] = [];
-			let addOns: any[] = [];
+			let products: unknown[] = [];
+			let categories: unknown[] = [];
+			let addOns: unknown[] = [];
 
 			[products, categories, addOns] = await Promise.all([
 				dataService.getProducts(),

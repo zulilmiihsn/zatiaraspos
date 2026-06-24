@@ -4,13 +4,13 @@
  */
 
 interface LazyComponent {
-	component: any;
+	component: unknown;
 	loading: boolean;
 	error: Error | null;
 }
 
 interface LazyModule {
-	module: any;
+	module: unknown;
 	loading: boolean;
 	error: Error | null;
 }

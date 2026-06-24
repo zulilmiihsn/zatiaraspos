@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
 	const rows = payloadRows(body.payload, branch);
-	await db.insert(kategori).values(rows as any);
+	await db.insert(kategori).values(rows as (typeof kategori.$inferInsert)[]);
 	await publish(platform, branch, 'kategori', 'insert', { id: rows[0]?.id });
 	await auditDataChange(rawDb, branch, session, 'kategori', 'insert', rows[0]?.id, {
 		count: rows.length
@@ -56,11 +56,11 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(kategori)
-		.set({ ...(body.payload as any) })
+		.set({ ...(body.payload as Partial<typeof kategori.$inferInsert>) })
 		.where(and(eq(kategori.cabang_id, branch), eq(kategori.id, String(body.where.id))));
 	await publish(platform, branch, 'kategori', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'kategori', 'update', body.where.id, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

@@ -1,16 +1,17 @@
-# Daftar Tugas Migrasi Cloudflare & Ably
+# Daftar Tugas Migrasi Cloudflare & Durable Objects
 
 - [/] Fase 1: Setup Dependensi & Hapus Supabase
   - [/] Uninstall `@supabase/supabase-js`
-  - [/] Install `drizzle-orm`, `drizzle-kit`, `@aws-sdk/client-s3`, `ably`
+  - [/] Install `drizzle-orm`, `drizzle-kit`, `@aws-sdk/client-s3`
 - [x] Fase 2: Database D1 (SQLite) & Drizzle
   - [x] Buat file `schema.ts` (Tabel `buku_kas`, `transaksi_kasir`, `produk`, `kategori`, `tambahan`, `profil`)
   - [x] Tambahkan kolom `branch_id` ke semua tabel untuk multi-branch
   - [x] Setup `drizzle.config.ts` dan integrasi D1 di `wrangler.jsonc`
   - [x] Hapus `supabaseClient.ts`
-- [/] Fase 3: Realtime (Ably)
-  - [ ] Buat endpoint auth token `/api/ably-token/+server.ts`
-  - [ ] Inisialisasi client Ably di `ablyClient.ts`
+- [x] Fase 3: Realtime (Cloudflare Durable Objects)
+  - [x] Buat endpoint WebSocket `/api/realtime/+server.ts`
+  - [x] Inisialisasi client WebSocket di `durableObjectClient.ts`
+  - [x] Tambahkan Durable Object hub `realtimeDurableObject.js`
 - [ ] Fase 4: Storage (R2)
   - [ ] Buat konfigurasi `s3Client.ts` untuk R2
   - [ ] Ubah logika upload produk agar mengarah ke R2
@@ -19,4 +20,4 @@
   - [ ] Hapus semua pemanggilan Supabase `from(...)`
 - [ ] Fase 6: Pengujian
   - [ ] Tes build Cloudflare adapter
-  - [ ] Tes lokal D1 dan mutasi realtime Ably
+  - [ ] Tes lokal D1 dan mutasi realtime Durable Objects

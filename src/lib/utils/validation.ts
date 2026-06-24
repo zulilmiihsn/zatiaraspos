@@ -7,7 +7,7 @@ export interface ValidationRule {
 	pattern?: RegExp;
 	min?: number;
 	max?: number;
-	custom?: (value: any) => string | null;
+	custom?: (value: string) => string | null;
 }
 
 export interface ValidationResult {
@@ -144,7 +144,11 @@ export function validatePasswordDemo(password: string): ValidationResult {
 }
 
 // Validasi pemasukan/pengeluaran
-export function validateIncomeExpense(data: any): ValidationResult {
+export function validateIncomeExpense(data: {
+	nominal?: unknown;
+	jenis?: unknown;
+	deskripsi?: unknown;
+}): ValidationResult {
 	const errors: string[] = [];
 
 	// Validasi nominal

@@ -11,13 +11,16 @@
 
 - [x] Scan existing routes for Svelte 5 Runes migration.
 - [x] Optimize database queries for performance.
-- [x] Ensure full RLS policies are active on Supabase.
+- [x] Verify branch-scoped server access for Cloudflare D1.
 
-## 🚀 Phase 3: New Feature Implementation (Active)
+## 🚀 Phase 3: POS Production Polish (Active)
 
-- [ ] Define high-priority features (e.g., specific POS improvements).
-- [ ] Implement new UI-spec for premium look & feel.
+- [x] Define high-priority scope: POS checkout reliability, loading states, empty/error states, and offline/realtime validation.
+- [x] Fix quality test runner so failed suites return a failing process exit.
+- [ ] Add focused UI polish for cashier-critical screens without changing core transaction rules.
+- [x] Run local verification: typecheck, build, lint, feature tests.
+- [x] Run Cloudflare deployment smoke checks for public pages, protected API, realtime auth gate, and worker deployment visibility.
 
 ---
 
-**Status**: Ready to take instructions for Phase 3 (New Feature Implementation).
+**Status**: Phase 3 active. Scope is production polish, not broad new features.

@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { getD1Database } from '$lib/server/branchResolver';
+import { getD1Database, type BranchId } from '$lib/server/branchResolver';
 import { requireAnyRole, requireAuthSession, requireSessionBranch } from '$lib/server/apiAuth';
 import type { RequestHandler } from './$types';
 
 function getDb(platform: App.Platform | undefined, branch: string) {
-	return getD1Database(platform?.env as Record<string, unknown> | undefined, branch as any);
+	return getD1Database(platform?.env as Record<string, unknown> | undefined, branch as BranchId);
 }
 
 function clampWindowMinutes(value: string | null) {

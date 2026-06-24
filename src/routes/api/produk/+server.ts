@@ -39,7 +39,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
 	const rows = payloadRows(body.payload, branch);
-	await db.insert(produk).values(rows as any);
+	await db.insert(produk).values(rows as (typeof produk.$inferInsert)[]);
 	await publish(platform, branch, 'produk', 'insert', { id: rows[0]?.id });
 	await auditDataChange(rawDb, branch, session, 'produk', 'insert', rows[0]?.id, {
 		count: rows.length
@@ -64,12 +64,12 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	if (kategoriId !== undefined && id == null) {
 		await db
 			.update(produk)
-			.set({ ...(body.payload as any) })
+			.set({ ...(body.payload as Partial<typeof produk.$inferInsert>) })
 			.where(and(eq(produk.cabang_id, branch), eq(produk.kategori_id, String(kategoriId))));
 		await publish(platform, branch, 'produk', 'update');
 		await auditDataChange(rawDb, branch, session, 'produk', 'bulk_update', null, {
 			kategori_id: kategoriId,
-			fields: Object.keys(body.payload as any)
+			fields: Object.keys(body.payload as Record<string, unknown>)
 		});
 		return json({ ok: true });
 	}
@@ -77,11 +77,11 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	// Mode single: update satu produk by id.
 	await db
 		.update(produk)
-		.set({ ...(body.payload as any) })
+		.set({ ...(body.payload as Partial<typeof produk.$inferInsert>) })
 		.where(and(eq(produk.cabang_id, branch), eq(produk.id, String(id))));
 	await publish(platform, branch, 'produk', 'update', { id });
 	await auditDataChange(rawDb, branch, session, 'produk', 'update', id, {
-		fields: Object.keys(body.payload as any)
+		fields: Object.keys(body.payload as Record<string, unknown>)
 	});
 	return json({ ok: true });
 };

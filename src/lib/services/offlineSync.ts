@@ -68,7 +68,7 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 				idempotency_key: bukuKas.transaction_id || bukuKas.id,
 				nama_pelanggan: bukuKas.nama_pelanggan || null,
 				metode_bayar: bukuKas.metode_bayar,
-				items: payload.transaksiKasir.map((item: any) => ({
+				items: payload.transaksiKasir.map((item: Record<string, unknown>) => ({
 					product_id: item.produk_id || null,
 					nama_kustom: item.nama_kustom || null,
 					custom_price: item.produk_id ? null : item.harga || item.nominal,
@@ -88,7 +88,10 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 			await dbPost(
 				'transaksi_kasir',
 				'insert',
-				payload.transaksiKasir.map((item: any) => ({ ...item, buku_kas_id: bukuKas.id }))
+				payload.transaksiKasir.map((item: Record<string, unknown>) => ({
+					...item,
+					buku_kas_id: bukuKas.id
+				}))
 			);
 		}
 		return;
@@ -175,4 +178,3 @@ if (typeof window !== 'undefined') {
 		void retryFailedPendingTransactions(['auth']).then(() => syncPendingTransactions());
 	});
 }
-

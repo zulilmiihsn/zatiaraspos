@@ -56,7 +56,7 @@ export class AuthGuard {
 		return true;
 	}
 
-	private persistValidatedSession(payload: any): void {
+	private persistValidatedSession(payload: Record<string, unknown>): void {
 		if (!payload?.authenticated || !payload?.user || !Number.isFinite(Number(payload.expiresAt))) {
 			return;
 		}

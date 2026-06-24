@@ -51,13 +51,16 @@ export class AiAnalysisService {
 	/**
 	 * Parse response dari AI menjadi struktur yang dapat digunakan
 	 */
-	private parseAnalysisResponse(data: any, originalText: string): TransactionAnalysis {
+	private parseAnalysisResponse(
+		data: Record<string, unknown>,
+		originalText: string
+	): TransactionAnalysis {
 		const detectedTransactions: DetectedTransaction[] = [];
 		const recommendations: AiRecommendation[] = [];
 
 		// Parse detected transactions
 		if (data.transactions) {
-			data.transactions.forEach((tx: any, index: number) => {
+			data.transactions.forEach((tx: Record<string, unknown>, index: number) => {
 				detectedTransactions.push({
 					type: this.mapTransactionType(tx.type),
 					amount: Number(tx.amount) || 0,
@@ -93,7 +96,7 @@ export class AiAnalysisService {
 			});
 		} else {
 			// Gunakan rekomendasi dari AI langsung
-			data.recommendations.forEach((rec: any, index: number) => {
+			data.recommendations.forEach((rec: Record<string, unknown>, index: number) => {
 				// Jika AI tidak mengirim data, gunakan detected transactions
 				let recommendationData = rec.data || {};
 
