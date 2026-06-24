@@ -37,8 +37,8 @@ export default defineConfig({
 			},
 			workbox: {
 				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-				navigateFallback: '/offline',
-				navigateFallbackDenylist: [/^\/api\//, /^\/pos(?:\/|$)/],
+				navigateFallback: null,
+				// navigateFallbackDenylist removed since fallback is null
 				globPatterns: [
 					'client/**/*.{js,css,html,ico,png,svg,webp,avif,woff2,woff,webmanifest}',
 					'prerendered/**/*.{html,json}'
