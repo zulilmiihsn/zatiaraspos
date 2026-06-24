@@ -157,23 +157,23 @@
 		};
 	});
 
-	const calculateCartSummary = memoize((cart: BayarCartItem[]) => {
-		let totalQty = 0;
-		let totalHarga = 0;
-		for (const item of cart) {
-			totalQty += item.jumlah;
-			totalHarga += item.jumlah * (item.product.harga ?? 0);
-			if (item.addOns) {
-				totalHarga += item.addOns.reduce(
-					(a: number, b: BayarAddOn) => a + (b.harga ?? 0) * item.jumlah,
-					0
-				);
+	let { totalQty, totalHarga } = $derived(
+		(() => {
+			let totalQty = 0;
+			let totalHarga = 0;
+			for (const item of cart) {
+				totalQty += item.jumlah;
+				totalHarga += item.jumlah * (item.product.harga ?? 0);
+				if (item.addOns) {
+					totalHarga += item.addOns.reduce(
+						(a: number, b: BayarAddOn) => a + (b.harga ?? 0) * item.jumlah,
+						0
+					);
+				}
 			}
-		}
-		return { totalQty, totalHarga };
-	});
-
-	let { totalQty, totalHarga } = $derived(calculateCartSummary(cart));
+			return { totalQty, totalHarga };
+		})()
+	);
 	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
 	let formattedCashReceived = $derived(
 		cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : ''

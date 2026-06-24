@@ -269,19 +269,13 @@
 	}
 
 	// Memoized computed values untuk performance
-	const memoizedCartTotal = memoize(calculateCartTotal);
-	let cartTotal = $derived(memoizedCartTotal(cart));
+	let cartTotal = $derived(calculateCartTotal(cart));
 	let totalItems = $derived(cartTotal.items);
 	let totalHarga = $derived(cartTotal.total);
 
 	// Memoized filtered products dengan optimasi
-	const memoizedFilter = memoize(
-		(
-			products: PosProduct[],
-			categories: PosCategory[],
-			selectedCategory: string,
-			search: string
-		) => {
+	let filteredProducts = $derived(
+		(() => {
 			let filtered = products;
 			if (search) {
 				filtered = fuzzySearch(search, products);
@@ -290,12 +284,9 @@
 				filtered = filtered.filter((p) => p.kategori_id === selectedCategory);
 			}
 			return filtered;
-		},
-		(products, categories, selectedCategory, search) =>
-			`${products.length}-${categories.length}-${selectedCategory}-${search}`
+		})()
 	);
 
-	let filteredProducts = $derived(memoizedFilter(products, categories, selectedCategory, search));
 
 	let showCartModal = $state(false);
 	function openCartModal() {

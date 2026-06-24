@@ -479,43 +479,7 @@
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
-	// Memoize untuk summary box
-	const memoizedSummary = memoize(
-		(
-			pemasukanUsahaDetail: BukuKasRecord[],
-			pemasukanLainDetail: BukuKasRecord[],
-			bebanUsahaDetail: BukuKasRecord[],
-			bebanLainDetail: BukuKasRecord[]
-		) => {
-			// Gunakan nominal seperti dataService, fallback ke amount jika nominal tidak ada
-			const totalPemasukan = pemasukanUsahaDetail
-				.concat(pemasukanLainDetail)
-				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0);
-			const totalPengeluaran = bebanUsahaDetail
-				.concat(bebanLainDetail)
-				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0);
 
-			// Laba (Rugi) Kotor = Pendapatan - Pengeluaran
-			const labaKotor = totalPemasukan - totalPengeluaran;
-
-			// Pajak Penghasilan = 0,5% dari Laba Kotor, tapi 0 jika Laba Kotor < 0
-			const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
-
-			// Laba (Rugi) Bersih = Laba Kotor - Pajak
-			const labaBersih = labaKotor - pajak;
-
-			return {
-				pendapatan: totalPemasukan,
-				pengeluaran: totalPengeluaran,
-				saldo: totalPemasukan - totalPengeluaran,
-				labaKotor,
-				pajak,
-				labaBersih
-			};
-		},
-		(a: BukuKasRecord[], b: BukuKasRecord[], c: BukuKasRecord[], d: BukuKasRecord[]) =>
-			`${a.length}-${b.length}-${c.length}-${d.length}`
-	);
 
 	// Fungsi untuk menghitung range tanggal berdasarkan filter type
 	function calculateDateRange(type: string, date?: string, month?: string, year?: string) {
