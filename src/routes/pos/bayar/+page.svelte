@@ -31,11 +31,11 @@
 
 	interface BayarAddOn {
 		id: string;
-		name: string;
+		nama: string;
 		harga: number;
 	}
 	interface BayarCartItem {
-		product: { id: string; name: string; harga: number; tipe: string };
+		product: { id: string; nama: string; harga: number; tipe: string };
 		jumlah: number;
 		addOns: BayarAddOn[];
 		gula: string;
@@ -313,7 +313,7 @@
 				const isCustom = item.product.id.toString().startsWith('custom-');
 				return {
 					product_id: isCustom ? null : item.product.id,
-					nama_kustom: isCustom ? item.product.name : null,
+					nama_kustom: isCustom ? item.product.nama : null,
 					custom_price: isCustom ? (item.product.harga ?? 0) : null,
 					jumlah: item.jumlah,
 					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
@@ -425,10 +425,10 @@
 		// Daftar pesanan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 		cart.forEach((item: BayarCartItem, idx: number) => {
-			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.jumlah}</td><td style='text-align:right;'>Rp${(item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.nama} x${item.jumlah}</td><td style='text-align:right;'>Rp${(item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
 				item.addOns.forEach((a: BayarAddOn) => {
-					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</td></tr>`;
+					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.nama}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</td></tr>`;
 				});
 			}
 			const detail = [
@@ -577,7 +577,7 @@
 								<li class="flex flex-col gap-1 py-3">
 									<div class="flex items-start justify-between gap-3">
 										<div class="min-w-0">
-											<div class="truncate font-semibold text-stone-950">{item.product.name}</div>
+											<div class="truncate font-semibold text-stone-950">{item.product.nama}</div>
 											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
 										</div>
 										<span class="shrink-0 font-bold text-pink-500"
@@ -590,7 +590,7 @@
 										<div class="mt-1 flex flex-col gap-0.5 rounded-lg bg-stone-50 px-3 py-2">
 											{#each item.addOns as ekstra}
 												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
-													<span class="truncate">+ {ekstra.name}</span>
+													<span class="truncate">+ {ekstra.nama}</span>
 													<span class="shrink-0"
 														>Rp {((ekstra.harga ?? 0) * item.jumlah).toLocaleString(
 															'id-ID'

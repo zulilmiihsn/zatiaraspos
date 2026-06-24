@@ -24,7 +24,7 @@ declare global {
 				// DurableObjectNamespace dibiarkan longgar: tipe Cloudflare-nya menyeret
 				// signature fetch/Request CF yang bentrok dengan DOM Request di publisher.
 				REALTIME_HUB?: {
-					idFromName(name: string): unknown;
+					idFromName(nama: string): unknown;
 					get(id: unknown): { fetch(request: Request): Promise<Response> };
 				};
 				R2_PUBLIC_URL?: string;

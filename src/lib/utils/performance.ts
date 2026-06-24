@@ -71,7 +71,7 @@ export const calculateCartTotal = memoize((cart: any[]) => {
 });
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch(query: string, items: any[], key: string = 'name'): any[] {
+export function fuzzySearch(query: string, items: any[], key: string = 'nama'): any[] {
 	if (!query.trim()) return items;
 	const searchTerm = query.toLowerCase();
 	// Cari di name dan kategori (jika ada)

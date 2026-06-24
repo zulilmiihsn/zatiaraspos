@@ -105,7 +105,7 @@
 	}
 
 	async function saveTransaksi(form: {
-		amount: number;
+		nominal: number;
 		deskripsi: string;
 		transaction_date: string;
 		transaction_time: string;
@@ -135,7 +135,7 @@
 			tipe: mode === 'pemasukan' ? 'in' : 'out',
 			sumber: 'catat',
 			metode_bayar: form.metode_bayar,
-			amount: form.amount,
+			nominal: form.nominal,
 			deskripsi: form.deskripsi,
 			id_sesi_toko,
 			waktu: utcTime,
@@ -276,7 +276,7 @@
 
 		// Validate complete data object
 		const dataToValidate = {
-			amount: parseFloat(sanitizedNominal.replace(/\D/g, '')),
+			nominal: parseFloat(sanitizedNominal.replace(/\D/g, '')),
 			deskripsi: sanitizedNama,
 			transaction_date: sanitizedDate,
 			transaction_time: sanitizedTime,

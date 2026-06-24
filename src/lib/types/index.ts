@@ -238,7 +238,7 @@ export interface EventHandlers {
 // ============================================================================
 
 export interface FormField {
-	name: string;
+	nama: string;
 	label: string;
 	type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio';
 	value: any;
@@ -377,7 +377,7 @@ export type AsyncResult<T> = Promise<{
 // ============================================================================
 
 export interface PWAConfig {
-	name: string;
+	nama: string;
 	short_name: string;
 	deskripsi: string;
 	theme_color: string;
@@ -410,7 +410,7 @@ export interface OfflineConfig {
 
 export interface TestCase {
 	id: string;
-	name: string;
+	nama: string;
 	deskripsi: string;
 	test: () => Promise<TestResult>;
 }
@@ -424,7 +424,7 @@ export interface TestResult {
 }
 
 export interface TestSuite {
-	name: string;
+	nama: string;
 	tests: TestCase[];
 }
 

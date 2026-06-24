@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 		.select()
 		.from(bahan)
 		.where(eq(bahan.cabang_id, branch))
-		.orderBy(asc(bahan.name))
+		.orderBy(asc(bahan.nama))
 		.limit(limit);
 	return json(rows);
 };

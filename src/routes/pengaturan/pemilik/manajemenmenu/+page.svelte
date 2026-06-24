@@ -49,7 +49,7 @@
 	let mutasiBahanId = $state<string | number | null>(null);
 
 	let menuForm = $state({
-		name: '',
+		nama: '',
 		kategori_id: null as string | number | null,
 		tipe: 'minuman' as 'minuman' | 'makanan' | 'snack',
 		harga: '',
@@ -60,9 +60,9 @@
 		gambar: ''
 	});
 
-	let ekstraForm = $state({ name: '', harga: '' });
+	let ekstraForm = $state({ nama: '', harga: '' });
 	let bahanForm = $state({
-		name: '',
+		nama: '',
 		satuan: 'gram',
 		stok_saat_ini: '',
 		ambang_stok: '',
@@ -80,7 +80,7 @@
 	let hppPurchaseText = $state('');
 	let hppParsedItems = $state<
 		Array<{
-			name: string;
+			nama: string;
 			satuan: string;
 			purchase_qty: number;
 			purchase_cost: number;
@@ -161,8 +161,8 @@
 				if (!keyword)
 					return selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori;
 				const kategoriNama =
-					kategoriList.find((k) => k.id === menu.kategori_id)?.name?.toLowerCase() || '';
-				const match = menu.name.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
+					kategoriList.find((k) => k.id === menu.kategori_id)?.nama?.toLowerCase() || '';
+				const match = menu.nama.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
 				return (
 					(selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match
 				);
@@ -321,7 +321,7 @@
 			editMenuId = menu.id;
 			// Format harga untuk display jika ada
 			const formattedPrice = menu.harga ? menu.harga.toLocaleString('id-ID') : '';
-			menuForm.name = menu.name;
+			menuForm.nama = menu.nama;
 			menuForm.kategori_id = menu.kategori_id as number;
 			menuForm.tipe = menu.tipe;
 			menuForm.harga = formattedPrice;
@@ -340,7 +340,7 @@
 			}
 		} else {
 			editMenuId = null;
-			menuForm.name = '';
+			menuForm.nama = '';
 			menuForm.kategori_id = null;
 			menuForm.tipe = 'minuman';
 			menuForm.harga = '';
@@ -355,7 +355,7 @@
 	function closeMenuForm() {
 		showMenuForm = false;
 		editMenuId = null;
-		menuForm.name = '';
+		menuForm.nama = '';
 		menuForm.kategori_id = null;
 		menuForm.tipe = 'minuman';
 		menuForm.harga = '';
@@ -369,7 +369,7 @@
 	}
 
 	async function saveMenu() {
-		if (!menuForm.name || menuForm.name.trim() === '') {
+		if (!menuForm.nama || menuForm.nama.trim() === '') {
 			notifModalMsg = 'Nama menu wajib diisi!';
 			notifModalType = 'warning';
 			showNotifModal = true;
@@ -406,7 +406,7 @@
 				: parseInt(menuForm.harga);
 
 		const payload = {
-			name: menuForm.name,
+			nama: menuForm.nama,
 			kategori_id: menuForm.kategori_id,
 			tipe: menuForm.tipe,
 			harga: priceValue,
@@ -483,7 +483,7 @@
 	}
 
 	function getBahanName(id: string | number) {
-		return bahanList.find((item) => String(item.id) === String(id))?.name || 'Bahan';
+		return bahanList.find((item) => String(item.id) === String(id))?.nama || 'Bahan';
 	}
 
 	function getBahanUnit(id: string | number) {
@@ -615,7 +615,7 @@
 		}
 		kategoriDetail = kat;
 		showKategoriDetailModal = true;
-		kategoriDetailName = kat.name;
+		kategoriDetailName = kat.nama;
 		selectedMenuIds = menus.filter((m) => m.kategori_id === kat.id).map((m) => m.id);
 		unselectedMenuIds = menus
 			.filter((m) => !m.kategori_id)
@@ -635,12 +635,12 @@
 		if (kategoriDetail) {
 			await dataService.updateRows(
 				'kategori',
-				{ name: kategoriDetailName },
+				{ nama: kategoriDetailName },
 				{ id: String(kategoriDetail.id) }
 			);
 			await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
 		} else {
-			const { data } = await dataService.insertRows('kategori', { name: kategoriDetailName });
+			const { data } = await dataService.insertRows('kategori', { nama: kategoriDetailName });
 			const newKategoriId = (data?.[0]?.id as string) ?? null;
 			await updateMenusKategori(newKategoriId, selectedMenuIds, null);
 		}
@@ -722,17 +722,17 @@
 		showEkstraForm = true;
 		if (ekstra) {
 			editEkstraId = ekstra.id;
-			ekstraForm.name = ekstra.name;
+			ekstraForm.nama = ekstra.nama;
 			ekstraForm.harga = ekstra.harga.toLocaleString('id-ID');
 		} else {
 			editEkstraId = null;
-			ekstraForm.name = '';
+			ekstraForm.nama = '';
 			ekstraForm.harga = '';
 		}
 	}
 
 	async function saveEkstra() {
-		if (!ekstraForm.name.trim()) {
+		if (!ekstraForm.nama.trim()) {
 			notifModalMsg = 'Nama ekstra wajib diisi';
 			notifModalType = 'warning';
 			showNotifModal = true;
@@ -749,15 +749,15 @@
 			if (editEkstraId) {
 				await dataService.updateRows(
 					'tambahan',
-					{ name: ekstraForm.name, harga: harga },
+					{ nama: ekstraForm.nama, harga: harga },
 					{ id: String(editEkstraId) }
 				);
 			} else {
-				await dataService.insertRows('tambahan', { name: ekstraForm.name, harga: harga });
+				await dataService.insertRows('tambahan', { nama: ekstraForm.nama, harga: harga });
 			}
 			await fetchEkstra();
 			showEkstraForm = false;
-			ekstraForm.name = '';
+			ekstraForm.nama = '';
 			ekstraForm.harga = '';
 			editEkstraId = null;
 		} catch (error) {
@@ -807,7 +807,7 @@
 		if (bahan) {
 			editBahanId = bahan.id;
 			bahanForm = {
-				name: bahan.name,
+				nama: bahan.nama,
 				satuan: bahan.satuan || 'gram',
 				stok_saat_ini: String(Number(bahan.stok_saat_ini || 0)),
 				ambang_stok: String(Number(bahan.ambang_stok || 0)),
@@ -817,7 +817,7 @@
 		} else {
 			editBahanId = null;
 			bahanForm = {
-				name: '',
+				nama: '',
 				satuan: 'gram',
 				stok_saat_ini: '',
 				ambang_stok: '',
@@ -831,7 +831,7 @@
 		showBahanForm = false;
 		editBahanId = null;
 		bahanForm = {
-			name: '',
+			nama: '',
 			satuan: 'gram',
 			stok_saat_ini: '',
 			ambang_stok: '',
@@ -841,14 +841,14 @@
 	}
 
 	async function saveBahan() {
-		if (!bahanForm.name.trim()) {
+		if (!bahanForm.nama.trim()) {
 			notifModalMsg = 'Nama bahan wajib diisi';
 			notifModalType = 'warning';
 			showNotifModal = true;
 			return;
 		}
 		const payload = {
-			name: bahanForm.name.trim(),
+			nama: bahanForm.nama.trim(),
 			satuan: bahanForm.satuan || 'gram',
 			stok_saat_ini: Math.max(0, Number(bahanForm.stok_saat_ini || 0)),
 			ambang_stok: Math.max(0, Number(bahanForm.ambang_stok || 0)),
@@ -929,14 +929,14 @@
 	}
 
 	async function saveParsedHppItem(item: {
-		name: string;
+		nama: string;
 		satuan: string;
 		purchase_qty: number;
 		purchase_cost: number;
 		biaya_per_satuan: number;
 	}) {
 		const existing = bahanList.find(
-			(bahan) => bahan.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+			(bahan) => bahan.nama.trim().toLowerCase() === item.nama.trim().toLowerCase()
 		);
 		try {
 			if (existing) {
@@ -958,7 +958,7 @@
 				});
 			} else {
 				await dataService.insertRows('bahan', {
-					name: item.name,
+					nama: item.nama,
 					satuan: item.satuan,
 					stok_saat_ini: item.purchase_qty,
 					ambang_stok: 0,
@@ -1468,7 +1468,7 @@
 										kat.id
 											? 'border-pink-500 bg-pink-500 text-white'
 											: 'border-pink-200 bg-white text-pink-500'}"
-										onclick={() => (selectedKategori = kat.id)}>{kat.name}</button
+										onclick={() => (selectedKategori = kat.id)}>{kat.nama}</button
 									>
 								{/each}
 							{/if}
@@ -1534,7 +1534,7 @@
 												{#if menu.gambar}
 													<img
 														src={menu.gambar}
-														alt={menu.name}
+														alt={menu.nama}
 														class="h-full w-full rounded-lg border border-gray-100 object-cover"
 														onerror={() => handleImgError(menu.id)}
 													/>
@@ -1550,10 +1550,10 @@
 												<div
 													class="mb-1 truncate text-base font-semibold text-gray-800 md:text-base"
 												>
-													{menu.name}
+													{menu.nama}
 												</div>
 												<div class="mb-1 truncate text-xs text-gray-500 md:text-base">
-													{kategoriList.find((k) => k.id === menu.kategori_id)?.name || '-'}
+													{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
 												</div>
 												<div class="text-xs font-bold text-pink-500 md:text-base">
 													Rp {menu.harga.toLocaleString('id-ID')}
@@ -1576,10 +1576,10 @@
 									>
 										<div class="min-w-0 flex-1">
 											<div class="mb-0.5 truncate text-base font-semibold text-gray-800">
-												{menu.name}
+												{menu.nama}
 											</div>
 											<div class="mb-0.5 truncate text-xs text-gray-500">
-												{kategoriList.find((k) => k.id === menu.kategori_id)?.name || '-'}
+												{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
 											</div>
 											<div class="text-base font-bold text-pink-500">
 												Rp {menu.harga.toLocaleString('id-ID')}
@@ -1652,7 +1652,7 @@
 							</div>
 						{:else}
 							<div class="flex flex-col gap-2">
-								{#each kategoriList.filter((kat) => kat.name
+								{#each kategoriList.filter((kat) => kat.nama
 										.toLowerCase()
 										.includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
 									<div
@@ -1665,7 +1665,7 @@
 									>
 										<div class="flex flex-col">
 											<span class="mb-0.5 truncate text-base font-semibold text-blue-900"
-												>{kat.name}</span
+												>{kat.nama}</span
 											>
 											<span class="truncate text-xs text-blue-700"
 												>{menus.filter((m) => m.kategori_id === kat.id).length} menu</span
@@ -1738,7 +1738,7 @@
 							</div>
 						{:else}
 							<div class="flex flex-col gap-2">
-								{#each ekstraList.filter((ekstra) => ekstra.name
+								{#each ekstraList.filter((ekstra) => ekstra.nama
 										.toLowerCase()
 										.includes(searchEkstra.trim().toLowerCase())) as ekstra}
 									<div
@@ -1751,7 +1751,7 @@
 									>
 										<div class="flex flex-col">
 											<span class="mb-0.5 truncate text-base font-semibold text-green-900"
-												>{ekstra.name}</span
+												>{ekstra.nama}</span
 											>
 											<span class="truncate text-xs text-green-700"
 												>Rp {ekstra.harga.toLocaleString('id-ID')}</span
@@ -1821,7 +1821,7 @@
 							</div>
 						{:else}
 							<div class="flex flex-col gap-2">
-								{#each bahanList.filter((bahan) => bahan.name
+								{#each bahanList.filter((bahan) => bahan.nama
 										.toLowerCase()
 										.includes(searchBahan.trim().toLowerCase())) as bahan}
 									<div
@@ -1834,7 +1834,7 @@
 												onclick={() => openBahanForm(bahan)}
 											>
 												<span class="mb-0.5 block truncate text-base font-semibold text-amber-950"
-													>{bahan.name}</span
+													>{bahan.nama}</span
 												>
 												<span class="block text-xs text-amber-800">
 													Stok {Number(bahan.stok_saat_ini || 0).toLocaleString('id-ID')}
@@ -1983,7 +1983,7 @@
 									class="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
 								>
 									<div class="min-w-0">
-										<div class="truncate text-sm font-semibold text-gray-800">{item.name}</div>
+										<div class="truncate text-sm font-semibold text-gray-800">{item.nama}</div>
 										<div class="text-xs text-gray-600">
 											{Number(item.purchase_qty).toLocaleString('id-ID')}
 											{item.satuan} /
@@ -2011,7 +2011,7 @@
 							<div class="rounded-lg border border-gray-200 px-3 py-3">
 								<div class="flex items-start justify-between gap-3">
 									<div class="min-w-0">
-										<div class="truncate text-sm font-semibold text-gray-900">{menu.name}</div>
+										<div class="truncate text-sm font-semibold text-gray-900">{menu.nama}</div>
 										<div class="text-xs text-gray-500">
 											Bahan {formatCurrency(getProductRecipeCost(menu.id))} + overhead
 											{formatCurrency(getOverheadPerItem())}
@@ -2180,7 +2180,7 @@
 							type="text"
 							id="menu-name"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
-							bind:value={menuForm.name}
+							bind:value={menuForm.nama}
 							required
 							placeholder="Contoh: Es Teh Manis"
 						/>
@@ -2262,7 +2262,7 @@
 									>
 										<option value="">Pilih bahan</option>
 										{#each bahanList as bahan}
-											<option value={bahan.id}>{bahan.name} ({bahan.satuan})</option>
+											<option value={bahan.id}>{bahan.nama} ({bahan.satuan})</option>
 										{/each}
 									</select>
 									<input
@@ -2361,7 +2361,7 @@
 										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
 									onclick={() => setMenuKategori(menuForm.kategori_id === kat.id ? null : kat.id)}
 								>
-									{kat.name}
+									{kat.nama}
 								</button>
 							{/each}
 						</div>
@@ -2381,7 +2381,7 @@
 										: 'border-gray-200 bg-white hover:border-pink-300 hover:bg-pink-50'}"
 									onclick={() => toggleEkstra(ekstra.id)}
 								>
-									<div class="mb-0.5 text-sm font-medium text-gray-800">{ekstra.name}</div>
+									<div class="mb-0.5 text-sm font-medium text-gray-800">{ekstra.nama}</div>
 									<div class="text-xs font-semibold text-pink-600">
 										+Rp {ekstra.harga?.toLocaleString('id-ID')}
 									</div>
@@ -2470,12 +2470,12 @@
 											type="button"
 											class="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 font-medium text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:outline-none"
 											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-											title={menu.name}
+											title={menu.nama}
 											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
 											in:fly={{ y: 16, duration: 180 }}
 											out:fly={{ y: 16, duration: 180 }}
 										>
-											{menu.name}
+											{menu.nama}
 										</button>
 									{/each}
 								{:else}
@@ -2497,12 +2497,12 @@
 											type="button"
 											class="inline-flex items-center rounded-full border border-blue-200 bg-white px-4 py-2 font-medium text-blue-500 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus:ring-2 focus:ring-blue-100 focus:outline-none"
 											style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-											title={menu.name}
+											title={menu.nama}
 											onclick={() => toggleMenuInKategoriRealtime(menu.id)}
 											in:fly={{ y: 16, duration: 180 }}
 											out:fly={{ y: 16, duration: 180 }}
 										>
-											{menu.name}
+											{menu.nama}
 										</button>
 									{/each}
 								{:else}
@@ -2542,13 +2542,13 @@
 			aria-modal="true"
 			onclick={(e) =>
 				e.target === e.currentTarget &&
-				((showEkstraForm = false), (ekstraForm = { name: '', harga: '' }), (editEkstraId = null))}
+				((showEkstraForm = false), (ekstraForm = { nama: '', harga: '' }), (editEkstraId = null))}
 			onkeydown={(e) =>
 				e.key === 'Escape' &&
-				((showEkstraForm = false), (ekstraForm = { name: '', harga: '' }), (editEkstraId = null))}
+				((showEkstraForm = false), (ekstraForm = { nama: '', harga: '' }), (editEkstraId = null))}
 			onkeypress={(e) =>
 				e.key === 'Enter' &&
-				((showEkstraForm = false), (ekstraForm = { name: '', harga: '' }), (editEkstraId = null))}
+				((showEkstraForm = false), (ekstraForm = { nama: '', harga: '' }), (editEkstraId = null))}
 			tabindex="-1"
 		>
 			<div
@@ -2565,7 +2565,7 @@
 						<input
 							type="text"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
-							bind:value={ekstraForm.name}
+							bind:value={ekstraForm.nama}
 							required
 							placeholder="Contoh: Es Teh Manis"
 						/>
@@ -2596,7 +2596,7 @@
 							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
 							onclick={() => {
 								showEkstraForm = false;
-								ekstraForm = { name: '', harga: '' };
+								ekstraForm = { nama: '', harga: '' };
 								editEkstraId = null;
 							}}>Batal</button
 						>
@@ -2630,7 +2630,7 @@
 							id="bahan-name"
 							type="text"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-							bind:value={bahanForm.name}
+							bind:value={bahanForm.nama}
 							required
 							placeholder="Contoh: Alpukat"
 						/>

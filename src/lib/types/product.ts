@@ -10,7 +10,7 @@
 
 export interface Product {
 	id: string | number;
-	name: string;
+	nama: string;
 	harga: number;
 	stok?: number | null;
 	lacak_stok?: boolean | number | null;
@@ -27,7 +27,7 @@ export interface Product {
 
 export interface Category {
 	id: string | number;
-	name: string;
+	nama: string;
 	deskripsi?: string;
 	is_active: boolean;
 	created_at?: string;
@@ -36,7 +36,7 @@ export interface Category {
 
 export interface AddOn {
 	id: string | number;
-	name: string;
+	nama: string;
 	harga: number;
 	is_active: boolean;
 	created_at?: string;
@@ -45,7 +45,7 @@ export interface AddOn {
 
 export interface Ingredient {
 	id: string | number;
-	name: string;
+	nama: string;
 	satuan: string;
 	stok_saat_ini: number;
 	ambang_stok?: number;
@@ -104,7 +104,7 @@ export interface CartSummary {
 
 export interface MenuForm {
 	id?: string | number;
-	name: string;
+	nama: string;
 	harga: number;
 	stok?: number | null;
 	lacak_stok?: boolean | number | null;

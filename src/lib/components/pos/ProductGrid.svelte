@@ -30,7 +30,7 @@
 	function getKategoriNameById(id: string | number): string {
 		if (!id) return '';
 		const kat = categories?.find((k: any) => String(k.id) === String(id));
-		return kat?.name || '';
+		return kat?.nama || '';
 	}
 </script>
 
@@ -78,10 +78,10 @@
 								if (e.key === 'Enter') onSelectProduct(p);
 							}}
 							role="button"
-							aria-label="Tambah {p.name} ke keranjang"
+							aria-label="Tambah {p.nama} ke keranjang"
 						>
 							<div class="flex min-w-0 flex-1 flex-col">
-								<span class="mb-0.5 truncate text-sm font-semibold text-stone-900">{p.name}</span>
+								<span class="mb-0.5 truncate text-sm font-semibold text-stone-900">{p.nama}</span>
 								<span class="mb-0.5 min-h-[18px] truncate text-xs text-stone-500"
 									>{getKategoriNameById(p.kategori_id || '')}</span
 								>
@@ -137,13 +137,13 @@
 								if (e.key === 'Enter') onSelectProduct(p);
 							}}
 							role="button"
-							aria-label="Tambah {p.name} ke keranjang"
+							aria-label="Tambah {p.nama} ke keranjang"
 						>
 							{#if (p.gambar || p.image) && !imageError[String(p.id)]}
 								<img
 									class="mb-2 aspect-square h-full min-h-[80px] w-full rounded-xl bg-stone-100 object-cover md:mb-3 md:rounded-2xl"
 									src={p.gambar || p.image}
-									alt={p.name}
+									alt={p.nama}
 									loading="lazy"
 									onerror={() => onImgError(p.id)}
 								/>
@@ -158,7 +158,7 @@
 								<h3
 									class="mb-0.5 w-full truncate text-center text-sm font-semibold text-stone-900 md:mb-1 md:text-lg"
 								>
-									{p.name}
+									{p.nama}
 								</h3>
 								<span class="min-h-[18px] truncate text-xs text-stone-500 md:text-sm"
 									>{getKategoriNameById(p.kategori_id || '')}</span

@@ -52,14 +52,14 @@
 		expandedItems = new Set(expandedItems);
 	}
 
-	function groupAndSumByName(items: BukuKasRecord[]): { name: string; total: number }[] {
+	function groupAndSumByName(items: BukuKasRecord[]): { nama: string; total: number }[] {
 		if (!items || items.length === 0) return [];
 		const groups = items.reduce((acc: Record<string, number>, item) => {
 			const name = item.deskripsi?.trim() || item.catatan?.trim() || 'Lain-lain';
-			acc[name] = (acc[name] || 0) + (item.amount || 0);
+			acc[name] = (acc[name] || 0) + (item.nominal || 0);
 			return acc;
 		}, {});
-		return Object.entries(groups).map(([name, total]) => ({ name, total }));
+		return Object.entries(groups).map(([name, total]) => ({ nama: name, total }));
 	}
 </script>
 
@@ -132,14 +132,14 @@
 							{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
 									<span
-										class="{expandedItems.has(grouped.name)
+										class="{expandedItems.has(grouped.nama)
 											? ''
 											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.name}
-										onclick={() => toggleExpand(grouped.name)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 										role="button"
-										tabindex="0">{grouped.name}</span
+										tabindex="0">{grouped.nama}</span
 									>
 									<span class="font-bold whitespace-nowrap text-gray-700"
 										>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -158,14 +158,14 @@
 						{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -204,14 +204,14 @@
 						{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -229,14 +229,14 @@
 						{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -311,14 +311,14 @@
 						{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -336,14 +336,14 @@
 						{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -382,14 +382,14 @@
 						{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span
@@ -407,14 +407,14 @@
 						{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
-									class="{expandedItems.has(grouped.name)
+									class="{expandedItems.has(grouped.nama)
 										? ''
 										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.name}
-									onclick={() => toggleExpand(grouped.name)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.name)}
+									title={grouped.nama}
+									onclick={() => toggleExpand(grouped.nama)}
+									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 									role="button"
-									tabindex="0">{grouped.name}</span
+									tabindex="0">{grouped.nama}</span
 								>
 								<span class="font-bold whitespace-nowrap text-gray-700"
 									>Rp {grouped.total.toLocaleString('id-ID')}</span

@@ -87,7 +87,7 @@ export class AutoApplyService {
 					items: products.length
 						? products.map((product: any) => ({
 								product_id: product.id || null,
-								nama_kustom: product.id ? null : product.name || data.deskripsi,
+								nama_kustom: product.id ? null : product.nama || data.deskripsi,
 								custom_price: product.id ? null : Number(product.harga || data.amount),
 								jumlah: product.quantity || product.jumlah || 1,
 								add_on_ids: (product.addOns || []).map((addOn: any) => addOn.id).filter(Boolean)
@@ -118,7 +118,7 @@ export class AutoApplyService {
 		const payload = {
 			id: transactionId,
 			tipe,
-			amount: Number(data.amount),
+			nominal: Number(data.amount),
 			deskripsi: String(data.deskripsi).trim(),
 			jenis: data.category || this.getDefaultCategory(data.type),
 			sumber: data.type === 'penjualan' ? 'pos' : 'catat',
@@ -174,9 +174,9 @@ export class AutoApplyService {
 				buku_kas_id: bukuKasId,
 				produk_id: product.id || null,
 				jumlah,
-				amount: unitPrice * jumlah,
+				nominal: unitPrice * jumlah,
 				transaction_id: transactionId,
-				nama_kustom: product.id ? null : product.name || 'Produk Custom'
+				nama_kustom: product.id ? null : product.nama || 'Produk Custom'
 			};
 		});
 
@@ -195,7 +195,7 @@ export class AutoApplyService {
 		const branch = selectedBranch.value;
 		const payload = {
 			tipe: data.type === 'pemasukan' ? 'in' : 'out',
-			amount: data.amount,
+			nominal: data.amount,
 			deskripsi: data.deskripsi,
 			jenis: data.category
 		};
@@ -223,7 +223,7 @@ export class AutoApplyService {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				branch,
-				payload: { id: crypto.randomUUID(), name: data.name, deskripsi: data.deskripsi }
+				payload: { id: crypto.randomUUID(), nama: data.nama, deskripsi: data.deskripsi }
 			})
 		});
 

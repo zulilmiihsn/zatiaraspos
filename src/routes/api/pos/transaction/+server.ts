@@ -33,7 +33,7 @@ interface PosTransactionInput {
 
 interface ProductRow {
 	id: string;
-	name: string;
+	nama: string;
 	harga: number;
 	stok: number | null;
 	lacak_stok?: number | boolean | null;
@@ -52,7 +52,7 @@ interface RecipeRow {
 
 interface AddOnRow {
 	id: string;
-	name: string;
+	nama: string;
 	harga: number;
 	is_active: number | boolean | null;
 }
@@ -186,13 +186,13 @@ async function getExistingByIdempotency(
 
 	return (await db
 		.prepare(
-			`SELECT id, transaction_id, nominal AS amount, jumlah
+			`SELECT id, transaction_id, nominal, jumlah
 			 FROM buku_kas
 			 WHERE cabang_id = ? AND idempotency_key = ?
 			 LIMIT 1`
 		)
 		.bind(branch, idempotencyKey)
-		.first()) as { id: string; transaction_id: string; amount: number; jumlah: number } | null;
+		.first()) as { id: string; transaction_id: string; nominal: number; jumlah: number } | null;
 }
 
 async function hasColumn(db: any, table: string, column: string): Promise<boolean> {
@@ -277,7 +277,7 @@ async function loadProducts(
 		const placeholders = part.map(() => '?').join(',');
 		const { results = [] } = (await db
 			.prepare(
-				`SELECT id, nama AS name, harga, stok,
+				`SELECT id, nama, harga, stok,
 				 ${stockTrackingAvailable ? 'lacak_stok,' : ''}
 				 ${ingredientTrackingAvailable ? 'lacak_bahan,' : ''}
 				 is_active
@@ -293,7 +293,7 @@ async function loadProducts(
 	for (const productId of productIds) {
 		const product = products.get(productId);
 		if (!product) throw kitError(404, `Produk tidak ditemukan: ${productId}`);
-		assertActive(product, product.name);
+		assertActive(product, product.nama);
 	}
 	return products;
 }
@@ -340,7 +340,7 @@ async function loadAddOns(
 		const placeholders = part.map(() => '?').join(',');
 		const { results = [] } = (await db
 			.prepare(
-				`SELECT id, nama AS name, harga, is_active
+				`SELECT id, nama, harga, is_active
 				 FROM tambahan
 				 WHERE cabang_id = ? AND id IN (${placeholders})`
 			)
@@ -353,7 +353,7 @@ async function loadAddOns(
 	for (const id of ids) {
 		const addOn = addOns.get(id);
 		if (!addOn) throw kitError(404, 'Tambahan tidak ditemukan');
-		assertActive(addOn, addOn.name);
+		assertActive(addOn, addOn.nama);
 	}
 	return addOns;
 }
@@ -410,7 +410,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			data: {
 				buku_kas_id: existing.id,
 				transaction_id: existing.transaction_id,
-				total_amount: existing.amount,
+				total_amount: existing.nominal,
 				total_qty: existing.jumlah
 			}
 		});
@@ -461,7 +461,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		produk_id: string | null;
 		nama_kustom: string | null;
 		jumlah: number;
-		amount: number;
+		nominal: number;
 		harga: number;
 		product_name: string;
 		harga_dasar: number;
@@ -475,10 +475,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		transaction_id: string;
 	}> = [];
 	const itemNames: string[] = [];
-	const stockDeductions = new Map<string, { name: string; jumlah: number }>();
+	const stockDeductions = new Map<string, { nama: string; jumlah: number }>();
 	const ingredientDeductions = new Map<
 		string,
-		{ name: string; satuan: string; jumlah: number; products: string[] }
+		{ nama: string; satuan: string; jumlah: number; products: string[] }
 	>();
 
 	for (const input of normalizedInputs) {
@@ -487,7 +487,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		const addOnTotal = addOns.reduce((sum, addOn) => sum + normalizeMoney(addOn.harga), 0);
 		const addOnSnapshot = addOns.map((addOn) => ({
 			id: String(addOn.id),
-			name: addOn.name,
+			nama: addOn.nama,
 			harga: normalizeMoney(addOn.harga)
 		}));
 		const gula = sanitizeShortText(item.gula, 24);
@@ -501,10 +501,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 		if (productId) {
 			const product = productsById.get(productId)!;
-			productName = product.name;
+			productName = product.nama;
 			productPrice = normalizeMoney(product.harga);
 			if (stockTrackingAvailable && (product.lacak_stok === true || product.lacak_stok === 1)) {
-				const current = stockDeductions.get(productId) || { name: productName, jumlah: 0 };
+				const current = stockDeductions.get(productId) || { nama: productName, jumlah: 0 };
 				current.jumlah += jumlah;
 				stockDeductions.set(productId, current);
 			}
@@ -518,7 +518,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				}
 				const hppIngredients = recipe.map((ingredient) => ({
 					bahan_id: ingredient.bahan_id,
-					name: ingredient.bahan_name,
+					nama: ingredient.bahan_name,
 					satuan: ingredient.satuan,
 					jumlah_per_item: normalizeCost(ingredient.jumlah_per_item),
 					biaya_per_satuan: normalizeCost(ingredient.biaya_per_satuan)
@@ -538,7 +538,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				}).slice(0, 4096);
 				for (const ingredient of recipe) {
 					const current = ingredientDeductions.get(ingredient.bahan_id) || {
-						name: ingredient.bahan_name,
+						nama: ingredient.bahan_name,
 						satuan: ingredient.satuan,
 						jumlah: 0,
 						products: []
@@ -563,7 +563,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			produk_id: productId,
 			nama_kustom: productId ? null : productName,
 			jumlah,
-			amount,
+			nominal: amount,
 			harga: unitPrice,
 			product_name: productName,
 			harga_dasar: productPrice,
@@ -582,7 +582,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw kitError(400, 'Item transaksi kosong');
 	}
 
-	const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+	const totalAmount = items.reduce((sum, item) => sum + item.nominal, 0);
 	const totalQty = items.reduce((sum, item) => sum + item.jumlah, 0);
 	const totalHpp = items.reduce((sum, item) => sum + (item.nominal_hpp || 0), 0);
 	const cashReceived = normalizeMoney(body.cash_received);
@@ -608,7 +608,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			transactionCount: 0
 		};
 		current.jumlah += item.jumlah;
-		current.grossSales += item.amount;
+		current.grossSales += item.nominal;
 		current.transactionCount = 1;
 		productSummaries.set(summaryKey, current);
 	}
@@ -717,7 +717,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 						item.produk_id,
 						item.nama_kustom,
 						item.jumlah,
-						item.amount,
+						item.nominal,
 						item.harga,
 						item.transaction_id,
 						createdAt,
@@ -757,7 +757,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					item.produk_id,
 					item.nama_kustom,
 					item.jumlah,
-					item.amount,
+					item.nominal,
 					item.harga,
 					item.product_name,
 					item.harga_dasar,
@@ -856,7 +856,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				data: {
 					buku_kas_id: duplicate.id,
 					transaction_id: duplicate.transaction_id,
-					total_amount: duplicate.amount,
+					total_amount: duplicate.nominal,
 					total_qty: duplicate.jumlah
 				}
 			});

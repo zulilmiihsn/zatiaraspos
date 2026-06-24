@@ -41,7 +41,7 @@ export interface UserProfile {
 
 export interface Branch {
 	id: string;
-	name: string;
+	nama: string;
 	code: string;
 	address?: string;
 	phone?: string;
@@ -62,7 +62,7 @@ export interface OrganizationSettings {
 
 export interface Organization {
 	id: string;
-	name: string;
+	nama: string;
 	branches: Branch[];
 	settings: OrganizationSettings;
 	created_at: string;

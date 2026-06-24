@@ -508,7 +508,7 @@ Output: [
 
 Input: "tadi ada customer membeli 5 kerupuk, catatlah itu"
 Output: [
-  { type: "penjualan", amount: 5000, deskripsi: "Penjualan 5 kerupuk", confidence: 0.95, products: [{ name: "Kerupuk", harga: 1000, quantity: 5 }] }
+  { type: "penjualan", amount: 5000, deskripsi: "Penjualan 5 kerupuk", confidence: 0.95, products: [{ nama: "Kerupuk", harga: 1000, quantity: 5 }] }
 ]
 
 CONTOH ANALISIS (MULTIPLE PRODUK):
@@ -520,9 +520,9 @@ Output: [
     deskripsi: "Penjualan 2 jus mangga, 3 kerupuk, 1 nasi goreng", 
     confidence: 0.95,
     products: [
-      { name: "Jus Mangga", harga: harga_jus_mangga, quantity: 2 },
-      { name: "Kerupuk", harga: harga_kerupuk, quantity: 3 },
-      { name: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 1 }
+      { nama: "Jus Mangga", harga: harga_jus_mangga, quantity: 2 },
+      { nama: "Kerupuk", harga: harga_kerupuk, quantity: 3 },
+      { nama: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 1 }
     ]
   }
 ]
@@ -535,8 +535,8 @@ Output: [
     deskripsi: "Penjualan 5 jus jeruk dan 2 jus apel", 
     confidence: 0.95,
     products: [
-      { name: "Jus Jeruk", harga: harga_jus_jeruk, quantity: 5 },
-      { name: "Jus Apel", harga: harga_jus_apel, quantity: 2 }
+      { nama: "Jus Jeruk", harga: harga_jus_jeruk, quantity: 5 },
+      { nama: "Jus Apel", harga: harga_jus_apel, quantity: 2 }
     ]
   }
 ]
@@ -549,9 +549,9 @@ Output: [
     deskripsi: "Penjualan 10 kerupuk, 5 jus mangga, 3 nasi goreng", 
     confidence: 0.95,
     products: [
-      { name: "Kerupuk", harga: harga_kerupuk, quantity: 10 },
-      { name: "Jus Mangga", harga: harga_jus_mangga, quantity: 5 },
-      { name: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 3 }
+      { nama: "Kerupuk", harga: harga_kerupuk, quantity: 10 },
+      { nama: "Jus Mangga", harga: harga_jus_mangga, quantity: 5 },
+      { nama: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 3 }
     ]
   }
 ]
@@ -1073,7 +1073,7 @@ async function handleRegularChat(request: Request) {
 			laporan.push({
 				...item,
 				sumber: 'pos',
-				nominal: item.amount || 0 // Map amount ke nominal seperti DataService
+				nominal: item.nominal || 0 // Map amount ke nominal seperti DataService
 			});
 		});
 
@@ -1082,7 +1082,7 @@ async function handleRegularChat(request: Request) {
 			laporan.push({
 				...item,
 				sumber: item.sumber || 'catat',
-				nominal: item.amount || 0 // Map amount ke nominal seperti DataService
+				nominal: item.nominal || 0 // Map amount ke nominal seperti DataService
 			});
 		});
 
@@ -1110,7 +1110,7 @@ async function handleRegularChat(request: Request) {
 				pengeluaran: number;
 				laba: number;
 				transaksi: number;
-				produkTerlaris: Record<string, { jumlah: number; revenue: number; name: string }>;
+				produkTerlaris: Record<string, { jumlah: number; revenue: number; nama: string }>;
 				paymentMethods: Record<string, { jumlah: number; nominal: number }>;
 			}
 		> = {};
@@ -1168,7 +1168,7 @@ async function handleRegularChat(request: Request) {
 				const satuan = Number(item.harga || item.amount || 0) || 0;
 				const revenue = satuan * (jumlah || 1);
 				const productName =
-					((item.produk as Record<string, unknown>)?.name as string) ||
+					((item.produk as Record<string, unknown>)?.nama as string) ||
 					(item.nama_kustom as string) ||
 					`Produk ${pid.slice(0, 8)}`;
 
@@ -1176,7 +1176,7 @@ async function handleRegularChat(request: Request) {
 					requestedMonthlyData[monthKey].produkTerlaris[pid] = {
 						jumlah: 0,
 						revenue: 0,
-						name: productName
+						nama: productName
 					};
 				}
 				requestedMonthlyData[monthKey].produkTerlaris[pid].jumlah += jumlah || 0;
@@ -1193,7 +1193,7 @@ async function handleRegularChat(request: Request) {
 				const topProducts = Object.entries(data.produkTerlaris)
 					.map(([pid, prod]) => ({
 						id: pid,
-						nama: prod.name,
+						nama: prod.nama,
 						totalTerjual: prod.jumlah,
 						totalPendapatan: prod.revenue
 					}))
@@ -1255,7 +1255,7 @@ async function handleRegularChat(request: Request) {
 			const waktu = new Date(t.waktu as string | number);
 			const wita = new Date(waktu);
 			const dateKey = wita.toISOString().split('T')[0];
-			const revenue = (t.amount as number) || 0;
+			const revenue = (t.nominal as number) || 0;
 
 			if (!dailyTrend[dateKey]) {
 				dailyTrend[dateKey] = { count: 0, revenue: 0, avgTicket: 0 };
@@ -1306,16 +1306,16 @@ async function handleRegularChat(request: Request) {
 		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
-		let products: { id: string; name: string; harga: number; kategori_id?: string | null }[] = [];
-		let categories: { id: string; name: string }[] = [];
-		let addons: { id: string; name: string; harga: number }[] = [];
+		let products: { id: string; nama: string; harga: number; kategori_id?: string | null }[] = [];
+		let categories: { id: string; nama: string }[] = [];
+		let addons: { id: string; nama: string; harga: number }[] = [];
 
 		// Fetch data berdasarkan jenis data yang diperlukan
 		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
 			products = await db
 				.select({
 					id: produk.id,
-					name: produk.name,
+					nama: produk.nama,
 					harga: produk.harga,
 					kategori_id: produk.kategori_id
 				})
@@ -1329,7 +1329,7 @@ async function handleRegularChat(request: Request) {
 			dataRequirements.jenisData.length === 0
 		) {
 			categories = await db
-				.select({ id: kategori.id, name: kategori.name })
+				.select({ id: kategori.id, nama: kategori.nama })
 				.from(kategori)
 				.where(eq(kategori.cabang_id, requestedBranch))
 				.limit(1000);
@@ -1340,14 +1340,14 @@ async function handleRegularChat(request: Request) {
 			dataRequirements.jenisData.length === 0
 		) {
 			addons = await db
-				.select({ id: tambahan.id, name: tambahan.name, harga: tambahan.harga })
+				.select({ id: tambahan.id, nama: tambahan.nama, harga: tambahan.harga })
 				.from(tambahan)
 				.where(eq(tambahan.cabang_id, requestedBranch))
 				.limit(1000);
 		}
 
 		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil
-		const productIdToSale: Record<string, { jumlah: number; revenue: number; name?: string }> = {};
+		const productIdToSale: Record<string, { jumlah: number; revenue: number; nama?: string }> = {};
 		// Prototype pollution guard: reject dangerous keys
 		const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 		for (const item of transaksiKasirData || []) {
@@ -1358,18 +1358,18 @@ async function handleRegularChat(request: Request) {
 			const revenue = satuan * (jumlah || 1);
 			// Ambil nama dari relasi produk atau nama_kustom
 			const productName =
-				(item as any)?.produk?.name || (item as any)?.nama_kustom || `Produk ${pid.slice(0, 8)}`;
+				(item as any)?.produk?.nama || (item as any)?.nama_kustom || `Produk ${pid.slice(0, 8)}`;
 			if (!Object.prototype.hasOwnProperty.call(productIdToSale, pid)) {
-				productIdToSale[pid] = { jumlah: 0, revenue: 0, name: productName };
+				productIdToSale[pid] = { jumlah: 0, revenue: 0, nama: productName };
 			}
 			productIdToSale[pid].jumlah += jumlah || 0;
 			productIdToSale[pid].revenue += revenue;
-			if (!productIdToSale[pid].name) productIdToSale[pid].name = productName;
+			if (!productIdToSale[pid].nama) productIdToSale[pid].nama = productName;
 		}
 		const produkTerlaris = Object.entries(productIdToSale)
 			.map(([pid, v]) => ({
 				id: pid,
-				nama: v.name || pid,
+				nama: v.nama || pid,
 				totalTerjual: v.jumlah,
 				totalPendapatan: v.revenue
 			}))
@@ -1400,7 +1400,7 @@ async function handleRegularChat(request: Request) {
 			);
 
 			if (foundKeyword) {
-				specificProduct = products.find((p) => p.name.toLowerCase().includes(foundKeyword));
+				specificProduct = products.find((p) => p.nama.toLowerCase().includes(foundKeyword));
 			}
 		}
 
@@ -1412,18 +1412,18 @@ async function handleRegularChat(request: Request) {
 			tipe: dataRequirements.periode.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
-			products: (products || []).map((p: { id: string; name: string; harga: number }) => ({
+			products: (products || []).map((p: { id: string; nama: string; harga: number }) => ({
 				id: p.id,
-				name: p.name,
+				nama: p.nama,
 				harga: p.harga
 			})),
-			categories: (categories || []).map((c: { id: string; name: string }) => ({
+			categories: (categories || []).map((c: { id: string; nama: string }) => ({
 				id: c.id,
-				name: c.name
+				nama: c.nama
 			})),
-			addons: (addons || []).map((a: { id: string; name: string; harga: number }) => ({
+			addons: (addons || []).map((a: { id: string; nama: string; harga: number }) => ({
 				id: a.id,
-				name: a.name,
+				nama: a.nama,
 				harga: a.harga
 			})),
 			produkTerlaris,
@@ -1546,13 +1546,13 @@ ${(serverReportData.jamRamai || []).map((s: string, i: number) => `- ${i + 1}. $
 Produk (sample): ${
 					serverReportData.products
 						?.slice(0, 5)
-						.map((p: { name: string }) => p.name)
+						.map((p: { nama: string }) => p.nama)
 						.join(', ') || '-'
 				}
 Kategori (sample): ${
 					serverReportData.categories
 						?.slice(0, 5)
-						.map((c: { name: string }) => c.name)
+						.map((c: { nama: string }) => c.nama)
 						.join(', ') || '-'
 				}
 
@@ -1560,7 +1560,7 @@ ${
 	serverReportData.specificProduct
 		? `
 === PRODUK SPESIFIK YANG DICARI ===
-Nama: ${serverReportData.specificProduct.name}
+Nama: ${serverReportData.specificProduct.nama}
 Harga: Rp ${serverReportData.specificProduct.harga?.toLocaleString('id-ID') || 'Tidak tersedia'}
 ID: ${serverReportData.specificProduct.id}
 `

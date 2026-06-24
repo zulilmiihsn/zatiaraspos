@@ -7,7 +7,7 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'deepseek/deepseek-chat';
 
 type ParsedPurchase = {
-	name: string;
+	nama: string;
 	satuan: 'gram' | 'ml' | 'pcs' | 'buah';
 	purchase_qty: number;
 	purchase_cost: number;
@@ -69,7 +69,7 @@ async function parseWithAi(text: string, apiKey: string): Promise<ParsedPurchase
 			const purchaseQty = Number(item.purchase_qty || 0);
 			const purchaseCost = Number(item.purchase_cost || 0);
 			return {
-				name: normalizeName(String(item.name || '')),
+				nama: normalizeName(String(item.nama || '')),
 				satuan,
 				purchase_qty: purchaseQty,
 				purchase_cost: purchaseCost,
@@ -78,7 +78,7 @@ async function parseWithAi(text: string, apiKey: string): Promise<ParsedPurchase
 					(purchaseQty > 0 ? Math.round((purchaseCost / purchaseQty) * 100) / 100 : 0)
 			};
 		})
-		.filter((item) => item.name && item.purchase_qty > 0 && item.purchase_cost > 0);
+		.filter((item) => item.nama && item.purchase_qty > 0 && item.purchase_cost > 0);
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {

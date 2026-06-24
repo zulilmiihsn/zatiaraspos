@@ -71,7 +71,7 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 				items: payload.transaksiKasir.map((item: any) => ({
 					product_id: item.produk_id || null,
 					nama_kustom: item.nama_kustom || null,
-					custom_price: item.produk_id ? null : item.harga || item.amount,
+					custom_price: item.produk_id ? null : item.harga || item.nominal,
 					jumlah: item.jumlah || 1,
 					add_on_ids: []
 				}))

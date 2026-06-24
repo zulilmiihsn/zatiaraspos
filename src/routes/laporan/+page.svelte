@@ -56,7 +56,7 @@
 		let detailSignature = '';
 
 		for (const tx of transactions) {
-			totalNominal += Number(tx?.amount ?? 0) || 0;
+			totalNominal += Number(tx?.nominal ?? 0) || 0;
 			const ts = String(tx?.waktu || tx?.created_at || '');
 			if (ts > latestTs) latestTs = ts;
 			paymentSignature += `|${tx?.id || ''}:${tx?.metode_bayar || ''}`;
@@ -376,8 +376,8 @@
 	let bebanUsaha: BukuKasRecord[] = [];
 	let bebanLain: BukuKasRecord[] = [];
 	let pengeluaran: number | null = null;
-	let produkTerlaris: { name: string; total: number }[] = [];
-	let kategoriTerlaris: { name: string; total: number }[] = [];
+	let produkTerlaris: { nama: string; total: number }[] = [];
+	let kategoriTerlaris: { nama: string; total: number }[] = [];
 
 	let laporan: BukuKasRecord[] = $state([]);
 
@@ -446,37 +446,37 @@
 	let totalQrisAll = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiAll = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalQrisPemasukan = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiPemasukan = $derived(
 		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalQrisPengeluaran = $derived(
 		[...bebanUsahaDetail, ...bebanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiPengeluaran = $derived(
 		[...bebanUsahaDetail, ...bebanLainDetail]
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	// Memoize untuk summary box
@@ -490,10 +490,10 @@
 			// Gunakan nominal seperti dataService, fallback ke amount jika nominal tidak ada
 			const totalPemasukan = pemasukanUsahaDetail
 				.concat(pemasukanLainDetail)
-				.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0);
+				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0);
 			const totalPengeluaran = bebanUsahaDetail
 				.concat(bebanLainDetail)
-				.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0);
+				.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0);
 
 			// Laba (Rugi) Kotor = Pendapatan - Pengeluaran
 			const labaKotor = totalPemasukan - totalPengeluaran;
@@ -593,64 +593,64 @@
 	}
 
 	// Fungsi untuk group dan sum item berdasarkan nama (deskripsi/catatan)
-	function groupAndSumByName(items: BukuKasRecord[]): { name: string; total: number }[] {
+	function groupAndSumByName(items: BukuKasRecord[]): { nama: string; total: number }[] {
 		const map = new Map<string, number>();
 		for (const item of items) {
 			const name = getDeskripsiLaporan(item);
 
 			const prev = map.get(name) || 0;
-			map.set(name, prev + (item.amount || 0));
+			map.set(name, prev + (item.nominal || 0));
 		}
-		return Array.from(map.entries()).map(([name, total]) => ({ name, total }));
+		return Array.from(map.entries()).map(([name, total]) => ({ nama: name, total }));
 	}
 
 	// Reactive statements untuk total QRIS/Tunai per sub-group
 	let totalQrisPendapatanUsaha = $derived(
 		pemasukanUsahaDetail
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiPendapatanUsaha = $derived(
 		pemasukanUsahaDetail
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalQrisPemasukanLain = $derived(
 		pemasukanLainDetail
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiPemasukanLain = $derived(
 		pemasukanLainDetail
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalQrisBebanUsaha = $derived(
 		bebanUsahaDetail
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiBebanUsaha = $derived(
 		bebanUsahaDetail
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalQrisBebanLain = $derived(
 		bebanLainDetail
 			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	let totalTunaiBebanLain = $derived(
 		bebanLainDetail
 			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.amount || 0), 0)
+			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
 	function getDeskripsiLaporan(item: BukuKasRecord): string {

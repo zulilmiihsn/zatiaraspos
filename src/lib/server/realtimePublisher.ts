@@ -32,7 +32,7 @@ export async function publishBranchEvent(
 ) {
 	const hub = env?.REALTIME_HUB as
 		| {
-				idFromName(name: string): unknown;
+				idFromName(nama: string): unknown;
 				get(id: unknown): { fetch(request: Request): Promise<Response> };
 		  }
 		| undefined;

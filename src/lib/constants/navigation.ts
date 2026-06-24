@@ -1,9 +1,9 @@
 export const NAV_ITEMS = [
-	{ name: 'Beranda', path: '/' },
-	{ name: 'POS', path: '/pos' },
-	{ name: 'Catat', path: '/catat' },
-	{ name: 'Laporan', path: '/laporan' },
-	{ name: 'Pengaturan', path: '/pengaturan' }
+	{ nama: 'Beranda', path: '/' },
+	{ nama: 'POS', path: '/pos' },
+	{ nama: 'Catat', path: '/catat' },
+	{ nama: 'Laporan', path: '/laporan' },
+	{ nama: 'Pengaturan', path: '/pengaturan' }
 ];
 
 export function getNavIndex(path: string): number {

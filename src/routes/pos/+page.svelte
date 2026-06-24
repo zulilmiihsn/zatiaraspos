@@ -47,7 +47,7 @@
 
 	interface PosProduct {
 		id: string;
-		name: string;
+		nama: string;
 		harga: number;
 		tipe: string;
 		image?: string;
@@ -57,11 +57,11 @@
 	}
 	interface PosCategory {
 		id: string;
-		name: string;
+		nama: string;
 	}
 	interface PosAddOn {
 		id: string;
-		name: string;
+		nama: string;
 		harga: number;
 	}
 	interface PosCartItem {
@@ -363,11 +363,11 @@
 		const sanitizedIce = sanitizeInput(selectedIce);
 
 		// Check for suspicious activity
-		const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${jumlah}`;
+		const allInputs = `${selectedProduct?.nama}${sanitizedSugar}${sanitizedIce}${jumlah}`;
 		if (securityUtils.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
 			showErrorNotif('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
 			securityUtils.logSecurityEvent('suspicious_cart_activity', {
-				product: selectedProduct?.name,
+				product: selectedProduct?.nama,
 				jumlah,
 				gula: sanitizedSugar,
 				es: sanitizedIce
@@ -414,7 +414,7 @@
 
 		// Log successful add to cart
 		securityUtils.logSecurityEvent('product_added_to_cart', {
-			product: selectedProduct?.name,
+			product: selectedProduct?.nama,
 			jumlah,
 			totalItems: cart.length
 		});
@@ -489,7 +489,7 @@
 	function getKategoriNameById(id: string | number): string {
 		if (!id) return '';
 		const kat = categories?.find((k) => String(k.id) === String(id));
-		return kat?.name || '';
+		return kat?.nama || '';
 	}
 
 	// Sinkronisasi cart ke localStorage setiap kali cart berubah
@@ -620,7 +620,7 @@
 							? 'border-pink-500 bg-pink-500 text-white shadow-sm'
 							: 'border-stone-200 bg-white text-stone-700'}"
 						type="button"
-						onclick={() => handleSelectCategory(c.id)}>{c.name}</button
+						onclick={() => handleSelectCategory(c.id)}>{c.nama}</button
 					>
 				{/each}
 				<!-- Button Custom Item di paling kanan -->
@@ -674,12 +674,12 @@
 						>
 							<div class="flex min-w-0 flex-col">
 								<div class="mb-0.5 truncate text-base font-semibold text-gray-900">
-									{item.jumlah}x {item.product.name}
+									{item.jumlah}x {item.product.nama}
 								</div>
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
-											? item.addOns.map((a) => a.name).join(', ')
+											? item.addOns.map((a) => a.nama).join(', ')
 											: '',
 										item.catatan ? `${item.catatan}` : '',
 										item.product.tipe === 'minuman' && item.gula !== 'normal'
@@ -736,7 +736,7 @@
 		{#if showModal}
 			<ModalSheet
 				bind:open={showModal}
-				title={selectedProduct ? selectedProduct.name : ''}
+				title={selectedProduct ? selectedProduct.nama : ''}
 				onclose={closeModal}
 			>
 				<div
@@ -790,7 +790,7 @@
 									type="button"
 									onclick={() => toggleAddOn(a.id)}
 								>
-									<span class="w-full truncate">{a.name}</span>
+									<span class="w-full truncate">{a.nama}</span>
 									<span
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'

@@ -148,7 +148,7 @@ export function validateIncomeExpense(data: any): ValidationResult {
 	const errors: string[] = [];
 
 	// Validasi nominal
-	const amountValidation = validateNumber(data.amount, {
+	const amountValidation = validateNumber(data.nominal, {
 		required: true,
 		min: 0
 	});

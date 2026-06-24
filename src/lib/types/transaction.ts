@@ -43,7 +43,7 @@ export interface TransactionItem {
 
 export interface TransactionAddOn {
 	id: number;
-	name: string;
+	nama: string;
 	harga: number;
 	quantity: number;
 }
@@ -56,7 +56,7 @@ export type PaymentMethod = 'tunai' | 'qris' | 'transfer' | 'e-wallet' | 'card';
 
 export interface PaymentDetails {
 	method: PaymentMethod;
-	amount: number;
+	nominal: number;
 	reference_number?: string;
 	transaction_id?: string;
 	status: PaymentStatus;
@@ -85,7 +85,7 @@ export interface FinancialRecord {
 	id: string;
 	type: 'pemasukan' | 'pengeluaran';
 	category: string;
-	amount: number;
+	nominal: number;
 	deskripsi: string;
 	metode_bayar: PaymentMethod;
 	date: string;
@@ -98,7 +98,7 @@ export interface FinancialRecord {
 
 export interface FinancialCategory {
 	id: string;
-	name: string;
+	nama: string;
 	type: 'pemasukan' | 'pengeluaran';
 	deskripsi?: string;
 	is_active: boolean;

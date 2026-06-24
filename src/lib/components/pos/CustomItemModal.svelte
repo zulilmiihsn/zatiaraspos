@@ -44,7 +44,7 @@
 		onAdd({
 			product: {
 				id: `custom-${Date.now()}`,
-				name: customItemName.trim(),
+				nama: customItemName.trim(),
 				harga: Number(customItemPriceRaw),
 				tipe: 'custom'
 			},

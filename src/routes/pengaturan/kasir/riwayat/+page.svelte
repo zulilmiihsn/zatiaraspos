@@ -23,7 +23,7 @@
 		transaction_id?: string;
 		waktu: string;
 		nama: string;
-		amount: number;
+		nominal: number;
 		tipe: string;
 		sumber: string;
 		metode_bayar: string;
@@ -66,7 +66,7 @@
 						transaction_id: t.transaction_id,
 						waktu: t.waktu,
 						nama: t.deskripsi || t.nama_pelanggan || t.nama || '-',
-						amount: t.amount || 0,
+						nominal: t.nominal || 0,
 						tipe: t.tipe || t.type,
 						sumber: t.sumber || 'catat',
 						metode_bayar: t.metode_bayar || 'tunai',
@@ -77,7 +77,7 @@
 
 			transaksiHariIni.sort((a, b) => new Date(b.waktu).getTime() - new Date(a.waktu).getTime());
 
-			transaksiHariIni = transaksiHariIni.filter((t) => t.amount > 0);
+			transaksiHariIni = transaksiHariIni.filter((t) => t.nominal > 0);
 
 			if (searchKeyword.trim()) {
 				const keyword = searchKeyword.trim().toLowerCase();
@@ -172,19 +172,19 @@
 			if (items.length > 0) {
 				items.forEach((item: Record<string, unknown>, idx: number) => {
 					const produk = item.produk as Record<string, unknown> | undefined;
-					const itemName = item.nama_kustom || (produk && produk.name) || 'Produk Custom';
+					const itemName = item.nama_kustom || (produk && produk.nama) || 'Produk Custom';
 					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.jumlah}</td><td style='text-align:right;'>Rp${(Number(item.harga) ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
-				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</td></tr>`;
+				html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			}
 
 			html += `</tbody></table>`;
 			html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
 
 			html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.amount ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
+			html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
 
 			const methodLabels: Record<string, string> = {
 				tunai: 'Tunai',
@@ -372,7 +372,7 @@
 						</div>
 						<div class="flex flex-col items-end gap-2">
 							<div class="text-base font-bold text-pink-500">
-								Rp {trx.amount?.toLocaleString('id-ID')}
+								Rp {trx.nominal?.toLocaleString('id-ID')}
 							</div>
 						</div>
 					</div>
@@ -427,7 +427,7 @@
 				<div class="flex flex-col gap-1">
 					<span class="font-semibold text-gray-500">Nominal</span>
 					<div class="text-lg font-bold text-pink-500">
-						Rp {selectedTransaksi.amount?.toLocaleString('id-ID')}
+						Rp {selectedTransaksi.nominal?.toLocaleString('id-ID')}
 					</div>
 				</div>
 				<div class="mb-2 flex flex-col gap-1">

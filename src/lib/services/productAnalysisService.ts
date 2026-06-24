@@ -77,7 +77,7 @@ export class ProductAnalysisService {
 		const productsByCategory = data.products.reduce(
 			(acc, product) => {
 				const category = data.categories.find((cat) => cat.id === product.kategori_id);
-				const categoryName = category?.name || 'Lainnya';
+				const categoryName = category?.nama || 'Lainnya';
 
 				if (!acc[categoryName]) {
 					acc[categoryName] = [];
@@ -94,13 +94,13 @@ export class ProductAnalysisService {
 
 			products.forEach((product) => {
 				if (product.is_active) {
-					promptData += `  • ${product.name}: Rp ${product.harga.toLocaleString('id-ID')}`;
+					promptData += `  • ${product.nama}: Rp ${product.harga.toLocaleString('id-ID')}`;
 
 					// Add add-ons if available
 					if (product.addOns.length > 0) {
 						promptData += `\n    Topping/Tambahan:`;
 						product.addOns.forEach((addOn) => {
-							promptData += `\n      - ${addOn.name}: Rp ${addOn.harga.toLocaleString('id-ID')}`;
+							promptData += `\n      - ${addOn.nama}: Rp ${addOn.harga.toLocaleString('id-ID')}`;
 						});
 					}
 					promptData += `\n`;
@@ -118,7 +118,7 @@ export class ProductAnalysisService {
 		if (standaloneAddOns.length > 0) {
 			promptData += `📂 TAMBAHAN/TOPPING STANDALONE:\n`;
 			standaloneAddOns.forEach((addOn) => {
-				promptData += `  • ${addOn.name}: Rp ${addOn.harga.toLocaleString('id-ID')}\n`;
+				promptData += `  • ${addOn.nama}: Rp ${addOn.harga.toLocaleString('id-ID')}\n`;
 			});
 			promptData += `\n`;
 		}
@@ -137,8 +137,8 @@ export class ProductAnalysisService {
 		return (
 			data.products.find(
 				(product) =>
-					(product.is_active && product.name.toLowerCase().includes(normalizedName)) ||
-					normalizedName.includes(product.name.toLowerCase())
+					(product.is_active && product.nama.toLowerCase().includes(normalizedName)) ||
+					normalizedName.includes(product.nama.toLowerCase())
 			) || null
 		);
 	}
@@ -154,8 +154,8 @@ export class ProductAnalysisService {
 		return (
 			data.addOns.find(
 				(addOn) =>
-					(addOn.is_active && addOn.name.toLowerCase().includes(normalizedName)) ||
-					normalizedName.includes(addOn.name.toLowerCase())
+					(addOn.is_active && addOn.nama.toLowerCase().includes(normalizedName)) ||
+					normalizedName.includes(addOn.nama.toLowerCase())
 			) || null
 		);
 	}

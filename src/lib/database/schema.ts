@@ -40,7 +40,7 @@ export const produk = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('nama').notNull(),
+		nama: text('nama').notNull(),
 		harga: real('harga').notNull(),
 		stok: integer('stok').default(0),
 		lacak_stok: integer('lacak_stok', { mode: 'boolean' }).default(false),
@@ -65,7 +65,7 @@ export const bahan = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('nama').notNull(),
+		nama: text('nama').notNull(),
 		satuan: text('satuan').notNull().default('gram'),
 		stok_saat_ini: real('stok_saat_ini').notNull().default(0),
 		ambang_stok: real('ambang_stok').notNull().default(0),
@@ -78,7 +78,7 @@ export const bahan = sqliteTable(
 	},
 	(table) => [
 		index('idx_bahan_branch_created').on(table.cabang_id, table.created_at),
-		index('idx_bahan_branch_name').on(table.cabang_id, table.name)
+		index('idx_bahan_branch_name').on(table.cabang_id, table.nama)
 	]
 );
 
@@ -146,7 +146,7 @@ export const kategori = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('nama').notNull(),
+		nama: text('nama').notNull(),
 		deskripsi: text('deskripsi'),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
@@ -160,7 +160,7 @@ export const tambahan = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('nama').notNull(),
+		nama: text('nama').notNull(),
 		harga: real('harga').notNull(),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
@@ -178,7 +178,7 @@ export const bukuKas = sqliteTable(
 		sumber: text('sumber').notNull(),
 		tipe: text('tipe').notNull(),
 		jenis: text('jenis').notNull(),
-		amount: real('nominal').notNull(),
+		nominal: real('nominal').notNull(),
 		jumlah: integer('jumlah'),
 		deskripsi: text('deskripsi'),
 		nama_pelanggan: text('nama_pelanggan'),
@@ -207,7 +207,7 @@ export const transaksiKasir = sqliteTable(
 		produk_id: text('produk_id'),
 		nama_kustom: text('nama_kustom'),
 		jumlah: integer('jumlah').notNull(),
-		amount: real('nominal').notNull(),
+		nominal: real('nominal').notNull(),
 		harga: real('harga'),
 		nama_produk: text('nama_produk'),
 		harga_dasar: real('harga_dasar'),

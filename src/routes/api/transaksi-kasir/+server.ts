@@ -73,7 +73,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const rows = await rawDb
 		.prepare(
 			`SELECT
-				id, cabang_id, buku_kas_id, produk_id, nama_kustom, jumlah, nominal AS amount, harga,
+				id, cabang_id, buku_kas_id, produk_id, nama_kustom, jumlah, nominal, harga,
 				${snapshotSelect},
 				transaction_id, created_at, updated_at
 			 FROM transaksi_kasir

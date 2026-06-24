@@ -161,13 +161,13 @@ export class DataService {
 				const itemTerjual = kasir.reduce((s: number, t: any) => s + (t.jumlah || 1), 0);
 				const txIds = new Set(kas.map((t: any) => t.transaction_id).filter(Boolean));
 				const jumlahTransaksi = txIds.size || kas.length;
-				const omzet = kas.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+				const omzet = kas.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
 				const pemasukan = kas
 					.filter((t: any) => t.tipe === 'in')
-					.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+					.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
 				const pengeluaran = kas
 					.filter((t: any) => t.tipe === 'out')
-					.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+					.reduce((s: number, t: any) => s + (t.nominal || 0), 0);
 
 				const [avgTransaksi, jamRamai] = await Promise.all([
 					getAvgTransaksiHarian(),
@@ -203,7 +203,7 @@ export class DataService {
 				const summaryItems = await dbGet('best_sellers_summary', { start: startUtc, end: endUtc });
 				if (summaryItems.length) {
 					return summaryItems.map((item: any) => ({
-						name: item.nama_produk || '-',
+						nama: item.nama_produk || '-',
 						image: '',
 						total_qty: Number(item.total_qty || 0)
 					}));
@@ -228,7 +228,7 @@ export class DataService {
 				const allProducts = await dbGet<Record<string, any>>('produk', {});
 				return topIds.map((id) => {
 					const prod = allProducts.find((p) => p.id === id);
-					return { name: prod?.name || '-', image: prod?.gambar || '', total_qty: grouped[id] };
+					return { nama: prod?.nama || '-', image: prod?.gambar || '', total_qty: grouped[id] };
 				});
 			},
 			{ ttl: 300000, backgroundRefresh: true }
@@ -273,7 +273,7 @@ export class DataService {
 					const d = new Date(t.waktu);
 					if (isNaN(d.getTime())) continue;
 					const tanggal = fmt.format(d);
-					if (tanggal in perHari) perHari[tanggal] += Number(t.amount || 0);
+					if (tanggal in perHari) perHari[tanggal] += Number(t.nominal || 0);
 				}
 
 				const weeklyIncome = labels.map((l) => perHari[l] || 0);
@@ -449,8 +449,8 @@ export class DataService {
 
 				const pemasukan = laporan.filter((t) => t.tipe === 'in');
 				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
-				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.amount || 0), 0);
-				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.amount || 0), 0);
+				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.nominal || 0), 0);
+				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.nominal || 0), 0);
 				const labaKotor = totalPemasukan - totalPengeluaran;
 				const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 

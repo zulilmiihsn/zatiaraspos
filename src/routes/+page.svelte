@@ -216,7 +216,7 @@
 		const weekly = Array.isArray(weeklyData?.weeklyIncome) ? weeklyData.weeklyIncome : [];
 		const sellers = Array.isArray(nextBestSellers) ? nextBestSellers : [];
 		const sellersSignature = sellers
-			.map((item) => `${item?.name || ''}:${Number(item?.total_qty || 0)}`)
+			.map((item) => `${item?.nama || ''}:${Number(item?.total_qty || 0)}`)
 			.join(',');
 
 		return [
@@ -542,7 +542,7 @@
 										<img
 											class="h-12 w-12 rounded-lg bg-pink-50 object-cover md:h-16 md:w-16"
 											src={m.image}
-											alt={m.name}
+											alt={m.nama}
 											onerror={() => handleImgError(i)}
 										/>
 									{:else}
@@ -556,7 +556,7 @@
 										<div
 											class="truncate text-base font-semibold text-gray-900 md:mb-1 md:text-xl lg:text-2xl"
 										>
-											{m.name}
+											{m.nama}
 										</div>
 										<div class="text-sm text-pink-400 md:text-lg">{m.total_qty} terjual</div>
 									</div>
