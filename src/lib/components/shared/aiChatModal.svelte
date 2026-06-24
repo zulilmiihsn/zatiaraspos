@@ -176,16 +176,16 @@
 {#if isOpen}
 	<div
 		class="modal-overlay fixed inset-0 z-[99999] flex items-center justify-center bg-black/30 px-2 py-2 backdrop-blur-sm sm:px-4 sm:py-4"
-		on:click={closeModal}
-		on:keydown={(e) => e.key === 'Escape' && closeModal()}
+		onclick={closeModal}
+		onkeydown={(e) => e.key === 'Escape' && closeModal()}
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
 	>
 		<div
 			class="modal-slideup mx-auto flex h-[600px] w-full max-w-[500px] flex-col rounded-2xl bg-white shadow-2xl sm:mx-auto md:max-w-[720px]"
-			on:click|stopPropagation
-			on:keydown={(e) => e.key === 'Escape' && closeModal()}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.key === 'Escape' && closeModal()}
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"
@@ -211,7 +211,7 @@
 				</div>
 				<div class="flex items-center space-x-2">
 					<button
-						on:click={closeModal}
+						onclick={closeModal}
 						class="rounded-lg p-2 text-gray-400 transition-all duration-200 hover:bg-gray-100 hover:text-gray-600"
 						aria-label="Tutup modal"
 					>
@@ -301,14 +301,14 @@
 					{#if currentAnalysis?.recommendations && currentAnalysis.recommendations.length > 0}
 						<div class="mt-4 flex space-x-3">
 							<button
-								on:click={applyRecommendations}
+								onclick={applyRecommendations}
 								disabled={isLoading}
 								class="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-pink-600 hover:to-rose-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								{isLoading ? 'Menerapkan...' : 'Terapkan Rekomendasi'}
 							</button>
 							<button
-								on:click={() => (showRecommendations = false)}
+								onclick={() => (showRecommendations = false)}
 								class="rounded-xl px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800"
 							>
 								Batal
@@ -317,7 +317,7 @@
 					{:else}
 						<div class="mt-4">
 							<button
-								on:click={() => (showRecommendations = false)}
+								onclick={() => (showRecommendations = false)}
 								class="w-full rounded-xl px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800"
 							>
 								Tutup
@@ -332,7 +332,7 @@
 				<div class="flex space-x-3">
 					<textarea
 						bind:value={currentMessage}
-						on:keydown={handleKeyPress}
+						onkeydown={handleKeyPress}
 						placeholder="Ceritakan transaksi Anda..."
 						disabled={isLoading}
 						class="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-pink-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -340,7 +340,7 @@
 					>
 					</textarea>
 					<button
-						on:click={sendMessage}
+						onclick={sendMessage}
 						disabled={!currentMessage.trim() || isLoading}
 						class="rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 px-6 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-pink-600 hover:to-rose-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
 						aria-label="Kirim pesan"

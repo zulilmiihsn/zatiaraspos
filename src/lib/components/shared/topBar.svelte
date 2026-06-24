@@ -6,9 +6,15 @@
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import AiChatModal from './aiChatModal.svelte';
 	let {
+		children,
+		actions,
+		download,
 		showSettings = true,
 		onAiRecommendationsApplied
 	}: {
+		children?: any;
+		actions?: any;
+		download?: any;
 		showSettings?: boolean;
 		onAiRecommendationsApplied?: (detail: any) => void;
 	} = $props();
@@ -69,7 +75,7 @@
 <div class="nav-transition z-10 flex items-center justify-between bg-white px-4 pt-4 pb-3">
 	<div class="flex items-center gap-3">
 		<button
-			on:click={openAiChat}
+			onclick={openAiChat}
 			class="h-[38px] w-[38px] cursor-pointer rounded-lg bg-white object-contain p-1.5 shadow-lg shadow-pink-500/7 transition-all duration-150 hover:shadow-xl hover:shadow-pink-500/12"
 			aria-label="Buka AI Assistant"
 		>
@@ -112,11 +118,11 @@
 		{/if}
 	</div>
 	<div class="flex-1 text-center text-lg font-medium tracking-wide text-gray-800">
-		<slot />
+		{@render children?.()}
 	</div>
 	<div class="flex items-center gap-2">
 		<!-- Slot untuk actions -->
-		<slot name="actions" />
+		{@render actions?.()}
 
 		{#if showSettings}
 			<a
@@ -131,7 +137,7 @@
 		{/if}
 
 		<!-- Slot untuk download -->
-		<slot name="download" />
+		{@render download?.()}
 	</div>
 </div>
 
