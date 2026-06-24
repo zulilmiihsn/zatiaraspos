@@ -2,7 +2,6 @@ import { and, eq, gte, lte, asc } from 'drizzle-orm';
 import { dailySalesSummary, bukuKas } from '$lib/database/schema';
 import type { BranchId, DrizzleDb } from '$lib/server/branchResolver';
 import type { D1Database } from '@cloudflare/workers-types';
-import { CUSTOM_PRODUCT_BUCKET_ID } from '$lib/server/dailySummary';
 
 /** Konversi timestamp ISO ke tanggal WITA 'YYYY-MM-DD' (zona Asia/Makassar). */
 function witaDate(ts: string): string {
@@ -83,7 +82,7 @@ export async function getBestSellersSummary(
 				`SELECT produk_id, nama_produk, SUM(jumlah) AS total_qty, SUM(penjualan_kotor) AS penjualan_kotor
 				 FROM penjualan_produk_harian
 				 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?
-					AND produk_id != '${CUSTOM_PRODUCT_BUCKET_ID}'
+					AND (produk_id NOT LIKE 'custom:%' AND produk_id != '__custom__')
 				 GROUP BY produk_id, nama_produk
 				 ORDER BY total_qty DESC
 				 LIMIT 3`

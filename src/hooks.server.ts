@@ -1,4 +1,5 @@
 import type { Handle } from '@sveltejs/kit';
+import { building } from '$app/environment';
 import { getAuthSession } from '$lib/server/sessionStore';
 import {
 	branchFromObservation,
@@ -7,6 +8,11 @@ import {
 } from '$lib/server/observability';
 
 export const handle: Handle = async ({ event, resolve }) => {
+	if (building) {
+		const response = await resolve(event);
+		return response;
+	}
+
 	const startedAt = Date.now();
 	const sessionId = event.cookies.get('zatiaras_sid');
 	event.locals.authSession = await getAuthSession(event.platform, sessionId);

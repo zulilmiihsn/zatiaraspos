@@ -1,14 +1,7 @@
 import type { BranchId } from '$lib/server/branchResolver';
 import type { D1Database } from '@cloudflare/workers-types';
 
-/**
- * Product_id sintetis untuk mengelompokkan item custom (penjualan non-produk
- * dari kasir, yang `produk_id`-nya NULL) di daily_product_sales. Tanpa ini item
- * custom hanya masuk total (daily_sales_summary) tapi tak punya baris rincian,
- * sehingga hilang dari laporan. Dipakai bersama oleh penulisan ringkasan POS,
- * pembalikan saat void, dan dikecualikan dari best-sellers.
- */
-export const CUSTOM_PRODUCT_BUCKET_ID = '__custom__';
+
 
 /**
  * Membalik (decrement) kontribusi sebuah transaksi POS terhadap tabel ringkasan
@@ -72,12 +65,12 @@ export async function reverseDailySummaryForTransaction(
 		(
 			(await rawDb
 				.prepare(
-					`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS produk_id,
+					`SELECT COALESCE(produk_id, 'custom:' || nama_produk) AS produk_id,
 				COALESCE(SUM(jumlah), 0) AS jumlah,
 				COALESCE(SUM(nominal), 0) AS gross
 			 FROM transaksi_kasir
 			 WHERE cabang_id = ? AND transaction_id = ?
-			 GROUP BY COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}')`
+			 GROUP BY COALESCE(produk_id, 'custom:' || nama_produk)`
 				)
 				.bind(branch, transactionId)
 				.all()
