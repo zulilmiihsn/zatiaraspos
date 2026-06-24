@@ -132,30 +132,15 @@
 	// Toast management
 	const toastManager = createToastManager();
 
-	const memoizedKategoriWithCount = memoize(
-		(menus: Product[], kategoriList: Category[]) =>
-			kategoriList.map((kat: Category) => ({
-				...kat,
-				count: menus.filter((m: Product) => m.kategori_id === kat.id).length
-			})),
-		(menus: Product[], kategoriList: Category[]) => {
-			const menuKategoriMap = menus
-				.map((m: Product) => `${m.id}:${m.kategori_id || 'null'}`)
-				.join(',');
-			const kategoriIds = kategoriList.map((k: Category) => k.id).join(',');
-			return `${menuKategoriMap}-${kategoriIds}`;
-		}
+	let kategoriWithCount = $derived(
+		kategoriList.map((kat: Category) => ({
+			...kat,
+			count: menus.filter((m: Product) => m.kategori_id === kat.id).length
+		}))
 	);
 
-	let kategoriWithCount = $derived(memoizedKategoriWithCount(menus, kategoriList));
-
-	const memoizedFilteredMenus = memoize(
-		(
-			menus: Product[],
-			kategoriList: Category[],
-			selectedKategori: string | number,
-			searchKeyword: string
-		) => {
+	let filteredMenus = $derived(
+		(() => {
 			const keyword = searchKeyword.trim().toLowerCase();
 			return menus.filter((menu) => {
 				if (!keyword)
@@ -167,21 +152,7 @@
 					(selectedKategori === 'Semua' ? true : menu.kategori_id === selectedKategori) && match
 				);
 			});
-		},
-		(
-			menus: Product[],
-			kategoriList: Category[],
-			selectedKategori: string | number,
-			searchKeyword: string
-		) => {
-			const menuKategoriMap = menus.map((m) => `${m.id}:${m.kategori_id || 'null'}`).join(',');
-			const kategoriIds = kategoriList.map((k) => k.id).join(',');
-			return `${menuKategoriMap}-${kategoriIds}-${selectedKategori}-${searchKeyword}`;
-		}
-	);
-
-	let filteredMenus = $derived(
-		memoizedFilteredMenus(menus, kategoriList, selectedKategori, searchKeyword)
+		})()
 	);
 
 	async function fetchMenus() {
