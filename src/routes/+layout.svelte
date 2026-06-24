@@ -462,9 +462,9 @@
 		pin={currentPin}
 		title="Akses Terkunci"
 		subtitle="Masukkan PIN untuk mengakses halaman ini"
-		on:success={handlePinSuccess}
-		on:error={handlePinError}
-		on:close={handlePinClose}
+		onSuccess={handlePinSuccess}
+		onError={handlePinError}
+		onClose={handlePinClose}
 	/>
 {/if}
 

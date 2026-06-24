@@ -625,9 +625,9 @@
 							open={showDropdown}
 							value={jenis}
 							options={mode === 'pemasukan' ? jenisPemasukan : jenisPengeluaran}
-							on:close={() => (showDropdown = false)}
-							on:select={(e) => {
-								jenis = e.detail;
+							onClose={() => (showDropdown = false)}
+							onSelect={(value) => {
+								jenis = value;
 								showDropdown = false;
 							}}
 						/>

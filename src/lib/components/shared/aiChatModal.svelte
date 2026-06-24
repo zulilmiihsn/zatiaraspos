@@ -1,21 +1,26 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import type { AiChatMessage, TransactionAnalysis } from '$lib/types/ai';
 	import { AiAnalysisService } from '$lib/services/aiAnalysisService';
 	import { AutoApplyService } from '$lib/services/autoApplyService';
 	import { refreshBus } from '$lib/utils/refreshBus';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	let {
+		isOpen = $bindable(false),
+		onClose,
+		onRecommendationsApplied
+	}: {
+		isOpen?: boolean;
+		onClose?: () => void;
+		onRecommendationsApplied?: (detail: any) => void;
+	} = $props();
 
-	const dispatch = createEventDispatcher();
-
-	let messages: AiChatMessage[] = [];
-	let currentMessage = '';
-	let isLoading = false;
-	let currentAnalysis: TransactionAnalysis | null = null;
-	let showRecommendations = false;
-	let appliedSinceOpen = false;
+	let messages: AiChatMessage[] = $state([]);
+	let currentMessage = $state('');
+	let isLoading = $state(false);
+	let currentAnalysis: TransactionAnalysis | null = $state(null);
+	let showRecommendations = $state(false);
+	let appliedSinceOpen = $state(false);
 
 	const aiAnalysisService = AiAnalysisService.getInstance();
 	const autoApplyService = AutoApplyService.getInstance();
@@ -27,11 +32,13 @@
 	});
 
 	// Reactive statement untuk mengontrol body scroll
-	$: if (isOpen && typeof document !== 'undefined') {
-		document.body.classList.add('modal-open');
-	} else if (typeof document !== 'undefined') {
-		document.body.classList.remove('modal-open');
-	}
+	$effect(() => {
+		if (isOpen && typeof document !== 'undefined') {
+			document.body.classList.add('modal-open');
+		} else if (typeof document !== 'undefined') {
+			document.body.classList.remove('modal-open');
+		}
+	});
 
 	function addWelcomeMessage() {
 		const welcomeMessage: AiChatMessage = {
@@ -118,7 +125,7 @@
 			}
 
 			// Dispatch event untuk refresh data di parent
-			dispatch('recommendationsApplied', { result });
+			if (onRecommendationsApplied) onRecommendationsApplied({ result });
 
 			// Broadcast global event agar halaman lain bisa dengar (laporan/riwayat)
 			if (result.success && typeof window !== 'undefined') {

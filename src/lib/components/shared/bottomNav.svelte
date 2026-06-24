@@ -14,11 +14,11 @@
 		{ label: 'Laporan', icon: FileText, path: '/laporan' }
 	];
 
-	let indicatorLeft = 0;
-	let indicatorWidth = 0;
+	let indicatorLeft = $state(0);
+	let indicatorWidth = $state(0);
 	let navRefs: HTMLElement[] = [];
 
-	let currentTabIndex = 0;
+	let currentTabIndex = $state(0);
 
 	onMount(() => {
 		// Set initial tab index
@@ -30,7 +30,7 @@
 		currentTabIndex = idx >= 0 ? idx : 0;
 	});
 
-	$: {
+	$effect(() => {
 		const idx = navs.findIndex((n) =>
 			n.path === '/'
 				? $page.url.pathname === '/'
@@ -43,7 +43,7 @@
 			indicatorLeft = rect.left - (parentRect?.left || 0);
 			indicatorWidth = rect.width;
 		}
-	}
+	});
 
 	function handleNavClick(path: string, e: Event) {
 		goto(path);

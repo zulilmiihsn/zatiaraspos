@@ -604,10 +604,10 @@
 							? 'qris'
 							: selectedTransaksi.metode_bayar}
 						options={paymentOptions}
-						on:close={() => (showDropdownPayment = false)}
-						on:select={(e) => {
+						onClose={() => (showDropdownPayment = false)}
+						onSelect={(value) => {
 							showDropdownPayment = false;
-							updatePaymentMethod(e.detail);
+							updatePaymentMethod(value);
 						}}
 					/>
 				</div>

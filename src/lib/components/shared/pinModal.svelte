@@ -1,19 +1,28 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-
 	import { onDestroy } from 'svelte';
 
-	const dispatch = createEventDispatcher();
+	let {
+		show = $bindable(false),
+		pin = '1234',
+		title = 'Masukkan PIN',
+		subtitle = 'Masukkan PIN untuk melanjutkan',
+		onSuccess,
+		onError,
+		onClose
+	}: {
+		show?: boolean;
+		pin?: string;
+		title?: string;
+		subtitle?: string;
+		onSuccess?: (detail: { pin: string }) => void;
+		onError?: (detail: { message: string }) => void;
+		onClose?: () => void;
+	} = $props();
 
-	export let show = false;
-	export let pin = '1234';
-	export let title = 'Masukkan PIN';
-	export let subtitle = 'Masukkan PIN untuk melanjutkan';
-
-	let pinInput = '';
-	let pinError = '';
+	let pinInput = $state('');
+	let pinError = $state('');
 	let errorTimeout: number;
-	let isShaking = false;
+	let isShaking = $state(false);
 
 	function handlePinInput(num: number) {
 		if (pinInput.length < 4) {
@@ -24,7 +33,7 @@
 				const entered = pinInput;
 				setTimeout(() => {
 					if (entered === pin) {
-						dispatch('success', { pin: entered });
+						if (onSuccess) onSuccess({ pin: entered });
 						show = false;
 						pinInput = '';
 						pinError = '';
@@ -37,7 +46,7 @@
 							pinError = '';
 							isShaking = false;
 						}, 2000) as any;
-						dispatch('error', { message: 'PIN salah!' });
+						if (onError) onError({ message: 'PIN salah!' });
 					}
 				}, 120);
 			}

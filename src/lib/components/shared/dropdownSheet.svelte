@@ -1,16 +1,29 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	export let options: { value: string; label: string }[] = [];
-	export let value = '';
-	export let open = false;
-	const dispatch = createEventDispatcher();
-	let selected = value;
-	$: if (open) selected = value;
+	let {
+		options = [],
+		value = '',
+		open = false,
+		onClose,
+		onSelect
+	}: {
+		options?: { value: string; label: string }[];
+		value?: string;
+		open?: boolean;
+		onClose?: () => void;
+		onSelect?: (value: string) => void;
+	} = $props();
+
+	let selected = $state(value);
+
+	$effect(() => {
+		if (open) selected = value;
+	});
+
 	function close() {
-		dispatch('close');
+		if (onClose) onClose();
 	}
 	function selectOption(optionValue: string) {
-		dispatch('select', optionValue);
+		if (onSelect) onSelect(optionValue);
 		close();
 	}
 </script>

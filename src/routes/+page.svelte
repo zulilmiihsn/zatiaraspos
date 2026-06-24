@@ -425,8 +425,8 @@
 		pin={actionPin}
 		title="Verifikasi Aksi"
 		subtitle="Masukkan PIN untuk melanjutkan"
-		on:success={handleActionPinSuccess}
-		on:close={handleActionPinClose}
+		onSuccess={handleActionPinSuccess}
+		onClose={handleActionPinClose}
 	/>
 {/if}
 

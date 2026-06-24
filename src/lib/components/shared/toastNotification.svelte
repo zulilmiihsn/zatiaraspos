@@ -4,24 +4,35 @@
 	import { cubicOut } from 'svelte/easing';
 	import { onDestroy } from 'svelte';
 
-	const dispatch = createEventDispatcher();
-
-	export let show = false;
-	export let message = '';
-	export let type: 'success' | 'error' | 'warning' | 'info' = 'success';
-	export let duration = 2000; // Default 2 seconds
-	export let position: 'top' | 'bottom' = 'top';
-	export let autoDismiss = true; // Always true
+	let {
+		show = $bindable(false),
+		message = '',
+		type = 'success',
+		duration = 2000,
+		position = 'top',
+		autoDismiss = true,
+		onDismiss
+	}: {
+		show?: boolean;
+		message?: string;
+		type?: 'success' | 'error' | 'warning' | 'info';
+		duration?: number;
+		position?: 'top' | 'bottom';
+		autoDismiss?: boolean;
+		onDismiss?: () => void;
+	} = $props();
 
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-	$: if (show && autoDismiss && duration > 0) {
-		if (timeoutId) clearTimeout(timeoutId);
-		timeoutId = setTimeout(() => {
-			show = false;
-			dispatch('dismiss');
-		}, duration);
-	}
+	$effect(() => {
+		if (show && autoDismiss && duration > 0) {
+			if (timeoutId) clearTimeout(timeoutId);
+			timeoutId = setTimeout(() => {
+				show = false;
+				if (onDismiss) onDismiss();
+			}, duration);
+		}
+	});
 
 	// Cleanup on component destroy
 	onDestroy(() => {

@@ -4,14 +4,19 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 
-	export let show = false;
-	export let onClose: () => void = () => {};
+	let {
+		show = false,
+		onClose = () => {}
+	}: {
+		show?: boolean;
+		onClose?: () => void;
+	} = $props();
 
-	let platform: 'ios' | 'android' | 'chrome-desktop' | 'edge' | 'firefox' | 'other' = 'other';
-	let isAlreadyInstalled = false;
-	let deferredPrompt: any = null;
-	let installing = false;
-	let installSuccess = false;
+	let platform: 'ios' | 'android' | 'chrome-desktop' | 'edge' | 'firefox' | 'other' = $state('other');
+	let isAlreadyInstalled = $state(false);
+	let deferredPrompt: any = $state(null);
+	let installing = $state(false);
+	let installSuccess = $state(false);
 
 	onMount(() => {
 		if (!browser) return;
@@ -158,7 +163,7 @@
 		}
 	];
 
-	$: steps =
+	let steps = $derived(
 		platform === 'ios'
 			? iosSteps
 			: platform === 'android'
@@ -169,7 +174,7 @@
 						? firefoxSteps
 						: null;
 
-	$: platformLabel =
+	let platformLabel = $derived(
 		platform === 'ios'
 			? 'Safari / iOS'
 			: platform === 'android'

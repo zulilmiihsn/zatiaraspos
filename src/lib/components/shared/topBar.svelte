@@ -5,15 +5,17 @@
 	import { onMount } from 'svelte';
 	import { getPendingTransactions } from '$lib/utils/offline';
 	import AiChatModal from './aiChatModal.svelte';
-	import { createEventDispatcher } from 'svelte';
+	let {
+		showSettings = true,
+		onAiRecommendationsApplied
+	}: {
+		showSettings?: boolean;
+		onAiRecommendationsApplied?: (detail: any) => void;
+	} = $props();
 
-	export let showSettings: boolean = true;
-
-	const dispatch = createEventDispatcher();
-
-	let pendingCount = 0;
-	let showPopover = false;
-	let showAiChat = false;
+	let pendingCount = $state(0);
+	let showPopover = $state(false);
+	let showAiChat = $state(false);
 
 	onMount(() => {
 		getPendingTransactions().then((transactions: any[]) => {
@@ -32,7 +34,7 @@
 		};
 	});
 
-	let isOffline = !navigator.onLine;
+	let isOffline = $state(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 	onMount(() => {
 		window.addEventListener('offline', () => (isOffline = true));
 		window.addEventListener('online', () => (isOffline = false));
@@ -52,8 +54,10 @@
 	}
 
 	function handleRecommendationsApplied(event: CustomEvent) {
-		// Dispatch event ke parent component untuk refresh data
-		dispatch('aiRecommendationsApplied', event.detail);
+		// Panggil callback prop ke parent component
+		if (onAiRecommendationsApplied) {
+			onAiRecommendationsApplied(event.detail);
+		}
 		// Broadcast global event agar halaman lain (mis. laporan) bisa dengar
 		if (typeof window !== 'undefined') {
 			window.dispatchEvent(new CustomEvent('ai-recommendations-applied', { detail: event.detail }));
