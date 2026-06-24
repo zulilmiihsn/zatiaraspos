@@ -106,10 +106,10 @@
 
 	async function saveTransaksi(form: {
 		amount: number;
-		description: string;
+		deskripsi: string;
 		transaction_date: string;
 		transaction_time: string;
-		payment_method: string;
+		metode_bayar: string;
 		jenis: string;
 	}) {
 		await cekSesiTokoAktif();
@@ -134,9 +134,9 @@
 			id: crypto.randomUUID(),
 			tipe: mode === 'pemasukan' ? 'in' : 'out',
 			sumber: 'catat',
-			payment_method: form.payment_method,
+			metode_bayar: form.metode_bayar,
 			amount: form.amount,
-			description: form.description,
+			deskripsi: form.deskripsi,
 			id_sesi_toko,
 			waktu: utcTime,
 			jenis: form.jenis
@@ -277,10 +277,10 @@
 		// Validate complete data object
 		const dataToValidate = {
 			amount: parseFloat(sanitizedNominal.replace(/\D/g, '')),
-			description: sanitizedNama,
+			deskripsi: sanitizedNama,
 			transaction_date: sanitizedDate,
 			transaction_time: sanitizedTime,
-			payment_method: sanitizedPaymentMethod,
+			metode_bayar: sanitizedPaymentMethod,
 			jenis: sanitizedJenis
 		};
 		const completeValidation = validateIncomeExpense(dataToValidate);

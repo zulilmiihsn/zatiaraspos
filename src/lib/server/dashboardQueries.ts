@@ -16,7 +16,7 @@ function witaDate(ts: string): string {
 
 /**
  * Statistik dashboard untuk rentang, dari ringkasan harian
- * (daily_sales_summary, sudah memuat hpp_total). Satu metode — tabel ringkasan
+ * (daily_sales_summary, sudah memuat total_hpp). Satu metode — tabel ringkasan
  * dijamin ada (migrasi 0004/0007) dan dijaga konsisten oleh checkout/void.
  * Periode tanpa penjualan → summary kosong (konsumen menghitungnya nol).
  */
@@ -34,11 +34,11 @@ export async function getDashboardStats(
 		.where(
 			and(
 				eq(dailySalesSummary.cabang_id, branch),
-				gte(dailySalesSummary.sales_date, startDate),
-				lte(dailySalesSummary.sales_date, endDate)
+				gte(dailySalesSummary.tanggal_penjualan, startDate),
+				lte(dailySalesSummary.tanggal_penjualan, endDate)
 			)
 		)
-		.orderBy(asc(dailySalesSummary.sales_date));
+		.orderBy(asc(dailySalesSummary.tanggal_penjualan));
 	return { summary };
 }
 
@@ -58,11 +58,11 @@ export async function getWeeklyIncomeSummary(
 			.where(
 				and(
 					eq(dailySalesSummary.cabang_id, branch),
-					gte(dailySalesSummary.sales_date, startDate),
-					lte(dailySalesSummary.sales_date, endDate)
+					gte(dailySalesSummary.tanggal_penjualan, startDate),
+					lte(dailySalesSummary.tanggal_penjualan, endDate)
 				)
 			)
-			.orderBy(asc(dailySalesSummary.sales_date));
+			.orderBy(asc(dailySalesSummary.tanggal_penjualan));
 	} catch {
 		return [];
 	}
@@ -80,9 +80,9 @@ export async function getBestSellersSummary(
 		const endDate = witaDate(endTime);
 		const rows = await rawDb
 			.prepare(
-				`SELECT produk_id, nama_produk, SUM(qty) AS total_qty, SUM(gross_sales) AS gross_sales
+				`SELECT produk_id, nama_produk, SUM(jumlah) AS total_qty, SUM(penjualan_kotor) AS penjualan_kotor
 				 FROM penjualan_produk_harian
-				 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?
+				 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?
 					AND produk_id != '${CUSTOM_PRODUCT_BUCKET_ID}'
 				 GROUP BY produk_id, nama_produk
 				 ORDER BY total_qty DESC

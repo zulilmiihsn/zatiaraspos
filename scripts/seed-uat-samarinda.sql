@@ -40,7 +40,7 @@ INSERT INTO pengaturan (
 	id,
 	cabang_id,
 	pin,
-	locked_pages,
+	halaman_terkunci,
 	nama_toko,
 	alamat,
 	telepon,
@@ -64,8 +64,8 @@ WHERE NOT EXISTS (
 INSERT INTO kategori (
 	id,
 	cabang_id,
-	name,
-	description,
+	nama,
+	deskripsi,
 	is_active
 )
 SELECT
@@ -81,8 +81,8 @@ WHERE NOT EXISTS (
 INSERT INTO produk (
 	id,
 	cabang_id,
-	name,
-	price,
+	nama,
+	harga,
 	stok,
 	kategori_id,
 	tipe,
@@ -108,8 +108,8 @@ WHERE NOT EXISTS (
 INSERT INTO sesi_toko (
 	id,
 	cabang_id,
-	opening_cash,
-	opening_time,
+	kas_awal,
+	waktu_buka,
 	is_active
 )
 SELECT

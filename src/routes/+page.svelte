@@ -327,7 +327,7 @@
 		sesiAktif = await getSesiAktif();
 		updateTokoAktif(!!sesiAktif);
 		// Update modalAwal agar box di beranda selalu sinkron
-		modalAwal = sesiAktif?.opening_cash ?? null;
+		modalAwal = sesiAktif?.kas_awal ?? null;
 	}
 
 	onMount(() => {

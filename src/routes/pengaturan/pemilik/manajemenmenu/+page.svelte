@@ -52,10 +52,10 @@
 		name: '',
 		kategori_id: null as string | number | null,
 		tipe: 'minuman' as 'minuman' | 'makanan' | 'snack',
-		price: '',
+		harga: '',
 		stok: '',
-		track_stock: false,
-		track_ingredients: false,
+		lacak_stok: false,
+		lacak_bahan: false,
 		ekstra_ids: [] as Array<string | number>,
 		gambar: ''
 	});
@@ -63,34 +63,34 @@
 	let ekstraForm = $state({ name: '', harga: '' });
 	let bahanForm = $state({
 		name: '',
-		unit: 'gram',
-		current_stock: '',
-		low_stock_threshold: '',
-		last_purchase_qty: '',
-		last_purchase_cost: ''
+		satuan: 'gram',
+		stok_saat_ini: '',
+		ambang_stok: '',
+		jumlah_beli_terakhir: '',
+		biaya_beli_terakhir: ''
 	});
 	let hppForm = $state({
-		rent_monthly: '',
-		electricity_monthly: '',
-		water_monthly: '',
-		salary_monthly: '',
-		other_monthly: '',
-		target_items_monthly: '1000'
+		sewa_bulanan: '',
+		listrik_bulanan: '',
+		air_bulanan: '',
+		gaji_bulanan: '',
+		lainnya_bulanan: '',
+		target_item_bulanan: '1000'
 	});
 	let hppPurchaseText = $state('');
 	let hppParsedItems = $state<
 		Array<{
 			name: string;
-			unit: string;
+			satuan: string;
 			purchase_qty: number;
 			purchase_cost: number;
-			cost_per_unit: number;
+			biaya_per_satuan: number;
 		}>
 	>([]);
 	let isParsingHpp = $state(false);
-	let mutasiBahanForm = $state({ quantity_delta: '', note: '' });
-	let recipeItems = $state<Array<{ bahan_id: string | number; qty_per_item: string }>>([]);
-	let recipeDraft = $state({ bahan_id: '', qty_per_item: '' });
+	let mutasiBahanForm = $state({ delta_jumlah: '', catatan: '' });
+	let recipeItems = $state<Array<{ bahan_id: string | number; jumlah_per_item: string }>>([]);
+	let recipeDraft = $state({ bahan_id: '', jumlah_per_item: '' });
 	let selectedKategori = $state<string | number>('Semua');
 	let searchKeyword = $state('');
 	let showDeleteModal = $state(false);
@@ -214,7 +214,7 @@
 		isLoadingEkstra = true;
 		try {
 			const data = await dataService.getAddOns();
-			ekstraList = (data || []).map((e: AddOn) => ({ ...e, harga: e.price }));
+			ekstraList = (data || []).map((e: AddOn) => ({ ...e, harga: e.harga }));
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data ekstra: ' + (e?.message || 'Unknown error');
@@ -250,12 +250,12 @@
 			hppSettings = (await dataService.getHppSettings()) as unknown as HppSettings | null;
 			const settings = hppSettings || ({} as Partial<HppSettings>);
 			hppForm = {
-				rent_monthly: String(settings.rent_monthly || ''),
-				electricity_monthly: String(settings.electricity_monthly || ''),
-				water_monthly: String(settings.water_monthly || ''),
-				salary_monthly: String(settings.salary_monthly || ''),
-				other_monthly: String(settings.other_monthly || ''),
-				target_items_monthly: String(settings.target_items_monthly || 1000)
+				sewa_bulanan: String(settings.sewa_bulanan || ''),
+				listrik_bulanan: String(settings.listrik_bulanan || ''),
+				air_bulanan: String(settings.air_bulanan || ''),
+				gaji_bulanan: String(settings.gaji_bulanan || ''),
+				lainnya_bulanan: String(settings.lainnya_bulanan || ''),
+				target_item_bulanan: String(settings.target_item_bulanan || 1000)
 			};
 		} catch {
 			hppSettings = null;
@@ -316,26 +316,26 @@
 		}
 		showMenuForm = true;
 		recipeItems = [];
-		recipeDraft = { bahan_id: '', qty_per_item: '' };
+		recipeDraft = { bahan_id: '', jumlah_per_item: '' };
 		if (menu) {
 			editMenuId = menu.id;
 			// Format harga untuk display jika ada
-			const formattedPrice = menu.price ? menu.price.toLocaleString('id-ID') : '';
+			const formattedPrice = menu.harga ? menu.harga.toLocaleString('id-ID') : '';
 			menuForm.name = menu.name;
 			menuForm.kategori_id = menu.kategori_id as number;
 			menuForm.tipe = menu.tipe;
-			menuForm.price = formattedPrice;
+			menuForm.harga = formattedPrice;
 			menuForm.stok =
 				menu.stok !== null && menu.stok !== undefined ? String(Number(menu.stok || 0)) : '';
-			menuForm.track_stock = Boolean(menu.track_stock);
-			menuForm.track_ingredients = Boolean(menu.track_ingredients);
+			menuForm.lacak_stok = Boolean(menu.lacak_stok);
+			menuForm.lacak_bahan = Boolean(menu.lacak_bahan);
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
 			menuForm.gambar = menu.gambar || '';
-			if (menuForm.track_ingredients) {
+			if (menuForm.lacak_bahan) {
 				const recipes = (await dataService.getProductRecipes(menu.id)) as unknown as ProductRecipe[];
 				recipeItems = recipes.map((recipe) => ({
 					bahan_id: recipe.bahan_id,
-					qty_per_item: String(recipe.qty_per_item || '')
+					jumlah_per_item: String(recipe.jumlah_per_item || '')
 				}));
 			}
 		} else {
@@ -343,10 +343,10 @@
 			menuForm.name = '';
 			menuForm.kategori_id = null;
 			menuForm.tipe = 'minuman';
-			menuForm.price = '';
+			menuForm.harga = '';
 			menuForm.stok = '';
-			menuForm.track_stock = false;
-			menuForm.track_ingredients = false;
+			menuForm.lacak_stok = false;
+			menuForm.lacak_bahan = false;
 			menuForm.ekstra_ids = [];
 			menuForm.gambar = '';
 		}
@@ -358,14 +358,14 @@
 		menuForm.name = '';
 		menuForm.kategori_id = null;
 		menuForm.tipe = 'minuman';
-		menuForm.price = '';
+		menuForm.harga = '';
 		menuForm.stok = '';
-		menuForm.track_stock = false;
-		menuForm.track_ingredients = false;
+		menuForm.lacak_stok = false;
+		menuForm.lacak_bahan = false;
 		menuForm.ekstra_ids = [];
 		menuForm.gambar = '';
 		recipeItems = [];
-		recipeDraft = { bahan_id: '', qty_per_item: '' };
+		recipeDraft = { bahan_id: '', jumlah_per_item: '' };
 	}
 
 	async function saveMenu() {
@@ -375,13 +375,13 @@
 			showNotifModal = true;
 			return;
 		}
-		if (!menuForm.price || menuForm.price.toString().trim() === '') {
+		if (!menuForm.harga || menuForm.harga.toString().trim() === '') {
 			notifModalMsg = 'Harga menu wajib diisi!';
 			notifModalType = 'warning';
 			showNotifModal = true;
 			return;
 		}
-		if (menuForm.track_ingredients && recipeItems.length === 0) {
+		if (menuForm.lacak_bahan && recipeItems.length === 0) {
 			notifModalMsg = 'Resep bahan wajib diisi untuk menu jus.';
 			notifModalType = 'warning';
 			showNotifModal = true;
@@ -401,18 +401,18 @@
 		}
 		// Konversi harga dari format Rupiah ke angka
 		const priceValue =
-			typeof menuForm.price === 'string'
-				? parseInt(menuForm.price.replace(/\./g, ''))
-				: parseInt(menuForm.price);
+			typeof menuForm.harga === 'string'
+				? parseInt(menuForm.harga.replace(/\./g, ''))
+				: parseInt(menuForm.harga);
 
 		const payload = {
 			name: menuForm.name,
 			kategori_id: menuForm.kategori_id,
 			tipe: menuForm.tipe,
-			price: priceValue,
-			stok: menuForm.track_stock ? Math.max(0, parseInt(menuForm.stok || '0', 10) || 0) : 0,
-			track_stock: menuForm.track_stock && !menuForm.track_ingredients,
-			track_ingredients: menuForm.track_ingredients,
+			harga: priceValue,
+			stok: menuForm.lacak_stok ? Math.max(0, parseInt(menuForm.stok || '0', 10) || 0) : 0,
+			lacak_stok: menuForm.lacak_stok && !menuForm.lacak_bahan,
+			lacak_bahan: menuForm.lacak_bahan,
 			ekstra_ids: menuForm.ekstra_ids,
 			gambar: imageUrl
 		};
@@ -449,20 +449,20 @@
 
 	async function saveMenuRecipe(productId: string | number) {
 		await dataService.deleteRows('resep_produk', { produk_id: String(productId) });
-		if (!menuForm.track_ingredients || recipeItems.length === 0) return;
+		if (!menuForm.lacak_bahan || recipeItems.length === 0) return;
 
 		const rows = recipeItems.map((item) => ({
 			produk_id: String(productId),
 			bahan_id: String(item.bahan_id),
-			qty_per_item: Number(item.qty_per_item || 0)
+			jumlah_per_item: Number(item.jumlah_per_item || 0)
 		}));
 		await dataService.insertRows('resep_produk', rows);
 	}
 
 	function addRecipeItem() {
 		const bahanId = recipeDraft.bahan_id;
-		const qty = Number(recipeDraft.qty_per_item || 0);
-		if (!bahanId || !Number.isFinite(qty) || qty <= 0) {
+		const jumlah = Number(recipeDraft.jumlah_per_item || 0);
+		if (!bahanId || !Number.isFinite(jumlah) || jumlah <= 0) {
 			notifModalMsg = 'Pilih bahan dan isi takaran resep.';
 			notifModalType = 'warning';
 			showNotifModal = true;
@@ -470,12 +470,12 @@
 		}
 		const existing = recipeItems.find((item) => String(item.bahan_id) === String(bahanId));
 		if (existing) {
-			existing.qty_per_item = String(qty);
+			existing.jumlah_per_item = String(jumlah);
 			recipeItems = [...recipeItems];
 		} else {
-			recipeItems = [...recipeItems, { bahan_id: bahanId, qty_per_item: String(qty) }];
+			recipeItems = [...recipeItems, { bahan_id: bahanId, jumlah_per_item: String(jumlah) }];
 		}
-		recipeDraft = { bahan_id: '', qty_per_item: '' };
+		recipeDraft = { bahan_id: '', jumlah_per_item: '' };
 	}
 
 	function removeRecipeItem(bahanId: string | number) {
@@ -487,26 +487,26 @@
 	}
 
 	function getBahanUnit(id: string | number) {
-		return bahanList.find((item) => String(item.id) === String(id))?.unit || '';
+		return bahanList.find((item) => String(item.id) === String(id))?.satuan || '';
 	}
 
 	function getBahanCostPerUnit(id: string | number) {
-		return Number(bahanList.find((item) => String(item.id) === String(id))?.cost_per_unit || 0);
+		return Number(bahanList.find((item) => String(item.id) === String(id))?.biaya_per_satuan || 0);
 	}
 
 	function getOverheadMonthly() {
 		const settings = hppSettings || ({} as Partial<HppSettings>);
 		return (
-			Number(settings.rent_monthly || 0) +
-			Number(settings.electricity_monthly || 0) +
-			Number(settings.water_monthly || 0) +
-			Number(settings.salary_monthly || 0) +
-			Number(settings.other_monthly || 0)
+			Number(settings.sewa_bulanan || 0) +
+			Number(settings.listrik_bulanan || 0) +
+			Number(settings.air_bulanan || 0) +
+			Number(settings.gaji_bulanan || 0) +
+			Number(settings.lainnya_bulanan || 0)
 		);
 	}
 
 	function getOverheadPerItem() {
-		const target = Math.max(1, Number(hppSettings?.target_items_monthly || 1000));
+		const target = Math.max(1, Number(hppSettings?.target_item_bulanan || 1000));
 		return Math.round(getOverheadMonthly() / target);
 	}
 
@@ -515,7 +515,7 @@
 			.filter((recipe) => String(recipe.produk_id) === String(productId))
 			.reduce(
 				(sum, recipe) =>
-					sum + Number(recipe.qty_per_item || 0) * getBahanCostPerUnit(recipe.bahan_id),
+					sum + Number(recipe.jumlah_per_item || 0) * getBahanCostPerUnit(recipe.bahan_id),
 				0
 			);
 	}
@@ -526,8 +526,8 @@
 	}
 
 	function getProductMargin(menu: Product) {
-		const price = Number(menu.price || 0);
-		return price - getProductHpp(menu);
+		const harga = Number(menu.harga || 0);
+		return harga - getProductHpp(menu);
 	}
 
 	function formatCurrency(value: number) {
@@ -749,11 +749,11 @@
 			if (editEkstraId) {
 				await dataService.updateRows(
 					'tambahan',
-					{ name: ekstraForm.name, price: harga },
+					{ name: ekstraForm.name, harga: harga },
 					{ id: String(editEkstraId) }
 				);
 			} else {
-				await dataService.insertRows('tambahan', { name: ekstraForm.name, price: harga });
+				await dataService.insertRows('tambahan', { name: ekstraForm.name, harga: harga });
 			}
 			await fetchEkstra();
 			showEkstraForm = false;
@@ -808,21 +808,21 @@
 			editBahanId = bahan.id;
 			bahanForm = {
 				name: bahan.name,
-				unit: bahan.unit || 'gram',
-				current_stock: String(Number(bahan.current_stock || 0)),
-				low_stock_threshold: String(Number(bahan.low_stock_threshold || 0)),
-				last_purchase_qty: String(Number(bahan.last_purchase_qty || 0) || ''),
-				last_purchase_cost: String(Number(bahan.last_purchase_cost || 0) || '')
+				satuan: bahan.satuan || 'gram',
+				stok_saat_ini: String(Number(bahan.stok_saat_ini || 0)),
+				ambang_stok: String(Number(bahan.ambang_stok || 0)),
+				jumlah_beli_terakhir: String(Number(bahan.jumlah_beli_terakhir || 0) || ''),
+				biaya_beli_terakhir: String(Number(bahan.biaya_beli_terakhir || 0) || '')
 			};
 		} else {
 			editBahanId = null;
 			bahanForm = {
 				name: '',
-				unit: 'gram',
-				current_stock: '',
-				low_stock_threshold: '',
-				last_purchase_qty: '',
-				last_purchase_cost: ''
+				satuan: 'gram',
+				stok_saat_ini: '',
+				ambang_stok: '',
+				jumlah_beli_terakhir: '',
+				biaya_beli_terakhir: ''
 			};
 		}
 	}
@@ -832,11 +832,11 @@
 		editBahanId = null;
 		bahanForm = {
 			name: '',
-			unit: 'gram',
-			current_stock: '',
-			low_stock_threshold: '',
-			last_purchase_qty: '',
-			last_purchase_cost: ''
+			satuan: 'gram',
+			stok_saat_ini: '',
+			ambang_stok: '',
+			jumlah_beli_terakhir: '',
+			biaya_beli_terakhir: ''
 		};
 	}
 
@@ -849,16 +849,16 @@
 		}
 		const payload = {
 			name: bahanForm.name.trim(),
-			unit: bahanForm.unit || 'gram',
-			current_stock: Math.max(0, Number(bahanForm.current_stock || 0)),
-			low_stock_threshold: Math.max(0, Number(bahanForm.low_stock_threshold || 0)),
-			last_purchase_qty: Math.max(0, Number(bahanForm.last_purchase_qty || 0)),
-			last_purchase_cost: Math.max(0, Number(bahanForm.last_purchase_cost || 0)),
-			cost_per_unit:
-				Number(bahanForm.last_purchase_qty || 0) > 0
+			satuan: bahanForm.satuan || 'gram',
+			stok_saat_ini: Math.max(0, Number(bahanForm.stok_saat_ini || 0)),
+			ambang_stok: Math.max(0, Number(bahanForm.ambang_stok || 0)),
+			jumlah_beli_terakhir: Math.max(0, Number(bahanForm.jumlah_beli_terakhir || 0)),
+			biaya_beli_terakhir: Math.max(0, Number(bahanForm.biaya_beli_terakhir || 0)),
+			biaya_per_satuan:
+				Number(bahanForm.jumlah_beli_terakhir || 0) > 0
 					? Math.round(
-							(Number(bahanForm.last_purchase_cost || 0) /
-								Number(bahanForm.last_purchase_qty || 0)) *
+							(Number(bahanForm.biaya_beli_terakhir || 0) /
+								Number(bahanForm.jumlah_beli_terakhir || 0)) *
 								100
 						) / 100
 					: 0
@@ -881,12 +881,12 @@
 
 	async function saveHppSettings() {
 		const payload = {
-			rent_monthly: Number(hppForm.rent_monthly || 0),
-			electricity_monthly: Number(hppForm.electricity_monthly || 0),
-			water_monthly: Number(hppForm.water_monthly || 0),
-			salary_monthly: Number(hppForm.salary_monthly || 0),
-			other_monthly: Number(hppForm.other_monthly || 0),
-			target_items_monthly: Math.max(1, Number(hppForm.target_items_monthly || 1000))
+			sewa_bulanan: Number(hppForm.sewa_bulanan || 0),
+			listrik_bulanan: Number(hppForm.listrik_bulanan || 0),
+			air_bulanan: Number(hppForm.air_bulanan || 0),
+			gaji_bulanan: Number(hppForm.gaji_bulanan || 0),
+			lainnya_bulanan: Number(hppForm.lainnya_bulanan || 0),
+			target_item_bulanan: Math.max(1, Number(hppForm.target_item_bulanan || 1000))
 		};
 		try {
 			const result = await dataService.insertRows('hpp_settings', payload);
@@ -930,10 +930,10 @@
 
 	async function saveParsedHppItem(item: {
 		name: string;
-		unit: string;
+		satuan: string;
 		purchase_qty: number;
 		purchase_cost: number;
-		cost_per_unit: number;
+		biaya_per_satuan: number;
 	}) {
 		const existing = bahanList.find(
 			(bahan) => bahan.name.trim().toLowerCase() === item.name.trim().toLowerCase()
@@ -943,28 +943,28 @@
 				await dataService.updateRows(
 					'bahan',
 					{
-						unit: item.unit,
-						last_purchase_qty: item.purchase_qty,
-						last_purchase_cost: item.purchase_cost,
-						cost_per_unit: item.cost_per_unit
+						satuan: item.satuan,
+						jumlah_beli_terakhir: item.purchase_qty,
+						biaya_beli_terakhir: item.purchase_cost,
+						biaya_per_satuan: item.biaya_per_satuan
 					},
 					{ id: String(existing.id) }
 				);
 				await dataService.insertRows('bahan_mutasi', {
 					bahan_id: String(existing.id),
-					quantity_delta: item.purchase_qty,
+					delta_jumlah: item.purchase_qty,
 					source: 'purchase',
-					note: `Belanja ${formatCurrency(item.purchase_cost)}`
+					catatan: `Belanja ${formatCurrency(item.purchase_cost)}`
 				});
 			} else {
 				await dataService.insertRows('bahan', {
 					name: item.name,
-					unit: item.unit,
-					current_stock: item.purchase_qty,
-					low_stock_threshold: 0,
-					last_purchase_qty: item.purchase_qty,
-					last_purchase_cost: item.purchase_cost,
-					cost_per_unit: item.cost_per_unit
+					satuan: item.satuan,
+					stok_saat_ini: item.purchase_qty,
+					ambang_stok: 0,
+					jumlah_beli_terakhir: item.purchase_qty,
+					biaya_beli_terakhir: item.purchase_cost,
+					biaya_per_satuan: item.biaya_per_satuan
 				});
 			}
 			await dataService.invalidateCacheOnChange('bahan');
@@ -981,19 +981,19 @@
 
 	function openMutasiBahanForm(bahan: Ingredient) {
 		mutasiBahanId = bahan.id;
-		mutasiBahanForm = { quantity_delta: '', note: '' };
+		mutasiBahanForm = { delta_jumlah: '', catatan: '' };
 		showMutasiBahanForm = true;
 	}
 
 	function closeMutasiBahanForm() {
 		showMutasiBahanForm = false;
 		mutasiBahanId = null;
-		mutasiBahanForm = { quantity_delta: '', note: '' };
+		mutasiBahanForm = { delta_jumlah: '', catatan: '' };
 	}
 
 	async function saveMutasiBahan() {
 		if (!mutasiBahanId) return;
-		const delta = Number(mutasiBahanForm.quantity_delta || 0);
+		const delta = Number(mutasiBahanForm.delta_jumlah || 0);
 		if (!Number.isFinite(delta) || delta === 0) {
 			notifModalMsg = 'Jumlah stok masuk atau keluar wajib diisi';
 			notifModalType = 'warning';
@@ -1003,9 +1003,9 @@
 		try {
 			await dataService.insertRows('bahan_mutasi', {
 				bahan_id: String(mutasiBahanId),
-				quantity_delta: delta,
+				delta_jumlah: delta,
 				source: 'manual',
-				note: mutasiBahanForm.note
+				catatan: mutasiBahanForm.catatan
 			});
 			closeMutasiBahanForm();
 			await dataService.invalidateCacheOnChange('bahan');
@@ -1090,9 +1090,9 @@
 			const numericValue = parseInt(value);
 			// Tampilkan format Rupiah untuk user
 			const formattedValue = numericValue.toLocaleString('id-ID');
-			menuForm.price = formattedValue;
+			menuForm.harga = formattedValue;
 		} else {
-			menuForm.price = '';
+			menuForm.harga = '';
 		}
 	}
 
@@ -1190,13 +1190,13 @@
 	}
 
 	function setTrackStock(value: boolean) {
-		menuForm.track_stock = value;
-		if (value) menuForm.track_ingredients = false;
+		menuForm.lacak_stok = value;
+		if (value) menuForm.lacak_bahan = false;
 	}
 
 	function setTrackIngredients(value: boolean) {
-		menuForm.track_ingredients = value;
-		if (value) menuForm.track_stock = false;
+		menuForm.lacak_bahan = value;
+		if (value) menuForm.lacak_stok = false;
 	}
 
 	async function afterUpdateCachePOS() {
@@ -1556,7 +1556,7 @@
 													{kategoriList.find((k) => k.id === menu.kategori_id)?.name || '-'}
 												</div>
 												<div class="text-xs font-bold text-pink-500 md:text-base">
-													Rp {menu.price.toLocaleString('id-ID')}
+													Rp {menu.harga.toLocaleString('id-ID')}
 												</div>
 											</div>
 										</div>
@@ -1582,7 +1582,7 @@
 												{kategoriList.find((k) => k.id === menu.kategori_id)?.name || '-'}
 											</div>
 											<div class="text-base font-bold text-pink-500">
-												Rp {menu.price.toLocaleString('id-ID')}
+												Rp {menu.harga.toLocaleString('id-ID')}
 											</div>
 										</div>
 										<div class="ml-2">
@@ -1837,19 +1837,19 @@
 													>{bahan.name}</span
 												>
 												<span class="block text-xs text-amber-800">
-													Stok {Number(bahan.current_stock || 0).toLocaleString('id-ID')}
-													{bahan.unit}
-													{#if Number(bahan.low_stock_threshold || 0) > 0}
-														/ minimum {Number(bahan.low_stock_threshold || 0).toLocaleString(
+													Stok {Number(bahan.stok_saat_ini || 0).toLocaleString('id-ID')}
+													{bahan.satuan}
+													{#if Number(bahan.ambang_stok || 0) > 0}
+														/ minimum {Number(bahan.ambang_stok || 0).toLocaleString(
 															'id-ID'
 														)}
-														{bahan.unit}
+														{bahan.satuan}
 													{/if}
 												</span>
 												<span class="block text-xs text-amber-700">
-													HPP {formatCurrency(Number(bahan.cost_per_unit || 0))} per {bahan.unit}
+													HPP {formatCurrency(Number(bahan.biaya_per_satuan || 0))} per {bahan.satuan}
 												</span>
-												{#if Number(bahan.low_stock_threshold || 0) > 0 && Number(bahan.current_stock || 0) <= Number(bahan.low_stock_threshold || 0)}
+												{#if Number(bahan.ambang_stok || 0) > 0 && Number(bahan.stok_saat_ini || 0) <= Number(bahan.ambang_stok || 0)}
 													<span
 														class="mt-1 inline-flex rounded-md bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700"
 													>
@@ -1899,7 +1899,7 @@
 					<div class="rounded-xl border border-gray-200 bg-white p-4">
 						<div class="text-xs font-semibold text-gray-500">Target item per bulan</div>
 						<div class="mt-1 text-xl font-bold text-gray-900">
-							{Number(hppSettings?.target_items_monthly || 1000).toLocaleString('id-ID')}
+							{Number(hppSettings?.target_item_bulanan || 1000).toLocaleString('id-ID')}
 						</div>
 					</div>
 				</div>
@@ -1915,42 +1915,42 @@
 							type="number"
 							min="0"
 							placeholder="Kios per bulan"
-							bind:value={hppForm.rent_monthly}
+							bind:value={hppForm.sewa_bulanan}
 						/>
 						<input
 							class="rounded-lg border border-gray-300 px-3 py-2"
 							type="number"
 							min="0"
 							placeholder="Listrik per bulan"
-							bind:value={hppForm.electricity_monthly}
+							bind:value={hppForm.listrik_bulanan}
 						/>
 						<input
 							class="rounded-lg border border-gray-300 px-3 py-2"
 							type="number"
 							min="0"
 							placeholder="Air bersih per bulan"
-							bind:value={hppForm.water_monthly}
+							bind:value={hppForm.air_bulanan}
 						/>
 						<input
 							class="rounded-lg border border-gray-300 px-3 py-2"
 							type="number"
 							min="0"
 							placeholder="Gaji per bulan"
-							bind:value={hppForm.salary_monthly}
+							bind:value={hppForm.gaji_bulanan}
 						/>
 						<input
 							class="rounded-lg border border-gray-300 px-3 py-2"
 							type="number"
 							min="0"
 							placeholder="Biaya lain"
-							bind:value={hppForm.other_monthly}
+							bind:value={hppForm.lainnya_bulanan}
 						/>
 						<input
 							class="rounded-lg border border-gray-300 px-3 py-2"
 							type="number"
 							min="1"
 							placeholder="Target item/bulan"
-							bind:value={hppForm.target_items_monthly}
+							bind:value={hppForm.target_item_bulanan}
 						/>
 					</div>
 					<button
@@ -1986,9 +1986,9 @@
 										<div class="truncate text-sm font-semibold text-gray-800">{item.name}</div>
 										<div class="text-xs text-gray-600">
 											{Number(item.purchase_qty).toLocaleString('id-ID')}
-											{item.unit} /
+											{item.satuan} /
 											{formatCurrency(item.purchase_cost)} =
-											{formatCurrency(item.cost_per_unit)} per {item.unit}
+											{formatCurrency(item.biaya_per_satuan)} per {item.satuan}
 										</div>
 									</div>
 									<button
@@ -2007,7 +2007,7 @@
 				<div class="rounded-xl border border-gray-200 bg-white p-4">
 					<h2 class="mb-3 text-lg font-bold text-gray-800">Estimasi HPP Menu</h2>
 					<div class="flex flex-col gap-2">
-						{#each menus.filter((menu) => menu.track_ingredients) as menu}
+						{#each menus.filter((menu) => menu.lacak_bahan) as menu}
 							<div class="rounded-lg border border-gray-200 px-3 py-3">
 								<div class="flex items-start justify-between gap-3">
 									<div class="min-w-0">
@@ -2032,7 +2032,7 @@
 								</div>
 							</div>
 						{/each}
-						{#if menus.filter((menu) => menu.track_ingredients).length === 0}
+						{#if menus.filter((menu) => menu.lacak_bahan).length === 0}
 							<div class="rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500">
 								Belum ada menu dengan resep bahan.
 							</div>
@@ -2188,16 +2188,16 @@
 
 					<!-- Harga -->
 					<div class="flex flex-col gap-2">
-						<label for="menu-price" class="text-sm font-semibold text-gray-700">Harga</label>
+						<label for="menu-harga" class="text-sm font-semibold text-gray-700">Harga</label>
 						<div class="relative">
 							<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
 								>Rp</span
 							>
 							<input
 								type="text"
-								id="menu-price"
+								id="menu-harga"
 								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
-								bind:value={menuForm.price}
+								bind:value={menuForm.harga}
 								oninput={formatRupiahInput}
 								required
 								placeholder="0"
@@ -2217,12 +2217,12 @@
 							<input
 								type="checkbox"
 								class="h-5 w-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
-								bind:checked={menuForm.track_stock}
+								bind:checked={menuForm.lacak_stok}
 								onchange={(event) =>
 									setTrackStock((event.currentTarget as HTMLInputElement).checked)}
 							/>
 						</label>
-						{#if menuForm.track_stock}
+						{#if menuForm.lacak_stok}
 							<div class="mt-4 flex flex-col gap-2">
 								<label for="menu-stok" class="text-sm font-semibold text-gray-700"
 									>Stok Saat Ini</label
@@ -2248,12 +2248,12 @@
 							<input
 								type="checkbox"
 								class="h-5 w-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
-								bind:checked={menuForm.track_ingredients}
+								bind:checked={menuForm.lacak_bahan}
 								onchange={(event) =>
 									setTrackIngredients((event.currentTarget as HTMLInputElement).checked)}
 							/>
 						</label>
-						{#if menuForm.track_ingredients}
+						{#if menuForm.lacak_bahan}
 							<div class="mt-4 rounded-xl border border-amber-200 bg-white p-3">
 								<div class="mb-3 grid grid-cols-[1fr_96px_auto] gap-2">
 									<select
@@ -2262,7 +2262,7 @@
 									>
 										<option value="">Pilih bahan</option>
 										{#each bahanList as bahan}
-											<option value={bahan.id}>{bahan.name} ({bahan.unit})</option>
+											<option value={bahan.id}>{bahan.name} ({bahan.satuan})</option>
 										{/each}
 									</select>
 									<input
@@ -2270,7 +2270,7 @@
 										min="0"
 										step="0.01"
 										class="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-										bind:value={recipeDraft.qty_per_item}
+										bind:value={recipeDraft.jumlah_per_item}
 										placeholder="Takaran"
 									/>
 									<button
@@ -2296,7 +2296,7 @@
 														{getBahanName(recipe.bahan_id)}
 													</div>
 													<div class="text-xs text-gray-500">
-														{Number(recipe.qty_per_item || 0).toLocaleString('id-ID')}
+														{Number(recipe.jumlah_per_item || 0).toLocaleString('id-ID')}
 														{getBahanUnit(recipe.bahan_id)} per item
 													</div>
 												</div>
@@ -2637,11 +2637,11 @@
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<div class="flex flex-col gap-2">
-							<label for="bahan-unit" class="font-semibold text-gray-700">Satuan</label>
+							<label for="bahan-satuan" class="font-semibold text-gray-700">Satuan</label>
 							<select
-								id="bahan-unit"
+								id="bahan-satuan"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-								bind:value={bahanForm.unit}
+								bind:value={bahanForm.satuan}
 							>
 								<option value="gram">gram</option>
 								<option value="ml">ml</option>
@@ -2657,7 +2657,7 @@
 								min="0"
 								step="0.01"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-								bind:value={bahanForm.current_stock}
+								bind:value={bahanForm.stok_saat_ini}
 								placeholder="0"
 							/>
 						</div>
@@ -2670,21 +2670,21 @@
 							min="0"
 							step="0.01"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-							bind:value={bahanForm.low_stock_threshold}
+							bind:value={bahanForm.ambang_stok}
 							placeholder="0"
 						/>
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<div class="flex flex-col gap-2">
-							<label for="bahan-purchase-qty" class="font-semibold text-gray-700">Jumlah Beli</label
+							<label for="bahan-purchase-jumlah" class="font-semibold text-gray-700">Jumlah Beli</label
 							>
 							<input
-								id="bahan-purchase-qty"
+								id="bahan-purchase-jumlah"
 								type="number"
 								min="0"
 								step="0.01"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-								bind:value={bahanForm.last_purchase_qty}
+								bind:value={bahanForm.jumlah_beli_terakhir}
 								placeholder="Contoh: 1000"
 							/>
 						</div>
@@ -2697,17 +2697,17 @@
 								min="0"
 								step="1"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-								bind:value={bahanForm.last_purchase_cost}
+								bind:value={bahanForm.biaya_beli_terakhir}
 								placeholder="Contoh: 18000"
 							/>
 						</div>
 					</div>
-					{#if Number(bahanForm.last_purchase_qty || 0) > 0}
+					{#if Number(bahanForm.jumlah_beli_terakhir || 0) > 0}
 						<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
 							HPP bahan {formatCurrency(
-								Number(bahanForm.last_purchase_cost || 0) / Number(bahanForm.last_purchase_qty || 1)
+								Number(bahanForm.biaya_beli_terakhir || 0) / Number(bahanForm.jumlah_beli_terakhir || 1)
 							)}
-							per {bahanForm.unit}
+							per {bahanForm.satuan}
 						</div>
 					{/if}
 					<div class="mt-4 flex gap-2">
@@ -2750,7 +2750,7 @@
 							type="number"
 							step="0.01"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-							bind:value={mutasiBahanForm.quantity_delta}
+							bind:value={mutasiBahanForm.delta_jumlah}
 							required
 							placeholder="Contoh: 500 atau -100"
 						/>
@@ -2759,12 +2759,12 @@
 						</p>
 					</div>
 					<div class="flex flex-col gap-2">
-						<label for="mutasi-note" class="font-semibold text-gray-700">Catatan</label>
+						<label for="mutasi-catatan" class="font-semibold text-gray-700">Catatan</label>
 						<input
-							id="mutasi-note"
+							id="mutasi-catatan"
 							type="text"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-							bind:value={mutasiBahanForm.note}
+							bind:value={mutasiBahanForm.catatan}
 							placeholder="Belanja bahan / koreksi opname"
 						/>
 					</div>

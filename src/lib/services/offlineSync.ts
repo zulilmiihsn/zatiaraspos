@@ -66,13 +66,13 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				idempotency_key: bukuKas.transaction_id || bukuKas.id,
-				customer_name: bukuKas.customer_name || null,
-				payment_method: bukuKas.payment_method,
+				nama_pelanggan: bukuKas.nama_pelanggan || null,
+				metode_bayar: bukuKas.metode_bayar,
 				items: payload.transaksiKasir.map((item: any) => ({
 					product_id: item.produk_id || null,
-					custom_name: item.custom_name || null,
-					custom_price: item.produk_id ? null : item.price || item.amount,
-					qty: item.qty || 1,
+					nama_kustom: item.nama_kustom || null,
+					custom_price: item.produk_id ? null : item.harga || item.amount,
+					jumlah: item.jumlah || 1,
 					add_on_ids: []
 				}))
 			})

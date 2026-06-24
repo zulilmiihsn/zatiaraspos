@@ -61,7 +61,7 @@ export class AiAnalysisService {
 				detectedTransactions.push({
 					type: this.mapTransactionType(tx.type),
 					amount: Number(tx.amount) || 0,
-					description: String(tx.description || ''),
+					deskripsi: String(tx.deskripsi || ''),
 					category: tx.category,
 					confidence: Number(tx.confidence) || 0.8,
 					products: tx.products || [] // Include products data
@@ -76,7 +76,7 @@ export class AiAnalysisService {
 					const recommendationData = {
 						type: tx.type,
 						amount: tx.amount,
-						description: tx.description,
+						deskripsi: tx.deskripsi,
 						category: tx.category,
 						products: tx.products || [] // Include products data
 					};
@@ -85,7 +85,7 @@ export class AiAnalysisService {
 						id: `rec_${Date.now()}_${index}`,
 						action: 'create_transaction',
 						title: `Catat ${this.getTransactionTypeLabel(tx.type)}`,
-						description: `${this.getTransactionTypeLabel(tx.type)} sebesar Rp ${tx.amount.toLocaleString('id-ID')} - ${tx.description}`,
+						deskripsi: `${this.getTransactionTypeLabel(tx.type)} sebesar Rp ${tx.amount.toLocaleString('id-ID')} - ${tx.deskripsi}`,
 						data: recommendationData,
 						priority: tx.confidence > 0.8 ? 'high' : 'medium'
 					});
@@ -103,7 +103,7 @@ export class AiAnalysisService {
 					recommendationData = {
 						type: tx.type,
 						amount: tx.amount,
-						description: tx.description,
+						deskripsi: tx.deskripsi,
 						category: tx.category,
 						products: tx.products || [] // Include products data
 					};
@@ -113,7 +113,7 @@ export class AiAnalysisService {
 					id: `rec_${Date.now()}_${index}`,
 					action: rec.action || 'create_transaction',
 					title: rec.title || `Rekomendasi ${index + 1}`,
-					description: rec.description || '',
+					deskripsi: rec.deskripsi || '',
 					data: recommendationData,
 					priority: rec.priority || 'medium'
 				});
@@ -174,8 +174,8 @@ export class AiAnalysisService {
 
 		analysis.detectedTransactions.forEach((tx, index) => {
 			response += `${index + 1}. ${this.getTransactionTypeLabel(tx.type)}: Rp ${tx.amount.toLocaleString('id-ID')}`;
-			if (tx.description) {
-				response += ` - ${tx.description}`;
+			if (tx.deskripsi) {
+				response += ` - ${tx.deskripsi}`;
 			}
 			response += '\n';
 		});

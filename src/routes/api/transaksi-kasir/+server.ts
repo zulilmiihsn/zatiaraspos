@@ -67,13 +67,13 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	// Deteksi apakah kolom snapshot sudah ada (migrasi skema bertahap antar-DB).
 	const hasSnapshots = await hasDatabaseColumn(rawDb, branch, 'transaksi_kasir', 'nama_produk');
 	const snapshotSelect = hasSnapshots
-		? `nama_produk, base_price, add_on_total, add_on_snapshot, sugar, ice, note, hpp_snapshot, hpp_amount`
-		: `NULL AS nama_produk, NULL AS base_price, 0 AS add_on_total, NULL AS add_on_snapshot,
-			NULL AS sugar, NULL AS ice, NULL AS note, NULL AS hpp_snapshot, 0 AS hpp_amount`;
+		? `nama_produk, harga_dasar, total_tambahan, snapshot_tambahan, gula, es, catatan, snapshot_hpp, nominal_hpp`
+		: `NULL AS nama_produk, NULL AS harga_dasar, 0 AS total_tambahan, NULL AS snapshot_tambahan,
+			NULL AS gula, NULL AS es, NULL AS catatan, NULL AS snapshot_hpp, 0 AS nominal_hpp`;
 	const rows = await rawDb
 		.prepare(
 			`SELECT
-				id, cabang_id, buku_kas_id, produk_id, custom_name, qty, amount, price,
+				id, cabang_id, buku_kas_id, produk_id, nama_kustom, jumlah, nominal AS amount, harga,
 				${snapshotSelect},
 				transaction_id, created_at, updated_at
 			 FROM transaksi_kasir

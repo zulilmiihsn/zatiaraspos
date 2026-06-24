@@ -379,7 +379,7 @@ export type AsyncResult<T> = Promise<{
 export interface PWAConfig {
 	name: string;
 	short_name: string;
-	description: string;
+	deskripsi: string;
 	theme_color: string;
 	background_color: string;
 	display: 'standalone' | 'fullscreen' | 'minimal-ui' | 'browser';
@@ -411,7 +411,7 @@ export interface OfflineConfig {
 export interface TestCase {
 	id: string;
 	name: string;
-	description: string;
+	deskripsi: string;
 	test: () => Promise<TestResult>;
 }
 

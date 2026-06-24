@@ -59,8 +59,8 @@
 			totalNominal += Number(tx?.amount ?? 0) || 0;
 			const ts = String(tx?.waktu || tx?.created_at || '');
 			if (ts > latestTs) latestTs = ts;
-			paymentSignature += `|${tx?.id || ''}:${tx?.payment_method || ''}`;
-			detailSignature += `|${tx?.id || ''}:${tx?.tipe || ''}:${tx?.jenis || ''}:${tx?.description || ''}`;
+			paymentSignature += `|${tx?.id || ''}:${tx?.metode_bayar || ''}`;
+			detailSignature += `|${tx?.id || ''}:${tx?.tipe || ''}:${tx?.jenis || ''}:${tx?.deskripsi || ''}`;
 		}
 
 		return [
@@ -245,7 +245,7 @@
 		startDate = getLocalDateStringWITA();
 		endDate = startDate;
 
-		// Removed fetchPin() and locked_pages check
+		// Removed fetchPin() and halaman_terkunci check
 		initializePageData().then(() => {
 			// Jika role belum ada di store, validasi dari session backend.
 			if (!currentUserRole) {
@@ -392,7 +392,7 @@
 	}
 
 	function normalizePaymentMethod(t: BukuKasRecord): 'tunai' | 'non-tunai' {
-		const method = String(t?.payment_method || '')
+		const method = String(t?.metode_bayar || '')
 			.trim()
 			.toLowerCase();
 		return method === 'tunai' ? 'tunai' : 'non-tunai';
@@ -592,7 +592,7 @@
 		return amount.toLocaleString('id-ID');
 	}
 
-	// Fungsi untuk group dan sum item berdasarkan nama (description/catatan)
+	// Fungsi untuk group dan sum item berdasarkan nama (deskripsi/catatan)
 	function groupAndSumByName(items: BukuKasRecord[]): { name: string; total: number }[] {
 		const map = new Map<string, number>();
 		for (const item of items) {
@@ -654,7 +654,7 @@
 	);
 
 	function getDeskripsiLaporan(item: BukuKasRecord): string {
-		return item?.description?.trim() || item?.catatan?.trim() || '-';
+		return item?.deskripsi?.trim() || item?.catatan?.trim() || '-';
 	}
 
 	function getLocalDateStringWITA(): string {

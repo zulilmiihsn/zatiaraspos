@@ -40,11 +40,11 @@ export const produk = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('name').notNull(),
-		price: real('price').notNull(),
+		name: text('nama').notNull(),
+		harga: real('harga').notNull(),
 		stok: integer('stok').default(0),
-		track_stock: integer('track_stock', { mode: 'boolean' }).default(false),
-		track_ingredients: integer('track_ingredients', { mode: 'boolean' }).default(false),
+		lacak_stok: integer('lacak_stok', { mode: 'boolean' }).default(false),
+		lacak_bahan: integer('lacak_bahan', { mode: 'boolean' }).default(false),
 		gambar: text('gambar'),
 		kategori_id: text('kategori_id'),
 		tipe: text('tipe').default('minuman'),
@@ -65,13 +65,13 @@ export const bahan = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('name').notNull(),
-		unit: text('unit').notNull().default('gram'),
-		current_stock: real('current_stock').notNull().default(0),
-		low_stock_threshold: real('low_stock_threshold').notNull().default(0),
-		cost_per_unit: real('cost_per_unit').notNull().default(0),
-		last_purchase_qty: real('last_purchase_qty').notNull().default(0),
-		last_purchase_cost: real('last_purchase_cost').notNull().default(0),
+		name: text('nama').notNull(),
+		satuan: text('satuan').notNull().default('gram'),
+		stok_saat_ini: real('stok_saat_ini').notNull().default(0),
+		ambang_stok: real('ambang_stok').notNull().default(0),
+		biaya_per_satuan: real('biaya_per_satuan').notNull().default(0),
+		jumlah_beli_terakhir: real('jumlah_beli_terakhir').notNull().default(0),
+		biaya_beli_terakhir: real('biaya_beli_terakhir').notNull().default(0),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
@@ -87,12 +87,12 @@ export const hppSettings = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		rent_monthly: real('rent_monthly').notNull().default(0),
-		electricity_monthly: real('electricity_monthly').notNull().default(0),
-		water_monthly: real('water_monthly').notNull().default(0),
-		salary_monthly: real('salary_monthly').notNull().default(0),
-		other_monthly: real('other_monthly').notNull().default(0),
-		target_items_monthly: integer('target_items_monthly').notNull().default(1000),
+		sewa_bulanan: real('sewa_bulanan').notNull().default(0),
+		listrik_bulanan: real('listrik_bulanan').notNull().default(0),
+		air_bulanan: real('air_bulanan').notNull().default(0),
+		gaji_bulanan: real('gaji_bulanan').notNull().default(0),
+		lainnya_bulanan: real('lainnya_bulanan').notNull().default(0),
+		target_item_bulanan: integer('target_item_bulanan').notNull().default(1000),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
@@ -106,7 +106,7 @@ export const resepProduk = sqliteTable(
 		cabang_id: text('cabang_id').notNull(),
 		produk_id: text('produk_id').notNull(),
 		bahan_id: text('bahan_id').notNull(),
-		qty_per_item: real('qty_per_item').notNull(),
+		jumlah_per_item: real('jumlah_per_item').notNull(),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
@@ -127,12 +127,12 @@ export const bahanMutasi = sqliteTable(
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
 		bahan_id: text('bahan_id').notNull(),
-		quantity_delta: real('quantity_delta').notNull(),
-		stock_after: real('stock_after'),
-		source: text('source').notNull().default('manual'),
-		reference_id: text('reference_id'),
-		note: text('note'),
-		created_by: text('created_by'),
+		delta_jumlah: real('delta_jumlah').notNull(),
+		stok_setelah: real('stok_setelah'),
+		sumber: text('sumber').notNull().default('manual'),
+		referensi_id: text('referensi_id'),
+		catatan: text('catatan'),
+		dibuat_oleh: text('dibuat_oleh'),
 		created_at: text('created_at').default(now())
 	},
 	(table) => [
@@ -146,8 +146,8 @@ export const kategori = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('name').notNull(),
-		description: text('description'),
+		name: text('nama').notNull(),
+		deskripsi: text('deskripsi'),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
@@ -160,8 +160,8 @@ export const tambahan = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		name: text('name').notNull(),
-		price: real('price').notNull(),
+		name: text('nama').notNull(),
+		harga: real('harga').notNull(),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
@@ -178,11 +178,11 @@ export const bukuKas = sqliteTable(
 		sumber: text('sumber').notNull(),
 		tipe: text('tipe').notNull(),
 		jenis: text('jenis').notNull(),
-		amount: real('amount').notNull(),
-		qty: integer('qty'),
-		description: text('description'),
-		customer_name: text('customer_name'),
-		payment_method: text('payment_method'),
+		amount: real('nominal').notNull(),
+		jumlah: integer('jumlah'),
+		deskripsi: text('deskripsi'),
+		nama_pelanggan: text('nama_pelanggan'),
+		metode_bayar: text('metode_bayar'),
 		transaction_id: text('transaction_id'),
 		idempotency_key: text('idempotency_key'),
 		id_sesi_toko: text('id_sesi_toko'),
@@ -205,30 +205,26 @@ export const transaksiKasir = sqliteTable(
 		cabang_id: text('cabang_id').notNull(),
 		buku_kas_id: text('buku_kas_id').notNull(),
 		produk_id: text('produk_id'),
-		custom_name: text('custom_name'),
-		qty: integer('qty').notNull(),
-		amount: real('amount').notNull(),
-		price: real('price'),
+		nama_kustom: text('nama_kustom'),
+		jumlah: integer('jumlah').notNull(),
+		amount: real('nominal').notNull(),
+		harga: real('harga'),
 		nama_produk: text('nama_produk'),
-		base_price: real('base_price'),
-		add_on_total: real('add_on_total').default(0),
-		add_on_snapshot: text('add_on_snapshot'),
-		sugar: text('sugar'),
-		ice: text('ice'),
-		note: text('note'),
-		hpp_snapshot: text('hpp_snapshot'),
-		hpp_amount: real('hpp_amount').default(0),
+		harga_dasar: real('harga_dasar'),
+		total_tambahan: real('total_tambahan').default(0),
+		snapshot_tambahan: text('snapshot_tambahan'),
+		gula: text('gula'),
+		es: text('es'),
+		catatan: text('catatan'),
+		snapshot_hpp: text('snapshot_hpp'),
+		nominal_hpp: real('nominal_hpp').default(0),
 		transaction_id: text('transaction_id'),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
 		index('idx_transaksi_kasir_branch_created').on(table.cabang_id, table.created_at),
-		index('idx_transaksi_kasir_branch_created_id').on(
-			table.cabang_id,
-			table.created_at,
-			table.id
-		),
+		index('idx_transaksi_kasir_branch_created_id').on(table.cabang_id, table.created_at, table.id),
 		index('idx_transaksi_kasir_branch_transaction').on(table.cabang_id, table.transaction_id),
 		index('idx_transaksi_kasir_branch_buku').on(table.cabang_id, table.buku_kas_id)
 	]
@@ -239,19 +235,19 @@ export const dailySalesSummary = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		sales_date: text('sales_date').notNull(),
-		transaction_count: integer('transaction_count').notNull().default(0),
-		item_count: integer('item_count').notNull().default(0),
-		gross_sales: real('gross_sales').notNull().default(0),
-		cash_sales: real('cash_sales').notNull().default(0),
-		non_cash_sales: real('non_cash_sales').notNull().default(0),
-		hpp_total: real('hpp_total').notNull().default(0),
+		tanggal_penjualan: text('tanggal_penjualan').notNull(),
+		jumlah_transaksi: integer('jumlah_transaksi').notNull().default(0),
+		jumlah_item: integer('jumlah_item').notNull().default(0),
+		penjualan_kotor: real('penjualan_kotor').notNull().default(0),
+		penjualan_tunai: real('penjualan_tunai').notNull().default(0),
+		penjualan_nontunai: real('penjualan_nontunai').notNull().default(0),
+		total_hpp: real('total_hpp').notNull().default(0),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
-		uniqueIndex('idx_daily_sales_branch_date').on(table.cabang_id, table.sales_date),
-		index('idx_daily_sales_branch_date_range').on(table.cabang_id, table.sales_date)
+		uniqueIndex('idx_daily_sales_branch_date').on(table.cabang_id, table.tanggal_penjualan),
+		index('idx_daily_sales_branch_date_range').on(table.cabang_id, table.tanggal_penjualan)
 	]
 );
 
@@ -260,24 +256,24 @@ export const dailyProductSales = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		sales_date: text('sales_date').notNull(),
+		tanggal_penjualan: text('tanggal_penjualan').notNull(),
 		produk_id: text('produk_id').notNull(),
 		nama_produk: text('nama_produk').notNull(),
-		qty: integer('qty').notNull().default(0),
-		gross_sales: real('gross_sales').notNull().default(0),
-		cash_sales: real('cash_sales').notNull().default(0),
-		non_cash_sales: real('non_cash_sales').notNull().default(0),
-		transaction_count: integer('transaction_count').notNull().default(0),
+		jumlah: integer('jumlah').notNull().default(0),
+		penjualan_kotor: real('penjualan_kotor').notNull().default(0),
+		penjualan_tunai: real('penjualan_tunai').notNull().default(0),
+		penjualan_nontunai: real('penjualan_nontunai').notNull().default(0),
+		jumlah_transaksi: integer('jumlah_transaksi').notNull().default(0),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
 		uniqueIndex('idx_daily_product_sales_unique').on(
 			table.cabang_id,
-			table.sales_date,
+			table.tanggal_penjualan,
 			table.produk_id
 		),
-		index('idx_daily_product_sales_branch_date').on(table.cabang_id, table.sales_date),
+		index('idx_daily_product_sales_branch_date').on(table.cabang_id, table.tanggal_penjualan),
 		index('idx_daily_product_sales_branch_product').on(table.cabang_id, table.produk_id)
 	]
 );
@@ -288,7 +284,7 @@ export const pengaturan = sqliteTable(
 		id: integer('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
 		pin: text('pin').default('1234'),
-		locked_pages: text('locked_pages', { mode: 'json' }).$type<string[]>().default([]),
+		halaman_terkunci: text('halaman_terkunci', { mode: 'json' }).$type<string[]>().default([]),
 		nama_toko: text('nama_toko'),
 		alamat: text('alamat'),
 		telepon: text('telepon'),
@@ -305,16 +301,16 @@ export const sesiToko = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		opening_cash: real('opening_cash').notNull(),
-		opening_time: text('opening_time').notNull(),
-		closing_time: text('closing_time'),
+		kas_awal: real('kas_awal').notNull(),
+		waktu_buka: text('waktu_buka').notNull(),
+		waktu_tutup: text('waktu_tutup'),
 		is_active: integer('is_active', { mode: 'boolean' }).default(true),
 		created_at: text('created_at').default(now()),
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
 		index('idx_sesi_toko_branch_active').on(table.cabang_id, table.is_active),
-		index('idx_sesi_toko_branch_opening').on(table.cabang_id, table.opening_time)
+		index('idx_sesi_toko_branch_opening').on(table.cabang_id, table.waktu_buka)
 	]
 );
 

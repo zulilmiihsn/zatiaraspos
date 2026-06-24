@@ -275,7 +275,7 @@
 							>
 								<div class="flex-1">
 									<p class="text-sm font-medium text-gray-900">{rec.title}</p>
-									<p class="mt-1 text-xs text-gray-600">{rec.description}</p>
+									<p class="mt-1 text-xs text-gray-600">{rec.deskripsi}</p>
 								</div>
 								<div class="flex items-center space-x-2">
 									<span

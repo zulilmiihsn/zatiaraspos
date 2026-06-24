@@ -88,7 +88,7 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<span class="text-base font-bold whitespace-nowrap text-pink-500"
-									>Rp {Number(p.price ?? 0).toLocaleString('id-ID')}</span
+									>Rp {Number(p.harga ?? 0).toLocaleString('id-ID')}</span
 								>
 							</div>
 						</div>
@@ -164,7 +164,7 @@
 									>{getKategoriNameById(p.kategori_id || '')}</span
 								>
 								<div class="text-base font-bold text-pink-500 md:mt-1 md:text-xl">
-									Rp {Number(p.price ?? 0).toLocaleString('id-ID')}
+									Rp {Number(p.harga ?? 0).toLocaleString('id-ID')}
 								</div>
 							</div>
 						</div>

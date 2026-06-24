@@ -4,9 +4,9 @@ WHERE cabang_id = 'samarinda'
 		SELECT transaction_id
 		FROM buku_kas
 		WHERE cabang_id = 'samarinda'
-			AND customer_name = 'UAT Browser'
+			AND nama_pelanggan = 'UAT Browser'
 	);
 
 DELETE FROM buku_kas
 WHERE cabang_id = 'samarinda'
-	AND customer_name = 'UAT Browser';
+	AND nama_pelanggan = 'UAT Browser';

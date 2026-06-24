@@ -71,7 +71,7 @@ export class AutoApplyService {
 		if (!data.type) throw new Error('Type transaksi tidak valid');
 		if (!data.amount || data.amount <= 0)
 			throw new Error('Amount transaksi tidak valid atau kosong');
-		if (!data.description || data.description.trim() === '')
+		if (!data.deskripsi || data.deskripsi.trim() === '')
 			throw new Error('Description transaksi tidak valid atau kosong');
 
 		if (data.type === 'penjualan') {
@@ -81,23 +81,23 @@ export class AutoApplyService {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					idempotency_key: crypto.randomUUID(),
-					customer_name: data.customerName || null,
-					payment_method: data.payment_method || 'tunai',
+					nama_pelanggan: data.customerName || null,
+					metode_bayar: data.metode_bayar || 'tunai',
 					cash_received: Number(data.amount),
 					items: products.length
 						? products.map((product: any) => ({
 								product_id: product.id || null,
-								custom_name: product.id ? null : product.name || data.description,
-								custom_price: product.id ? null : Number(product.price || data.amount),
-								qty: product.quantity || product.qty || 1,
+								nama_kustom: product.id ? null : product.name || data.deskripsi,
+								custom_price: product.id ? null : Number(product.harga || data.amount),
+								jumlah: product.quantity || product.jumlah || 1,
 								add_on_ids: (product.addOns || []).map((addOn: any) => addOn.id).filter(Boolean)
 							}))
 						: [
 								{
 									product_id: null,
-									custom_name: String(data.description).trim(),
+									nama_kustom: String(data.deskripsi).trim(),
 									custom_price: Number(data.amount),
-									qty: 1,
+									jumlah: 1,
 									add_on_ids: []
 								}
 							]
@@ -119,18 +119,18 @@ export class AutoApplyService {
 			id: transactionId,
 			tipe,
 			amount: Number(data.amount),
-			description: String(data.description).trim(),
+			deskripsi: String(data.deskripsi).trim(),
 			jenis: data.category || this.getDefaultCategory(data.type),
 			sumber: data.type === 'penjualan' ? 'pos' : 'catat',
 			waktu: new Date().toISOString(),
-			payment_method: 'tunai',
+			metode_bayar: 'tunai',
 			transaction_id: transactionId
 		};
 
-		const res = await apiFetch('/api/data', {
+		const res = await apiFetch('/api/buku-kas', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ table: 'buku_kas', action: 'insert', branch, payload })
+			body: JSON.stringify({ branch, payload })
 		});
 
 		if (!res.ok) {
@@ -164,28 +164,26 @@ export class AutoApplyService {
 	): Promise<void> {
 		const items = products.map((product) => {
 			const addOnsTotal = (product.addOns || []).reduce(
-				(sum: number, addOn: any) => sum + (addOn.price || 0),
+				(sum: number, addOn: any) => sum + (addOn.harga || 0),
 				0
 			);
-			const unitPrice = (product.price || 0) + addOnsTotal;
-			const qty = product.quantity || 1;
+			const unitPrice = (product.harga || 0) + addOnsTotal;
+			const jumlah = product.quantity || 1;
 			return {
 				id: crypto.randomUUID(),
 				buku_kas_id: bukuKasId,
 				produk_id: product.id || null,
-				qty,
-				amount: unitPrice * qty,
+				jumlah,
+				amount: unitPrice * jumlah,
 				transaction_id: transactionId,
-				custom_name: product.id ? null : product.name || 'Produk Custom'
+				nama_kustom: product.id ? null : product.name || 'Produk Custom'
 			};
 		});
 
-		await apiFetch('/api/data', {
+		await apiFetch('/api/transaksi-kasir', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				table: 'transaksi_kasir',
-				action: 'insert',
 				branch,
 				payload: items
 			})
@@ -198,16 +196,14 @@ export class AutoApplyService {
 		const payload = {
 			tipe: data.type === 'pemasukan' ? 'in' : 'out',
 			amount: data.amount,
-			description: data.description,
+			deskripsi: data.deskripsi,
 			jenis: data.category
 		};
 
-		const res = await apiFetch('/api/data', {
-			method: 'POST',
+		const res = await apiFetch('/api/buku-kas', {
+			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				table: 'buku_kas',
-				action: 'update',
 				branch,
 				where: { id: data.id },
 				payload
@@ -222,14 +218,12 @@ export class AutoApplyService {
 
 	private async createCategory(data: any): Promise<void> {
 		const branch = selectedBranch.value;
-		const res = await apiFetch('/api/data', {
+		const res = await apiFetch('/api/kategori', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				table: 'kategori',
-				action: 'insert',
 				branch,
-				payload: { id: crypto.randomUUID(), name: data.name, description: data.description }
+				payload: { id: crypto.randomUUID(), name: data.name, deskripsi: data.deskripsi }
 			})
 		});
 
@@ -267,7 +261,7 @@ export class AutoApplyService {
 	private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
 		const seen = new Set<string>();
 		return recommendations.filter((rec) => {
-			const key = `${rec.action}_${rec.data?.amount}_${rec.data?.type}_${rec.data?.description}`;
+			const key = `${rec.action}_${rec.data?.amount}_${rec.data?.type}_${rec.data?.deskripsi}`;
 			if (seen.has(key)) return false;
 			seen.add(key);
 			return true;

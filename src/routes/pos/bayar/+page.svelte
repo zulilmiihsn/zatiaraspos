@@ -32,15 +32,15 @@
 	interface BayarAddOn {
 		id: string;
 		name: string;
-		price: number;
+		harga: number;
 	}
 	interface BayarCartItem {
-		product: { id: string; name: string; price: number; tipe: string };
-		qty: number;
+		product: { id: string; name: string; harga: number; tipe: string };
+		jumlah: number;
 		addOns: BayarAddOn[];
-		sugar: string;
-		ice: string;
-		note: string;
+		gula: string;
+		es: string;
+		catatan: string;
 	}
 
 	let cart: BayarCartItem[] = $state([]);
@@ -161,11 +161,11 @@
 		let totalQty = 0;
 		let totalHarga = 0;
 		for (const item of cart) {
-			totalQty += item.qty;
-			totalHarga += item.qty * (item.product.price ?? 0);
+			totalQty += item.jumlah;
+			totalHarga += item.jumlah * (item.product.harga ?? 0);
 			if (item.addOns) {
 				totalHarga += item.addOns.reduce(
-					(a: number, b: BayarAddOn) => a + (b.price ?? 0) * item.qty,
+					(a: number, b: BayarAddOn) => a + (b.harga ?? 0) * item.jumlah,
 					0
 				);
 			}
@@ -306,20 +306,20 @@
 
 		const requestPayload = {
 			idempotency_key: transactionId || uuidv4(),
-			customer_name: customerName || null,
-			payment_method: payment,
+			nama_pelanggan: customerName || null,
+			metode_bayar: payment,
 			cash_received: cashReceived ? Number(cashReceived) : null,
 			items: cart.map((item: BayarCartItem) => {
 				const isCustom = item.product.id.toString().startsWith('custom-');
 				return {
 					product_id: isCustom ? null : item.product.id,
-					custom_name: isCustom ? item.product.name : null,
-					custom_price: isCustom ? (item.product.price ?? 0) : null,
-					qty: item.qty,
+					nama_kustom: isCustom ? item.product.name : null,
+					custom_price: isCustom ? (item.product.harga ?? 0) : null,
+					jumlah: item.jumlah,
 					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
-					sugar: item.sugar || null,
-					ice: item.ice || null,
-					note: item.note || null
+					gula: item.gula || null,
+					es: item.es || null,
+					catatan: item.catatan || null
 				};
 			})
 		};
@@ -385,7 +385,7 @@
 			summary: {
 				transaction_code: transactionCode,
 				total_amount: totalHarga,
-				item_count: totalQty,
+				jumlah_item: totalQty,
 				created_at: new Date().toISOString()
 			}
 		});
@@ -425,28 +425,28 @@
 		// Daftar pesanan
 		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
 		cart.forEach((item: BayarCartItem, idx: number) => {
-			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.qty}</td><td style='text-align:right;'>Rp${(item.product.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.name} x${item.jumlah}</td><td style='text-align:right;'>Rp${(item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
 				item.addOns.forEach((a: BayarAddOn) => {
-					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.price ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
+					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.name}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</td></tr>`;
 				});
 			}
 			const detail = [
-				item.sugar && item.sugar !== 'normal'
-					? item.sugar === 'no'
+				item.gula && item.gula !== 'normal'
+					? item.gula === 'no'
 						? 'Tanpa Gula'
-						: item.sugar === 'less'
+						: item.gula === 'less'
 							? 'Sedikit Gula'
-							: item.sugar
+							: item.gula
 					: null,
-				item.ice && item.ice !== 'normal'
-					? item.ice === 'no'
+				item.es && item.es !== 'normal'
+					? item.es === 'no'
 						? 'Tanpa Es'
-						: item.ice === 'less'
+						: item.es === 'less'
 							? 'Sedikit Es'
-							: item.ice
+							: item.es
 					: null,
-				item.note && item.note.trim() ? item.note : null
+				item.catatan && item.catatan.trim() ? item.catatan : null
 			]
 				.filter(Boolean)
 				.join(', ');
@@ -578,11 +578,11 @@
 									<div class="flex items-start justify-between gap-3">
 										<div class="min-w-0">
 											<div class="truncate font-semibold text-stone-950">{item.product.name}</div>
-											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.qty}</div>
+											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
 										</div>
 										<span class="shrink-0 font-bold text-pink-500"
 											>Rp {(
-												(item.product.price ?? 0) * item.qty
+												(item.product.harga ?? 0) * item.jumlah
 											).toLocaleString('id-ID')}</span
 										>
 									</div>
@@ -592,7 +592,7 @@
 												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
 													<span class="truncate">+ {ekstra.name}</span>
 													<span class="shrink-0"
-														>Rp {((ekstra.price ?? 0) * item.qty).toLocaleString(
+														>Rp {((ekstra.harga ?? 0) * item.jumlah).toLocaleString(
 															'id-ID'
 														)}</span
 													>
@@ -600,24 +600,24 @@
 											{/each}
 										</div>
 									{/if}
-									{#if (item.sugar && item.sugar !== 'normal') || (item.ice && item.ice !== 'normal') || (item.note && item.note.trim())}
+									{#if (item.gula && item.gula !== 'normal') || (item.es && item.es !== 'normal') || (item.catatan && item.catatan.trim())}
 										<div class="text-xs font-medium text-stone-500">
 											{[
-												item.sugar && item.sugar !== 'normal'
-													? item.sugar === 'no'
+												item.gula && item.gula !== 'normal'
+													? item.gula === 'no'
 														? 'Tanpa Gula'
-														: item.sugar === 'less'
+														: item.gula === 'less'
 															? 'Sedikit Gula'
-															: item.sugar
+															: item.gula
 													: null,
-												item.ice && item.ice !== 'normal'
-													? item.ice === 'no'
+												item.es && item.es !== 'normal'
+													? item.es === 'no'
 														? 'Tanpa Es'
-														: item.ice === 'less'
+														: item.es === 'less'
 															? 'Sedikit Es'
-															: item.ice
+															: item.es
 													: null,
-												item.note && item.note.trim() ? item.note : null
+												item.catatan && item.catatan.trim() ? item.catatan : null
 											]
 												.filter(Boolean)
 												.join(', ')}

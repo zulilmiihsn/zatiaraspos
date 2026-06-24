@@ -48,13 +48,13 @@
 
 		// Penjualan tunai (semua pemasukan tunai)
 		const penjualanTunai = kas
-			.filter((t) => t.tipe === 'in' && t.payment_method === 'tunai')
+			.filter((t) => t.tipe === 'in' && t.metode_bayar === 'tunai')
 			.reduce((a, b) => a + (b.amount || 0), 0);
 		// Pengeluaran tunai
 		const pengeluaranTunai = kas
-			.filter((t) => t.tipe === 'out' && t.payment_method === 'tunai')
+			.filter((t) => t.tipe === 'out' && t.metode_bayar === 'tunai')
 			.reduce((a, b) => a + (b.amount || 0), 0);
-		const modalAwalValue = sesiAktif.opening_cash || 0;
+		const modalAwalValue = sesiAktif.kas_awal || 0;
 		// Total penjualan = semua pemasukan (in) dari sumber pos
 		const totalPenjualan = kas
 			.filter((t) => t.tipe === 'in' && t.sumber === 'pos')

@@ -487,28 +487,28 @@ ${productData}
 CONTOH ANALISIS (SINGLE PRODUK):
 Input: "Tadi masukkan uang 2000, ambil 5000 buat beli jajan"
 Output: [
-  { type: "pemasukan", amount: 2000, description: "Setoran modal ke kas", confidence: 0.9 },
-  { type: "pengeluaran", amount: 5000, description: "Pengambilan uang untuk belanja pribadi", confidence: 0.9 }
+  { type: "pemasukan", amount: 2000, deskripsi: "Setoran modal ke kas", confidence: 0.9 },
+  { type: "pengeluaran", amount: 5000, deskripsi: "Pengambilan uang untuk belanja pribadi", confidence: 0.9 }
 ]
 
 Input: "Customer membeli jus mangga reguler dengan topping milo"
 Output: [
-  { type: "penjualan", amount: [harga_jus_mangga + harga_milo], description: "Penjualan jus mangga reguler + topping milo", confidence: 0.95 }
+  { type: "penjualan", amount: [harga_jus_mangga + harga_milo], deskripsi: "Penjualan jus mangga reguler + topping milo", confidence: 0.95 }
 ]
 
 Input: "ada yang pesan nasi goreng"
 Output: [
-  { type: "penjualan", amount: [harga_nasi_goreng], description: "Penjualan nasi goreng", confidence: 0.95 }
+  { type: "penjualan", amount: [harga_nasi_goreng], deskripsi: "Penjualan nasi goreng", confidence: 0.95 }
 ]
 
 Input: "terjual 2 jus jeruk"
 Output: [
-  { type: "penjualan", amount: [harga_jus_jeruk * 2], description: "Penjualan 2 jus jeruk", confidence: 0.95 }
+  { type: "penjualan", amount: [harga_jus_jeruk * 2], deskripsi: "Penjualan 2 jus jeruk", confidence: 0.95 }
 ]
 
 Input: "tadi ada customer membeli 5 kerupuk, catatlah itu"
 Output: [
-  { type: "penjualan", amount: 5000, description: "Penjualan 5 kerupuk", confidence: 0.95, products: [{ name: "Kerupuk", price: 1000, quantity: 5 }] }
+  { type: "penjualan", amount: 5000, deskripsi: "Penjualan 5 kerupuk", confidence: 0.95, products: [{ name: "Kerupuk", harga: 1000, quantity: 5 }] }
 ]
 
 CONTOH ANALISIS (MULTIPLE PRODUK):
@@ -517,12 +517,12 @@ Output: [
   { 
     type: "penjualan", 
     amount: [harga_jus_mangga * 2 + harga_kerupuk * 3 + harga_nasi_goreng * 1], 
-    description: "Penjualan 2 jus mangga, 3 kerupuk, 1 nasi goreng", 
+    deskripsi: "Penjualan 2 jus mangga, 3 kerupuk, 1 nasi goreng", 
     confidence: 0.95,
     products: [
-      { name: "Jus Mangga", price: harga_jus_mangga, quantity: 2 },
-      { name: "Kerupuk", price: harga_kerupuk, quantity: 3 },
-      { name: "Nasi Goreng", price: harga_nasi_goreng, quantity: 1 }
+      { name: "Jus Mangga", harga: harga_jus_mangga, quantity: 2 },
+      { name: "Kerupuk", harga: harga_kerupuk, quantity: 3 },
+      { name: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 1 }
     ]
   }
 ]
@@ -532,11 +532,11 @@ Output: [
   { 
     type: "penjualan", 
     amount: [harga_jus_jeruk * 5 + harga_jus_apel * 2], 
-    description: "Penjualan 5 jus jeruk dan 2 jus apel", 
+    deskripsi: "Penjualan 5 jus jeruk dan 2 jus apel", 
     confidence: 0.95,
     products: [
-      { name: "Jus Jeruk", price: harga_jus_jeruk, quantity: 5 },
-      { name: "Jus Apel", price: harga_jus_apel, quantity: 2 }
+      { name: "Jus Jeruk", harga: harga_jus_jeruk, quantity: 5 },
+      { name: "Jus Apel", harga: harga_jus_apel, quantity: 2 }
     ]
   }
 ]
@@ -546,29 +546,29 @@ Output: [
   { 
     type: "penjualan", 
     amount: [harga_kerupuk * 10 + harga_jus_mangga * 5 + harga_nasi_goreng * 3], 
-    description: "Penjualan 10 kerupuk, 5 jus mangga, 3 nasi goreng", 
+    deskripsi: "Penjualan 10 kerupuk, 5 jus mangga, 3 nasi goreng", 
     confidence: 0.95,
     products: [
-      { name: "Kerupuk", price: harga_kerupuk, quantity: 10 },
-      { name: "Jus Mangga", price: harga_jus_mangga, quantity: 5 },
-      { name: "Nasi Goreng", price: harga_nasi_goreng, quantity: 3 }
+      { name: "Kerupuk", harga: harga_kerupuk, quantity: 10 },
+      { name: "Jus Mangga", harga: harga_jus_mangga, quantity: 5 },
+      { name: "Nasi Goreng", harga: harga_nasi_goreng, quantity: 3 }
     ]
   }
 ]
 
 Input: "masukkan uang 10rb"
 Output: [
-  { type: "pemasukan", amount: 10000, description: "Setoran modal ke kas", confidence: 0.95 }
+  { type: "pemasukan", amount: 10000, deskripsi: "Setoran modal ke kas", confidence: 0.95 }
 ]
 
 Input: "ambil uang 50rb"
 Output: [
-  { type: "pengeluaran", amount: 50000, description: "Pengambilan uang dari kas", confidence: 0.95 }
+  { type: "pengeluaran", amount: 50000, deskripsi: "Pengambilan uang dari kas", confidence: 0.95 }
 ]
 
 Input: "beli bahan baku 100rb"
 Output: [
-  { type: "pengeluaran", amount: 100000, description: "Pembelian bahan baku", confidence: 0.95 }
+  { type: "pengeluaran", amount: 100000, deskripsi: "Pembelian bahan baku", confidence: 0.95 }
 ]
 
 Input: "hari ini cuacanya bagus"
@@ -625,17 +625,17 @@ FORMAT OUTPUT (JSON):
     {
       "type": "pemasukan|pengeluaran|penjualan",
       "amount": number,
-      "description": "string",
+      "deskripsi": "string",
       "confidence": number (0-1),
       "products": [
         {
           "name": "string",
-          "price": number,
+          "harga": number,
           "quantity": number,
           "addOns": [
             {
               "name": "string",
-              "price": number
+              "harga": number
             }
           ]
         }
@@ -647,7 +647,7 @@ FORMAT OUTPUT (JSON):
     {
       "action": "create_transaction",
       "title": "string",
-      "description": "string"
+      "deskripsi": "string"
     }
   ]
 }
@@ -740,7 +740,7 @@ Teks user: "${text}"`
 			fallbackTransactions.push({
 				type: 'pemasukan',
 				amount: amount,
-				description: 'Setoran ke kas',
+				deskripsi: 'Setoran ke kas',
 				confidence: 0.8
 			});
 		}
@@ -762,7 +762,7 @@ Teks user: "${text}"`
 			fallbackTransactions.push({
 				type: 'pengeluaran',
 				amount: amount,
-				description: 'Pengeluaran',
+				deskripsi: 'Pengeluaran',
 				confidence: 0.8
 			});
 		}
@@ -781,7 +781,7 @@ Teks user: "${text}"`
 			fallbackTransactions.push({
 				type: 'penjualan',
 				amount: 0, // Akan diisi oleh user atau sistem
-				description: `Penjualan ${quantity} ${productName}`,
+				deskripsi: `Penjualan ${quantity} ${productName}`,
 				confidence: 0.7
 			});
 		}
@@ -1110,7 +1110,7 @@ async function handleRegularChat(request: Request) {
 				pengeluaran: number;
 				laba: number;
 				transaksi: number;
-				produkTerlaris: Record<string, { qty: number; revenue: number; name: string }>;
+				produkTerlaris: Record<string, { jumlah: number; revenue: number; name: string }>;
 				paymentMethods: Record<string, { jumlah: number; nominal: number }>;
 			}
 		> = {};
@@ -1146,7 +1146,7 @@ async function handleRegularChat(request: Request) {
 			}
 
 			// Hitung metode pembayaran per bulan
-			const pm = (item.payment_method as string) || 'lainnya';
+			const pm = (item.metode_bayar as string) || 'lainnya';
 			if (!requestedMonthlyData[monthKey].paymentMethods[pm]) {
 				requestedMonthlyData[monthKey].paymentMethods[pm] = { jumlah: 0, nominal: 0 };
 			}
@@ -1164,22 +1164,22 @@ async function handleRegularChat(request: Request) {
 			if (requestedMonthlyData[monthKey]) {
 				const pid = item.produk_id as string;
 				if (!pid) continue;
-				const qty = Number(item.qty || 0) || 0;
-				const unit = Number(item.price || item.amount || 0) || 0;
-				const revenue = unit * (qty || 1);
+				const jumlah = Number(item.jumlah || 0) || 0;
+				const satuan = Number(item.harga || item.amount || 0) || 0;
+				const revenue = satuan * (jumlah || 1);
 				const productName =
 					((item.produk as Record<string, unknown>)?.name as string) ||
-					(item.custom_name as string) ||
+					(item.nama_kustom as string) ||
 					`Produk ${pid.slice(0, 8)}`;
 
 				if (!requestedMonthlyData[monthKey].produkTerlaris[pid]) {
 					requestedMonthlyData[monthKey].produkTerlaris[pid] = {
-						qty: 0,
+						jumlah: 0,
 						revenue: 0,
 						name: productName
 					};
 				}
-				requestedMonthlyData[monthKey].produkTerlaris[pid].qty += qty || 0;
+				requestedMonthlyData[monthKey].produkTerlaris[pid].jumlah += jumlah || 0;
 				requestedMonthlyData[monthKey].produkTerlaris[pid].revenue += revenue;
 			}
 		}
@@ -1194,7 +1194,7 @@ async function handleRegularChat(request: Request) {
 					.map(([pid, prod]) => ({
 						id: pid,
 						nama: prod.name,
-						totalTerjual: prod.qty,
+						totalTerjual: prod.jumlah,
 						totalPendapatan: prod.revenue
 					}))
 					.sort((a, b) => b.totalTerjual - a.totalTerjual)
@@ -1229,7 +1229,7 @@ async function handleRegularChat(request: Request) {
 		// Breakdown metode pembayaran & pola waktu
 		const paymentBreakdown: Record<string, { jumlah: number; nominal: number }> = {};
 		for (const t of laporan) {
-			const pm = (t as any)?.payment_method || 'lainnya';
+			const pm = (t as any)?.metode_bayar || 'lainnya';
 			if (!paymentBreakdown[pm]) paymentBreakdown[pm] = { jumlah: 0, nominal: 0 };
 			paymentBreakdown[pm].jumlah += 1;
 			paymentBreakdown[pm].nominal += (t.amount || t.nominal || 0) as number;
@@ -1306,9 +1306,9 @@ async function handleRegularChat(request: Request) {
 		);
 
 		// Ambil metadata produk/kategori/tambahan berdasarkan kebutuhan data
-		let products: { id: string; name: string; price: number; kategori_id?: string | null }[] = [];
+		let products: { id: string; name: string; harga: number; kategori_id?: string | null }[] = [];
 		let categories: { id: string; name: string }[] = [];
-		let addons: { id: string; name: string; price: number }[] = [];
+		let addons: { id: string; name: string; harga: number }[] = [];
 
 		// Fetch data berdasarkan jenis data yang diperlukan
 		if (dataRequirements.jenisData.includes('produk') || dataRequirements.jenisData.length === 0) {
@@ -1316,7 +1316,7 @@ async function handleRegularChat(request: Request) {
 				.select({
 					id: produk.id,
 					name: produk.name,
-					price: produk.price,
+					harga: produk.harga,
 					kategori_id: produk.kategori_id
 				})
 				.from(produk)
@@ -1340,29 +1340,29 @@ async function handleRegularChat(request: Request) {
 			dataRequirements.jenisData.length === 0
 		) {
 			addons = await db
-				.select({ id: tambahan.id, name: tambahan.name, price: tambahan.price })
+				.select({ id: tambahan.id, name: tambahan.name, harga: tambahan.harga })
 				.from(tambahan)
 				.where(eq(tambahan.cabang_id, requestedBranch))
 				.limit(1000);
 		}
 
 		// Hitung produk terlaris berdasarkan transaksi_kasir yang sudah diambil
-		const productIdToSale: Record<string, { qty: number; revenue: number; name?: string }> = {};
+		const productIdToSale: Record<string, { jumlah: number; revenue: number; name?: string }> = {};
 		// Prototype pollution guard: reject dangerous keys
 		const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 		for (const item of transaksiKasirData || []) {
 			const pid = (item as any)?.produk_id;
 			if (!pid || typeof pid !== 'string' || FORBIDDEN_KEYS.has(pid)) continue;
-			const qty = Number((item as any)?.qty || 0) || 0;
-			const unit = Number((item as any)?.price || (item as any)?.amount || 0) || 0;
-			const revenue = unit * (qty || 1);
-			// Ambil nama dari relasi produk atau custom_name
+			const jumlah = Number((item as any)?.jumlah || 0) || 0;
+			const satuan = Number((item as any)?.harga || (item as any)?.amount || 0) || 0;
+			const revenue = satuan * (jumlah || 1);
+			// Ambil nama dari relasi produk atau nama_kustom
 			const productName =
-				(item as any)?.produk?.name || (item as any)?.custom_name || `Produk ${pid.slice(0, 8)}`;
+				(item as any)?.produk?.name || (item as any)?.nama_kustom || `Produk ${pid.slice(0, 8)}`;
 			if (!Object.prototype.hasOwnProperty.call(productIdToSale, pid)) {
-				productIdToSale[pid] = { qty: 0, revenue: 0, name: productName };
+				productIdToSale[pid] = { jumlah: 0, revenue: 0, name: productName };
 			}
-			productIdToSale[pid].qty += qty || 0;
+			productIdToSale[pid].jumlah += jumlah || 0;
 			productIdToSale[pid].revenue += revenue;
 			if (!productIdToSale[pid].name) productIdToSale[pid].name = productName;
 		}
@@ -1370,7 +1370,7 @@ async function handleRegularChat(request: Request) {
 			.map(([pid, v]) => ({
 				id: pid,
 				nama: v.name || pid,
-				totalTerjual: v.qty,
+				totalTerjual: v.jumlah,
 				totalPendapatan: v.revenue
 			}))
 			.sort((a, b) => b.totalTerjual - a.totalTerjual)
@@ -1412,19 +1412,19 @@ async function handleRegularChat(request: Request) {
 			tipe: dataRequirements.periode.type,
 			pembayaran: paymentBreakdown,
 			jamRamai,
-			products: (products || []).map((p: { id: string; name: string; price: number }) => ({
+			products: (products || []).map((p: { id: string; name: string; harga: number }) => ({
 				id: p.id,
 				name: p.name,
-				price: p.price
+				harga: p.harga
 			})),
 			categories: (categories || []).map((c: { id: string; name: string }) => ({
 				id: c.id,
 				name: c.name
 			})),
-			addons: (addons || []).map((a: { id: string; name: string; price: number }) => ({
+			addons: (addons || []).map((a: { id: string; name: string; harga: number }) => ({
 				id: a.id,
 				name: a.name,
-				price: a.price
+				harga: a.harga
 			})),
 			produkTerlaris,
 			specificProduct, // Produk spesifik yang dicari
@@ -1561,7 +1561,7 @@ ${
 		? `
 === PRODUK SPESIFIK YANG DICARI ===
 Nama: ${serverReportData.specificProduct.name}
-Harga: Rp ${serverReportData.specificProduct.price?.toLocaleString('id-ID') || 'Tidak tersedia'}
+Harga: Rp ${serverReportData.specificProduct.harga?.toLocaleString('id-ID') || 'Tidak tersedia'}
 ID: ${serverReportData.specificProduct.id}
 `
 		: ''

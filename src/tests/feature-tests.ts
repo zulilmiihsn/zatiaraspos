@@ -15,7 +15,7 @@ export const dashboardTests = {
 		{
 			id: 'dashboard-1',
 			name: 'Dashboard Data Loading',
-			description: 'Dashboard harus bisa load data omzet, transaksi, profit, item terjual',
+			deskripsi: 'Dashboard harus bisa load data omzet, transaksi, profit, item terjual',
 			test: async () => {
 				try {
 					// Test dashboard data loading
@@ -46,7 +46,7 @@ export const dashboardTests = {
 		{
 			id: 'dashboard-2',
 			name: 'Weekly Income Chart',
-			description: 'Chart pendapatan mingguan harus bisa ditampilkan',
+			deskripsi: 'Chart pendapatan mingguan harus bisa ditampilkan',
 			test: async () => {
 				try {
 					const weeklyData = [100000, 150000, 200000, 180000, 250000, 300000, 280000];
@@ -69,7 +69,7 @@ export const dashboardTests = {
 		{
 			id: 'dashboard-3',
 			name: 'Best Sellers Display',
-			description: 'Menu terlaris harus bisa ditampilkan dengan ranking',
+			deskripsi: 'Menu terlaris harus bisa ditampilkan dengan ranking',
 			test: async () => {
 				try {
 					const bestSellers = [
@@ -105,13 +105,13 @@ export const posTests = {
 		{
 			id: 'pos-1',
 			name: 'Product Loading',
-			description: 'Produk harus bisa di-load dari database',
+			deskripsi: 'Produk harus bisa di-load dari database',
 			test: async () => {
 				try {
 					const mockProducts = [
-						{ id: 1, name: 'Es Teh Manis', price: 5000, kategori_id: 1 },
-						{ id: 2, name: 'Es Jeruk', price: 6000, kategori_id: 1 },
-						{ id: 3, name: 'Kopi Hitam', price: 8000, kategori_id: 2 }
+						{ id: 1, name: 'Es Teh Manis', harga: 5000, kategori_id: 1 },
+						{ id: 2, name: 'Es Jeruk', harga: 6000, kategori_id: 1 },
+						{ id: 3, name: 'Kopi Hitam', harga: 8000, kategori_id: 2 }
 					];
 
 					return {
@@ -131,7 +131,7 @@ export const posTests = {
 		{
 			id: 'pos-2',
 			name: 'Category Filtering',
-			description: 'Filter produk berdasarkan kategori harus berfungsi',
+			deskripsi: 'Filter produk berdasarkan kategori harus berfungsi',
 			test: async () => {
 				try {
 					const categories = [
@@ -162,12 +162,12 @@ export const posTests = {
 		{
 			id: 'pos-3',
 			name: 'Add to Cart',
-			description: 'Produk harus bisa ditambahkan ke keranjang',
+			deskripsi: 'Produk harus bisa ditambahkan ke keranjang',
 			test: async () => {
 				try {
 					const cart = [
-						{ product: { name: 'Es Teh Manis', price: 5000 }, qty: 2, total: 10000 },
-						{ product: { name: 'Es Jeruk', price: 6000 }, qty: 1, total: 6000 }
+						{ product: { name: 'Es Teh Manis', harga: 5000 }, jumlah: 2, total: 10000 },
+						{ product: { name: 'Es Jeruk', harga: 6000 }, jumlah: 1, total: 6000 }
 					];
 
 					const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
@@ -189,7 +189,7 @@ export const posTests = {
 		{
 			id: 'pos-4',
 			name: 'Payment Processing',
-			description: 'Proses pembayaran harus berfungsi dengan berbagai metode',
+			deskripsi: 'Proses pembayaran harus berfungsi dengan berbagai metode',
 			test: async () => {
 				try {
 					const paymentMethods = ['tunai', 'qris', 'transfer'];
@@ -228,7 +228,7 @@ export const reportingTests = {
 		{
 			id: 'report-1',
 			name: 'Daily Report Generation',
-			description: 'Laporan harian harus bisa di-generate',
+			deskripsi: 'Laporan harian harus bisa di-generate',
 			test: async () => {
 				try {
 					const dailyReport = {
@@ -258,7 +258,7 @@ export const reportingTests = {
 		{
 			id: 'report-2',
 			name: 'Date Range Filtering',
-			description: 'Filter laporan berdasarkan range tanggal harus berfungsi',
+			deskripsi: 'Filter laporan berdasarkan range tanggal harus berfungsi',
 			test: async () => {
 				try {
 					const dateRange = {
@@ -290,7 +290,7 @@ export const reportingTests = {
 		{
 			id: 'report-3',
 			name: 'Export Functionality',
-			description: 'Export laporan ke format yang berbeda harus berfungsi',
+			deskripsi: 'Export laporan ke format yang berbeda harus berfungsi',
 			test: async () => {
 				try {
 					const exportFormats = ['PDF', 'Excel', 'CSV'];
@@ -327,7 +327,7 @@ export const recordingTests = {
 		{
 			id: 'record-1',
 			name: 'Income Recording',
-			description: 'Pencatatan pemasukan harus berfungsi',
+			deskripsi: 'Pencatatan pemasukan harus berfungsi',
 			test: async () => {
 				try {
 					const incomeRecord = {
@@ -356,7 +356,7 @@ export const recordingTests = {
 		{
 			id: 'record-2',
 			name: 'Expense Recording',
-			description: 'Pencatatan pengeluaran harus berfungsi',
+			deskripsi: 'Pencatatan pengeluaran harus berfungsi',
 			test: async () => {
 				try {
 					const expenseRecord = {
@@ -385,7 +385,7 @@ export const recordingTests = {
 		{
 			id: 'record-3',
 			name: 'Offline Recording',
-			description: 'Pencatatan offline harus bisa disimpan dan sync saat online',
+			deskripsi: 'Pencatatan offline harus bisa disimpan dan sync saat online',
 			test: async () => {
 				try {
 					const offlineRecord = {
@@ -423,7 +423,7 @@ export const settingsTests = {
 		{
 			id: 'settings-1',
 			name: 'User Profile Management',
-			description: 'Manajemen profil user harus berfungsi',
+			deskripsi: 'Manajemen profil user harus berfungsi',
 			test: async () => {
 				try {
 					const userProfile = {
@@ -450,7 +450,7 @@ export const settingsTests = {
 		{
 			id: 'settings-2',
 			name: 'Security Settings',
-			description: 'Pengaturan keamanan (PIN) harus berfungsi',
+			deskripsi: 'Pengaturan keamanan (PIN) harus berfungsi',
 			test: async () => {
 				try {
 					const securitySettings = {
@@ -476,7 +476,7 @@ export const settingsTests = {
 		{
 			id: 'settings-3',
 			name: 'Printer Configuration',
-			description: 'Konfigurasi printer harus berfungsi',
+			deskripsi: 'Konfigurasi printer harus berfungsi',
 			test: async () => {
 				try {
 					const printerConfig = {
@@ -513,7 +513,7 @@ export const authTests = {
 		{
 			id: 'auth-1',
 			name: 'User Login',
-			description: 'Login user harus berfungsi dengan validasi',
+			deskripsi: 'Login user harus berfungsi dengan validasi',
 			test: async () => {
 				try {
 					const loginTest = {
@@ -540,7 +540,7 @@ export const authTests = {
 		{
 			id: 'auth-2',
 			name: 'Role-based Access Control',
-			description: 'Kontrol akses berdasarkan role harus berfungsi',
+			deskripsi: 'Kontrol akses berdasarkan role harus berfungsi',
 			test: async () => {
 				try {
 					const accessControl = {
@@ -566,7 +566,7 @@ export const authTests = {
 		{
 			id: 'auth-3',
 			name: 'Session Management',
-			description: 'Manajemen session harus berfungsi',
+			deskripsi: 'Manajemen session harus berfungsi',
 			test: async () => {
 				try {
 					const session = {
@@ -604,7 +604,7 @@ export const dataManagementTests = {
 		{
 			id: 'data-1',
 			name: 'Data Caching',
-			description: 'Sistem cache harus berfungsi untuk performance',
+			deskripsi: 'Sistem cache harus berfungsi untuk performance',
 			test: async () => {
 				try {
 					const cacheStats = {
@@ -630,7 +630,7 @@ export const dataManagementTests = {
 		{
 			id: 'data-2',
 			name: 'Real-time Sync',
-			description: 'Sinkronisasi real-time harus berfungsi',
+			deskripsi: 'Sinkronisasi real-time harus berfungsi',
 			test: async () => {
 				try {
 					const syncStatus = {
@@ -657,7 +657,7 @@ export const dataManagementTests = {
 		{
 			id: 'data-3',
 			name: 'Offline Support',
-			description: 'Fitur offline harus berfungsi dengan baik',
+			deskripsi: 'Fitur offline harus berfungsi dengan baik',
 			test: async () => {
 				try {
 					const offlineStatus = {

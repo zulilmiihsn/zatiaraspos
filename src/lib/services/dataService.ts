@@ -131,13 +131,13 @@ export class DataService {
 				const { kasir = [], kas = [], summary = [] } = payload;
 
 				if (Array.isArray(summary) && summary.length) {
-					const itemTerjual = summary.reduce((s: number, row: any) => s + (row.item_count || 0), 0);
+					const itemTerjual = summary.reduce((s: number, row: any) => s + (row.jumlah_item || 0), 0);
 					const jumlahTransaksi = summary.reduce(
-						(s: number, row: any) => s + (row.transaction_count || 0),
+						(s: number, row: any) => s + (row.jumlah_transaksi || 0),
 						0
 					);
-					const omzet = summary.reduce((s: number, row: any) => s + (row.gross_sales || 0), 0);
-					const hppTotal = summary.reduce((s: number, row: any) => s + (row.hpp_total || 0), 0);
+					const omzet = summary.reduce((s: number, row: any) => s + (row.penjualan_kotor || 0), 0);
+					const hppTotal = summary.reduce((s: number, row: any) => s + (row.total_hpp || 0), 0);
 
 					const [avgTransaksi, jamRamai] = await Promise.all([
 						getAvgTransaksiHarian(),
@@ -158,7 +158,7 @@ export class DataService {
 					};
 				}
 
-				const itemTerjual = kasir.reduce((s: number, t: any) => s + (t.qty || 1), 0);
+				const itemTerjual = kasir.reduce((s: number, t: any) => s + (t.jumlah || 1), 0);
 				const txIds = new Set(kas.map((t: any) => t.transaction_id).filter(Boolean));
 				const jumlahTransaksi = txIds.size || kas.length;
 				const omzet = kas.reduce((s: number, t: any) => s + (t.amount || 0), 0);
@@ -216,7 +216,7 @@ export class DataService {
 				const grouped: Record<string, number> = {};
 				for (const item of items) {
 					if (!item.produk_id) continue;
-					grouped[item.produk_id] = (grouped[item.produk_id] || 0) + (item.qty || 1);
+					grouped[item.produk_id] = (grouped[item.produk_id] || 0) + (item.jumlah || 1);
 				}
 
 				const topIds = Object.entries(grouped)
@@ -255,8 +255,8 @@ export class DataService {
 				});
 				if (summaryRows.length) {
 					for (const row of summaryRows) {
-						const tanggal = String(row.sales_date || '');
-						if (tanggal in perHari) perHari[tanggal] += Number(row.gross_sales || 0);
+						const tanggal = String(row.tanggal_penjualan || '');
+						if (tanggal in perHari) perHari[tanggal] += Number(row.penjualan_kotor || 0);
 					}
 					const weeklyIncome = labels.map((l) => perHari[l] || 0);
 					return { weeklyIncome, weeklyMax: Math.max(1, ...weeklyIncome) };

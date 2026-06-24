@@ -94,13 +94,13 @@ export class ProductAnalysisService {
 
 			products.forEach((product) => {
 				if (product.is_active) {
-					promptData += `  • ${product.name}: Rp ${product.price.toLocaleString('id-ID')}`;
+					promptData += `  • ${product.name}: Rp ${product.harga.toLocaleString('id-ID')}`;
 
 					// Add add-ons if available
 					if (product.addOns.length > 0) {
 						promptData += `\n    Topping/Tambahan:`;
 						product.addOns.forEach((addOn) => {
-							promptData += `\n      - ${addOn.name}: Rp ${addOn.price.toLocaleString('id-ID')}`;
+							promptData += `\n      - ${addOn.name}: Rp ${addOn.harga.toLocaleString('id-ID')}`;
 						});
 					}
 					promptData += `\n`;
@@ -118,7 +118,7 @@ export class ProductAnalysisService {
 		if (standaloneAddOns.length > 0) {
 			promptData += `📂 TAMBAHAN/TOPPING STANDALONE:\n`;
 			standaloneAddOns.forEach((addOn) => {
-				promptData += `  • ${addOn.name}: Rp ${addOn.price.toLocaleString('id-ID')}\n`;
+				promptData += `  • ${addOn.name}: Rp ${addOn.harga.toLocaleString('id-ID')}\n`;
 			});
 			promptData += `\n`;
 		}
@@ -161,13 +161,13 @@ export class ProductAnalysisService {
 	}
 
 	/**
-	 * Calculate total price for a product with add-ons
+	 * Calculate total harga for a product with add-ons
 	 */
 	calculateTotalPrice(product: ProductWithAddOns, selectedAddOns: AddOn[] = []): number {
-		let total = product.price;
+		let total = product.harga;
 
 		selectedAddOns.forEach((addOn) => {
-			total += addOn.price;
+			total += addOn.harga;
 		});
 
 		return total;

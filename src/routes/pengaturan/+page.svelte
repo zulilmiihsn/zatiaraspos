@@ -25,7 +25,7 @@
 
 	// Type definitions
 	interface PengaturanData {
-		locked_pages?: string[];
+		halaman_terkunci?: string[];
 		pin?: string;
 	}
 
@@ -42,7 +42,7 @@
 
 	// Removed showPinModal, pin, errorTimeout, isClosing
 	let showPwaInstalledToast = $state(false);
-	let pengaturan: PengaturanData = { locked_pages: ['laporan', 'beranda'], pin: '1234' };
+	let pengaturan: PengaturanData = { halaman_terkunci: ['laporan', 'beranda'], pin: '1234' };
 
 	let showNotification = $state(false);
 	let notificationMessage = $state('');
@@ -133,7 +133,7 @@
 				}
 			}
 
-			// Removed locked_pages check for kasir role
+			// Removed halaman_terkunci check for kasir role
 
 			// Set loading selesai
 			isLoading = false;
@@ -612,11 +612,11 @@
 		<pwa-install
 			manifest-url="/manifest.webmanifest"
 			name="Zatiaras POS"
-			description="Install aplikasi ini untuk akses lebih cepat dan pengalaman lebih baik"
+			deskripsi="Install aplikasi ini untuk akses lebih cepat dan pengalaman lebih baik"
 			icon="/img/192x192.png"
 			manual-apple="true"
 			manual-chrome="true"
-			disable-install-description="false"
+			disable-install-deskripsi="false"
 		></pwa-install>
 	{/if}
 

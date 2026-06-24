@@ -48,7 +48,7 @@
 	interface PosProduct {
 		id: string;
 		name: string;
-		price: number;
+		harga: number;
 		tipe: string;
 		image?: string;
 		gambar?: string;
@@ -62,15 +62,15 @@
 	interface PosAddOn {
 		id: string;
 		name: string;
-		price: number;
+		harga: number;
 	}
 	interface PosCartItem {
 		product: PosProduct;
-		qty: number;
+		jumlah: number;
 		addOns: PosAddOn[];
-		sugar: string;
-		ice: string;
-		note: string;
+		gula: string;
+		es: string;
+		catatan: string;
 	}
 
 	let produkData = $state<PosProduct[]>([]);
@@ -148,8 +148,8 @@
 				(nextProducts || []).length,
 				(nextProducts || [])
 					.map(
-						(item: { id?: string; price?: number }) =>
-							`${item?.id || ''}:${item?.price ?? 0}`
+						(item: { id?: string; harga?: number }) =>
+							`${item?.id || ''}:${item?.harga ?? 0}`
 					)
 					.join(','),
 				(nextCategories || []).length,
@@ -157,8 +157,8 @@
 				(nextAddons || []).length,
 				(nextAddons || [])
 					.map(
-						(item: { id?: string; price?: number }) =>
-							`${item?.id || ''}:${item?.price ?? 0}`
+						(item: { id?: string; harga?: number }) =>
+							`${item?.id || ''}:${item?.harga ?? 0}`
 					)
 					.join(',')
 			].join('|');
@@ -253,7 +253,7 @@
 	let selectedAddOns = $state<string[]>([]);
 	let selectedSugar = $state('normal');
 	let selectedIce = $state('normal');
-	let qty = $state(1);
+	let jumlah = $state(1);
 	let selectedNote = $state('');
 
 	// Keranjang sementara
@@ -321,7 +321,7 @@
 		selectedAddOns = [];
 		selectedSugar = 'normal';
 		selectedIce = 'normal';
-		qty = 1;
+		jumlah = 1;
 		selectedNote = '';
 		showModal = true;
 	}
@@ -346,7 +346,7 @@
 			return;
 		}
 		// Validate quantity
-		const qtyValidation = validateNumber(qty, { required: true, min: 1, max: 99 });
+		const qtyValidation = validateNumber(jumlah, { required: true, min: 1, max: 99 });
 		if (!qtyValidation.isValid) {
 			showErrorNotif(`Error: ${qtyValidation.errors.join(', ')}`);
 			return;
@@ -363,14 +363,14 @@
 		const sanitizedIce = sanitizeInput(selectedIce);
 
 		// Check for suspicious activity
-		const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${qty}`;
+		const allInputs = `${selectedProduct?.name}${sanitizedSugar}${sanitizedIce}${jumlah}`;
 		if (securityUtils.detectSuspiciousActivity('pos_add_to_cart', allInputs)) {
 			showErrorNotif('Aktivitas mencurigakan terdeteksi. Silakan coba lagi.');
 			securityUtils.logSecurityEvent('suspicious_cart_activity', {
 				product: selectedProduct?.name,
-				qty,
-				sugar: sanitizedSugar,
-				ice: sanitizedIce
+				jumlah,
+				gula: sanitizedSugar,
+				es: sanitizedIce
 			});
 			return;
 		}
@@ -388,14 +388,14 @@
 				.map((a: PosAddOn) => a.id)
 				.sort()
 				.join(',');
-			const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.sugar}-${item.ice}-${item.note}`;
+			const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.gula}-${item.es}-${item.catatan}`;
 			return currentItemKey === itemKey;
 		});
 
 		if (existingIdx !== -1) {
-			// Jika sudah ada, tambahkan qty
+			// Jika sudah ada, tambahkan jumlah
 			cart = cart.map((item, idx) =>
-				idx === existingIdx ? { ...item, qty: item.qty + qty } : item
+				idx === existingIdx ? { ...item, jumlah: item.jumlah + jumlah } : item
 			);
 		} else if (selectedProduct) {
 			// Jika belum ada, tambahkan item baru
@@ -404,10 +404,10 @@
 				{
 					product: selectedProduct,
 					addOns: addOnsSelected,
-					sugar: sanitizedSugar,
-					ice: sanitizedIce,
-					qty,
-					note: selectedNote.trim()
+					gula: sanitizedSugar,
+					es: sanitizedIce,
+					jumlah,
+					catatan: selectedNote.trim()
 				}
 			];
 		}
@@ -415,7 +415,7 @@
 		// Log successful add to cart
 		securityUtils.logSecurityEvent('product_added_to_cart', {
 			product: selectedProduct?.name,
-			qty,
+			jumlah,
 			totalItems: cart.length
 		});
 
@@ -432,10 +432,10 @@
 	}
 
 	function incQty() {
-		if (qty < 99) qty++;
+		if (jumlah < 99) jumlah++;
 	}
 	function decQty() {
-		if (qty > 1) qty--;
+		if (jumlah > 1) jumlah--;
 	}
 
 	let showSnackbar = $state(false);
@@ -509,7 +509,7 @@
 		openAddOnModal(product);
 	}
 	function handleShowCustomItemModal(): void {
-		qty = 1;
+		jumlah = 1;
 		showCustomItemModal = true;
 	}
 	function handleImgErrorId(id: string | number): void {
@@ -674,26 +674,26 @@
 						>
 							<div class="flex min-w-0 flex-col">
 								<div class="mb-0.5 truncate text-base font-semibold text-gray-900">
-									{item.qty}x {item.product.name}
+									{item.jumlah}x {item.product.name}
 								</div>
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
 											? item.addOns.map((a) => a.name).join(', ')
 											: '',
-										item.note ? `${item.note}` : '',
-										item.product.tipe === 'minuman' && item.sugar !== 'normal'
-											? (sugarOptions.find((s) => s.id === item.sugar)?.label ?? item.sugar)
+										item.catatan ? `${item.catatan}` : '',
+										item.product.tipe === 'minuman' && item.gula !== 'normal'
+											? (sugarOptions.find((s) => s.id === item.gula)?.label ?? item.gula)
 											: '',
-										item.product.tipe === 'minuman' && item.ice !== 'normal'
-											? (iceOptions.find((i) => i.id === item.ice)?.label ?? item.ice)
+										item.product.tipe === 'minuman' && item.es !== 'normal'
+											? (iceOptions.find((i) => i.id === item.es)?.label ?? item.es)
 											: ''
 									]
 										.filter(Boolean)
 										.join(', ')}
 								</div>
 								<div class="mt-1 text-base font-bold text-pink-500">
-									Rp {Number(item.product.price ?? 0).toLocaleString('id-ID')}
+									Rp {Number(item.product.harga ?? 0).toLocaleString('id-ID')}
 								</div>
 							</div>
 							<button
@@ -795,7 +795,7 @@
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
 											: 'text-pink-500'}"
-										>+Rp {Number(a.price ?? 0).toLocaleString('id-ID')}</span
+										>+Rp {Number(a.harga ?? 0).toLocaleString('id-ID')}</span
 									>
 								</button>
 							{/each}
@@ -832,7 +832,7 @@
 								type="number"
 								min="1"
 								max="99"
-								bind:value={qty}
+								bind:value={jumlah}
 							/>
 							<button
 								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"

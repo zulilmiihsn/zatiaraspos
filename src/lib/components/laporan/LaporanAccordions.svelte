@@ -55,7 +55,7 @@
 	function groupAndSumByName(items: BukuKasRecord[]): { name: string; total: number }[] {
 		if (!items || items.length === 0) return [];
 		const groups = items.reduce((acc: Record<string, number>, item) => {
-			const name = item.description?.trim() || item.catatan?.trim() || 'Lain-lain';
+			const name = item.deskripsi?.trim() || item.catatan?.trim() || 'Lain-lain';
 			acc[name] = (acc[name] || 0) + (item.amount || 0);
 			return acc;
 		}, {});

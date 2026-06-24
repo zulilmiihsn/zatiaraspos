@@ -10,7 +10,7 @@ import type { RequestHandler } from './$types';
  * /api/bahan — Resource route untuk tabel `bahan` (bahan baku & stok).
  * Menggantikan dispatch dari /api/data?table=bahan.
  * Invariant:
- *   - Field numerik di-coerce (current_stock, cost_per_unit, dll) di insert & update.
+ *   - Field numerik di-coerce (stok_saat_ini, biaya_per_satuan, dll) di insert & update.
  *   - DELETE menolak (409) bila bahan masih dipakai di resep_produk.
  * RBAC: pemilik (owner) untuk semua operasi tulis.
  */
@@ -40,12 +40,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	const rows = payloadRows(body.payload, branch).map((row) => ({
 		...row,
-		unit: row.unit || 'gram',
-		current_stock: Number(row.current_stock || 0),
-		low_stock_threshold: Number(row.low_stock_threshold || 0),
-		cost_per_unit: Number(row.cost_per_unit || 0),
-		last_purchase_qty: Number(row.last_purchase_qty || 0),
-		last_purchase_cost: Number(row.last_purchase_cost || 0)
+		satuan: row.satuan || 'gram',
+		stok_saat_ini: Number(row.stok_saat_ini || 0),
+		ambang_stok: Number(row.ambang_stok || 0),
+		biaya_per_satuan: Number(row.biaya_per_satuan || 0),
+		jumlah_beli_terakhir: Number(row.jumlah_beli_terakhir || 0),
+		biaya_beli_terakhir: Number(row.biaya_beli_terakhir || 0)
 	})) as Array<Record<string, any>>;
 	await db.insert(bahan).values(rows as any);
 	await publish(platform, branch, 'bahan', 'insert', { id: rows[0]?.id });
@@ -67,18 +67,18 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	const safePayload = { ...(body.payload as any) };
 	// Coerce field numerik bila ada di payload.
-	if ('current_stock' in safePayload)
-		safePayload.current_stock = Number(safePayload.current_stock || 0);
-	if ('low_stock_threshold' in safePayload) {
-		safePayload.low_stock_threshold = Number(safePayload.low_stock_threshold || 0);
+	if ('stok_saat_ini' in safePayload)
+		safePayload.stok_saat_ini = Number(safePayload.stok_saat_ini || 0);
+	if ('ambang_stok' in safePayload) {
+		safePayload.ambang_stok = Number(safePayload.ambang_stok || 0);
 	}
-	if ('cost_per_unit' in safePayload)
-		safePayload.cost_per_unit = Number(safePayload.cost_per_unit || 0);
-	if ('last_purchase_qty' in safePayload) {
-		safePayload.last_purchase_qty = Number(safePayload.last_purchase_qty || 0);
+	if ('biaya_per_satuan' in safePayload)
+		safePayload.biaya_per_satuan = Number(safePayload.biaya_per_satuan || 0);
+	if ('jumlah_beli_terakhir' in safePayload) {
+		safePayload.jumlah_beli_terakhir = Number(safePayload.jumlah_beli_terakhir || 0);
 	}
-	if ('last_purchase_cost' in safePayload) {
-		safePayload.last_purchase_cost = Number(safePayload.last_purchase_cost || 0);
+	if ('biaya_beli_terakhir' in safePayload) {
+		safePayload.biaya_beli_terakhir = Number(safePayload.biaya_beli_terakhir || 0);
 	}
 	await db
 		.update(bahan)

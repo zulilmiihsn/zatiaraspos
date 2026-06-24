@@ -46,9 +46,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		...row,
 		produk_id: String(row.produk_id || ''),
 		bahan_id: String(row.bahan_id || ''),
-		qty_per_item: Number(row.qty_per_item || 0)
+		jumlah_per_item: Number(row.jumlah_per_item || 0)
 	})) as Array<Record<string, any>>;
-	if (rows.some((row) => !row.produk_id || !row.bahan_id || row.qty_per_item <= 0)) {
+	if (rows.some((row) => !row.produk_id || !row.bahan_id || row.jumlah_per_item <= 0)) {
 		throw kitError(400, 'Resep bahan tidak valid');
 	}
 	await db.insert(resepProduk).values(rows as any);

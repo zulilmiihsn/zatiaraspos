@@ -12,7 +12,7 @@ import type { RequestHandler } from './$types';
  * Invariant KRITIS:
  *   - POST hanya satu mutasi per request (bukan bulk).
  *   - Update stok `bahan` + insert `bahan_mutasi` dijalankan atomic via rawDb.batch
- *     (batch D1 itu transaksional). stock_after dihitung dari subquery pasca-update.
+ *     (batch D1 itu transaksional). stok_setelah dihitung dari subquery pasca-update.
  *   - INSUFFICIENT_INGREDIENT → 409 (stok tidak boleh minus).
  * RBAC: pemilik (owner) untuk mutasi (mutasi manual lewat menu manajemen).
  */
@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (rows.length !== 1) throw kitError(400, 'Mutasi bahan harus satu per request');
 	const row = rows[0];
 	const bahanId = String(row.bahan_id || '');
-	const quantityDelta = Number(row.quantity_delta || 0);
+	const quantityDelta = Number(row.delta_jumlah || 0);
 	if (!bahanId || !Number.isFinite(quantityDelta) || quantityDelta === 0) {
 		throw kitError(400, 'Mutasi bahan tidak valid');
 	}
@@ -66,19 +66,19 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			rawDb
 				.prepare(
 					`UPDATE bahan
-					 SET current_stock = COALESCE(current_stock, 0) + ?, updated_at = ?
+					 SET stok_saat_ini = COALESCE(stok_saat_ini, 0) + ?, updated_at = ?
 					 WHERE cabang_id = ? AND id = ?`
 				)
 				.bind(quantityDelta, now, branch, bahanId),
 			rawDb
 				.prepare(
 					`INSERT INTO bahan_mutasi (
-						id, cabang_id, bahan_id, quantity_delta, stock_after, source,
-						reference_id, note, created_by, created_at
+						id, cabang_id, bahan_id, delta_jumlah, stok_setelah, sumber,
+						referensi_id, catatan, dibuat_oleh, created_at
 					)
 					VALUES (
 						?, ?, ?, ?,
-						(SELECT current_stock FROM bahan WHERE cabang_id = ? AND id = ?),
+						(SELECT stok_saat_ini FROM bahan WHERE cabang_id = ? AND id = ?),
 						?, ?, ?, ?, ?
 					)`
 				)
@@ -90,8 +90,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 					branch,
 					bahanId,
 					String(row.source || 'manual'),
-					row.reference_id == null ? null : String(row.reference_id),
-					row.note == null ? null : String(row.note).slice(0, 160),
+					row.referensi_id == null ? null : String(row.referensi_id),
+					row.catatan == null ? null : String(row.catatan).slice(0, 160),
 					session?.username || session?.userId || null,
 					now
 				)
@@ -109,7 +109,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	await publish(platform, branch, 'bahan_mutasi', 'insert', { id: row.id });
 	await auditDataChange(rawDb, branch, session, 'bahan_mutasi', 'insert', row.id, {
 		bahan_id: bahanId,
-		quantity_delta: quantityDelta
+		delta_jumlah: quantityDelta
 	});
 	return json({ ok: true, data: [row] });
 };

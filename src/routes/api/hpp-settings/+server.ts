@@ -25,12 +25,12 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 };
 
 type HppPayload = {
-	rent_monthly?: number;
-	electricity_monthly?: number;
-	water_monthly?: number;
-	salary_monthly?: number;
-	other_monthly?: number;
-	target_items_monthly?: number;
+	sewa_bulanan?: number;
+	listrik_bulanan?: number;
+	air_bulanan?: number;
+	gaji_bulanan?: number;
+	lainnya_bulanan?: number;
+	target_item_bulanan?: number;
 };
 
 export const PUT: RequestHandler = async ({ request, platform, locals }) => {
@@ -47,40 +47,40 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
 	const row = {
 		id,
 		cabang_id: branch,
-		rent_monthly: Number(input.rent_monthly || 0),
-		electricity_monthly: Number(input.electricity_monthly || 0),
-		water_monthly: Number(input.water_monthly || 0),
-		salary_monthly: Number(input.salary_monthly || 0),
-		other_monthly: Number(input.other_monthly || 0),
-		target_items_monthly: Math.max(1, Number(input.target_items_monthly || 1000))
+		sewa_bulanan: Number(input.sewa_bulanan || 0),
+		listrik_bulanan: Number(input.listrik_bulanan || 0),
+		air_bulanan: Number(input.air_bulanan || 0),
+		gaji_bulanan: Number(input.gaji_bulanan || 0),
+		lainnya_bulanan: Number(input.lainnya_bulanan || 0),
+		target_item_bulanan: Math.max(1, Number(input.target_item_bulanan || 1000))
 	};
 
 	const rawDb = getRawDb(platform, branch);
 	await rawDb
 		.prepare(
 			`INSERT INTO pengaturan_hpp (
-				id, cabang_id, rent_monthly, electricity_monthly, water_monthly,
-				salary_monthly, other_monthly, target_items_monthly, created_at, updated_at
+				id, cabang_id, sewa_bulanan, listrik_bulanan, air_bulanan,
+				gaji_bulanan, lainnya_bulanan, target_item_bulanan, created_at, updated_at
 			)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
-				rent_monthly = excluded.rent_monthly,
-				electricity_monthly = excluded.electricity_monthly,
-				water_monthly = excluded.water_monthly,
-				salary_monthly = excluded.salary_monthly,
-				other_monthly = excluded.other_monthly,
-				target_items_monthly = excluded.target_items_monthly,
+				sewa_bulanan = excluded.sewa_bulanan,
+				listrik_bulanan = excluded.listrik_bulanan,
+				air_bulanan = excluded.air_bulanan,
+				gaji_bulanan = excluded.gaji_bulanan,
+				lainnya_bulanan = excluded.lainnya_bulanan,
+				target_item_bulanan = excluded.target_item_bulanan,
 				updated_at = excluded.updated_at`
 		)
 		.bind(
 			row.id,
 			row.cabang_id,
-			row.rent_monthly,
-			row.electricity_monthly,
-			row.water_monthly,
-			row.salary_monthly,
-			row.other_monthly,
-			row.target_items_monthly,
+			row.sewa_bulanan,
+			row.listrik_bulanan,
+			row.air_bulanan,
+			row.gaji_bulanan,
+			row.lainnya_bulanan,
+			row.target_item_bulanan,
 			now,
 			now
 		)

@@ -27,8 +27,8 @@
 		amount: number;
 		tipe: string;
 		sumber: string;
-		payment_method: string;
-		customer_name: string;
+		metode_bayar: string;
+		nama_pelanggan: string;
 	}
 
 	let pengaturanStruk: ReceiptSettings | null = null;
@@ -76,12 +76,12 @@
 						id: t.id,
 						transaction_id: t.ref_transaksi_kasir_id || t.transaction_id, // Tambahkan transaction_id untuk delete operation
 						waktu: t.waktu || t.created_at,
-						nama: t.description || t.customer_name || t.nama || '-',
+						nama: t.deskripsi || t.nama_pelanggan || t.nama || '-',
 						amount: t.amount || 0,
 						tipe: t.tipe || (t as unknown as Record<string, string>).type, // Handle kemungkinan perbedaan nama kolom
 						sumber: t.sumber || 'catat',
-						payment_method: t.payment_method || 'tunai',
-						customer_name: t.customer_name || ''
+						metode_bayar: t.metode_bayar || 'tunai',
+						nama_pelanggan: t.nama_pelanggan || ''
 					}))
 				);
 			}
@@ -102,8 +102,8 @@
 			if (filterPayment !== 'all') {
 				transaksiHariIni = transaksiHariIni.filter((t) => {
 					if (filterPayment === 'qris')
-						return t.payment_method === 'qris' || t.payment_method === 'non-tunai';
-					if (filterPayment === 'tunai') return t.payment_method === 'tunai';
+						return t.metode_bayar === 'qris' || t.metode_bayar === 'non-tunai';
+					if (filterPayment === 'tunai') return t.metode_bayar === 'tunai';
 					return true;
 				});
 			}
@@ -177,17 +177,17 @@
 
 	async function updatePaymentMethod(newMethod: string) {
 		if (!selectedTransaksi) return;
-		const currentMethod = selectedTransaksi.payment_method;
+		const currentMethod = selectedTransaksi.metode_bayar;
 		const dbMethod = newMethod === 'qris' ? 'non-tunai' : newMethod;
 		if (currentMethod === dbMethod) return;
 		loading = true;
 		try {
 			await dataService.updateRows(
 				'buku_kas',
-				{ payment_method: dbMethod },
+				{ metode_bayar: dbMethod },
 				{ id: selectedTransaksi.id }
 			);
-			selectedTransaksi = { ...selectedTransaksi, payment_method: dbMethod };
+			selectedTransaksi = { ...selectedTransaksi, metode_bayar: dbMethod };
 			toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
 			setTimeout(() => {
 				toastManager.hideToast();
@@ -254,7 +254,7 @@
 
 			html += `<div style='text-align:center;font-weight:bold;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
 			html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
-			html += `${selectedTransaksi.customer_name ? selectedTransaksi.customer_name + '<br/>' : ''}`;
+			html += `${selectedTransaksi.nama_pelanggan ? selectedTransaksi.nama_pelanggan + '<br/>' : ''}`;
 			html += `${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
 			html += `</div>`;
 
@@ -263,8 +263,8 @@
 			if (items.length > 0) {
 				items.forEach((item: Record<string, unknown>, idx: number) => {
 					const produk = item.produk as Record<string, unknown> | undefined;
-					const itemName = item.custom_name || (produk && produk.name) || 'Produk Custom';
-					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(Number(item.price) ?? 0).toLocaleString('id-ID')}</td></tr>`;
+					const itemName = item.nama_kustom || (produk && produk.name) || 'Produk Custom';
+					html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.jumlah}</td><td style='text-align:right;'>Rp${(Number(item.harga) ?? 0).toLocaleString('id-ID')}</td></tr>`;
 					if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
 				});
 			} else {
@@ -285,7 +285,7 @@
 				card: 'Kartu',
 				'non-tunai': 'QRIS/Non-Tunai'
 			};
-			const methodKey = (selectedTransaksi.payment_method || '').toLowerCase();
+			const methodKey = (selectedTransaksi.metode_bayar || '').toLowerCase();
 			html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
 			html += `</tbody></table>`;
 
@@ -462,7 +462,7 @@
 									{trx.sumber === 'pos' ? ' | ' : ''}
 								</span>
 								<span class="font-semibold text-pink-500 uppercase">
-									{trx.payment_method === 'qris' || trx.payment_method === 'non-tunai'
+									{trx.metode_bayar === 'qris' || trx.metode_bayar === 'non-tunai'
 										? 'QRIS'
 										: 'Tunai'}
 								</span>
@@ -555,7 +555,7 @@
 				</div>
 				<div class="flex flex-col gap-1">
 					<span class="font-semibold text-gray-500">Customer</span>
-					<div class="text-base text-gray-700">{selectedTransaksi.customer_name || '-'}</div>
+					<div class="text-base text-gray-700">{selectedTransaksi.nama_pelanggan || '-'}</div>
 				</div>
 				<div class="flex flex-col gap-1">
 					<span class="font-semibold text-gray-500">Waktu</span>
@@ -584,9 +584,9 @@
 							>{paymentOptions.find(
 								(opt) =>
 									opt.value ===
-									(selectedTransaksi?.payment_method === 'non-tunai'
+									(selectedTransaksi?.metode_bayar === 'non-tunai'
 										? 'qris'
-										: selectedTransaksi?.payment_method)
+										: selectedTransaksi?.metode_bayar)
 							)?.label || 'Pilih'}</span
 						>
 						<svg
@@ -600,9 +600,9 @@
 					</button>
 					<DropdownSheet
 						open={showDropdownPayment}
-						value={selectedTransaksi.payment_method === 'non-tunai'
+						value={selectedTransaksi.metode_bayar === 'non-tunai'
 							? 'qris'
-							: selectedTransaksi.payment_method}
+							: selectedTransaksi.metode_bayar}
 						options={paymentOptions}
 						on:close={() => (showDropdownPayment = false)}
 						on:select={(e) => {

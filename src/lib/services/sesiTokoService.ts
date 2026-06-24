@@ -1,6 +1,6 @@
 /**
  * Shared service for sesi_toko (store session) queries.
- * All DB access via /api/data endpoint.
+ * All DB access via per-resource route /api/sesi-toko.
  */
 
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
@@ -53,16 +53,16 @@ function cacheActiveSession(session: TokoSession | null): void {
 
 export async function getSesiAktif(): Promise<TokoSession | null> {
 	if (typeof navigator !== 'undefined' && !navigator.onLine) return getCachedActiveSession();
-	const qs = new URLSearchParams({ table: 'sesi_toko', branch: branch() }).toString();
+	const qs = new URLSearchParams({ branch: branch() }).toString();
 	try {
-		const res = await fetch(`/api/data?${qs}`);
+		const res = await fetch(`/api/sesi-toko?${qs}`);
 		if (!res.ok) return null;
 		const rows: TokoSession[] = await res.json();
 		const active =
 			rows
 				.filter((r) => r.is_active)
 				.sort(
-					(a, b) => new Date(b.opening_time).getTime() - new Date(a.opening_time).getTime()
+					(a, b) => new Date(b.waktu_buka).getTime() - new Date(a.waktu_buka).getTime()
 				)[0] || null;
 		cacheActiveSession(active);
 		return active;
@@ -72,17 +72,15 @@ export async function getSesiAktif(): Promise<TokoSession | null> {
 }
 
 export async function bukaToko(openingCash: number, openingTime: string): Promise<void> {
-	const response = await fetch('/api/data', {
+	const response = await fetch('/api/sesi-toko', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
-			table: 'sesi_toko',
-			action: 'insert',
 			branch: branch(),
 			payload: {
 				id: crypto.randomUUID(),
-				opening_cash: openingCash,
-				opening_time: openingTime,
+				kas_awal: openingCash,
+				waktu_buka: openingTime,
 				is_active: true
 			}
 		})
@@ -92,15 +90,13 @@ export async function bukaToko(openingCash: number, openingTime: string): Promis
 }
 
 export async function tutupToko(sesiId: string, closingTime: string): Promise<void> {
-	const response = await fetch('/api/data', {
-		method: 'POST',
+	const response = await fetch('/api/sesi-toko', {
+		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
-			table: 'sesi_toko',
-			action: 'update',
 			branch: branch(),
 			where: { id: sesiId },
-			payload: { closing_time: closingTime, is_active: false }
+			payload: { waktu_tutup: closingTime, is_active: false }
 		})
 	});
 	if (!response.ok) throw new Error(`Gagal menutup toko: HTTP ${response.status}`);

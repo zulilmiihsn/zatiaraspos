@@ -120,7 +120,7 @@
 
 		if (userRole === 'kasir') {
 			// Session and security settings are loaded through backend APIs.
-			// const lockedPages = data?.locked_pages || ['laporan', 'beranda'];
+			// const lockedPages = data?.halaman_terkunci || ['laporan', 'beranda'];
 			// if (lockedPages.includes('beranda')) {
 			//   // showPinModal = true; // Hapus semua logic showPinModal
 			// }

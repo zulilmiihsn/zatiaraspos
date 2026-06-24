@@ -46,12 +46,12 @@
 
 		const data = (await dataService.getOne('pengaturan')) as {
 			pin?: string;
-			locked_pages?: string[];
+			halaman_terkunci?: string[];
 			id?: string;
 		} | null;
 		if (data) {
 			pin = data.pin || '';
-			lockedPages = data.locked_pages || [];
+			lockedPages = data.halaman_terkunci || [];
 			pengaturanKeamananId = data.id ?? '';
 		}
 	});
@@ -214,7 +214,7 @@
 		try {
 			await dataService.updateRows(
 				'pengaturan',
-				{ locked_pages: lockedPages },
+				{ halaman_terkunci: lockedPages },
 				{ id: pengaturanKeamananId }
 			);
 			notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';

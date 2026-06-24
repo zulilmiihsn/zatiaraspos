@@ -36,9 +36,9 @@ export async function buildLaporanAggregate(
 ): Promise<LaporanAggregate> {
 	const summaryRow = (await rawDb
 		.prepare(
-			`SELECT COALESCE(SUM(gross_sales),0) AS gross
+			`SELECT COALESCE(SUM(penjualan_kotor),0) AS gross
 			 FROM ringkasan_penjualan_harian
-			 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?`
+			 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?`
 		)
 		.bind(branch, startDate, endDate)
 		.first()
@@ -48,10 +48,10 @@ export async function buildLaporanAggregate(
 		((await rawDb
 			.prepare(
 				`SELECT nama_produk,
-					COALESCE(SUM(cash_sales),0) AS cash,
-					COALESCE(SUM(non_cash_sales),0) AS non_cash
+					COALESCE(SUM(penjualan_tunai),0) AS cash,
+					COALESCE(SUM(penjualan_nontunai),0) AS non_cash
 				 FROM penjualan_produk_harian
-				 WHERE cabang_id = ? AND sales_date >= ? AND sales_date <= ?
+				 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?
 				 GROUP BY nama_produk`
 			)
 			.bind(branch, startDate, endDate)
@@ -63,8 +63,8 @@ export async function buildLaporanAggregate(
 	const manualRows =
 		((await rawDb
 			.prepare(
-				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, amount,
-					description, payment_method, customer_name
+				`SELECT id, transaction_id, waktu, sumber, tipe, jenis, nominal AS amount,
+					deskripsi, metode_bayar, nama_pelanggan
 				 FROM buku_kas
 				 WHERE cabang_id = ?
 					AND (sumber IS NULL OR sumber != 'pos')
@@ -92,8 +92,8 @@ export async function buildLaporanAggregate(
 				tipe: 'in',
 				jenis: 'pendapatan_usaha',
 				amount: cash,
-				description: name,
-				payment_method: 'tunai'
+				deskripsi: name,
+				metode_bayar: 'tunai'
 			});
 		}
 		if (nonCash > 0) {
@@ -105,8 +105,8 @@ export async function buildLaporanAggregate(
 				tipe: 'in',
 				jenis: 'pendapatan_usaha',
 				amount: nonCash,
-				description: name,
-				payment_method: 'qris'
+				deskripsi: name,
+				metode_bayar: 'qris'
 			});
 		}
 	}
@@ -120,7 +120,7 @@ export async function buildLaporanAggregate(
 			...m,
 			sumber: m.sumber || 'catat',
 			amount: value,
-			description: m.description || 'Transaksi Lainnya'
+			deskripsi: m.deskripsi || 'Transaksi Lainnya'
 		});
 		if (m.tipe === 'in') manualIncome += value;
 		else if (m.tipe === 'out') manualExpense += value;

@@ -133,7 +133,7 @@ export type AccessLevel = 'read' | 'write' | 'admin' | 'super_admin';
 
 export interface SecuritySettings {
 	pin: string;
-	locked_pages: string[];
+	halaman_terkunci: string[];
 	session_timeout: number;
 	max_login_attempts: number;
 	require_pin_for_sensitive_actions: boolean;
@@ -143,7 +143,7 @@ export interface SecurityEvent {
 	id: string;
 	user_id: string;
 	event_type: SecurityEventType;
-	description: string;
+	deskripsi: string;
 	ip_address?: string;
 	user_agent?: string;
 	timestamp: string;
@@ -259,7 +259,7 @@ export interface SecurityForm {
 	current_pin: string;
 	new_pin: string;
 	confirm_pin: string;
-	locked_pages: string[];
+	halaman_terkunci: string[];
 	session_timeout: number;
 }
 

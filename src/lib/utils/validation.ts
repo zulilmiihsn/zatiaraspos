@@ -162,7 +162,7 @@ export function validateIncomeExpense(data: any): ValidationResult {
 	}
 
 	// Validasi deskripsi
-	const descriptionValidation = validateText(data.description, {
+	const descriptionValidation = validateText(data.deskripsi, {
 		required: true,
 		minLength: 3,
 		maxLength: 200

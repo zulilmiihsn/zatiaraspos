@@ -18,8 +18,8 @@ export interface BukuKasRecord {
 	jenis: 'pendapatan_usaha' | 'beban_usaha' | 'lainnya';
 	amount: number;
 	catatan?: string;
-	description?: string; // Alias legacy
-	payment_method: 'tunai' | 'non-tunai' | 'qris';
+	deskripsi?: string; // Alias legacy
+	metode_bayar: 'tunai' | 'non-tunai' | 'qris';
 	sumber?: 'pos' | 'manual' | 'catat';
 	waktu?: string;
 	created_at: string;
@@ -33,7 +33,7 @@ export interface BukuKasRecord {
 	produk_detail?: string;
 	transaction_id?: string;
 	nama?: string;
-	customer_name?: string;
+	nama_pelanggan?: string;
 }
 
 // ============================================================================

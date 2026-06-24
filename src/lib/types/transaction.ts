@@ -15,9 +15,9 @@ export interface Transaction {
 	transaction_number: string;
 	user_id: string;
 	cabang_id: string;
-	customer_name?: string;
+	nama_pelanggan?: string;
 	total_amount: number;
-	payment_method: PaymentMethod;
+	metode_bayar: PaymentMethod;
 	cash_received?: number;
 	change_amount?: number;
 	status: TransactionStatus;
@@ -35,16 +35,16 @@ export interface TransactionItem {
 	product_price: number;
 	quantity: number;
 	add_ons: TransactionAddOn[];
-	sugar?: string;
-	ice?: string;
-	note?: string;
+	gula?: string;
+	es?: string;
+	catatan?: string;
 	subtotal: number;
 }
 
 export interface TransactionAddOn {
 	id: number;
 	name: string;
-	price: number;
+	harga: number;
 	quantity: number;
 }
 
@@ -86,13 +86,13 @@ export interface FinancialRecord {
 	type: 'pemasukan' | 'pengeluaran';
 	category: string;
 	amount: number;
-	description: string;
-	payment_method: PaymentMethod;
+	deskripsi: string;
+	metode_bayar: PaymentMethod;
 	date: string;
 	time: string;
 	user_id: string;
 	cabang_id: string;
-	reference_id?: string;
+	referensi_id?: string;
 	created_at: string;
 }
 
@@ -100,7 +100,7 @@ export interface FinancialCategory {
 	id: string;
 	name: string;
 	type: 'pemasukan' | 'pengeluaran';
-	description?: string;
+	deskripsi?: string;
 	is_active: boolean;
 	created_at: string;
 }
@@ -158,7 +158,7 @@ export interface SalesReport {
 	total_sales: number;
 	average_transaction: number;
 	top_products: TopProduct[];
-	payment_methods: PaymentMethodSummary[];
+	metode_bayars: PaymentMethodSummary[];
 	daily_sales: DailySales[];
 }
 
@@ -254,7 +254,7 @@ export interface TransactionFilters {
 		start_date: string;
 		end_date: string;
 	};
-	payment_method?: PaymentMethod;
+	metode_bayar?: PaymentMethod;
 	status?: TransactionStatus;
 	user_id?: string;
 	cabang_id?: string;
@@ -263,7 +263,7 @@ export interface TransactionFilters {
 }
 
 export interface TransactionSortOptions {
-	field: 'created_at' | 'total_amount' | 'transaction_number' | 'customer_name';
+	field: 'created_at' | 'total_amount' | 'transaction_number' | 'nama_pelanggan';
 	order: 'asc' | 'desc';
 }
 
@@ -307,7 +307,7 @@ export interface FinancialFilters {
 	};
 	type?: 'pemasukan' | 'pengeluaran';
 	category_id?: string;
-	payment_method?: PaymentMethod;
+	metode_bayar?: PaymentMethod;
 	min_amount?: number;
 	max_amount?: number;
 }

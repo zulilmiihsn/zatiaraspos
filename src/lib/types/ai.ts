@@ -16,7 +16,7 @@ export interface TransactionAnalysis {
 export interface DetectedTransaction {
 	type: 'pemasukan' | 'pengeluaran' | 'penjualan' | 'unknown';
 	amount: number;
-	description: string;
+	deskripsi: string;
 	category?: string;
 	confidence: number;
 	products?: any[]; // Product details for sales transactions
@@ -26,7 +26,7 @@ export interface AiRecommendation {
 	id: string;
 	action: 'create_transaction' | 'update_transaction' | 'create_category' | 'other';
 	title: string;
-	description: string;
+	deskripsi: string;
 	data: any;
 	priority: 'high' | 'medium' | 'low';
 }

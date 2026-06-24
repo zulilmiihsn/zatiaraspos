@@ -4,6 +4,6 @@ WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='berau' AND username='pem
 INSERT INTO profil (id,cabang_id,role,username,password,nama_lengkap)
 SELECT 'prod-kasir-berau','berau','kasir','kasir','$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy','Kasir berau'
 WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='berau' AND username='kasir');
-INSERT INTO pengaturan (id,cabang_id,pin,locked_pages,nama_toko)
+INSERT INTO pengaturan (id,cabang_id,pin,halaman_terkunci,nama_toko)
 SELECT 910005,'berau','1234','["laporan","beranda","pengaturan","catat"]','Zatiaras Berau'
 WHERE NOT EXISTS (SELECT 1 FROM pengaturan WHERE cabang_id='berau');

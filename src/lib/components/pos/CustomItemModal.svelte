@@ -10,7 +10,7 @@
 	let customItemPriceRaw = '';
 	let customItemPriceFormatted = $state('');
 	let customItemNote = $state('');
-	let qty = $state(1);
+	let jumlah = $state(1);
 
 	function formatRupiahInput(value: string): string {
 		const numberString = value.replace(/[^\d]/g, '');
@@ -26,10 +26,10 @@
 	}
 
 	function decQty() {
-		if (qty > 1) qty--;
+		if (jumlah > 1) jumlah--;
 	}
 	function incQty() {
-		if (qty < 99) qty++;
+		if (jumlah < 99) jumlah++;
 	}
 
 	function handleAdd(e?: Event) {
@@ -45,14 +45,14 @@
 			product: {
 				id: `custom-${Date.now()}`,
 				name: customItemName.trim(),
-				price: Number(customItemPriceRaw),
+				harga: Number(customItemPriceRaw),
 				tipe: 'custom'
 			},
 			addOns: [],
-			sugar: '',
-			ice: '',
-			qty: qty,
-			note: customItemNote.trim()
+			gula: '',
+			es: '',
+			jumlah: jumlah,
+			catatan: customItemNote.trim()
 		});
 		show = false;
 		// reset
@@ -60,7 +60,7 @@
 		customItemPriceRaw = '';
 		customItemPriceFormatted = '';
 		customItemNote = '';
-		qty = 1;
+		jumlah = 1;
 	}
 
 	function handleStopPropagation(e: Event): void {
@@ -144,7 +144,7 @@
 					type="number"
 					min="1"
 					max="99"
-					bind:value={qty}
+					bind:value={jumlah}
 				/>
 				<button
 					class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"

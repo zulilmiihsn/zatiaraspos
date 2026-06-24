@@ -22,19 +22,68 @@ function currentBranch(): string {
 }
 
 async function parseError(response: Response, operation: string): Promise<Error> {
-	const payload = (await response.json().catch(() => null)) as
-		| { message?: unknown; error?: unknown }
-		| null;
+	const payload = (await response.json().catch(() => null)) as {
+		message?: unknown;
+		error?: unknown;
+	} | null;
 	const detail = String(payload?.message || payload?.error || `HTTP ${response.status}`);
 	return new Error(`${operation} gagal: ${detail}`);
 }
 
+// ─── Table → per-resource URL map ────────────────────────────────────────
+// Resource route RESTful pengganti god endpoint /api/data.
+// Tambahkan entry di sini saat tabel baru ditambahkan.
+
+const READ_ROUTES: Record<string, string> = {
+	produk: '/api/produk',
+	kategori: '/api/kategori',
+	tambahan: '/api/tambahan',
+	bahan: '/api/bahan',
+	resep_produk: '/api/resep-produk',
+	bahan_mutasi: '/api/bahan-mutasi',
+	hpp_settings: '/api/hpp-settings',
+	buku_kas: '/api/buku-kas',
+	transaksi_kasir: '/api/transaksi-kasir',
+	sesi_toko: '/api/sesi-toko',
+	pengaturan: '/api/pengaturan',
+	// Virtual reads (aggregate/dashboard)
+	dashboard_stats: '/api/dashboard/stats',
+	weekly_income_summary: '/api/dashboard/weekly',
+	best_sellers_summary: '/api/dashboard/best-sellers',
+	pos_kas_7hari: '/api/dashboard/pos-kas-7hari',
+	laporan_aggregate: '/api/reports/aggregate'
+};
+
+const WRITE_ROUTES: Record<string, string> = {
+	produk: '/api/produk',
+	kategori: '/api/kategori',
+	tambahan: '/api/tambahan',
+	bahan: '/api/bahan',
+	resep_produk: '/api/resep-produk',
+	bahan_mutasi: '/api/bahan-mutasi',
+	hpp_settings: '/api/hpp-settings',
+	buku_kas: '/api/buku-kas',
+	transaksi_kasir: '/api/transaksi-kasir',
+	profil: '/api/profil',
+	sesi_toko: '/api/sesi-toko',
+	pengaturan: '/api/pengaturan'
+};
+
+// ─── GET helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Ambil data dari per-resource GET route.
+ * Params di-pass sebagai query string (tanpa `table` — sudah ada di URL).
+ * `branch` tetap disertakan karena beberapa route menggunakannya.
+ */
 export async function dbGet<T extends DataRecord = DataRecord>(
 	table: string,
 	params: Record<string, string> = {}
 ): Promise<T[]> {
-	const qs = new URLSearchParams({ table, branch: currentBranch(), ...params }).toString();
-	const response = await fetch(`/api/data?${qs}`);
+	const url = READ_ROUTES[table];
+	if (!url) throw new Error(`[dataApiClient] dbGet: unknown table "${table}"`);
+	const qs = new URLSearchParams({ branch: currentBranch(), ...params }).toString();
+	const response = await fetch(`${url}?${qs}`);
 	if (!response.ok) return [];
 	return (await response.json()) as T[];
 }
@@ -43,19 +92,26 @@ export async function dbGetStrict<T extends DataRecord = DataRecord>(
 	table: string,
 	params: Record<string, string> = {}
 ): Promise<T[]> {
-	const qs = new URLSearchParams({ table, branch: currentBranch(), ...params }).toString();
-	const response = await fetch(`/api/data?${qs}`);
+	const url = READ_ROUTES[table];
+	if (!url) throw new Error(`[dataApiClient] dbGetStrict: unknown table "${table}"`);
+	const qs = new URLSearchParams({ branch: currentBranch(), ...params }).toString();
+	const response = await fetch(`${url}?${qs}`);
 	if (!response.ok) throw await parseError(response, `GET ${table}`);
 	return (await response.json()) as T[];
 }
 
+/**
+ * Ambil satu halaman cursor-paginated dari per-resource GET route.
+ * Khusus buku_kas dan transaksi_kasir.
+ */
 export async function dbGetPage<T extends DataRecord = DataRecord>(
 	table: 'buku_kas' | 'transaksi_kasir',
 	params: Record<string, string> = {},
 	cursor?: string | null
 ): Promise<DataPage<T>> {
+	const url = READ_ROUTES[table];
+	if (!url) throw new Error(`[dataApiClient] dbGetPage: unknown table "${table}"`);
 	const query = new URLSearchParams({
-		table,
 		branch: currentBranch(),
 		...params,
 		pagination: 'cursor',
@@ -63,7 +119,7 @@ export async function dbGetPage<T extends DataRecord = DataRecord>(
 	});
 	if (cursor) query.set('cursor', cursor);
 
-	const response = await fetch(`/api/data?${query.toString()}`);
+	const response = await fetch(`${url}?${query.toString()}`);
 	if (!response.ok) throw await parseError(response, `GET ${table} page`);
 	return (await response.json()) as DataPage<T>;
 }
@@ -85,17 +141,48 @@ export async function dbGetAll<T extends DataRecord = DataRecord>(
 	return rows;
 }
 
+// ─── POST (write) helper ───────────────────────────────────────────────────
+
+/**
+ * Kirim operasi tulis ke per-resource RESTful route.
+ * - action='insert'   → POST ke /api/<resource>
+ * - action='update'   → PATCH ke /api/<resource> (where clause via body)
+ * - action='delete'   → DELETE ke /api/<resource> (where clause via query param)
+ *
+ * Body shape disesuaikan agar kompatibel dengan format WriteBody di server.
+ */
 export async function dbPost<T extends DataRecord = DataRecord>(
 	table: string,
 	action: 'insert' | 'update' | 'delete',
 	payload: DataRecord | DataRecord[],
 	where?: Record<string, string>
 ): Promise<DataMutationResult<T>> {
-	const response = await fetch('/api/data', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ table, action, payload, branch: currentBranch(), where })
-	});
-	if (!response.ok) throw await parseError(response, `POST ${table}/${action}`);
+	const url = WRITE_ROUTES[table];
+	if (!url) throw new Error(`[dataApiClient] dbPost: unknown table "${table}"`);
+
+	if (action === 'insert') {
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ payload, branch: currentBranch() })
+		});
+		if (!response.ok) throw await parseError(response, `POST ${table}/insert`);
+		return (await response.json()) as DataMutationResult<T>;
+	}
+
+	if (action === 'update') {
+		const response = await fetch(url, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ payload, branch: currentBranch(), where })
+		});
+		if (!response.ok) throw await parseError(response, `PATCH ${table}`);
+		return (await response.json()) as DataMutationResult<T>;
+	}
+
+	// action === 'delete' — where clause lewat query param (seperti di route DELETE handler).
+	const qs = new URLSearchParams({ branch: currentBranch(), ...where }).toString();
+	const response = await fetch(`${url}?${qs}`, { method: 'DELETE' });
+	if (!response.ok) throw await parseError(response, `DELETE ${table}`);
 	return (await response.json()) as DataMutationResult<T>;
 }

@@ -1,11 +1,11 @@
--- Backfill kolom ringkasan_penjualan_harian.hpp_total dari data transaksi lama.
+-- Backfill kolom ringkasan_penjualan_harian.total_hpp dari data transaksi lama.
 --
 -- Diperlukan sekali setelah migration 0007_daily_sales_hpp diterapkan, supaya
 -- laporan/dashboard periode lama tetap menampilkan HPP & profit yang akurat
 -- tanpa perlu scan transaksi_kasir tiap kali.
 --
--- Mengelompokkan hpp_amount per tanggal WITA (created_at + 8 jam) — sama persis
--- dengan cara checkout menentukan sales_date.
+-- Mengelompokkan nominal_hpp per tanggal WITA (created_at + 8 jam) — sama persis
+-- dengan cara checkout menentukan tanggal_penjualan.
 --
 -- Idempoten: menulis ulang nilai (bukan increment), aman dijalankan berulang.
 --
@@ -14,12 +14,12 @@
 --     --config=wrangler.pages.jsonc --file=scripts/backfill-daily-sales-hpp.sql
 
 UPDATE ringkasan_penjualan_harian
-SET hpp_total = COALESCE(
+SET total_hpp = COALESCE(
 		(
-			SELECT SUM(tk.hpp_amount)
+			SELECT SUM(tk.nominal_hpp)
 			FROM transaksi_kasir tk
 			WHERE tk.cabang_id = ringkasan_penjualan_harian.cabang_id
-				AND date(datetime(tk.created_at, '+8 hours')) = ringkasan_penjualan_harian.sales_date
+				AND date(datetime(tk.created_at, '+8 hours')) = ringkasan_penjualan_harian.tanggal_penjualan
 		),
 		0
 	);

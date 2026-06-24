@@ -63,7 +63,7 @@ export interface CodeQualityTestResult {
 
 export interface CodeQualityTest {
 	name: string;
-	description: string;
+	deskripsi: string;
 	test: () => Promise<CodeQualityTestResult>;
 }
 
@@ -90,7 +90,7 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 	tests: [
 		{
 			name: 'TypeScript Check',
-			description: 'Svelte sync dan typecheck harus berhasil tanpa error',
+			deskripsi: 'Svelte sync dan typecheck harus berhasil tanpa error',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -122,7 +122,7 @@ export const typescriptTests: CodeQualityTestSuiteDef = {
 		},
 		{
 			name: 'TypeScript Build',
-			description: 'Production build harus berhasil',
+			deskripsi: 'Production build harus berhasil',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -164,7 +164,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 	tests: [
 		{
 			name: 'ESLint Check',
-			description: 'ESLint harus pass tanpa error',
+			deskripsi: 'ESLint harus pass tanpa error',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -195,7 +195,7 @@ export const lintingTests: CodeQualityTestSuiteDef = {
 		},
 		{
 			name: 'Prettier Format Check',
-			description: 'Code formatting harus sesuai standar',
+			deskripsi: 'Code formatting harus sesuai standar',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -236,7 +236,7 @@ export const fileStructureTests: CodeQualityTestSuiteDef = {
 	tests: [
 		{
 			name: 'Required Files Exist',
-			description: 'File-file penting harus ada',
+			deskripsi: 'File-file penting harus ada',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -297,7 +297,7 @@ export const fileStructureTests: CodeQualityTestSuiteDef = {
 		},
 		{
 			name: 'Directory Structure',
-			description: 'Struktur folder harus sesuai standar',
+			deskripsi: 'Struktur folder harus sesuai standar',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -367,7 +367,7 @@ export const dependencyTests: CodeQualityTestSuiteDef = {
 	tests: [
 		{
 			name: 'Package.json Valid',
-			description: 'package.json harus valid dan lengkap',
+			deskripsi: 'package.json harus valid dan lengkap',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 
@@ -420,7 +420,7 @@ export const dependencyTests: CodeQualityTestSuiteDef = {
 		},
 		{
 			name: 'Dependencies Installed',
-			description: 'Semua dependencies harus terinstall',
+			deskripsi: 'Semua dependencies harus terinstall',
 			test: async (): Promise<CodeQualityTestResult> => {
 				const startTime = Date.now();
 

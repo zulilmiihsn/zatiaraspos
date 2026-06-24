@@ -35,34 +35,34 @@ export async function reverseDailySummaryForTransaction(
 	const header = (await rawDb
 		.prepare(
 			`SELECT
-				date(datetime(tk.created_at, '+8 hours')) AS sales_date,
-				bk.payment_method AS payment_method,
-				COALESCE(SUM(tk.qty), 0) AS item_qty,
-				COALESCE(SUM(tk.amount), 0) AS gross,
-				COALESCE(SUM(tk.hpp_amount), 0) AS hpp
+				date(datetime(tk.created_at, '+8 hours')) AS tanggal_penjualan,
+				bk.metode_bayar AS metode_bayar,
+				COALESCE(SUM(tk.jumlah), 0) AS item_qty,
+				COALESCE(SUM(tk.nominal), 0) AS gross,
+				COALESCE(SUM(tk.nominal_hpp), 0) AS hpp
 			 FROM transaksi_kasir tk
 			 INNER JOIN buku_kas bk
 				ON bk.cabang_id = tk.cabang_id AND bk.id = tk.buku_kas_id
 			 WHERE tk.cabang_id = ? AND tk.transaction_id = ?
-			 GROUP BY sales_date, bk.payment_method
+			 GROUP BY tanggal_penjualan, bk.metode_bayar
 			 LIMIT 1`
 		)
 		.bind(branch, transactionId)
 		.first()) as {
-		sales_date?: string;
-		payment_method?: string;
+		tanggal_penjualan?: string;
+		metode_bayar?: string;
 		item_qty?: number;
 		gross?: number;
 		hpp?: number;
 	} | null;
 
-	if (!header || !header.sales_date) return;
+	if (!header || !header.tanggal_penjualan) return;
 
-	const salesDate = header.sales_date;
+	const salesDate = header.tanggal_penjualan;
 	const itemQty = Number(header.item_qty || 0);
 	const gross = Number(header.gross || 0);
 	const hpp = Number(header.hpp || 0);
-	const isCash = header.payment_method === 'tunai';
+	const isCash = header.metode_bayar === 'tunai';
 	const cashDelta = isCash ? gross : 0;
 	const nonCashDelta = isCash ? 0 : gross;
 	const now = new Date().toISOString();
@@ -71,8 +71,8 @@ export async function reverseDailySummaryForTransaction(
 	const products = ((await rawDb
 		.prepare(
 			`SELECT COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}') AS produk_id,
-				COALESCE(SUM(qty), 0) AS qty,
-				COALESCE(SUM(amount), 0) AS gross
+				COALESCE(SUM(jumlah), 0) AS jumlah,
+				COALESCE(SUM(nominal), 0) AS gross
 			 FROM transaksi_kasir
 			 WHERE cabang_id = ? AND transaction_id = ?
 			 GROUP BY COALESCE(produk_id, '${CUSTOM_PRODUCT_BUCKET_ID}')`
@@ -80,37 +80,37 @@ export async function reverseDailySummaryForTransaction(
 		.bind(branch, transactionId)
 		.all()
 		.catch(() => ({ results: [] }))) as {
-		results?: Array<{ produk_id?: string; qty?: number; gross?: number }>;
+		results?: Array<{ produk_id?: string; jumlah?: number; gross?: number }>;
 	}).results || [];
 
 	const statements = [
 		rawDb
 			.prepare(
 				`UPDATE ringkasan_penjualan_harian SET
-					transaction_count = MAX(0, transaction_count - 1),
-					item_count = MAX(0, item_count - ?),
-					gross_sales = MAX(0, gross_sales - ?),
-					cash_sales = MAX(0, cash_sales - ?),
-					non_cash_sales = MAX(0, non_cash_sales - ?),
-					hpp_total = MAX(0, hpp_total - ?),
+					jumlah_transaksi = MAX(0, jumlah_transaksi - 1),
+					jumlah_item = MAX(0, jumlah_item - ?),
+					penjualan_kotor = MAX(0, penjualan_kotor - ?),
+					penjualan_tunai = MAX(0, penjualan_tunai - ?),
+					penjualan_nontunai = MAX(0, penjualan_nontunai - ?),
+					total_hpp = MAX(0, total_hpp - ?),
 					updated_at = ?
-				 WHERE cabang_id = ? AND sales_date = ?`
+				 WHERE cabang_id = ? AND tanggal_penjualan = ?`
 			)
 			.bind(itemQty, gross, cashDelta, nonCashDelta, hpp, now, branch, salesDate),
 		...products.map((p) =>
 			rawDb
 				.prepare(
 					`UPDATE penjualan_produk_harian SET
-						qty = MAX(0, qty - ?),
-						gross_sales = MAX(0, gross_sales - ?),
-						cash_sales = MAX(0, cash_sales - ?),
-						non_cash_sales = MAX(0, non_cash_sales - ?),
-						transaction_count = MAX(0, transaction_count - 1),
+						jumlah = MAX(0, jumlah - ?),
+						penjualan_kotor = MAX(0, penjualan_kotor - ?),
+						penjualan_tunai = MAX(0, penjualan_tunai - ?),
+						penjualan_nontunai = MAX(0, penjualan_nontunai - ?),
+						jumlah_transaksi = MAX(0, jumlah_transaksi - 1),
 						updated_at = ?
-					 WHERE cabang_id = ? AND sales_date = ? AND produk_id = ?`
+					 WHERE cabang_id = ? AND tanggal_penjualan = ? AND produk_id = ?`
 				)
 				.bind(
-					Number(p.qty || 0),
+					Number(p.jumlah || 0),
 					Number(p.gross || 0),
 					isCash ? Number(p.gross || 0) : 0,
 					isCash ? 0 : Number(p.gross || 0),

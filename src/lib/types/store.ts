@@ -23,9 +23,9 @@ export type BranchId = string;
  */
 export interface TokoSession {
 	id: string;
-	opening_cash: number;
-	opening_time: string;
-	closing_time?: string;
+	kas_awal: number;
+	waktu_buka: string;
+	waktu_tutup?: string;
 	is_active: boolean;
 }
 
@@ -56,5 +56,5 @@ export type LazyIcon = typeof import('svelte').SvelteComponent | null;
 
 export interface SecuritySettingsData {
 	pin: string;
-	locked_pages: string[];
+	halaman_terkunci: string[];
 }

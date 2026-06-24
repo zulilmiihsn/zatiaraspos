@@ -96,12 +96,12 @@ export async function loginWithUsername(username: string, password: string, bran
 	// Jika peran adalah 'kasir', ambil pengaturan keamanan
 	if (result.user.role === 'kasir') {
 		try {
-			const qs = new URLSearchParams({ table: 'pengaturan', branch }).toString();
-			const settingsRes = await fetch(`/api/data?${qs}`);
+			const qs = new URLSearchParams({ branch }).toString();
+			const settingsRes = await fetch(`/api/pengaturan?${qs}`);
 			const settingsData = settingsRes.ok ? await settingsRes.json() : null;
 			const row = Array.isArray(settingsData) ? settingsData[0] : null;
 			if (row) {
-				setSecuritySettings({ pin: row.pin, lockedPages: row.locked_pages });
+				setSecuritySettings({ pin: row.pin, lockedPages: row.halaman_terkunci });
 			} else {
 				setSecuritySettings({
 					pin: '1234',

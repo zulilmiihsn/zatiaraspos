@@ -11,10 +11,10 @@
 export interface Product {
 	id: string | number;
 	name: string;
-	price: number;
+	harga: number;
 	stok?: number | null;
-	track_stock?: boolean | number | null;
-	track_ingredients?: boolean | number | null;
+	lacak_stok?: boolean | number | null;
+	lacak_bahan?: boolean | number | null;
 	kategori_id?: string | number | null;
 	tipe: 'minuman' | 'makanan' | 'snack';
 	gambar?: string;
@@ -28,7 +28,7 @@ export interface Product {
 export interface Category {
 	id: string | number;
 	name: string;
-	description?: string;
+	deskripsi?: string;
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
@@ -37,7 +37,7 @@ export interface Category {
 export interface AddOn {
 	id: string | number;
 	name: string;
-	price: number;
+	harga: number;
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
@@ -46,12 +46,12 @@ export interface AddOn {
 export interface Ingredient {
 	id: string | number;
 	name: string;
-	unit: string;
-	current_stock: number;
-	low_stock_threshold?: number;
-	cost_per_unit?: number;
-	last_purchase_qty?: number;
-	last_purchase_cost?: number;
+	satuan: string;
+	stok_saat_ini: number;
+	ambang_stok?: number;
+	biaya_per_satuan?: number;
+	jumlah_beli_terakhir?: number;
+	biaya_beli_terakhir?: number;
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
@@ -60,12 +60,12 @@ export interface Ingredient {
 export interface HppSettings {
 	id: string;
 	cabang_id: string;
-	rent_monthly: number;
-	electricity_monthly: number;
-	water_monthly: number;
-	salary_monthly: number;
-	other_monthly: number;
-	target_items_monthly: number;
+	sewa_bulanan: number;
+	listrik_bulanan: number;
+	air_bulanan: number;
+	gaji_bulanan: number;
+	lainnya_bulanan: number;
+	target_item_bulanan: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -74,7 +74,7 @@ export interface ProductRecipe {
 	id: string | number;
 	produk_id: string | number;
 	bahan_id: string | number;
-	qty_per_item: number;
+	jumlah_per_item: number;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -85,11 +85,11 @@ export interface ProductRecipe {
 
 export interface CartItem {
 	product: Product;
-	qty: number;
+	jumlah: number;
 	addOns: AddOn[];
-	sugar?: string;
-	ice?: string;
-	note?: string;
+	gula?: string;
+	es?: string;
+	catatan?: string;
 	total: number;
 }
 
@@ -105,10 +105,10 @@ export interface CartSummary {
 export interface MenuForm {
 	id?: string | number;
 	name: string;
-	price: number;
+	harga: number;
 	stok?: number | null;
-	track_stock?: boolean | number | null;
-	track_ingredients?: boolean | number | null;
+	lacak_stok?: boolean | number | null;
+	lacak_bahan?: boolean | number | null;
 	tipe: 'minuman' | 'makanan' | 'snack';
 	kategori_id: string | number;
 	gambar: string;
@@ -148,7 +148,7 @@ export interface FilteredProducts {
 
 export type ProductType = 'minuman' | 'makanan' | 'snack';
 export type SortOrder = 'asc' | 'desc';
-export type SortField = 'name' | 'price' | 'created_at';
+export type SortField = 'name' | 'harga' | 'created_at';
 
 export interface ProductSortOptions {
 	field: SortField;

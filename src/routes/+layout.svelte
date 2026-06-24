@@ -190,13 +190,13 @@
 		try {
 			const data = (await dataService.getOne('pengaturan')) as {
 				pin?: string;
-				locked_pages?: string[];
+				halaman_terkunci?: string[];
 			} | null;
 
 			if (data) {
 				setSecuritySettings({
 					pin: data.pin || null,
-					lockedPages: data.locked_pages || []
+					lockedPages: data.halaman_terkunci || []
 				});
 			}
 		} catch {

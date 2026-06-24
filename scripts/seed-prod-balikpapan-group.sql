@@ -4,7 +4,7 @@ WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='balikpapan' AND username
 INSERT INTO profil (id,cabang_id,role,username,password,nama_lengkap)
 SELECT 'prod-kasir-balikpapan','balikpapan','kasir','kasir','$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy','Kasir balikpapan'
 WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='balikpapan' AND username='kasir');
-INSERT INTO pengaturan (id,cabang_id,pin,locked_pages,nama_toko)
+INSERT INTO pengaturan (id,cabang_id,pin,halaman_terkunci,nama_toko)
 SELECT 910003,'balikpapan','1234','["laporan","beranda","pengaturan","catat"]','Zatiaras Balikpapan'
 WHERE NOT EXISTS (SELECT 1 FROM pengaturan WHERE cabang_id='balikpapan');
 INSERT INTO profil (id,cabang_id,role,username,password,nama_lengkap)
@@ -13,6 +13,6 @@ WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='balikpapan2' AND usernam
 INSERT INTO profil (id,cabang_id,role,username,password,nama_lengkap)
 SELECT 'prod-kasir-balikpapan2','balikpapan2','kasir','kasir','$2b$10$ao/mv2wHSeOZdvuQj4bGLu8NT2CQiBUfbUcnmjXrb3Q2/BpEIPkAy','Kasir balikpapan2'
 WHERE NOT EXISTS (SELECT 1 FROM profil WHERE cabang_id='balikpapan2' AND username='kasir');
-INSERT INTO pengaturan (id,cabang_id,pin,locked_pages,nama_toko)
+INSERT INTO pengaturan (id,cabang_id,pin,halaman_terkunci,nama_toko)
 SELECT 910004,'balikpapan2','1234','["laporan","beranda","pengaturan","catat"]','Zatiaras Balikpapan2'
 WHERE NOT EXISTS (SELECT 1 FROM pengaturan WHERE cabang_id='balikpapan2');
