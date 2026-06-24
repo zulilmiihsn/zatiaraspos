@@ -271,11 +271,10 @@
 		await fetchRecipes();
 		await fetchHppSettings();
 
-		// 2. Update cache POS setelah fetch sukses
 		await setCache('pos-data', {
-			produkData: $state.snapshot(menus),
-			kategoriData: $state.snapshot(kategoriList),
-			tambahanData: $state.snapshot(ekstraList)
+			produkData: JSON.parse(JSON.stringify(menus)),
+			kategoriData: JSON.parse(JSON.stringify(kategoriList)),
+			tambahanData: JSON.parse(JSON.stringify(ekstraList))
 		});
 
 		if (typeof window !== 'undefined') {
@@ -1202,11 +1201,10 @@
 	}
 
 	async function afterUpdateCachePOS() {
-		// Update local cache
 		await setCache('pos-data', {
-			produkData: $state.snapshot(menus),
-			kategoriData: $state.snapshot(kategoriList),
-			tambahanData: $state.snapshot(ekstraList)
+			produkData: JSON.parse(JSON.stringify(menus)),
+			kategoriData: JSON.parse(JSON.stringify(kategoriList)),
+			tambahanData: JSON.parse(JSON.stringify(ekstraList))
 		});
 
 		// Clear dataService cache untuk memastikan data terbaru
