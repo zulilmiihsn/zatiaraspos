@@ -17,7 +17,7 @@
 	>
 		<span>Laba (Rugi) Kotor</span>
 		{#if isLoadingReport}
-			<div class="h-6 w-32 animate-pulse rounded bg-gray-200 md:h-8"></div>
+			<div class="h-6 w-32 animate-pulse rounded-lg bg-pink-500/10 md:h-8"></div>
 		{:else}
 			<span
 				>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined
@@ -32,7 +32,7 @@
 	>
 		<span>Pajak Penghasilan (0,5%)</span>
 		{#if isLoadingReport}
-			<div class="h-6 w-32 animate-pulse rounded bg-gray-200 md:h-8"></div>
+			<div class="h-6 w-32 animate-pulse rounded-lg bg-pink-500/10 md:h-8"></div>
 		{:else}
 			<span
 				>Rp {summary?.pajak !== null && summary?.pajak !== undefined

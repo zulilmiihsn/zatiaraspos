@@ -118,16 +118,15 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanUsahaQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
 						{#if isLoadingReport}
-							{#each Array(3) as _}
+							{#each Array(2) as _}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
-									<div class="h-4 w-20 animate-pulse rounded bg-gray-200"></div>
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
 								</li>
 							{/each}
+						{:else if pemasukanUsahaQris.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
 						{:else}
 							{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
@@ -152,10 +151,17 @@
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanUsahaTunai.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if pemasukanUsahaTunai.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -198,10 +204,17 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanLainQris.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if pemasukanLainQris.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -223,10 +236,17 @@
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanLainTunai.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if pemasukanLainTunai.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -305,10 +325,17 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanUsahaQris.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if bebanUsahaQris.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -330,10 +357,17 @@
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanUsahaTunai.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if bebanUsahaTunai.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -376,10 +410,17 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanLainQris.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if bebanLainQris.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
@@ -401,10 +442,17 @@
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanLainTunai.length === 0}
+						{#if isLoadingReport}
+							{#each Array(2) as _}
+								<li class="flex justify-between text-sm text-gray-600 md:text-base">
+									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
+									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+								</li>
+							{/each}
+						{:else if bebanLainTunai.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
+						{:else}
+							{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 							<li class="flex justify-between text-sm text-gray-600 md:text-base">
 								<span
 									class="{expandedItems.has(grouped.nama)
