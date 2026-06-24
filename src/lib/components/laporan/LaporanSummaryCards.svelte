@@ -31,13 +31,10 @@
 					Pemasukan
 				</div>
 				<div class="text-xl font-bold text-green-900 md:text-center md:text-2xl lg:text-lg">
-					{#if isLoadingReport}
-						<div class="h-6 w-24 animate-pulse rounded-lg bg-green-900/10 md:h-8 md:w-32 lg:h-7 lg:w-28"></div>
-					{:else}
-						Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
+					Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
 							? summary.pendapatan.toLocaleString('id-ID')
-							: '--'}
-					{/if}
+							: '0'}
+					
 				</div>
 			</div>
 			<div
@@ -50,13 +47,10 @@
 					Pengeluaran
 				</div>
 				<div class="text-xl font-bold text-red-900 md:text-center md:text-2xl lg:text-lg">
-					{#if isLoadingReport}
-						<div class="h-6 w-24 animate-pulse rounded-lg bg-red-900/10 md:h-8 md:w-32 lg:h-7 lg:w-28"></div>
-					{:else}
-						Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
+					Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
 							? summary.pengeluaran.toLocaleString('id-ID')
-							: '--'}
-					{/if}
+							: '0'}
+					
 				</div>
 			</div>
 			<div
@@ -67,13 +61,10 @@
 					Laba (Rugi)
 				</div>
 				<div class="text-xl font-bold text-cyan-900 md:text-center md:text-2xl lg:text-lg">
-					{#if isLoadingReport}
-						<div class="h-6 w-24 animate-pulse rounded-lg bg-cyan-900/10 md:h-8 md:w-32 lg:h-7 lg:w-28"></div>
-					{:else}
-						Rp {summary?.saldo !== null && summary?.saldo !== undefined
+					Rp {summary?.saldo !== null && summary?.saldo !== undefined
 							? summary.saldo.toLocaleString('id-ID')
-							: '--'}
-					{/if}
+							: '0'}
+					
 				</div>
 			</div>
 		</div>

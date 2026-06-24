@@ -118,17 +118,10 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
-								</li>
-							{/each}
-						{:else if pemasukanUsahaQris.length === 0}
+						{#if pemasukanUsahaQris.length === 0}
 							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
+						{/if}
+						{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
 									<span
 										class="{expandedItems.has(grouped.nama)
@@ -138,46 +131,34 @@
 										onclick={() => toggleExpand(grouped.nama)}
 										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
 										role="button"
-										tabindex="0">{grouped.nama}</span
-									>
+										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span
-									>
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{/if}
 					</ul>
 					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if pemasukanUsahaTunai.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if pemasukanUsahaTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 				</div>
 			{/if}
@@ -204,65 +185,47 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if pemasukanLainQris.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if pemasukanLainQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if pemasukanLainTunai.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if pemasukanLainTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 				</div>
 			{/if}
@@ -325,65 +288,47 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if bebanUsahaQris.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if bebanUsahaQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if bebanUsahaTunai.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if bebanUsahaTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 				</div>
 			{/if}
@@ -410,65 +355,47 @@
 						QRIS
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if bebanLainQris.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if bebanLainQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
 						Tunai
 					</div>
 					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if isLoadingReport}
-							{#each Array(2) as _}
+						{#if bebanLainTunai.length === 0}
+							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+						{/if}
+						{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
 								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<div class="h-4 w-32 animate-pulse rounded-md bg-pink-100/60"></div>
-									<div class="h-4 w-20 animate-pulse rounded-md bg-pink-100/60"></div>
+									<span
+										class="{expandedItems.has(grouped.nama)
+											? ''
+											: 'max-w-[60%] truncate'} cursor-pointer"
+										title={grouped.nama}
+										onclick={() => toggleExpand(grouped.nama)}
+										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+										role="button"
+										tabindex="0">{grouped.nama}</span>
+									<span class="font-bold whitespace-nowrap text-gray-700"
+										>Rp {grouped.total.toLocaleString('id-ID')}</span>
 								</li>
 							{/each}
-						{:else if bebanLainTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{:else}
-							{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
-							<li class="flex justify-between text-sm text-gray-600 md:text-base">
-								<span
-									class="{expandedItems.has(grouped.nama)
-										? ''
-										: 'max-w-[60%] truncate'} cursor-pointer"
-									title={grouped.nama}
-									onclick={() => toggleExpand(grouped.nama)}
-									onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-									role="button"
-									tabindex="0">{grouped.nama}</span
-								>
-								<span class="font-bold whitespace-nowrap text-gray-700"
-									>Rp {grouped.total.toLocaleString('id-ID')}</span
-								>
-							</li>
-						{/each}
 					</ul>
 				</div>
 			{/if}
