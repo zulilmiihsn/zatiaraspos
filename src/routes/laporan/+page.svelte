@@ -759,49 +759,9 @@
 		class="page-content min-h-0 w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
-		<!-- LOADING BLUR: Elegant loading dengan blur effect -->
-		{#if isLoadingReport}
-			<div class="pointer-events-none fixed inset-0 z-40">
-				<!-- Loading indicator di tengah tanpa background overlay -->
-				<div class="absolute inset-0 flex items-center justify-center">
-					<div
-						class="rounded-2xl border border-white/30 bg-white/95 p-6 shadow-2xl backdrop-blur-lg"
-					>
-						<div class="text-center">
-							<!-- Elegant Spinner -->
-							<div class="mb-4 flex justify-center">
-								<div class="relative">
-									<div
-										class="h-10 w-10 animate-spin rounded-full border-3 border-pink-100 border-t-pink-500"
-									></div>
-									<div
-										class="absolute inset-0 h-10 w-10 animate-ping rounded-full border-3 border-pink-200 opacity-20"
-									></div>
-								</div>
-							</div>
-
-							<!-- Progress Bar -->
-							<div class="mb-3 h-1.5 w-48 rounded-full bg-gray-100">
-								<div
-									class="h-1.5 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 transition-all duration-500 ease-out"
-									style="width: {loadingProgress}%"
-								></div>
-							</div>
-
-							<!-- Loading Message -->
-							<p class="text-sm font-medium text-gray-700">{loadingMessage}</p>
-							<p class="mt-1 text-xs text-gray-500">{loadingProgress}%</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		{/if}
-
 		<!-- Konten utama halaman Laporan di sini -->
 		<div
-			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 transition-all duration-300 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10 {isLoadingReport
-				? 'opacity-60 blur-sm'
-				: 'blur-0 opacity-100'}"
+			class="mx-auto w-full max-w-md px-2 pt-4 pb-8 transition-all duration-300 md:max-w-3xl md:px-8 md:pt-8 lg:max-w-none lg:px-6 lg:pt-10"
 		>
 			<div class="mb-3 flex w-full items-center gap-2 px-2 md:mb-6 md:gap-4 md:px-0">
 				<!-- Button Filter -->
@@ -891,7 +851,7 @@
 					{bebanLainTunai}
 				/>
 				<!-- Section Laba/Rugi - Desktop Layout -->
-				<LaporanLabaRugiCard {summary} />
+				<LaporanLabaRugiCard {isLoadingReport} {summary} />
 			</div>
 			<!-- AI Assistant Section -->
 			<LaporanAISection />
