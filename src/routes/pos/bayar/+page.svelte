@@ -11,7 +11,7 @@
 
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
-	import { memoize } from '$lib/utils/performance';
+
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { dataService } from '$lib/services/dataService';

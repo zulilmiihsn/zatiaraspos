@@ -24,29 +24,6 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 	};
 }
 
-// Memoization untuk expensive calculations
-export function memoize<T extends (...args: unknown[]) => unknown>(
-	func: T,
-	resolver?: (...args: Parameters<T>) => string
-): T & { clearCache: () => void } {
-	const cache = new Map();
-
-	const memoizedFunc = ((...args: Parameters<T>) => {
-		const key = resolver ? resolver(...args) : JSON.stringify(args);
-		if (cache.has(key)) {
-			return cache.get(key);
-		}
-		const result = func(...args);
-		cache.set(key, result);
-		return result;
-	}) as T & { clearCache: () => void };
-
-	memoizedFunc.clearCache = () => {
-		cache.clear();
-	};
-
-	return memoizedFunc;
-}
 
 // Performance measurement
 export async function measureAsyncPerformance(_name: string, fn: () => Promise<void>) {
@@ -55,8 +32,8 @@ export async function measureAsyncPerformance(_name: string, fn: () => Promise<v
 	const _end = performance.now();
 }
 
-// Cart calculations dengan memoization
-export const calculateCartTotal = memoize((cart: Record<string, unknown>[]) => {
+// Cart calculations (without memoization)
+export const calculateCartTotal = (cart: Record<string, unknown>[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
@@ -70,7 +47,7 @@ export const calculateCartTotal = memoize((cart: Record<string, unknown>[]) => {
 		items += item.jumlah ?? 1;
 	}
 	return { items, total };
-});
+};
 
 // Fuzzy search dengan hasil lebih relevan
 export function fuzzySearch(

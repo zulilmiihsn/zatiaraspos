@@ -16,7 +16,6 @@
 	import {
 		debounce,
 		throttle,
-		memoize,
 		measureAsyncPerformance,
 		calculateCartTotal,
 		fuzzySearch

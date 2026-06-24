@@ -5,7 +5,7 @@
 	import { formatDateYmdWita, getTodayWita, getNowWita } from '$lib/utils/dateTime';
 
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
-	import { memoize } from '$lib/utils/performance';
+
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';

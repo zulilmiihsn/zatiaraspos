@@ -9,7 +9,7 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { get as getCache, set as setCache } from 'idb-keyval';
 
-	import { memoize } from '$lib/utils/performance';
+
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import Plus from 'lucide-svelte/icons/plus';
 
@@ -416,7 +416,7 @@
 		await fetchRecipes();
 
 		await afterUpdateCachePOS();
-		clearMemoizationCache();
+
 	}
 
 	async function saveMenuRecipe(productId: string | number) {
@@ -562,7 +562,7 @@
 			await fetchMenus();
 
 			await afterUpdateCachePOS();
-			clearMemoizationCache();
+
 		}
 	}
 
@@ -668,7 +668,7 @@
 				await fetchMenus();
 
 				await afterUpdateCachePOS();
-				clearMemoizationCache();
+
 
 				// Force refresh data setelah perubahan kategori
 				await forceRefreshAfterCategoryChange();
@@ -760,7 +760,7 @@
 			await fetchEkstra();
 
 			await afterUpdateCachePOS();
-			clearMemoizationCache();
+
 		}
 	}
 
@@ -1190,11 +1190,7 @@
 		}
 	}
 
-	// Function untuk clear memoization cache
-	function clearMemoizationCache() {
-		memoizedKategoriWithCount.clearCache();
-		memoizedFilteredMenus.clearCache();
-	}
+
 
 	// Function untuk force refresh data setelah perubahan kategori
 	async function forceRefreshAfterCategoryChange() {
@@ -1208,7 +1204,7 @@
 		await fetchMenus();
 
 		// Clear memoization cache
-		clearMemoizationCache();
+
 
 		// Update POS cache
 		await afterUpdateCachePOS();
