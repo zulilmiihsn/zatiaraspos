@@ -54,10 +54,10 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | Lokasi | Temuan | Status |
 |--------|--------|--------|
 | `bayar/+page.svelte` | modal **NoSession** + notif **Success** (9 occurrence `showNoSessionModal`/`showSuccessNotif` di file ini ✅ ada) tak pernah di-trigger | ◐ trigger-check |
-| `manajemenmenu/+page.svelte` | `blockNextClick` (8 occurrence ✅ ada; agent: hanya `removeEventListener`, no `add`), `touchStartX/EndX`, `selectedImage`, komentar migrasi 1153-1154 | ◐ |
+| `manajemenmenu/+page.svelte` | `blockNextClick` (no-op), `touchStartX/EndX`, `selectedImage` | ✅ **DONE** (27 baris dihapus, grep nol) |
 | `lib/types/index.ts:112-438` | ~300 baris tipe mati; sisakan `AppError`/`ApiError`/`ValidationError`. **Sebagian sudah dibuang saat P1** (`UserState`/`TransactionState`/ref `AppState` — yang rujuk modul terhapus). Sisa (`UIState`/`AppState`/`ButtonProps`/dst) masih ada | ◐ **per-simbol** sebelum trim lanjut |
-| `pengaturan/+page.svelte` | `PengaturanData`, `fetchPengaturan()` tak dipanggil, 5 getter role, `settingsSections` | ◐ |
-| `laporan/+page.svelte:572-618` | 8 `$derived` total per-subgroup + `formatCurrency`/`groupAndSumByName`/`toYMD`/`showToastNotification`/`userProfileData` | ◐ |
+| `pengaturan/+page.svelte` | `PengaturanData`, `fetchPengaturan()`, 5 getter role, `settingsSections`, toast lokal | ✅ **DONE** (~110 baris, verify zero-read) |
+| `laporan/+page.svelte` | 8 `$derived` subgroup + `groupAndSumByName`/`toYMD`/`showToastNotification` lokal/`userProfileData`/`pengeluaran`/`produkTerlaris`/`kategoriTerlaris` | ✅ **DONE** (~95 baris, verify zero-read) |
 | `performance.ts` | `throttle` + `measureAsyncPerformance` zero-consumer (`debounce`/`calculateCartTotal`/`fuzzySearch` DIPAKAI — jangan hapus) | ◐ |
 | `errorHandling.ts` | `createApiError`/`createErrorBoundary`/`ValidationHelper` zero-consumer | ◐ |
 | `security.ts` | `CSRFProtection`/`SessionSecurity`/`XSSProtection`/`InputValidation` zero-consumer (CSRF asli di `csrf.ts`) | ◐ |
@@ -78,8 +78,8 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | `methodLabels` map di-copy | pos/bayar/aichat/riwayat | ◐ |
 | `LaporanAccordions` 4 sub-accordion copy-paste (~110×4) | — | ◐ |
 | 3 impl sanitasi XSS + 2× validateEmail/Password | validation.ts vs security.ts | ◐ |
-| `dataService` getProducts/Categories/AddOns nyaris identik | 300-358 | ◐ |
-| `autoApplyService` pola `if(!res.ok)` ×4 | — | ◐ |
+| `dataService` getProducts/Categories/AddOns nyaris identik | → `getCachedTable(table, cacheKey, offlineKey)` private method | ✅ **DONE** |
+| `autoApplyService` pola `if(!res.ok)` ×4 | → `throwIfNotOk(res, label)` helper | ✅ **DONE** |
 
 ---
 
@@ -104,7 +104,7 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | Toast 3 pola (`createToastManager` vs inline `+layout:332` vs state lokal) | ◐ |
 | Error-handling frontend tak konsisten (`catch {}` silent vs string lokal vs `ErrorHandler`) | ◐ |
 | 4 komponen reimplement modal backdrop + `@keyframes slideUp` | ◐ |
-| Icon: `<ArrowLeft/>` vs `<svelte:component>` (deprecated) campur | ◐ |
+| Icon: `<ArrowLeft/>` vs `<svelte:component>` (deprecated) campur | ✅ **DONE** — 47× `svelte:component` → render langsung (14 file); grep 0, `pnpm build` lulus |
 | Runes vs Svelte 4 `let` campur di file riwayat | ◐ |
 | Callback prop `onClose` vs `onclose`/`ondone` campur | ◐ |
 | `each` key `(trx.id)` vs `(_i)` index vs tanpa key | ◐ |
