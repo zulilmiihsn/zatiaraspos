@@ -1,5 +1,6 @@
 import type { Product, AddOn } from '$lib/types/product';
 import { dataService } from './dataService';
+import { formatRupiah } from '$lib/utils/currency';
 
 export interface ProductWithAddOns extends Product {
 	addOns: AddOn[];
@@ -94,13 +95,13 @@ export class ProductAnalysisService {
 
 			products.forEach((product) => {
 				if (product.is_active) {
-					promptData += `  • ${product.nama}: Rp ${product.harga.toLocaleString('id-ID')}`;
+					promptData += `  • ${product.nama}: Rp ${formatRupiah(product.harga)}`;
 
 					// Add add-ons if available
 					if (product.addOns.length > 0) {
 						promptData += `\n    Topping/Tambahan:`;
 						product.addOns.forEach((addOn) => {
-							promptData += `\n      - ${addOn.nama}: Rp ${addOn.harga.toLocaleString('id-ID')}`;
+							promptData += `\n      - ${addOn.nama}: Rp ${formatRupiah(addOn.harga)}`;
 						});
 					}
 					promptData += `\n`;
@@ -118,7 +119,7 @@ export class ProductAnalysisService {
 		if (standaloneAddOns.length > 0) {
 			promptData += `📂 TAMBAHAN/TOPPING STANDALONE:\n`;
 			standaloneAddOns.forEach((addOn) => {
-				promptData += `  • ${addOn.nama}: Rp ${addOn.harga.toLocaleString('id-ID')}\n`;
+				promptData += `  • ${addOn.nama}: Rp ${formatRupiah(addOn.harga)}\n`;
 			});
 			promptData += `\n`;
 		}

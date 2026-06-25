@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
+import { formatRupiah } from '$lib/utils/currency';
 import { productAnalysisService } from '$lib/services/productAnalysisService';
 import { getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
 import { bukuKas, kategori, produk, tambahan, transaksiKasir } from '$lib/database/schema';
@@ -34,6 +35,55 @@ function isRateLimited(identifier: string): boolean {
 interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
 	content: string;
+}
+
+interface OpenRouterOpts {
+	title: string;
+	maxTokens: number;
+	temperature: number;
+	errorLabel: string;
+}
+
+/** Panggil OpenRouter chat-completion, kembalikan konten string (caller terapkan default/parse). */
+async function callOpenRouter(
+	apiKey: string,
+	systemMessage: ChatMessage,
+	opts: OpenRouterOpts
+): Promise<string> {
+	const response = await fetch(OPENROUTER_API_URL, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+			'HTTP-Referer': 'https://zatiaraspos.com',
+			'X-Title': opts.title
+		},
+		body: JSON.stringify({
+			model: MODEL,
+			messages: [systemMessage],
+			max_tokens: opts.maxTokens,
+			temperature: opts.temperature
+		})
+	});
+
+	if (!response.ok) {
+		throw new Error(`${opts.errorLabel}: ${response.status}`);
+	}
+
+	const data = await response.json();
+	return data.choices?.[0]?.message?.content ?? '';
+}
+
+/** Bersihkan markdown code-fence (```json ... ```) dari output AI. */
+function stripJsonFence(content: string): string {
+	let clean = content.trim();
+	if (clean.startsWith('```json')) {
+		clean = clean.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+	}
+	if (clean.startsWith('```')) {
+		clean = clean.replace(/^```\s*/, '').replace(/\s*```$/, '');
+	}
+	return clean;
 }
 
 // Util: format YYYY-MM-DD dalam zona WITA
@@ -143,38 +193,16 @@ CONTOH BERDASARKAN TANGGAL SAAT INI (${todayWita}):
 Pertanyaan user: "${question}"`
 	};
 
-	const response = await fetch(OPENROUTER_API_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'HTTP-Referer': 'https://zatiaraspos.com',
-			'X-Title': 'Zatiaras POS - Data Requirement Analyzer'
-		},
-		body: JSON.stringify({
-			model: MODEL,
-			messages: [systemMessage],
-			max_tokens: 500,
-			temperature: 0.3
-		})
-	});
-
-	if (!response.ok) {
-		throw new Error(`AI 1 Error: ${response.status}`);
-	}
-
-	const data = await response.json();
-	const content = data.choices?.[0]?.message?.content || '{}';
+	const content =
+		(await callOpenRouter(apiKey, systemMessage, {
+			title: 'Zatiaras POS - Data Requirement Analyzer',
+			maxTokens: 500,
+			temperature: 0.3,
+			errorLabel: 'AI 1 Error'
+		})) || '{}';
 
 	try {
-		// Clean up response - remove markdown code blocks if present
-		let cleanContent = content.trim();
-		if (cleanContent.startsWith('```json')) {
-			cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-		}
-		if (cleanContent.startsWith('```')) {
-			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-		}
+		const cleanContent = stripJsonFence(content);
 
 		const parsed = JSON.parse(cleanContent);
 		return {
@@ -302,28 +330,14 @@ SPESIFIKASI ANALISIS BISNIS JUS:
 Pertanyaan pengguna: "${question}"`
 	};
 
-	const response = await fetch(OPENROUTER_API_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'HTTP-Referer': 'https://zatiaraspos.com',
-			'X-Title': 'Zatiaras POS - Business Analyst'
-		},
-		body: JSON.stringify({
-			model: MODEL,
-			messages: [systemMessage],
-			max_tokens: 2000,
-			temperature: 0.6
-		})
-	});
-
-	if (!response.ok) {
-		throw new Error(`AI 2 Error: ${response.status}`);
-	}
-
-	const data = await response.json();
-	return data.choices?.[0]?.message?.content || 'Maaf, tidak dapat menghasilkan jawaban.';
+	return (
+		(await callOpenRouter(apiKey, systemMessage, {
+			title: 'Zatiaras POS - Business Analyst',
+			maxTokens: 2000,
+			temperature: 0.6,
+			errorLabel: 'AI 2 Error'
+		})) || 'Maaf, tidak dapat menghasilkan jawaban.'
+	);
 }
 
 // AI 3: Transaction Analyzer
@@ -679,38 +693,16 @@ Saya akan menganalisis pesan Anda dan memberikan rekomendasi transaksi yang tepa
 Teks user: "${text}"`
 	};
 
-	const response = await fetch(OPENROUTER_API_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'HTTP-Referer': 'https://zatiaraspos.com',
-			'X-Title': 'Zatiaras POS - Transaction Analyzer'
-		},
-		body: JSON.stringify({
-			model: MODEL,
-			messages: [systemMessage],
-			max_tokens: 1000,
-			temperature: 0.3
-		})
-	});
-
-	if (!response.ok) {
-		throw new Error(`AI 3 Error: ${response.status}`);
-	}
-
-	const data = await response.json();
-	const content = data.choices?.[0]?.message?.content || '{}';
+	const content =
+		(await callOpenRouter(apiKey, systemMessage, {
+			title: 'Zatiaras POS - Transaction Analyzer',
+			maxTokens: 1000,
+			temperature: 0.3,
+			errorLabel: 'AI 3 Error'
+		})) || '{}';
 
 	try {
-		// Clean up response - remove markdown code blocks if present
-		let cleanContent = content.trim();
-		if (cleanContent.startsWith('```json')) {
-			cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-		}
-		if (cleanContent.startsWith('```')) {
-			cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-		}
+		const cleanContent = stripJsonFence(content);
 
 		const parsed = JSON.parse(cleanContent);
 
@@ -1495,11 +1487,11 @@ PERIODE YANG DIMINTA USER:
 
 === DATA LAPORAN PERIODE YANG DIMINTA (SUDAH DIFETCH SESUAI KONTEKS) ===
 Rentang Waktu: ${serverReportData.startDate} s.d. ${serverReportData.endDate}
-- Pendapatan: Rp ${serverReportData.summary?.pendapatan?.toLocaleString('id-ID') || '0'}
-- Pengeluaran: Rp ${serverReportData.summary?.pengeluaran?.toLocaleString('id-ID') || '0'}
-- Laba Kotor: Rp ${serverReportData.summary?.labaKotor?.toLocaleString('id-ID') || '0'}
-- Pajak: Rp ${serverReportData.summary?.pajak?.toLocaleString('id-ID') || '0'}
-- Laba Bersih: Rp ${serverReportData.summary?.labaBersih?.toLocaleString('id-ID') || '0'}
+- Pendapatan: Rp ${formatRupiah(serverReportData.summary?.pendapatan) || '0'}
+- Pengeluaran: Rp ${formatRupiah(serverReportData.summary?.pengeluaran) || '0'}
+- Laba Kotor: Rp ${formatRupiah(serverReportData.summary?.labaKotor) || '0'}
+- Pajak: Rp ${formatRupiah(serverReportData.summary?.pajak) || '0'}
+- Laba Bersih: Rp ${formatRupiah(serverReportData.summary?.labaBersih) || '0'}
 - Total Transaksi: ${serverReportData.summary?.totalTransaksi || '0'}
 
 PENTING: Data di atas sudah sesuai dengan periode yang diminta user. Jika user bertanya "2 bulan terakhir", maka data di atas adalah data untuk 2 bulan terakhir. Jika user bertanya "5 hari pertama bulan ini", maka data di atas adalah data untuk 5 hari pertama bulan ini, bukan data bulan penuh. ANALISIS data yang tersedia, jangan katakan tidak ada data.
@@ -1519,9 +1511,9 @@ ${
 				topProducts: { nama: string; totalTerjual: number; totalPendapatan: number }[];
 			}) => `
 Bulan ${month.monthName} (${month.month}):
-- Pendapatan: Rp ${month.pemasukan.toLocaleString('id-ID')}
-- Pengeluaran: Rp ${month.pengeluaran.toLocaleString('id-ID')}
-- Laba: Rp ${month.laba.toLocaleString('id-ID')}
+- Pendapatan: Rp ${formatRupiah(month.pemasukan)}
+- Pengeluaran: Rp ${formatRupiah(month.pengeluaran)}
+- Laba: Rp ${formatRupiah(month.laba)}
 - Total Transaksi: ${month.transaksi}
 - Metode Pembayaran: ${Object.entries(month.paymentMethods)
 				.map(([method, data]: [string, { jumlah: number; nominal: number }]) => {
@@ -1531,10 +1523,10 @@ Bulan ${month.monthName} (${month.month}):
 						lainnya: 'Lainnya'
 					};
 					const label = methodLabels[method] || method;
-					return `${label}: ${data.jumlah} trx (Rp ${data.nominal.toLocaleString('id-ID')})`;
+					return `${label}: ${data.jumlah} trx (Rp ${formatRupiah(data.nominal)})`;
 				})
 				.join(', ')}
-- Top 3 Produk Terlaris: ${month.topProducts.map((p: { nama: string; totalTerjual: number; totalPendapatan: number }) => `${p.nama} (${p.totalTerjual} terjual, Rp ${p.totalPendapatan.toLocaleString('id-ID')})`).join(', ')}
+- Top 3 Produk Terlaris: ${month.topProducts.map((p: { nama: string; totalTerjual: number; totalPendapatan: number }) => `${p.nama} (${p.totalTerjual} terjual, Rp ${formatRupiah(p.totalPendapatan)})`).join(', ')}
 `
 		)
 		.join('\n') || '- (tidak ada data per bulan)'
@@ -1550,7 +1542,7 @@ ${
 				lainnya: 'Lainnya'
 			};
 			const label = methodLabels[k] || k;
-			return `- ${label}: ${v.jumlah} trx, Rp ${v.nominal.toLocaleString('id-ID')}`;
+			return `- ${label}: ${v.jumlah} trx, Rp ${formatRupiah(v.nominal)}`;
 		})
 		.join('\n') || '- (tidak ada)'
 }
@@ -1578,32 +1570,32 @@ ${
 		? `
 === PRODUK SPESIFIK YANG DICARI ===
 Nama: ${serverReportData.specificProduct.nama}
-Harga: Rp ${serverReportData.specificProduct.harga?.toLocaleString('id-ID') || 'Tidak tersedia'}
+Harga: Rp ${formatRupiah(serverReportData.specificProduct.harga) || 'Tidak tersedia'}
 ID: ${serverReportData.specificProduct.id}
 `
 		: ''
 }
 
 Top Produk Terlaris:
-${(serverReportData.produkTerlaris || []).map((p: { nama: string; totalTerjual: number; totalPendapatan: number }, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${p.totalPendapatan.toLocaleString('id-ID')}`).join('\n') || '-'}
+${(serverReportData.produkTerlaris || []).map((p: { nama: string; totalTerjual: number; totalPendapatan: number }, i: number) => `- ${i + 1}. ${p.nama} • ${p.totalTerjual} terjual • Rp ${formatRupiah(p.totalPendapatan)}`).join('\n') || '-'}
 
 === ANALISIS MENDALAM ===
 Performa Harian:
 - Rata-rata transaksi per hari: ${serverReportData.analytics?.avgTransactionsPerDay || 0} trx
-- Rata-rata pendapatan per hari: Rp ${(serverReportData.analytics?.avgRevenuePerDay || 0).toLocaleString('id-ID')}
-- Rata-rata nilai per transaksi: Rp ${(serverReportData.analytics?.avgTicketSize || 0).toLocaleString('id-ID')}
+- Rata-rata pendapatan per hari: Rp ${formatRupiah(serverReportData.analytics?.avgRevenuePerDay || 0)}
+- Rata-rata nilai per transaksi: Rp ${formatRupiah(serverReportData.analytics?.avgTicketSize || 0)}
 - Total hari aktif: ${serverReportData.analytics?.totalDays || 0} hari
 
-Hari Terbaik: ${serverReportData.analytics?.bestDay ? `${serverReportData.analytics.bestDay.date} - Rp ${serverReportData.analytics.bestDay.revenue.toLocaleString('id-ID')} (${serverReportData.analytics.bestDay.transactions} trx, avg Rp ${serverReportData.analytics.bestDay.avgTicket.toLocaleString('id-ID')})` : 'Tidak ada data'}
+Hari Terbaik: ${serverReportData.analytics?.bestDay ? `${serverReportData.analytics.bestDay.date} - Rp ${formatRupiah(serverReportData.analytics.bestDay.revenue)} (${serverReportData.analytics.bestDay.transactions} trx, avg Rp ${formatRupiah(serverReportData.analytics.bestDay.avgTicket)})` : 'Tidak ada data'}
 
-Hari Terburuk: ${serverReportData.analytics?.worstDay ? `${serverReportData.analytics.worstDay.date} - Rp ${serverReportData.analytics.worstDay.revenue.toLocaleString('id-ID')} (${serverReportData.analytics.worstDay.transactions} trx, avg Rp ${serverReportData.analytics.worstDay.avgTicket.toLocaleString('id-ID')})` : 'Tidak ada data'}
+Hari Terburuk: ${serverReportData.analytics?.worstDay ? `${serverReportData.analytics.worstDay.date} - Rp ${formatRupiah(serverReportData.analytics.worstDay.revenue)} (${serverReportData.analytics.worstDay.transactions} trx, avg Rp ${formatRupiah(serverReportData.analytics.worstDay.avgTicket)})` : 'Tidak ada data'}
 
 Detail Performa Harian:
 ${
 	(serverReportData.dailyPerformance || [])
 		.map(
 			(day: { formattedDate: string; count: number; revenue: number; avgTicket: number }) =>
-				`- ${day.formattedDate}: ${day.count} trx, Rp ${day.revenue.toLocaleString('id-ID')} (avg Rp ${Math.round(day.avgTicket).toLocaleString('id-ID')})`
+				`- ${day.formattedDate}: ${day.count} trx, Rp ${formatRupiah(day.revenue)} (avg Rp ${formatRupiah(Math.round(day.avgTicket))})`
 		)
 		.join('\n') || '- (tidak ada data harian)'
 }

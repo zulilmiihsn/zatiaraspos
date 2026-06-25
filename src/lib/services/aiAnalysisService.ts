@@ -5,6 +5,7 @@ import {
 	getApiErrorMessageFromResponse,
 	reportApiFailureFromResponse
 } from '$lib/utils/errorHandling';
+import { formatRupiah } from '$lib/utils/currency';
 
 export class AiAnalysisService {
 	private static instance: AiAnalysisService;
@@ -88,7 +89,7 @@ export class AiAnalysisService {
 						id: `rec_${Date.now()}_${index}`,
 						action: 'create_transaction',
 						title: `Catat ${this.getTransactionTypeLabel(tx.type)}`,
-						deskripsi: `${this.getTransactionTypeLabel(tx.type)} sebesar Rp ${tx.amount.toLocaleString('id-ID')} - ${tx.deskripsi}`,
+						deskripsi: `${this.getTransactionTypeLabel(tx.type)} sebesar Rp ${formatRupiah(tx.amount)} - ${tx.deskripsi}`,
 						data: recommendationData,
 						priority: tx.confidence > 0.8 ? 'high' : 'medium'
 					});
@@ -176,7 +177,7 @@ export class AiAnalysisService {
 		let response = 'Saya telah menganalisis cerita Anda dan menemukan:\n\n';
 
 		analysis.detectedTransactions.forEach((tx, index) => {
-			response += `${index + 1}. ${this.getTransactionTypeLabel(tx.type)}: Rp ${tx.amount.toLocaleString('id-ID')}`;
+			response += `${index + 1}. ${this.getTransactionTypeLabel(tx.type)}: Rp ${formatRupiah(tx.amount)}`;
 			if (tx.deskripsi) {
 				response += ` - ${tx.deskripsi}`;
 			}
