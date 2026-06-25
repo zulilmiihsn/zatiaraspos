@@ -36,6 +36,22 @@ export interface BukuKasRecord {
 	nama_pelanggan?: string;
 }
 
+/**
+ * Satu baris transaksi pada halaman Riwayat (turunan ringkas dari `buku_kas`).
+ * Dipakai bersama oleh riwayat umum/kasir/pemilik + util cetak struk.
+ */
+export interface HistoryItem {
+	id: string;
+	transaction_id?: string;
+	waktu: string;
+	nama: string;
+	nominal: number;
+	tipe: string;
+	sumber: string;
+	metode_bayar: string;
+	nama_pelanggan: string;
+}
+
 // ============================================================================
 // 📈 LAPORAN SUMMARY
 // ============================================================================
