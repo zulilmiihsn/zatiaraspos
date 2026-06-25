@@ -306,21 +306,11 @@
 			}
 		} else {
 			editMenuId = null;
-			menuForm.nama = '';
-			menuForm.kategori_id = null;
-			menuForm.tipe = 'minuman';
-			menuForm.harga = '';
-			menuForm.stok = '';
-			menuForm.lacak_stok = false;
-			menuForm.lacak_bahan = false;
-			menuForm.ekstra_ids = [];
-			menuForm.gambar = '';
+			resetMenuForm();
 		}
 	}
 
-	function closeMenuForm() {
-		showMenuForm = false;
-		editMenuId = null;
+	function resetMenuForm() {
 		menuForm.nama = '';
 		menuForm.kategori_id = null;
 		menuForm.tipe = 'minuman';
@@ -330,6 +320,12 @@
 		menuForm.lacak_bahan = false;
 		menuForm.ekstra_ids = [];
 		menuForm.gambar = '';
+	}
+
+	function closeMenuForm() {
+		showMenuForm = false;
+		editMenuId = null;
+		resetMenuForm();
 		recipeItems = [];
 		recipeDraft = { bahan_id: '', jumlah_per_item: '' };
 	}
