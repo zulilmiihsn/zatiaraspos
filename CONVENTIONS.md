@@ -177,6 +177,6 @@ Diurutkan biar batch berikut nggak mengulang/merusak batch sebelumnya:
 4. ~~**Extract `receiptPrint.ts` + `riwayatService.ts`** (§2-3)~~ — ✅ **DONE** (3 riwayat): `HistoryItem`→types, `riwayatService` (data), `receiptPrint` (struk). ~447 baris dup dihapus, `pnpm check` 70. `bayar` receipt + komponen `RiwayatHarian` tunggal → follow-up.
 5. ~~**Kontrak error/response API** (§4)~~ — ✅ **DONE (no-code)**: impact-check → konversi paksa UNSAFE (CSRF `code` load-bearing, success coupled, normalizer sudah toleran). Resolusi: dokumentasikan kontrak 2-tier (§4). Endpoint baru default Tier A.
 6. **Toast + modal base + error-handling frontend** (§5-7).
-7. **Pecah god-components** (`manajemenmenu`, `aichat`) — terakhir, paling berat. ◐ **Sebagian:** `aichat` DRY (`callOpenRouter`/`stripJsonFence`) + Rupiah ✅. **SISA (post-commit + tes runtime):** split `manajemenmenu` 5-tab, dekomposisi `handleRegularChat`, `bayar` printStruk→`receiptPrint`, dead-code manajemenmenu.
+7. ~~**Pecah god-components**~~ — ✅ **DONE**: `aichat` 1652→1162 (DRY + `prompts.ts`), `manajemenmenu` 2831→2167 (5 tab dumb-component + dead-code + `resetMenuForm`), `bayar` printStruk→`printViaIntent`/`DEFAULT_RECEIPT_SETTINGS`. `pnpm build` lulus. ⚠️ **Split butuh tes runtime sebelum merge** (checklist di `AUDIT.md`). Opsional sisa: dekomposisi data-logic `handleRegularChat`.
 
 > Setelah tiap batch: update `AUDIT.md` (centang yang beres) supaya progres lintas-scope tetap satu pandangan.

@@ -20,7 +20,7 @@
 | 2 | Dead code level-halaman | ◐ sebagian ✅ | ratusan LOC tambahan |
 | 3 | `formatRupiah` tak diadopsi 🔁×4 | ✅ **DONE** (app-wide) | 97 situs (74 client + 23 server); sisa 4 = util+tanggal |
 | 4 | 3 file `riwayat` ~80-85% duplikat 🔁×2 | ✅ **DONE** | ~447 baris dup → 3 modul bersama |
-| 5 | God-components | ◐ DRY done, split ditunda | aichat DRY+Rupiah ✅; split → post-commit |
+| 5 | God-components | ✅ **DONE** ⚠️ tes runtime | aichat 1652→1162; manajemenmenu 2831→2167 (5 tab) |
 | 6 | Kontrak error/response API 4 gaya | ✅ **DONE (no-code)** | 2-tier didokumentasikan; konversi ditolak (unsafe) |
 | 7 | Bug korektnes + security | ✅ **DONE** | upload no-auth, 3 bug kecil |
 
@@ -83,17 +83,16 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 
 ---
 
-## 🟠 P4 — KISS god-components (◐ sebagian — DRY/de-bloat done, SPLIT ditunda)
+## 🟠 P4 — KISS god-components (✅ DONE — split butuh tes runtime sebelum merge)
 
-> **P4-part-1 ✅ DONE (aman, type-checkable):** `aichat` DRY — `callOpenRouter()` + `stripJsonFence()` (3 fetch + 2 fence-parse → 1 helper) + 23 Rupiah server. `pnpm check` 70, nol regresi.
-> **DITUNDA (risiko tinggi — butuh tes runtime, lakukan SETELAH commit):** split komponen reaktif + dekomposisi handler. Bug reaktivitas/logika TIDAK ketangkep `pnpm check`.
+> ✅ **Selesai, semua `pnpm check` 70 + `pnpm build` lulus.** ⚠️ Split komponen reaktif & receipt = **compile-verified only**; bug reaktivitas TIDAK ketangkep build → **WAJIB klik-test di `pnpm dev` sebelum merge** (lihat checklist di akhir file).
 
 | File | LOC | Aksi | Status |
 |------|-----|------|--------|
-| `api/aichat/+server.ts` | **1652** | ✅ DRY helper (`callOpenRouter`/`stripJsonFence`) + Rupiah. **◐ Ditunda:** `handleRegularChat` 780 baris → modul + `prompts.ts` | ◐ DRY done |
-| `pengaturan/pemilik/manajemenmenu/+page.svelte` | **2831** | pecah 5 tab → `MenuTab/KategoriTab/EkstraTab/BahanTab/HppTab`. Dead-code (`blockNextClick`/touch/`selectedImage`) **terverifikasi** tapi ditahan ke post-commit | ⏸ ditunda |
-| `bayar/+page.svelte` | 1008 | `printStrukViaEscPosService` 87 baris (+ migrasi ke `receiptPrint.ts`) + `addToCart` 81 baris | ⏸ ditunda |
-| `laporan:38-79` | — | `computeReportFingerprint` over-engineered → hash ringan | ⏸ ditunda |
+| `api/aichat/+server.ts` | 1652→**1162** | ✅ DRY (`callOpenRouter`/`stripJsonFence`) + Rupiah + 3 prompt → `prompts.ts` (521). **◐ Sisa opsional:** dekomposisi data-logic `handleRegularChat` (risiko logika, diminishing returns) | ✅ done (decomp opsional) |
+| `pengaturan/pemilik/manajemenmenu/+page.svelte` | 2831→**2167** | ✅ Dead-code dihapus + `resetMenuForm` + **pecah 5 tab** (`MenuTab/KategoriTab/EkstraTab/BahanTab/HppTab`, dumb-component) | ✅ done ⚠️ tes runtime |
+| `bayar/+page.svelte` | 1008 | ✅ `printStruk` → pakai `printViaIntent` + `DEFAULT_RECEIPT_SETTINGS` (buang pako/Base64 dup). `addToCart` split → opsional | ✅ done (receipt) |
+| `laporan:38-79` | — | `computeReportFingerprint` → **KEPT** (simplifikasi buang sensitivitas detail-edit → risiko report stale; cost negligible di skala POS). Documented, bukan defect | ✅ resolved (kept) |
 
 ---
 
@@ -134,10 +133,39 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 3. ~~**P3 batch Rupiah** — sweep ke `formatRupiah`~~ — ✅ **DONE**: 74 situs display di 18 file (4 builder-agent paralel), `pnpm check` tetap 70 (nol regresi). Server prompt (23×) folded ke P4. Belum commit.
 4. ~~**Extract `receiptPrint.ts` + `riwayatService.ts`**~~ — ✅ **DONE** (3 riwayat): ~447 baris dup dihapus, `pnpm check` tetap 70. `bayar` receipt → P4-followup. Belum commit.
 5. ~~**P5 kontrak error API**~~ — ✅ **DONE (no-code)**: impact-check menolak konversi (unsafe), kontrak 2-tier didokumentasikan. Nol perubahan kode = nol risiko.
-6. **Toast + modal base + error-handling frontend.**
-7. **P4 pecah god-components** — terakhir, per-komponen.
+6. **Toast + modal base + error-handling frontend.** — ⏸ belum (P5 §6, opsional).
+7. ~~**P4 pecah god-components**~~ — ✅ **DONE**: aichat 1652→1162, manajemenmenu 2831→2167 (5 tab), bayar receipt, computeReportFingerprint kept. ⚠️ split butuh tes runtime.
 
-Tiap batch: `pnpm check` + `pnpm test:all` hijau, ikuti checklist `CONVENTIONS.md §9`, centang progres di sini.
+Tiap batch: `pnpm check` + `pnpm build` hijau, ikuti checklist `CONVENTIONS.md §9`, centang progres di sini.
+
+---
+
+## ⚠️ CHECKLIST TES RUNTIME WAJIB (sebelum merge `refactor/audit-cleanup`)
+
+Split komponen & receipt **compile + build OK**, tapi reaktivitas/logika cuma terbukti saat di-klik. Jalankan `pnpm dev`, lalu verifikasi:
+
+**manajemenmenu (5 tab — paling kritis):**
+- [ ] Tab **Menu**: search filter jalan, toggle grid/list, tambah/edit/hapus menu, gambar tampil (handleImgError), pilih kategori filter
+- [ ] Tab **Kategori**: search, tambah/edit/hapus kategori, count menu benar
+- [ ] Tab **Tambahan (ekstra)**: search, tambah/edit/hapus
+- [ ] Tab **Bahan**: search, tambah/edit/hapus, mutasi bahan, format Rupiah harga
+- [ ] Tab **HPP**: form HPP (input Rupiah ke-format via `hppForm` bindable), parse purchase text, simpan item, kalkulasi overhead/recipe/margin tampil benar
+- [ ] FAB "Tambah" tiap tab muncul + buka form yang benar
+- [ ] Modal/cropper/notif masih jalan (tetap di parent)
+
+**bayar:** cetak struk POS (tunai + qris) — header/item/addons/gula-es/total/kembalian/ucapan benar, kirim ke printer (`printViaIntent`)
+**3 riwayat (umum/kasir/pemilik):** cetak ulang struk, list transaksi, delete (pemilik)
+**aichat:** chat laporan + analisis transaksi (prompt `prompts.ts` + `callOpenRouter`) balas normal, angka Rupiah benar
+
+---
+
+### Catatan validasi (apa yang gua cek ulang sesi ini)
+- ✅ Grep import 7 util + 2 types → semua zero external consumer (self-ref only).
+- ✅ `toLocaleString('id-ID')` = 102 occurrence / 20 file (exact); migrasi 97 → sisa 4 (util+tanggal).
+- ✅ Baca baris: `upload` no-auth, `bayar:218`, `buku-kas:73`, `profil:27` — semua benar.
+- ✅ LOC presisi file mati via `wc -l` = 2.518 total.
+- ✅ Split manajemenmenu: `pnpm check` 70 (nol baru) + `pnpm build` lulus; wiring parent + MenuTab props di-review manual.
+- ◐ Item bertanda ◐ belum di-verifikasi per-baris — verifikasi saat batch-nya dikerjakan (impact-check `CONVENTIONS §8`).
 
 ---
 
