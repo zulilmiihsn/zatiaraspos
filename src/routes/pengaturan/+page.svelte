@@ -23,44 +23,19 @@
 	let pwaElement: any = null;
 	let isPwaLibraryLoaded = $state(false);
 
-	// Type definitions
-	interface PengaturanData {
-		halaman_terkunci?: string[];
-		pin?: string;
-	}
-
-	let pengaturanData = null;
-
 	// State untuk loading
 	let isLoading = $state(true);
 	let isProfileLoaded = $state(false);
-	let isPengaturanLoaded = false;
 
 	let currentUserRole = $derived(userRole.value || '');
 	let showLogoutModal = $state(false);
-	let currentPage = 'security';
 
 	// Removed showPinModal, pin, errorTimeout, isClosing
 	let showPwaInstalledToast = $state(false);
-	let pengaturan: PengaturanData = { halaman_terkunci: ['laporan', 'beranda'], pin: '1234' };
 
 	let showNotification = $state(false);
 	let notificationMessage = $state('');
 	let notificationTimeout: any = null;
-
-	// Toast notification state
-	let showToast = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
-
-	function showToastNotification(
-		message: string,
-		type: 'success' | 'error' | 'warning' | 'info' = 'success'
-	) {
-		toastMessage = message;
-		toastType = type;
-		showToast = true;
-	}
 
 	let LogOut: any = $state(null),
 		Shield: any = $state(null),
@@ -80,10 +55,6 @@
 		notificationTimeout = setTimeout(() => {
 			showNotification = false;
 		}, 3000);
-	}
-
-	async function fetchPengaturan() {
-		pengaturanData = await dataService.getOne('pengaturan');
 	}
 
 	onMount(async () => {
@@ -178,46 +149,6 @@
 		return User;
 	}
 
-	function getRoleLabel() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik') return 'Pemilik';
-		if (currentUserRole === 'kasir') return 'Kasir';
-		return 'User';
-	}
-
-	function getRoleDesc() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik')
-			return 'Akses penuh ke seluruh sistem';
-		if (currentUserRole === 'kasir') return 'Akses standar';
-		return 'Akses standar';
-	}
-
-	function getRoleColor() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
-			return 'from-purple-500 to-pink-500';
-		} else if (currentUserRole === 'kasir') {
-			return 'from-green-500 to-blue-500';
-		}
-		return 'from-gray-500 to-gray-600';
-	}
-
-	function getRoleBadgeColor() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
-			return 'bg-purple-100 text-purple-800';
-		} else if (currentUserRole === 'kasir') {
-			return 'bg-green-100 text-green-800';
-		}
-		return 'bg-gray-100 text-gray-800';
-	}
-
-	function getRoleDescription() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik') {
-			return 'Akses penuh ke semua fitur sistem';
-		} else if (currentUserRole === 'kasir') {
-			return 'Akses terbatas untuk POS dan laporan';
-		}
-		return 'Akses standar';
-	}
-
 	function handleInstallPWA() {
 		if (browser && isPwaLibraryLoaded) {
 			// Get the web component element
@@ -228,96 +159,6 @@
 			}
 		}
 	}
-
-	const settingsSections = [
-		{
-			title: 'Akun & Keamanan',
-			icon: Shield,
-			items: [
-				{
-					label: 'Profil Pengguna',
-					icon: User,
-					action: () => showNotif('Fitur profil belum tersedia')
-				},
-				{
-					label: 'Ubah Password',
-					icon: Shield,
-					action: () => showNotif('Fitur ubah password belum tersedia')
-				},
-				{
-					label: 'Riwayat Login',
-					icon: Bell,
-					action: () => showNotif('Fitur riwayat login belum tersedia')
-				}
-			]
-		},
-		{
-			title: 'Tampilan & Tema',
-			icon: Palette,
-			items: [
-				{
-					label: 'Tema Aplikasi',
-					icon: Palette,
-					action: () => showNotif('Fitur tema belum tersedia')
-				},
-				{
-					label: 'Ukuran Font',
-					icon: Settings,
-					action: () => showNotif('Fitur ukuran font belum tersedia')
-				},
-				{
-					label: 'Animasi',
-					icon: Settings,
-					action: () => showNotif('Fitur animasi belum tersedia')
-				}
-			]
-		},
-		{
-			title: 'Data & Backup',
-			icon: Database,
-			items: [
-				{
-					label: 'Export Data',
-					icon: Database,
-					action: () => showNotif('Fitur export data belum tersedia')
-				},
-				{
-					label: 'Import Data',
-					icon: Database,
-					action: () => showNotif('Fitur import data belum tersedia')
-				},
-				{
-					label: 'Monitoring Produksi',
-					icon: Settings,
-					action: () => goto('/monitoring')
-				}
-			]
-		},
-		{
-			title: 'Bantuan & Dukungan',
-			icon: HelpCircle,
-			items: [
-				{
-					label: 'Panduan Penggunaan',
-					icon: HelpCircle,
-					action: () => showNotif('Panduan belum tersedia')
-				},
-				{ label: 'Hubungi Support', icon: Bell, action: () => showNotif('Support belum tersedia') },
-				{
-					label: 'Tentang Aplikasi',
-					icon: Settings,
-					action: () => showNotif('Versi 1.0.0 - Zatiaras Juice POS')
-				}
-			]
-		}
-	];
-
-	// Filter sections based on user role
-	let filteredSections = $derived(
-		settingsSections.filter(
-			(section) => section.title !== 'Data & Backup' || currentUserRole === 'admin'
-		)
-	);
 
 	// Get role icon once and store it
 	let roleIcon = $derived(getRoleIcon());

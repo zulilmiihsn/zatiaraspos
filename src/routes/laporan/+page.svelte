@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { refreshBus } from '$lib/utils/refreshBus';
 
-	import { formatDateYmdWita, getTodayWita, getNowWita } from '$lib/utils/dateTime';
+	import { getTodayWita, getNowWita } from '$lib/utils/dateTime';
 
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 
@@ -79,7 +79,6 @@
 	}
 
 	let currentUserRole = $derived(userRole.value || '');
-	let userProfileData = $derived(userProfile.value as { role: string; username: string } | null);
 
 	async function scheduleLaporanRefresh(delayMs = 220, force = false) {
 		if (!force && Date.now() - lastLaporanRefreshAt < 400) {
@@ -375,9 +374,6 @@
 	let pemasukanLain: BukuKasRecord[] = [];
 	let bebanUsaha: BukuKasRecord[] = [];
 	let bebanLain: BukuKasRecord[] = [];
-	let pengeluaran: number | null = null;
-	let produkTerlaris: { nama: string; total: number }[] = [];
-	let kategoriTerlaris: { nama: string; total: number }[] = [];
 
 	let laporan: BukuKasRecord[] = $state([]);
 
@@ -548,67 +544,6 @@
 		return { startDate: '', endDate: '' };
 	}
 
-	// Fungsi untuk group dan sum item berdasarkan nama (deskripsi/catatan)
-	function groupAndSumByName(items: BukuKasRecord[]): { nama: string; total: number }[] {
-		const map = new Map<string, number>();
-		for (const item of items) {
-			const name = getDeskripsiLaporan(item);
-
-			const prev = map.get(name) || 0;
-			map.set(name, prev + (item.nominal || 0));
-		}
-		return Array.from(map.entries()).map(([name, total]) => ({ nama: name, total }));
-	}
-
-	// Reactive statements untuk total QRIS/Tunai per sub-group
-	let totalQrisPendapatanUsaha = $derived(
-		pemasukanUsahaDetail
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiPendapatanUsaha = $derived(
-		pemasukanUsahaDetail
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalQrisPemasukanLain = $derived(
-		pemasukanLainDetail
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiPemasukanLain = $derived(
-		pemasukanLainDetail
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalQrisBebanUsaha = $derived(
-		bebanUsahaDetail
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiBebanUsaha = $derived(
-		bebanUsahaDetail
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalQrisBebanLain = $derived(
-		bebanLainDetail
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiBebanLain = $derived(
-		bebanLainDetail
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
 	function getDeskripsiLaporan(item: BukuKasRecord): string {
 		return item?.deskripsi?.trim() || item?.catatan?.trim() || '-';
 	}
@@ -661,26 +596,6 @@
 
 		// Setup realtime subscriptions setelah filter berubah
 		setupRealtimeSubscriptions();
-	}
-
-	// Tambahkan helper untuk normalisasi tanggal ke YYYY-MM-DD
-	function toYMD(date: string | Date): string {
-		if (typeof date === 'string') return date.slice(0, 10);
-		return formatDateYmdWita(date);
-	}
-
-	// Toast notification state
-	let showToast = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' | 'info' = 'success';
-
-	function showToastNotification(
-		message: string,
-		type: 'success' | 'error' | 'warning' | 'info' = 'success'
-	): void {
-		toastMessage = message;
-		toastType = type;
-		showToast = true;
 	}
 
 	// Toast management
