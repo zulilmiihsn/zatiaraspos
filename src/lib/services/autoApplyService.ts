@@ -4,6 +4,13 @@ import { refreshBus } from '$lib/utils/refreshBus';
 
 const apiFetch = (path: string, init?: RequestInit) => fetch(path, init);
 
+async function throwIfNotOk(res: Response, label: string): Promise<void> {
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({}));
+		throw new Error(`${label}: ${err?.error ?? res.statusText}`);
+	}
+}
+
 export class AutoApplyService {
 	private static instance: AutoApplyService;
 
@@ -106,10 +113,7 @@ export class AutoApplyService {
 				})
 			});
 
-			if (!res.ok) {
-				const err = await res.json().catch(() => ({}));
-				throw new Error(`Gagal menyimpan transaksi POS: ${err?.error ?? res.statusText}`);
-			}
+			await throwIfNotOk(res, 'Gagal menyimpan transaksi POS');
 			return;
 		}
 
@@ -136,10 +140,7 @@ export class AutoApplyService {
 			body: JSON.stringify({ branch, payload })
 		});
 
-		if (!res.ok) {
-			const err = await res.json().catch(() => ({}));
-			throw new Error(`Gagal menyimpan transaksi: ${err?.error ?? res.statusText}`);
-		}
+		await throwIfNotOk(res, 'Gagal menyimpan transaksi');
 
 		const inserted = await res.json();
 		const bukuKasId = inserted?.id ?? transactionId;
@@ -213,10 +214,7 @@ export class AutoApplyService {
 			})
 		});
 
-		if (!res.ok) {
-			const err = await res.json().catch(() => ({}));
-			throw new Error(`Gagal mengupdate transaksi: ${err?.error ?? res.statusText}`);
-		}
+		await throwIfNotOk(res, 'Gagal mengupdate transaksi');
 	}
 
 	private async createCategory(data: Record<string, unknown>): Promise<void> {
@@ -230,10 +228,7 @@ export class AutoApplyService {
 			})
 		});
 
-		if (!res.ok) {
-			const err = await res.json().catch(() => ({}));
-			throw new Error(`Gagal membuat kategori: ${err?.error ?? res.statusText}`);
-		}
+		await throwIfNotOk(res, 'Gagal membuat kategori');
 	}
 
 	private getDefaultCategory(type: string): string {

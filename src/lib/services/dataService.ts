@@ -297,17 +297,17 @@ export class DataService {
 		);
 	}
 
-	async getProducts() {
+	private async getCachedTable(table: string, cacheKey: string, offlineKeyPrefix: string) {
 		const branch = selectedBranch.value || 'default';
-		const offlineKey = `products_${branch}`;
+		const offlineKey = `${offlineKeyPrefix}_${branch}`;
 		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
 		if (typeof navigator !== 'undefined' && !navigator.onLine) {
 			return offlineData;
 		}
 		try {
 			const data = await smartCache.get(
-				`${CACHE_KEYS.PRODUCTS}_${branch}`,
-				async () => dbGetStrict('produk'),
+				`${cacheKey}_${branch}`,
+				async () => dbGetStrict(table),
 				{ ttl: 180000, backgroundRefresh: true }
 			);
 			await idbSet(offlineKey, data || []);
@@ -315,46 +315,18 @@ export class DataService {
 		} catch {
 			return offlineData;
 		}
+	}
+
+	async getProducts() {
+		return this.getCachedTable('produk', CACHE_KEYS.PRODUCTS, 'products');
 	}
 
 	async getCategories() {
-		const branch = selectedBranch.value || 'default';
-		const offlineKey = `categories_${branch}`;
-		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
-		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			return offlineData;
-		}
-		try {
-			const data = await smartCache.get(
-				`${CACHE_KEYS.CATEGORIES}_${branch}`,
-				async () => dbGetStrict('kategori'),
-				{ ttl: 180000, backgroundRefresh: true }
-			);
-			await idbSet(offlineKey, data || []);
-			return data || [];
-		} catch {
-			return offlineData;
-		}
+		return this.getCachedTable('kategori', CACHE_KEYS.CATEGORIES, 'categories');
 	}
 
 	async getAddOns() {
-		const branch = selectedBranch.value || 'default';
-		const offlineKey = `addons_${branch}`;
-		const offlineData = ((await idbGet(offlineKey)) as Record<string, any>[] | undefined) || [];
-		if (typeof navigator !== 'undefined' && !navigator.onLine) {
-			return offlineData;
-		}
-		try {
-			const data = await smartCache.get(
-				`${CACHE_KEYS.ADDONS}_${branch}`,
-				async () => dbGetStrict('tambahan'),
-				{ ttl: 180000, backgroundRefresh: true }
-			);
-			await idbSet(offlineKey, data || []);
-			return data || [];
-		} catch {
-			return offlineData;
-		}
+		return this.getCachedTable('tambahan', CACHE_KEYS.ADDONS, 'addons');
 	}
 
 	async getIngredients() {
