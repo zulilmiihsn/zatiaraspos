@@ -334,7 +334,7 @@
 			class="rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 		>
 			{#if ArrowLeft}
-				<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+				<ArrowLeft class="h-5 w-5 text-gray-600" />
 			{:else}
 				<div class="flex h-5 w-5 items-center justify-center">
 					<span
@@ -368,7 +368,8 @@
 					class="mb-2 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-400 to-purple-500 shadow-lg"
 				>
 					{#if roleIcon}
-						<svelte:component this={roleIcon} class="h-8 w-8 text-white" />
+						{@const RoleIcon = roleIcon}
+						<RoleIcon class="h-8 w-8 text-white" />
 					{:else}
 						<div class="flex h-8 w-8 items-center justify-center">
 							<span
@@ -429,7 +430,7 @@
 					class:pointer-events-none={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
 				>
 					{#if Crown}
-						<svelte:component this={Crown} class="mb-2 h-8 w-8" />
+						<Crown class="mb-2 h-8 w-8" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -452,7 +453,7 @@
 					onclick={handleInstallPWA}
 				>
 					{#if Download}
-						<svelte:component this={Download} class="mb-2 h-8 w-8 text-pink-500" />
+						<Download class="mb-2 h-8 w-8 text-pink-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -475,7 +476,7 @@
 					onclick={() => goto('/pengaturan/printer')}
 				>
 					{#if Printer}
-						<svelte:component this={Printer} class="mb-2 h-8 w-8 text-blue-500" />
+						<Printer class="mb-2 h-8 w-8 text-blue-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -498,7 +499,7 @@
 					onclick={() => goto('/pengaturan/riwayat')}
 				>
 					{#if History}
-						<svelte:component this={History} class="mb-2 h-8 w-8 text-emerald-500" />
+						<History class="mb-2 h-8 w-8 text-emerald-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -525,7 +526,7 @@
 			<div class="border-b border-red-200 bg-red-50 px-6 py-4">
 				<div class="flex items-center gap-3">
 					{#if LogOut}
-						<svelte:component this={LogOut} class="h-5 w-5 text-red-600" />
+						<LogOut class="h-5 w-5 text-red-600" />
 					{:else}
 						<div class="flex h-5 w-5 items-center justify-center">
 							<span
@@ -545,7 +546,7 @@
 					class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-3 font-medium text-white transition-colors hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 				>
 					{#if LogOut}
-						<svelte:component this={LogOut} class="h-4 w-4" />
+						<LogOut class="h-4 w-4" />
 					{:else}
 						<div class="flex h-4 w-4 items-center justify-center">
 							<span
@@ -566,7 +567,7 @@
 				<div class="mb-4 flex items-center gap-3">
 					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
 						{#if LogOut}
-							<svelte:component this={LogOut} class="h-5 w-5 text-red-600" />
+							<LogOut class="h-5 w-5 text-red-600" />
 						{:else}
 							<div class="flex h-5 w-5 items-center justify-center">
 								<span

@@ -153,7 +153,7 @@
 				<div
 					class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center py-12 text-center"
 				>
-					<svelte:component this={Utensils} class="mb-4 h-14 w-14 text-pink-300" />
+					<Utensils class="mb-4 h-14 w-14 text-pink-300" />
 					<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Menu</div>
 					<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
 				</div>
@@ -181,7 +181,7 @@
 									}}
 									aria-label="Hapus Menu"
 								>
-									<svelte:component this={Trash} class="h-4 w-4 text-red-600 md:h-5 md:w-5" />
+									<Trash class="h-4 w-4 text-red-600 md:h-5 md:w-5" />
 								</button>
 							</div>
 							<div class="flex h-full w-full flex-col items-center justify-center">
@@ -197,7 +197,7 @@
 										<div
 											class="flex h-full w-full items-center justify-center rounded-lg border border-gray-100 bg-pink-50/50"
 										>
-											<svelte:component this={Utensils} class="h-8 w-8 text-pink-300" />
+											<Utensils class="h-8 w-8 text-pink-300" />
 										</div>
 									{/if}
 								</div>
@@ -249,7 +249,7 @@
 									}}
 									aria-label="Hapus Menu"
 								>
-									<svelte:component this={Trash} class="h-4 w-4 text-red-600" />
+									<Trash class="h-4 w-4 text-red-600" />
 								</button>
 							</div>
 						</div>

@@ -61,7 +61,7 @@
 				<div
 					class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
 				>
-					<svelte:component this={Wheat} class="mb-4 h-12 w-12 text-amber-300" />
+					<Wheat class="mb-4 h-12 w-12 text-amber-300" />
 					<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Bahan</div>
 					<div class="text-sm text-gray-400">
 						Tambahkan buah, gula, susu, cup, dan bahan lain.
@@ -116,7 +116,7 @@
 										onclick={() => confirmDeleteBahan(bahan.id)}
 										aria-label="Hapus Bahan"
 									>
-										<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
+										<Trash class="h-5 w-5 text-red-600" />
 									</button>
 								</div>
 							</div>

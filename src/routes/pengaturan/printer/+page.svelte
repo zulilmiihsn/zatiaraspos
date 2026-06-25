@@ -101,7 +101,7 @@
 		onclick={() => goto('/pengaturan')}
 		class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 	>
-		<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+		<ArrowLeft class="h-5 w-5 text-gray-600" />
 	</button>
 	<h1 class="text-xl font-bold text-gray-800">Pengaturan Draft Struk</h1>
 </div>

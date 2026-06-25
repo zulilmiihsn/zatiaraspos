@@ -67,7 +67,7 @@
 		<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
 			<div class="mb-2 flex items-center gap-3">
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-500">
-					<svelte:component this={Calculator} class="h-5 w-5" />
+					<Calculator class="h-5 w-5" />
 				</div>
 				<div class="text-sm font-semibold text-gray-500">Total Biaya Tetap</div>
 			</div>
@@ -78,7 +78,7 @@
 		<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
 			<div class="mb-2 flex items-center gap-3">
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
-					<svelte:component this={CupSoda} class="h-5 w-5" />
+					<CupSoda class="h-5 w-5" />
 				</div>
 				<div class="text-sm font-semibold text-gray-500">Beban per Item</div>
 			</div>
@@ -89,7 +89,7 @@
 		<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
 			<div class="mb-2 flex items-center gap-3">
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-					<svelte:component this={Wheat} class="h-5 w-5" />
+					<Wheat class="h-5 w-5" />
 				</div>
 				<div class="text-sm font-semibold text-gray-500">Target Sales (Bulan)</div>
 			</div>
@@ -169,7 +169,7 @@
 						<p class="mt-1 text-xs text-gray-500">Ketik asal-asalan, AI akan paham.</p>
 					</div>
 					<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-						<svelte:component this={Sparkles} class="h-5 w-5" />
+						<Sparkles class="h-5 w-5" />
 					</div>
 				</div>
 				<textarea class="min-h-24 w-full rounded-xl border border-purple-100 bg-white p-4 text-sm outline-none transition-all focus:border-purple-400 focus:ring-2 focus:ring-purple-100" placeholder="Contoh: aku tadi belanja buat minggu ini, alpukat 10 kg kena 35000, gula 1 kg 18000, cup 50 pcs 25000" bind:value={hppPurchaseText}></textarea>
@@ -226,7 +226,7 @@
 					{/each}
 					{#if menus.filter((menu) => menu.lacak_bahan).length === 0}
 						<div class="pointer-events-none flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-100 py-10 text-center">
-							<svelte:component this={Calculator} class="mb-3 h-10 w-10 text-gray-300" />
+							<Calculator class="mb-3 h-10 w-10 text-gray-300" />
 							<div class="text-sm font-bold text-gray-700">Belum Ada Menu dengan Resep</div>
 							<div class="mt-1 text-xs font-medium text-gray-400">Tambahkan resep bahan pada detail menu.</div>
 						</div>

@@ -221,7 +221,7 @@
 			onclick={() => goto('/pengaturan/pemilik')}
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 		>
-			<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+			<ArrowLeft class="h-5 w-5 text-gray-600" />
 		</button>
 		<h1 class="flex-1 text-xl font-bold text-gray-800">Riwayat Transaksi Hari Ini</h1>
 		<button
@@ -229,8 +229,7 @@
 			class="ml-2 rounded-xl bg-pink-50 p-2 transition-colors hover:bg-pink-100"
 			aria-label="Refresh"
 		>
-			<svelte:component
-				this={RefreshCw}
+			<RefreshCw
 				class="h-5 w-5 text-pink-500 {loading ? 'animate-spin' : ''}"
 			/>
 		</button>
@@ -353,7 +352,7 @@
 									}}
 									title="Hapus transaksi"
 								>
-									<svelte:component this={Trash} class="h-5 w-5" />
+									<Trash class="h-5 w-5" />
 								</button>
 							{/if}
 						</div>
@@ -369,7 +368,7 @@
 				class="animate-slideUpModal relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-white p-6 shadow-xl"
 			>
 				<div class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-red-100">
-					<svelte:component this={Trash} class="h-8 w-8 text-red-500" />
+					<Trash class="h-8 w-8 text-red-500" />
 				</div>
 				<h2 class="mb-2 text-center text-lg font-bold text-gray-800">Hapus Transaksi?</h2>
 				<p class="mb-6 text-center text-sm text-gray-500">

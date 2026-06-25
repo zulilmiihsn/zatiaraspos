@@ -22,7 +22,7 @@
 			onclick={() => goto('/pengaturan')}
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 		>
-			<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+			<ArrowLeft class="h-5 w-5 text-gray-600" />
 		</button>
 		<h1 class="text-xl font-bold text-gray-800">Pengaturan Draft Struk</h1>
 	</div>
@@ -36,7 +36,7 @@
 				style="text-decoration:none;"
 			>
 				<div class="mb-2 flex items-center gap-2 md:mb-2 md:gap-2">
-					<svelte:component this={Utensils} class="h-5 w-5 text-pink-500 md:h-12 md:w-12" />
+					<Utensils class="h-5 w-5 text-pink-500 md:h-12 md:w-12" />
 					<h3 class="text-sm font-semibold text-gray-800 lg:text-lg">Manajemen Menu</h3>
 				</div>
 				<p class="text-xs leading-tight text-gray-500 lg:text-sm">
@@ -49,7 +49,7 @@
 				style="text-decoration:none;"
 			>
 				<div class="mb-2 flex items-center gap-2 md:mb-2 md:gap-2">
-					<svelte:component this={Shield} class="h-5 w-5 text-blue-500 md:h-12 md:w-12" />
+					<Shield class="h-5 w-5 text-blue-500 md:h-12 md:w-12" />
 					<h3 class="text-sm leading-tight font-semibold text-gray-800 lg:text-lg">
 						Ganti Keamanan
 					</h3>
@@ -90,7 +90,7 @@
 				style="text-decoration:none;"
 			>
 				<div class="mb-2 flex items-center gap-2 md:mb-2 md:gap-2">
-					<svelte:component this={Archive} class="h-5 w-5 text-emerald-500 md:h-12 md:w-12" />
+					<Archive class="h-5 w-5 text-emerald-500 md:h-12 md:w-12" />
 					<h3 class="text-sm leading-tight font-semibold text-gray-800 lg:text-lg">Arsip Data</h3>
 				</div>
 				<p class="text-xs leading-tight text-gray-500 lg:text-sm">

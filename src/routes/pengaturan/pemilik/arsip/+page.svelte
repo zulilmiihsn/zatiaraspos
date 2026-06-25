@@ -67,7 +67,7 @@
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 			aria-label="Kembali"
 		>
-			<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+			<ArrowLeft class="h-5 w-5 text-gray-600" />
 		</button>
 		<h1 class="text-xl font-bold text-gray-800">Arsip Data</h1>
 	</div>
@@ -77,7 +77,7 @@
 		<div class="mb-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
 			<div class="mb-3 flex items-center gap-3">
 				<div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
-					<svelte:component this={Archive} class="h-6 w-6 text-emerald-500" />
+					<Archive class="h-6 w-6 text-emerald-500" />
 				</div>
 				<div>
 					<h2 class="text-base font-bold text-gray-800">Arsipkan Transaksi Lama</h2>
@@ -128,7 +128,7 @@
 					></span>
 					Memproses...
 				{:else}
-					<svelte:component this={Download} class="h-5 w-5" />
+					<Download class="h-5 w-5" />
 					Arsipkan & Unduh
 				{/if}
 			</button>
@@ -141,8 +141,7 @@
 					<div
 						class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
 					>
-						<svelte:component
-							this={CheckCircle2}
+						<CheckCircle2
 							class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500"
 						/>
 						<div class="text-sm text-emerald-800">

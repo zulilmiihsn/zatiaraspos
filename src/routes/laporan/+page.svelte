@@ -728,7 +728,7 @@
 						aria-label="Filter laporan"
 					>
 						{#if FilterIcon}
-							<svelte:component this={FilterIcon} class="h-5 w-5 md:h-7 md:w-7" />
+							<FilterIcon class="h-5 w-5 md:h-7 md:w-7" />
 						{:else}
 							<div class="flex h-5 w-5 items-center justify-center md:h-7 md:w-7">
 								<span

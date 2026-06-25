@@ -62,7 +62,7 @@
 				<div
 					class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
 				>
-					<svelte:component this={FolderOpen} class="mb-4 h-12 w-12 text-blue-300" />
+					<FolderOpen class="mb-4 h-12 w-12 text-blue-300" />
 					<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Kategori</div>
 					<div class="text-sm text-gray-400">Silakan tambahkan kategori terlebih dahulu.</div>
 				</div>
@@ -96,7 +96,7 @@
 									}}
 									aria-label="Hapus Kategori"
 								>
-									<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
+									<Trash class="h-5 w-5 text-red-600" />
 								</button>
 							</div>
 						</div>

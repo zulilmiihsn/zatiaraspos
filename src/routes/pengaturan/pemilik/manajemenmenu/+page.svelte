@@ -1122,7 +1122,7 @@
 			onclick={() => goto('/pengaturan/pemilik')}
 			class="mr-2 rounded-xl bg-gray-100 p-2 transition-colors hover:bg-gray-200"
 		>
-			<svelte:component this={ArrowLeft} class="h-5 w-5 text-gray-600" />
+			<ArrowLeft class="h-5 w-5 text-gray-600" />
 		</button>
 		<h1 class="text-xl font-bold text-gray-800">Manajemen Menu</h1>
 	</div>
@@ -1190,7 +1190,7 @@
 			onclick={() => openMenuForm()}
 			aria-label="Tambah Menu"
 		>
-			<svelte:component this={Plus} class="h-8 w-8" />
+			<Plus class="h-8 w-8" />
 		</button>
 	{:else if activeTab === 'kategori'}
 		<button
@@ -1198,7 +1198,7 @@
 			onclick={() => openKategoriForm(null)}
 			aria-label="Tambah Kategori"
 		>
-			<svelte:component this={Plus} class="h-8 w-8" />
+			<Plus class="h-8 w-8" />
 		</button>
 	{:else if activeTab === 'ekstra'}
 		<button
@@ -1206,7 +1206,7 @@
 			onclick={() => openEkstraForm()}
 			aria-label="Tambah Tambahan"
 		>
-			<svelte:component this={Plus} class="h-8 w-8" />
+			<Plus class="h-8 w-8" />
 		</button>
 	{:else if activeTab === 'bahan'}
 		<button
@@ -1214,7 +1214,7 @@
 			onclick={() => openBahanForm()}
 			aria-label="Tambah Bahan"
 		>
-			<svelte:component this={Plus} class="h-8 w-8" />
+			<Plus class="h-8 w-8" />
 		</button>
 	{/if}
 
@@ -1566,7 +1566,7 @@
 								onclick={() => setMenuType('minuman')}
 							>
 								<div class="flex items-center justify-center gap-2">
-									<svelte:component this={CupSoda} class="h-5 w-5" />
+									<CupSoda class="h-5 w-5" />
 									<span class="text-sm">Minuman</span>
 								</div>
 							</button>
@@ -1579,7 +1579,7 @@
 								onclick={() => setMenuType('makanan')}
 							>
 								<div class="flex items-center justify-center gap-2">
-									<svelte:component this={Pizza} class="h-5 w-5" />
+									<Pizza class="h-5 w-5" />
 									<span class="text-sm">Makanan</span>
 								</div>
 							</button>

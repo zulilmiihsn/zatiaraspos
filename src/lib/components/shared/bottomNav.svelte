@@ -55,6 +55,7 @@
 	style="position:relative;"
 >
 	{#each navs as nav, i}
+		{@const Icon = nav.icon}
 		<a
 			class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-0 border-none bg-transparent py-1 text-center text-xs font-medium text-pink-500 transition-colors duration-200 ease-out {nav.path ===
 			'/'
@@ -69,8 +70,7 @@
 			href={nav.path}
 			onclick={(e) => handleNavClick(nav.path, e)}
 		>
-			<svelte:component
-				this={nav.icon}
+			<Icon
 				size={18}
 				class="mb-0.5 block h-[18px] w-[18px] stroke-[1.7] transition-colors duration-200 ease-out"
 			/>
