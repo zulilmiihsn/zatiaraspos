@@ -12,18 +12,6 @@
 export * from './product';
 
 // ============================================================================
-// 👤 USER & AUTHENTICATION TYPES
-// ============================================================================
-
-export * from './user';
-
-// ============================================================================
-// 💰 TRANSACTION TYPES
-// ============================================================================
-
-export * from './transaction';
-
-// ============================================================================
 // 🧩 COMPONENT TYPES
 // ============================================================================
 
@@ -119,18 +107,6 @@ export interface AuthState {
 	token: string | null;
 }
 
-export interface UserState {
-	profile: import('./user').UserProfile | null;
-	role: string | null;
-	permissions: string[];
-}
-
-export interface TransactionState {
-	transactions: import('./transaction').Transaction[];
-	isLoading: boolean;
-	error: string | null;
-}
-
 export interface FinancialState {
 	records: import('./laporan').BukuKasRecord[];
 	summary: import('./laporan').LaporanSummary | null;
@@ -139,9 +115,7 @@ export interface FinancialState {
 
 export interface AppState {
 	auth: AuthState;
-	user: UserState;
 	products: import('./product').ProductState;
-	transactions: TransactionState;
 	financial: FinancialState;
 	ui: UIState;
 }
