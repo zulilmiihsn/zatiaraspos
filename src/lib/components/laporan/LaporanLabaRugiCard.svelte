@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { LaporanSummary } from '$lib/types/laporan';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let {
 		isLoadingReport,
@@ -18,7 +19,7 @@
 		<span>Laba (Rugi) Kotor</span>
 		<span
 			>Rp {summary?.labaKotor !== null && summary?.labaKotor !== undefined
-				? summary.labaKotor.toLocaleString('id-ID')
+				? formatRupiah(summary.labaKotor)
 				: '0'}</span
 		>
 	</div>
@@ -29,7 +30,7 @@
 		<span>Pajak Penghasilan (0,5%)</span>
 		<span
 			>Rp {summary?.pajak !== null && summary?.pajak !== undefined
-				? summary.pajak.toLocaleString('id-ID')
+				? formatRupiah(summary.pajak)
 				: '0'}</span
 		>
 	</div>
@@ -40,7 +41,7 @@
 		<span>Laba (Rugi) Bersih</span>
 		<span
 			>Rp {summary?.labaBersih !== null && summary?.labaBersih !== undefined
-				? summary.labaBersih.toLocaleString('id-ID')
+				? formatRupiah(summary.labaBersih)
 				: '0'}</span
 		>
 	</div>

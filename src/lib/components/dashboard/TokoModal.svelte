@@ -4,6 +4,7 @@
 	import { dataService } from '$lib/services/dataService';
 	import { bukaToko, tutupToko } from '$lib/services/sesiTokoService';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
+	import { formatRupiah } from '$lib/utils/currency';
 	import type { BukuKasRecord, TokoSession } from '$lib/types';
 
 	let {
@@ -91,7 +92,7 @@
 	function formatModalAwalInput(e: Event) {
 		let value = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
 		if (value.length > 0) {
-			value = Number(value).toLocaleString('id-ID'); // Format as Rupiah
+			value = formatRupiah(value); // Format as Rupiah
 		}
 		modalAwalInput = value;
 	}
@@ -167,28 +168,28 @@
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
-						<span>Modal Awal</span><span>Rp {ringkasanTutup.modalAwal.toLocaleString('id-ID')}</span
+						<span>Modal Awal</span><span>Rp {formatRupiah(ringkasanTutup.modalAwal)}</span
 						>
 					</div>
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
 						<span>Total Penjualan</span><span
-							>Rp {ringkasanTutup.totalPenjualan.toLocaleString('id-ID')}</span
+							>Rp {formatRupiah(ringkasanTutup.totalPenjualan)}</span
 						>
 					</div>
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
 						<span>Pemasukan Tunai</span><span
-							>Rp {ringkasanTutup.pemasukanTunai.toLocaleString('id-ID')}</span
+							>Rp {formatRupiah(ringkasanTutup.pemasukanTunai)}</span
 						>
 					</div>
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
 						<span>Pengeluaran Tunai</span><span
-							>Rp {ringkasanTutup.pengeluaranTunai.toLocaleString('id-ID')}</span
+							>Rp {formatRupiah(ringkasanTutup.pengeluaranTunai)}</span
 						>
 					</div>
 					<div class="mb-1 flex flex-col items-center">
@@ -201,7 +202,7 @@
 							<div class="mb-1 text-4xl">💸</div>
 							<span
 								class="animate-glow text-2xl font-extrabold whitespace-nowrap text-pink-600 md:text-3xl"
-								>Rp {ringkasanTutup.uangKasir.toLocaleString('id-ID')}</span
+								>Rp {formatRupiah(ringkasanTutup.uangKasir)}</span
 							>
 							<div class="mt-2 text-center text-xs text-gray-400">
 								Pastikan uang kasir sesuai sebelum tutup toko

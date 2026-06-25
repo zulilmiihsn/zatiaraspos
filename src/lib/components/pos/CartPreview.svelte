@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { ShoppingCart } from 'lucide-svelte';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let {
 		cart = [],
@@ -54,7 +55,7 @@
 {#if cart.length > 0}
 	<div
 		bind:this={cartPreviewRef}
-		class="fixed right-3 bottom-16 left-3 z-20 flex min-h-[68px] items-center justify-between rounded-2xl border border-stone-200 bg-[#282423] px-4 py-3 text-base font-medium text-white shadow-2xl shadow-stone-900/20 md:right-6 md:left-6"
+		class="fixed right-3 bottom-16 left-3 z-20 flex min-h-[68px] items-center justify-between rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-3 text-base font-medium text-white shadow-xl shadow-pink-500/30 md:right-6 md:left-6"
 		style="transform: translateX({cartPreviewX}px); transition: {cartPreviewDragging
 			? 'none'
 			: 'transform 0.25s cubic-bezier(.4,0,.2,1)'}; touch-action: pan-y;"
@@ -72,21 +73,21 @@
 			aria-label="Buka keranjang belanja"
 			style="min-width:0;"
 		>
-			<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/10">
+			<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20">
 				<ShoppingCart class="h-5 w-5 text-white" />
 			</div>
 			<div class="min-w-0">
-				<div class="truncate text-xs font-semibold tracking-wide text-stone-300 uppercase">
+				<div class="truncate text-xs font-semibold tracking-wide text-pink-100 uppercase">
 					{totalItems} item pesanan
 				</div>
 				<div class="truncate text-xl font-bold text-white">
-					Rp {Number(totalHarga ?? 0).toLocaleString('id-ID')}
+					Rp {formatRupiah(totalHarga ?? 0)}
 				</div>
 			</div>
 		</div>
 		<div class="ml-4 flex items-center justify-center">
 			<button
-				class="flex items-center justify-center rounded-xl bg-pink-500 px-6 py-3 text-base font-bold text-white shadow transition-all duration-200 hover:bg-pink-600 active:scale-[0.98]"
+				class="flex items-center justify-center rounded-xl bg-white px-6 py-3 text-base font-bold text-pink-600 shadow-sm transition-all duration-200 hover:bg-pink-50 active:scale-[0.98]"
 				onclick={onGoToBayar}>Bayar</button
 			>
 		</div>

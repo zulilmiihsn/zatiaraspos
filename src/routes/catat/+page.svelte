@@ -14,6 +14,7 @@
 	import { securityUtils } from '$lib/utils/security';
 	import { auth } from '$lib/auth/auth';
 	import { witaToUtcISO } from '$lib/utils/dateTime';
+	import { formatRupiah } from '$lib/utils/currency';
 	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
@@ -182,11 +183,6 @@
 			}
 		}
 	});
-
-	function formatRupiah(angka: string | number): string {
-		if (!angka) return '';
-		return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-	}
 
 	function handleNominalInput(e: Event) {
 		// Hanya izinkan angka
@@ -698,8 +694,12 @@
 									</div>
 									<div class="text-xs text-gray-500 md:text-sm">
 										{paymentMethod === 'tunai'
-											? 'Ya, dari laci kasir'
-											: 'Tidak, bukan dari laci kasir'}
+											? mode === 'pemasukan'
+												? 'Ya, masuk laci kasir'
+												: 'Ya, dari laci kasir'
+											: mode === 'pemasukan'
+												? 'Tidak masuk laci kasir'
+												: 'Tidak dari laci kasir'}
 									</div>
 								</div>
 							</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ComponentType } from 'svelte';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let {
 		itemTerjual = null as number | null,
@@ -82,7 +83,7 @@
 		{/if}
 		<div class="text-sm font-medium text-green-900/80 md:text-center md:text-base">Pendapatan</div>
 		<div class="text-xl font-bold text-green-900 md:text-center md:text-3xl">
-			{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
+			{omzet !== null ? `Rp ${formatRupiah(omzet)}` : '--'}
 		</div>
 	</div>
 	<div
@@ -99,7 +100,7 @@
 		{/if}
 		<div class="text-sm font-medium text-cyan-900/80 md:text-center md:text-base">Modal Awal</div>
 		<div class="text-xl font-bold text-cyan-900 md:text-center md:text-3xl">
-			{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
+			{modalAwal !== null ? `Rp ${formatRupiah(modalAwal)}` : 'Rp 0'}
 		</div>
 	</div>
 </div>
@@ -119,7 +120,7 @@
 		{/if}
 		<div class="text-sm font-medium text-green-900/80">Pendapatan</div>
 		<div class="text-xl font-bold text-green-900">
-			{omzet !== null ? `Rp ${omzet.toLocaleString('id-ID')}` : '--'}
+			{omzet !== null ? `Rp ${formatRupiah(omzet)}` : '--'}
 		</div>
 	</div>
 	<div
@@ -136,7 +137,7 @@
 		{/if}
 		<div class="text-sm font-medium text-cyan-900/80">Modal Awal</div>
 		<div class="text-xl font-bold text-cyan-900">
-			{modalAwal !== null ? `Rp ${modalAwal.toLocaleString('id-ID')}` : 'Rp 0'}
+			{modalAwal !== null ? `Rp ${formatRupiah(modalAwal)}` : 'Rp 0'}
 		</div>
 	</div>
 </div>

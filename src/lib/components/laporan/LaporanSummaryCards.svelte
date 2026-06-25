@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { LaporanSummary } from '$lib/types/laporan';
+	import { formatRupiah } from '$lib/utils/currency';
 	import Wallet from 'lucide-svelte/icons/wallet';
 	import ArrowDownCircle from 'lucide-svelte/icons/arrow-down-circle';
 	import ArrowUpCircle from 'lucide-svelte/icons/arrow-up-circle';
@@ -32,7 +33,7 @@
 				</div>
 				<div class="text-xl font-bold text-green-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
-							? summary.pendapatan.toLocaleString('id-ID')
+							? formatRupiah(summary.pendapatan)
 							: '0'}
 					
 				</div>
@@ -48,7 +49,7 @@
 				</div>
 				<div class="text-xl font-bold text-red-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
-							? summary.pengeluaran.toLocaleString('id-ID')
+							? formatRupiah(summary.pengeluaran)
 							: '0'}
 					
 				</div>
@@ -62,7 +63,7 @@
 				</div>
 				<div class="text-xl font-bold text-cyan-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.saldo !== null && summary?.saldo !== undefined
-							? summary.saldo.toLocaleString('id-ID')
+							? formatRupiah(summary.saldo)
 							: '0'}
 					
 				</div>
@@ -74,12 +75,12 @@
 		>
 			<span
 				>Total QRIS: <span class="font-bold text-pink-500"
-					>Rp {totalQrisAll.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalQrisAll)}</span
 				></span
 			>
 			<span
 				>Total Tunai: <span class="font-bold text-pink-500"
-					>Rp {totalTunaiAll.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalTunaiAll)}</span
 				></span
 			>
 		</div>

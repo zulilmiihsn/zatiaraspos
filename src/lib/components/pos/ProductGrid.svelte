@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
-	import { ImageOff, PackageOpen, RefreshCw } from 'lucide-svelte';
+	import { PackageOpen, RefreshCw } from 'lucide-svelte';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let {
 		posGridView,
@@ -44,7 +45,7 @@
 				{#if isLoadingProducts}
 					{#each Array(skeletonCount) as _, i}
 						<div
-							class="flex max-h-[80px] min-h-[56px] animate-pulse items-center justify-between rounded-lg border border-stone-200 bg-stone-100 px-3 py-2 shadow-sm"
+							class="flex max-h-[80px] min-h-[56px] animate-pulse items-center justify-between rounded-lg border border-pink-100 bg-stone-50 px-3 py-2 shadow-sm"
 						></div>
 					{/each}
 				{:else if loadError}
@@ -62,7 +63,7 @@
 					</div>
 				{:else if filteredProducts.length === 0}
 					<div
-						class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-12 text-center"
+						class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center rounded-xl border border-dashed border-pink-200 bg-pink-50/30 px-5 py-12 text-center"
 					>
 						<PackageOpen class="mb-3 h-9 w-9 text-stone-400" />
 						<div class="mb-1 text-base font-semibold text-stone-800">Menu belum tersedia</div>
@@ -71,7 +72,7 @@
 				{:else}
 					{#each filteredProducts as p}
 						<div
-							class="flex cursor-pointer items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-sm transition-all duration-200 hover:border-pink-300 hover:bg-pink-50 active:scale-[0.98]"
+							class="flex cursor-pointer items-center justify-between rounded-lg border border-pink-100 bg-white px-3 py-2 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)] transition-all duration-200 hover:border-pink-300 hover:bg-pink-50 active:scale-[0.98]"
 							tabindex="0"
 							onclick={() => onSelectProduct(p)}
 							onkeydown={(e) => {
@@ -88,7 +89,7 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<span class="text-base font-bold whitespace-nowrap text-pink-500"
-									>Rp {Number(p.harga ?? 0).toLocaleString('id-ID')}</span
+									>Rp {formatRupiah(p.harga ?? 0)}</span
 								>
 							</div>
 						</div>
@@ -103,7 +104,7 @@
 				{#if isLoadingProducts}
 					{#each Array(skeletonCount) as _, i}
 						<div
-							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] animate-pulse flex-col items-center justify-between rounded-xl border border-stone-200 bg-stone-100 p-2.5 shadow-sm md:max-h-[320px] md:min-h-[180px] md:p-6"
+							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] animate-pulse flex-col items-center justify-between rounded-xl border border-pink-100 bg-stone-50 p-2.5 shadow-sm md:max-h-[320px] md:min-h-[180px] md:p-6"
 						></div>
 					{/each}
 				{:else if loadError}
@@ -121,7 +122,7 @@
 					</div>
 				{:else if filteredProducts.length === 0}
 					<div
-						class="pointer-events-none col-span-2 flex min-h-[50vh] flex-col items-center justify-center rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-12 text-center md:col-span-3 lg:col-span-6"
+						class="pointer-events-none col-span-2 flex min-h-[50vh] flex-col items-center justify-center rounded-xl border border-dashed border-pink-200 bg-pink-50/30 px-5 py-12 text-center md:col-span-3 lg:col-span-6"
 					>
 						<PackageOpen class="mb-3 h-10 w-10 text-stone-400" />
 						<div class="mb-1 text-base font-semibold text-stone-800">Menu belum tersedia</div>
@@ -130,7 +131,7 @@
 				{:else}
 					{#each filteredProducts as p}
 						<div
-							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:border-pink-300 hover:shadow-md active:scale-[0.98] md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6"
+							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-pink-100 bg-white p-3 shadow-[0_4px_12px_-2px_rgba(236,72,153,0.05)] transition-all duration-200 hover:border-pink-300 hover:shadow-md active:scale-[0.98] md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6"
 							tabindex="0"
 							onclick={() => onSelectProduct(p)}
 							onkeydown={(e) => {
@@ -149,9 +150,9 @@
 								/>
 							{:else}
 								<div
-									class="mb-2 flex aspect-square min-h-[80px] w-full items-center justify-center overflow-hidden rounded-xl bg-stone-100 text-stone-400 md:mb-3 md:rounded-2xl"
+									class="mb-2 flex aspect-square min-h-[80px] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-4xl md:mb-3 md:rounded-2xl md:text-5xl"
 								>
-									<ImageOff class="h-9 w-9" />
+									🍹
 								</div>
 							{/if}
 							<div class="flex w-full flex-col items-center">
@@ -164,7 +165,7 @@
 									>{getKategoriNameById(p.kategori_id || '')}</span
 								>
 								<div class="text-base font-bold text-pink-500 md:mt-1 md:text-xl">
-									Rp {Number(p.harga ?? 0).toLocaleString('id-ID')}
+									Rp {formatRupiah(p.harga ?? 0)}
 								</div>
 							</div>
 						</div>

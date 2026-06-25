@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { getLast7DaysLabelsWITA } from '$lib/utils/dateTime';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let { weeklyIncome = [], weeklyMax = 1 } = $props<{
 		weeklyIncome: number[];
@@ -87,7 +88,7 @@
 						<div
 							class="animate-fade-in pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-xl border border-pink-200 bg-white px-4 py-2 text-center text-sm font-bold text-pink-600 shadow-lg"
 						>
-							<span class="font-normal text-gray-700">Rp {income.toLocaleString('id-ID')}</span>
+							<span class="font-normal text-gray-700">Rp {formatRupiah(income)}</span>
 						</div>
 					{/if}
 				</div>

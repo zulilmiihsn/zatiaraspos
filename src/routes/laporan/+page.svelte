@@ -548,14 +548,6 @@
 		return { startDate: '', endDate: '' };
 	}
 
-	// Helper function untuk format currency yang aman
-	function formatCurrency(amount: number | null | undefined): string {
-		if (amount === null || amount === undefined || isNaN(amount)) {
-			return '0';
-		}
-		return amount.toLocaleString('id-ID');
-	}
-
 	// Fungsi untuk group dan sum item berdasarkan nama (deskripsi/catatan)
 	function groupAndSumByName(items: BukuKasRecord[]): { nama: string; total: number }[] {
 		const map = new Map<string, number>();

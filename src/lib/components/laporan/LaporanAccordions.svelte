@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import type { BukuKasRecord } from '$lib/types/laporan';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let {
 		isLoadingReport,
@@ -85,12 +86,12 @@
 		>
 			<span
 				>QRIS: <span class="font-bold text-pink-500"
-					>Rp {totalQrisPemasukan.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalQrisPemasukan)}</span
 				></span
 			>
 			<span
 				>Tunai: <span class="font-bold text-pink-500"
-					>Rp {totalTunaiPemasukan.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalTunaiPemasukan)}</span
 				></span
 			>
 		</div>
@@ -133,7 +134,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -156,7 +157,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -200,7 +201,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -223,7 +224,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -255,12 +256,12 @@
 		>
 			<span
 				>QRIS: <span class="font-bold text-pink-500"
-					>Rp {totalQrisPengeluaran.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalQrisPengeluaran)}</span
 				></span
 			>
 			<span
 				>Tunai: <span class="font-bold text-pink-500"
-					>Rp {totalTunaiPengeluaran.toLocaleString('id-ID')}</span
+					>Rp {formatRupiah(totalTunaiPengeluaran)}</span
 				></span
 			>
 		</div>
@@ -303,7 +304,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -326,7 +327,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -370,7 +371,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>
@@ -393,7 +394,7 @@
 										role="button"
 										tabindex="0">{grouped.nama}</span>
 									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {grouped.total.toLocaleString('id-ID')}</span>
+										>Rp {formatRupiah(grouped.total)}</span>
 								</li>
 							{/each}
 					</ul>

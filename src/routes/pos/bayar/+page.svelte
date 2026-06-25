@@ -8,12 +8,14 @@
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
+	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
 
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { formatRupiah } from '$lib/utils/currency';
 	import { dataService } from '$lib/services/dataService';
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
@@ -176,7 +178,7 @@
 	);
 	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
 	let formattedCashReceived = $derived(
-		cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : ''
+		cashReceived ? formatRupiah(parseInt(cashReceived)) : ''
 	);
 	let canPay = $derived(
 		Boolean(
@@ -212,8 +214,7 @@
 	}
 	async function confirmQrisChecked() {
 		showQrisWarning = false;
-		cashReceived = totalHarga.toString(); // QRIS = dibayar pas
-		kembalian = 0;
+		cashReceived = totalHarga.toString(); // QRIS = dibayar pas → kembalian otomatis 0 via $derived
 		showSuccessModal = await catatTransaksiKeLaporan();
 	}
 	function addCashTemplate(nom: number) {
@@ -404,31 +405,32 @@
 			instagram: '@zatiarasjuice',
 			ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
 		};
-		let html = `<html><body style='font-family:monospace;font-size:24px;line-height:2.0;margin:0;padding:0;'>`;
+		let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
 		// Header
-		html += `<div style='text-align:center;margin-bottom:16px;line-height:1.5;'>`;
-		html += `<div style='font-weight:bold;font-size:26px;'>${pengaturan.nama_toko}</div>`;
-		html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.alamat}</div>`;
+		html += `<div style='text-align:center;margin-bottom:16px;'>`;
+		html += `<img src='${LOGO_BASE64}' style='width:80px;height:80px;margin:0 auto 8px;display:block;' />`;
+		html += `<div style='font-weight:bold;font-size:20px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
+		html += `<div style='font-size:13px;margin-top:4px;'>${pengaturan.alamat}</div>`;
 		if (pengaturan.instagram || pengaturan.telepon) {
-			html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+			html += `<div style='font-size:13px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
 		}
 		html += `</div>`;
-		html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
 		// Info pelanggan & waktu
-		html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
-		html += `${customerName ? customerName + '<br/>' : ''}`;
-		html += `${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
-		if (transactionQueuedOffline) {
-			html += `<b>STATUS: MENUNGGU SINKRONISASI</b><br/>`;
-		}
+		html += `<div style='text-align:left;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
+		html += `<div>${customerName || ''}</div>`;
+		html += `<div>${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
 		html += `</div>`;
+		if (transactionQueuedOffline) {
+			html += `<div style='font-size:12px;margin-bottom:12px;'><b>STATUS: MENUNGGU SINKRONISASI</b></div>`;
+		}
 		// Daftar pesanan
-		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
+		html += `<table style='width:100%;font-size:14px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
 		cart.forEach((item: BayarCartItem, idx: number) => {
-			html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${item.product.nama} x${item.jumlah}</td><td style='text-align:right;'>Rp${(item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${item.product.nama} <span style='font-size:12px;font-weight:normal;'>x${item.jumlah}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${formatRupiah(item.product.harga ?? 0)}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
 				item.addOns.forEach((a: BayarAddOn) => {
-					html += `<tr style='line-height:1.5;'><td style='font-size:18px;padding-left:8px;color:#000;'>+ ${a.nama}</td><td style='font-size:18px;text-align:right;color:#000;'>Rp${((a.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</td></tr>`;
+					html += `<tr><td style='font-size:12px;padding-left:8px;color:#333;'>+ ${a.nama}</td><td style='font-size:12px;text-align:right;color:#333;'>Rp${formatRupiah((a.harga ?? 0) * item.jumlah)}</td></tr>`;
 				});
 			}
 			const detail = [
@@ -451,14 +453,13 @@
 				.filter(Boolean)
 				.join(', ');
 			if (detail)
-				html += `<tr style='line-height:1.5;'><td colspan='2' style='font-size:18px;padding-left:8px;color:#000;'>${detail}</td></tr>`;
-			if (idx < cart.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
+				html += `<tr><td colspan='2' style='font-size:12px;padding-left:8px;padding-bottom:8px;color:#333;font-style:italic;'>${detail}</td></tr>`;
 		});
 		html += `</tbody></table>`;
-		html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
 		// Ringkasan
-		html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-		html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${totalHarga.toLocaleString('id-ID')}</b></td></tr>`;
+		html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
+		html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${formatRupiah(totalHarga)}</td></tr>`;
 		const methodLabels: Record<string, string> = {
 			tunai: 'Tunai',
 			qris: 'QRIS',
@@ -466,14 +467,14 @@
 			'e-wallet': 'E-Wallet',
 			card: 'Kartu'
 		};
-		html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
+		html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
 		if (paymentMethod === 'tunai') {
-			html += `<tr><td style='text-align:left;'>Dibayar:</td><td style='text-align:right;'>Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</td></tr>`;
-			html += `<tr><td style='text-align:left;'>Kembalian:</td><td style='text-align:right;'>Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</td></tr>`;
+			html += `<tr><td style='text-align:left;font-size:13px;'>Dibayar:</td><td style='text-align:right;font-size:13px;'>Rp${formatRupiah(parseInt(cashReceived) || 0)}</td></tr>`;
+			html += `<tr><td style='text-align:left;font-size:13px;'>Kembalian:</td><td style='text-align:right;font-size:13px;'>Rp${kembalian >= 0 ? formatRupiah(kembalian) : '0'}</td></tr>`;
 		}
 		html += `</tbody></table>`;
 		// Ucapan
-		html += `<div style='margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;'>${pengaturan.ucapan}</div>`;
+		html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
 		html += `</body></html>`;
 
 		// 2. Gzip + base64 encode
@@ -507,24 +508,8 @@
 	}
 </script>
 
-<main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-[#faf8f6] px-4 pt-4 pb-28">
+<main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-white px-4 pt-4 pb-28">
 	<div class="mx-auto max-w-4xl">
-		<div class="mb-4 flex items-start justify-between gap-4">
-			<div>
-				<div class="text-xs font-semibold tracking-wide text-stone-500 uppercase">Pembayaran</div>
-				<div class="text-2xl font-bold text-stone-950">
-					{transactionCode ? `#${transactionCode}` : 'Draft'}
-				</div>
-			</div>
-			<button
-				class="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 shadow-sm transition-all duration-200 active:scale-[0.98]"
-				type="button"
-				aria-label="Kembali ke kasir"
-				onclick={handleCancel}
-			>
-				<ArrowLeft class="h-5 w-5" />
-			</button>
-		</div>
 
 		{#if cart.length === 0}
 			<div
@@ -542,150 +527,94 @@
 				>
 			</div>
 		{:else}
-			<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-				<section class="space-y-4">
-					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-						<label
-							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
-							for="nama"
-						>
-							<UserRound class="h-4 w-4 text-stone-400" />
-							Nama Pelanggan
-						</label>
-						<input
-							id="nama"
-							type="text"
-							class="mb-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-500 focus:bg-white focus:ring-4 focus:ring-pink-500/10"
-							placeholder="Nama pelanggan"
-							bind:value={customerName}
-							maxlength="50"
-						/>
-					</div>
-
-					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-						<div class="mb-3 flex items-center justify-between">
-							<div class="flex items-center gap-2 font-semibold text-stone-900">
-								<ReceiptText class="h-5 w-5 text-pink-500" />
-								Pesanan
-							</div>
-							<div class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
-								{totalQty} item
+			<div class="mx-auto flex max-w-lg flex-col gap-4 pb-8">
+				{#if isOffline}
+					<div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+						<WifiOff class="mt-0.5 h-5 w-5 shrink-0" />
+						<div>
+							<div class="text-sm font-bold">Mode offline</div>
+							<div class="mt-0.5 text-xs leading-5 text-amber-800">
+								Pembayaran tunai akan disimpan lokal sampai koneksi kembali.
 							</div>
 						</div>
-						<ul class="divide-y divide-stone-100">
-							{#each cart as item}
-								<li class="flex flex-col gap-1 py-3">
-									<div class="flex items-start justify-between gap-3">
-										<div class="min-w-0">
-											<div class="truncate font-semibold text-stone-950">{item.product.nama}</div>
-											<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
-										</div>
-										<span class="shrink-0 font-bold text-pink-500"
-											>Rp {((item.product.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</span
-										>
+					</div>
+				{/if}
+
+				<!-- 1. Nama Pelanggan -->
+				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+					<label class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700" for="nama">
+						<UserRound class="h-4 w-4 text-pink-500" />
+						Nama Pelanggan
+					</label>
+					<input id="nama" type="text" class="w-full rounded-xl border-[1.5px] border-pink-100 bg-pink-50/30 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-400 focus:bg-white focus:ring-4 focus:ring-pink-500/10" placeholder="Masukkan nama pelanggan..." bind:value={customerName} maxlength="50" />
+				</div>
+
+				<!-- 2. Pesanan & 3. Total Tagihan -->
+				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+					<div class="mb-3 flex items-center justify-between">
+						<div class="flex items-center gap-2 font-semibold text-stone-900">
+							<ReceiptText class="h-5 w-5 text-pink-500" />
+							Pesanan
+						</div>
+						<div class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
+							{totalQty} item
+						</div>
+					</div>
+					<ul class="divide-y divide-stone-100">
+						{#each cart as item}
+							<li class="flex flex-col gap-1 py-3">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0">
+										<div class="truncate font-semibold text-stone-950">{item.product.nama}</div>
+										<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
 									</div>
-									{#if item.addOns && item.addOns.length > 0}
-										<div class="mt-1 flex flex-col gap-0.5 rounded-lg bg-stone-50 px-3 py-2">
-											{#each item.addOns as ekstra}
-												<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
-													<span class="truncate">+ {ekstra.nama}</span>
-													<span class="shrink-0"
-														>Rp {((ekstra.harga ?? 0) * item.jumlah).toLocaleString('id-ID')}</span
-													>
-												</div>
-											{/each}
-										</div>
-									{/if}
-									{#if (item.gula && item.gula !== 'normal') || (item.es && item.es !== 'normal') || (item.catatan && item.catatan.trim())}
-										<div class="text-xs font-medium text-stone-500">
-											{[
-												item.gula && item.gula !== 'normal'
-													? item.gula === 'no'
-														? 'Tanpa Gula'
-														: item.gula === 'less'
-															? 'Sedikit Gula'
-															: item.gula
-													: null,
-												item.es && item.es !== 'normal'
-													? item.es === 'no'
-														? 'Tanpa Es'
-														: item.es === 'less'
-															? 'Sedikit Es'
-															: item.es
-													: null,
-												item.catatan && item.catatan.trim() ? item.catatan : null
-											]
-												.filter(Boolean)
-												.join(', ')}
-										</div>
-									{/if}
-								</li>
-							{/each}
-						</ul>
-					</div>
-				</section>
-
-				<aside class="space-y-4 lg:sticky lg:top-4 lg:self-start">
-					{#if isOffline}
-						<div
-							class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
-						>
-							<WifiOff class="mt-0.5 h-5 w-5 shrink-0" />
-							<div>
-								<div class="text-sm font-bold">Mode offline</div>
-								<div class="mt-0.5 text-xs leading-5 text-amber-800">
-									Pembayaran tunai akan disimpan lokal sampai koneksi kembali.
+									<span class="shrink-0 font-bold text-pink-500">Rp {formatRupiah((item.product.harga ?? 0) * item.jumlah)}</span>
 								</div>
-							</div>
-						</div>
-					{/if}
-					<div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-						<div class="mb-3 text-sm font-semibold text-stone-700">Metode Pembayaran</div>
-						<div class="grid grid-cols-2 gap-3">
-							{#each paymentOptions as opt}
-								<button
-									type="button"
-									class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98]
-									{paymentMethod === opt.id
-										? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm'
-										: 'border-stone-200 bg-white text-stone-700'}
-									{isOffline && opt.id !== 'tunai' ? 'cursor-not-allowed opacity-45' : ''}"
-									onclick={() => handleSetPaymentMethod(opt.id)}
-									disabled={isOffline && opt.id !== 'tunai'}
-								>
-									{#if opt.id === 'tunai'}
-										<Banknote class="h-5 w-5" />
-									{:else}
-										<CreditCard class="h-5 w-5" />
-									{/if}
-									{opt.label}{isOffline && opt.id !== 'tunai' ? ' (online)' : ''}
-								</button>
-							{/each}
-						</div>
+								{#if item.addOns && item.addOns.length > 0}
+									<div class="mt-1 flex flex-col gap-0.5 rounded-lg bg-stone-50 px-3 py-2">
+										{#each item.addOns as ekstra}
+											<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
+												<span class="truncate">+ {ekstra.nama}</span>
+												<span class="shrink-0">Rp {formatRupiah((ekstra.harga ?? 0) * item.jumlah)}</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+								{#if (item.gula && item.gula !== 'normal') || (item.es && item.es !== 'normal') || (item.catatan && item.catatan.trim())}
+									<div class="text-xs font-medium text-stone-500">
+										{[item.gula && item.gula !== 'normal' ? item.gula === 'no' ? 'Tanpa Gula' : item.gula === 'less' ? 'Sedikit Gula' : item.gula : null, item.es && item.es !== 'normal' ? item.es === 'no' ? 'Tanpa Es' : item.es === 'less' ? 'Sedikit Es' : item.es : null, item.catatan && item.catatan.trim() ? item.catatan : null].filter(Boolean).join(', ')}
+									</div>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					<!-- Total Tagihan -->
+					<div class="mt-2 flex items-end justify-between border-t border-dashed border-stone-200 pt-4 pb-1">
+						<div class="text-sm font-semibold text-stone-500">Total Tagihan</div>
+						<div class="text-2xl font-bold tracking-tight text-stone-900">Rp {formatRupiah(totalHarga)}</div>
 					</div>
+				</div>
 
-					<div class="rounded-2xl bg-[#282423] p-5 text-white shadow-xl shadow-stone-900/10">
-						<div class="mb-1 text-sm font-semibold text-stone-300">Total Bayar</div>
-						<div class="text-3xl font-bold">Rp {totalHarga.toLocaleString('id-ID')}</div>
-						<div class="mt-4 grid grid-cols-2 gap-2 text-xs text-stone-300">
-							<div class="rounded-xl bg-white/10 px-3 py-2">
-								<div>Item</div>
-								<div class="text-base font-bold text-white">{totalQty}</div>
-							</div>
-							<div class="rounded-xl bg-white/10 px-3 py-2">
-								<div>Metode</div>
-								<div class="truncate text-base font-bold text-white">
-									{paymentOptions.find((item) => item.id === paymentMethod)?.label || '-'}
-								</div>
-							</div>
-						</div>
+				<!-- 4. Metode Pembayaran -->
+				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+					<div class="mb-3 text-sm font-semibold text-stone-700">Metode Pembayaran</div>
+					<div class="grid grid-cols-2 gap-3">
+						{#each paymentOptions as opt}
+							<button type="button" class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98] {paymentMethod === opt.id ? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm' : 'border-pink-100 bg-white text-stone-700'} {isOffline && opt.id !== 'tunai' ? 'cursor-not-allowed opacity-45' : ''}" onclick={() => handleSetPaymentMethod(opt.id)} disabled={isOffline && opt.id !== 'tunai'}>
+								{#if opt.id === 'tunai'}
+									<Banknote class="h-5 w-5" />
+								{:else}
+									<CreditCard class="h-5 w-5" />
+								{/if}
+								{opt.label}{isOffline && opt.id !== 'tunai' ? ' (online)' : ''}
+							</button>
+						{/each}
 					</div>
+				</div>
 
-					<button
-						class="w-full rounded-xl bg-pink-500 py-4 text-lg font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:shadow-none"
-						onclick={handleBayar}
-						disabled={!canPay}
-					>
+				<!-- 5. Konfirmasi & Batalkan Buttons -->
+				<div class="mt-2 flex flex-col gap-3">
+					<button class="w-full rounded-xl bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-[1.5px] disabled:border-pink-100 disabled:bg-pink-50 disabled:text-pink-300 disabled:shadow-none" onclick={handleBayar} disabled={!canPay}>
 						Konfirmasi & Bayar
 					</button>
 					{#if !canPay}
@@ -699,14 +628,10 @@
 							{/if}
 						</div>
 					{/if}
-					<button
-						class="mx-auto block text-sm font-semibold text-stone-500 transition-colors duration-200 hover:text-pink-500"
-						type="button"
-						onclick={handleCancel}
-					>
+					<button class="mx-auto block w-full rounded-xl border-[1.5px] border-stone-200 bg-white py-3 text-sm font-bold text-stone-500 shadow-sm transition-all duration-200 hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600 active:scale-[0.98]" type="button" onclick={handleCancel}>
 						Batalkan pembayaran
 					</button>
-				</aside>
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -761,7 +686,7 @@
 						class="rounded-lg bg-pink-100 px-4 py-2 text-base font-bold text-pink-500 md:px-8 md:py-3 md:text-lg"
 						onclick={() => handleAddCashTemplate(t)}
 					>
-						Rp {t.toLocaleString('id-ID')}
+						Rp {formatRupiah(t)}
 					</button>
 				{/each}
 			</div>
@@ -785,7 +710,7 @@
 				<div class="mb-2 text-center text-gray-700 md:mb-4 md:text-lg">
 					Kembalian:
 					<span class="font-bold {kembalian < 0 ? 'text-red-500' : 'text-green-500'}"
-						>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span
+						>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
 					>
 				</div>
 				<button
@@ -868,23 +793,23 @@
 				{/if}
 				Kembalian:
 				<span class="font-bold text-pink-500"
-					>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span
+					>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
 				>
 			</div>
 			<div class="mb-2 flex w-full flex-col gap-1 rounded-lg bg-pink-50 p-3">
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Total</span><span class="font-bold text-pink-500"
-						>Rp {totalHarga.toLocaleString('id-ID')}</span
+						>Rp {formatRupiah(totalHarga)}</span
 					>
 				</div>
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Dibayar</span><span class="font-bold text-green-600"
-						>Rp {cashReceived ? parseInt(cashReceived).toLocaleString('id-ID') : '0'}</span
+						>Rp {cashReceived ? formatRupiah(parseInt(cashReceived)) : '0'}</span
 					>
 				</div>
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Kembalian</span><span class="font-bold text-green-600"
-						>Rp {kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</span
+						>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
 					>
 				</div>
 			</div>

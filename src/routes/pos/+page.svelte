@@ -25,6 +25,7 @@
 	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
+	import { formatRupiah } from '$lib/utils/currency';
 	import { Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
 	$effect(() => {
@@ -515,7 +516,7 @@
 </script>
 
 <div
-	class="flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-[#faf8f6]"
+	class="flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-white"
 	ontouchstart={swipeNav.handleTouchStart}
 	ontouchmove={swipeNav.handleTouchMove}
 	ontouchend={swipeNav.handleTouchEnd}
@@ -528,22 +529,13 @@
 		class="page-content w-full max-w-full flex-1 overflow-x-hidden"
 		style="scrollbar-width:none;-ms-overflow-style:none;"
 	>
-		<div class="bg-[#faf8f6] px-4 pt-4 pb-3 md:px-8 md:pt-8 lg:px-10">
-			<div class="mb-3 flex items-end justify-between gap-4">
-				<div>
-					<div class="text-xs font-semibold tracking-wide text-stone-500 uppercase">Kasir</div>
-					<div class="text-2xl font-bold text-stone-950">Pilih Menu</div>
-				</div>
-				<div class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-600 shadow-sm">
-					{totalItems} item
-				</div>
-			</div>
+		<div class="bg-white px-4 pt-4 pb-3 md:px-8 md:pt-8 lg:px-10">
 			<div class="relative w-full">
 				<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-stone-400">
 					<Search class="h-5 w-5" />
 				</span>
 				<input
-					class="w-full flex-1 rounded-xl border border-stone-200 bg-white py-3 pr-3 pl-10 text-base text-stone-900 shadow-sm transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
+					class="w-full flex-1 rounded-xl border-[1.5px] border-pink-200 bg-white py-3 pr-3 pl-10 text-base text-gray-800 shadow-sm transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
 					type="text"
 					placeholder="Cari produk..."
 					bind:value={search}
@@ -553,14 +545,14 @@
 			</div>
 		</div>
 		<div
-			class="flex gap-2 overflow-x-auto bg-[#faf8f6] px-4 py-2 md:px-8 lg:px-10"
+			class="flex gap-2 overflow-x-auto bg-white px-4 py-2 md:px-8 lg:px-10"
 			style="scrollbar-width:none;-ms-overflow-style:none;"
 		>
 			<button
 				class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 				'all'
 					? 'border-pink-500 bg-pink-500 text-white shadow-sm'
-					: 'border-stone-200 bg-white text-stone-700'}"
+					: 'border-pink-200 bg-white text-gray-700'}"
 				type="button"
 				onclick={handleSelectCategoryAll}>Semua</button
 			>
@@ -602,7 +594,7 @@
 						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 						String(c.id)
 							? 'border-pink-500 bg-pink-500 text-white shadow-sm'
-							: 'border-stone-200 bg-white text-stone-700'}"
+							: 'border-pink-200 bg-white text-gray-700'}"
 						type="button"
 						onclick={() => handleSelectCategory(c.id)}>{c.nama}</button
 					>
@@ -677,7 +669,7 @@
 										.join(', ')}
 								</div>
 								<div class="mt-1 text-base font-bold text-pink-500">
-									Rp {Number(item.product.harga ?? 0).toLocaleString('id-ID')}
+									Rp {formatRupiah(item.product.harga ?? 0)}
 								</div>
 							</div>
 							<button
@@ -778,7 +770,7 @@
 									<span
 										class="mt-0 text-sm font-semibold {selectedAddOns.includes(a.id)
 											? 'text-white'
-											: 'text-pink-500'}">+Rp {Number(a.harga ?? 0).toLocaleString('id-ID')}</span
+											: 'text-pink-500'}">+Rp {formatRupiah(a.harga ?? 0)}</span
 									>
 								</button>
 							{/each}

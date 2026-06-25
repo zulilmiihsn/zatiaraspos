@@ -12,13 +12,21 @@
 
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import Plus from 'lucide-svelte/icons/plus';
-
 	import Trash from 'lucide-svelte/icons/trash';
+	import Utensils from 'lucide-svelte/icons/utensils';
+	import FolderOpen from 'lucide-svelte/icons/folder-open';
+	import PlusCircle from 'lucide-svelte/icons/plus-circle';
+	import Wheat from 'lucide-svelte/icons/wheat';
+	import CupSoda from 'lucide-svelte/icons/cup-soda';
+	import Pizza from 'lucide-svelte/icons/pizza';
+	import Calculator from 'lucide-svelte/icons/calculator';
+	import Sparkles from 'lucide-svelte/icons/sparkles';
 
 	import { dataService } from '$lib/services/dataService';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { formatRupiah, parseRupiah, handleRupiahInput } from '$lib/utils/currency';
 
 	import type {
 		Product,
@@ -221,33 +229,19 @@
 			hppSettings = (await dataService.getHppSettings()) as unknown as HppSettings | null;
 			const settings = hppSettings || ({} as Partial<HppSettings>);
 			hppForm = {
-				sewa_bulanan: String(settings.sewa_bulanan || ''),
-				listrik_bulanan: String(settings.listrik_bulanan || ''),
-				air_bulanan: String(settings.air_bulanan || ''),
-				gaji_bulanan: String(settings.gaji_bulanan || ''),
-				lainnya_bulanan: String(settings.lainnya_bulanan || ''),
-				target_item_bulanan: String(settings.target_item_bulanan || 1000)
+				sewa_bulanan: formatRupiah(settings.sewa_bulanan),
+				listrik_bulanan: formatRupiah(settings.listrik_bulanan),
+				air_bulanan: formatRupiah(settings.air_bulanan),
+				gaji_bulanan: formatRupiah(settings.gaji_bulanan),
+				lainnya_bulanan: formatRupiah(settings.lainnya_bulanan),
+				target_item_bulanan: formatRupiah(settings.target_item_bulanan) || '1.000'
 			};
 		} catch {
 			hppSettings = null;
 		}
 	}
 
-	onMount(async () => {
-		let first = true;
-		await fetchMenus();
-		await fetchKategori();
-		await fetchEkstra();
-		await fetchBahan();
-		await fetchRecipes();
-		await fetchHppSettings();
-
-		await setCache('pos-data', {
-			produkData: JSON.parse(JSON.stringify(menus)),
-			kategoriData: JSON.parse(JSON.stringify(kategoriList)),
-			tambahanData: JSON.parse(JSON.stringify(ekstraList))
-		});
-
+	onMount(() => {
 		if (typeof window !== 'undefined') {
 			document.body.classList.add('hide-nav');
 		}
@@ -257,20 +251,25 @@
 		}
 	});
 
-	let isInitialLoad = true;
 	$effect(() => {
 		let _branch = selectedBranch.value;
 		if (typeof window !== 'undefined') {
-			if (isInitialLoad) {
-				isInitialLoad = false;
-				return;
-			}
-			fetchMenus();
-			fetchKategori();
-			fetchEkstra();
-			fetchBahan();
-			fetchRecipes();
-			fetchHppSettings();
+			(async () => {
+				await Promise.all([
+					fetchMenus(),
+					fetchKategori(),
+					fetchEkstra(),
+					fetchBahan(),
+					fetchRecipes(),
+					fetchHppSettings()
+				]);
+
+				await setCache('pos-data', {
+					produkData: JSON.parse(JSON.stringify(menus)),
+					kategoriData: JSON.parse(JSON.stringify(kategoriList)),
+					tambahanData: JSON.parse(JSON.stringify(ekstraList))
+				});
+			})();
 		}
 	});
 
@@ -289,12 +288,10 @@
 		recipeDraft = { bahan_id: '', jumlah_per_item: '' };
 		if (menu) {
 			editMenuId = menu.id;
-			// Format harga untuk display jika ada
-			const formattedPrice = menu.harga ? menu.harga.toLocaleString('id-ID') : '';
 			menuForm.nama = menu.nama;
 			menuForm.kategori_id = menu.kategori_id as number;
 			menuForm.tipe = menu.tipe;
-			menuForm.harga = formattedPrice;
+			menuForm.harga = formatRupiah(menu.harga);
 			menuForm.stok =
 				menu.stok !== null && menu.stok !== undefined ? String(Number(menu.stok || 0)) : '';
 			menuForm.lacak_stok = Boolean(menu.lacak_stok);
@@ -371,17 +368,11 @@
 				return;
 			}
 		}
-		// Konversi harga dari format Rupiah ke angka
-		const priceValue =
-			typeof menuForm.harga === 'string'
-				? parseInt(menuForm.harga.replace(/\./g, ''))
-				: parseInt(menuForm.harga);
-
 		const payload = {
 			nama: menuForm.nama,
 			kategori_id: menuForm.kategori_id,
 			tipe: menuForm.tipe,
-			harga: priceValue,
+			harga: parseRupiah(menuForm.harga),
 			stok: menuForm.lacak_stok ? Math.max(0, parseInt(menuForm.stok || '0', 10) || 0) : 0,
 			lacak_stok: menuForm.lacak_stok && !menuForm.lacak_bahan,
 			lacak_bahan: menuForm.lacak_bahan,
@@ -406,15 +397,8 @@
 			return;
 		}
 		showMenuForm = false;
-
-		// Clear all caches first
-		await dataService.clearAllCaches();
-		await dataService.invalidateCacheOnChange('produk');
-
-		// Force refresh data dan clear memoization
 		await fetchMenus();
 		await fetchRecipes();
-
 		await afterUpdateCachePOS();
 
 	}
@@ -503,7 +487,7 @@
 	}
 
 	function formatCurrency(value: number) {
-		return `Rp ${Math.round(Number(value || 0)).toLocaleString('id-ID')}`;
+		return `Rp ${formatRupiah(Math.round(Number(value || 0)))}` ;
 	}
 
 	function confirmDeleteMenu(id: string | number) {
@@ -553,14 +537,7 @@
 			}
 			showDeleteModal = false;
 			menuIdToDelete = null;
-
-			// Clear all caches first
-			await dataService.clearAllCaches();
-			await dataService.invalidateCacheOnChange('produk');
-
-			// Force refresh data dan clear memoization
 			await fetchMenus();
-
 			await afterUpdateCachePOS();
 
 		}
@@ -618,18 +595,9 @@
 		}
 		showKategoriDetailModal = false;
 		kategoriDetail = null;
-
-		// Clear all caches first
-		await dataService.clearAllCaches();
-		await dataService.invalidateCacheOnChange('produk');
-		await dataService.invalidateCacheOnChange('kategori');
-
-		// Force refresh data dan clear memoization
 		await fetchKategori();
 		await fetchMenus();
-
-		// Force refresh data setelah perubahan kategori
-		await forceRefreshAfterCategoryChange();
+		await afterUpdateCachePOS();
 	}
 
 	function confirmDeleteKategori(id: string | number) {
@@ -657,21 +625,9 @@
 
 				showDeleteKategoriModal = false;
 				kategoriIdToDelete = null;
-
-				// Clear all caches first
-				await dataService.clearAllCaches();
-				await dataService.invalidateCacheOnChange('produk');
-				await dataService.invalidateCacheOnChange('kategori');
-
-				// Force refresh data dan clear memoization
 				await fetchKategori();
 				await fetchMenus();
-
 				await afterUpdateCachePOS();
-
-
-				// Force refresh data setelah perubahan kategori
-				await forceRefreshAfterCategoryChange();
 			} catch (error) {
 				notifModalMsg = 'Gagal menghapus kategori: ' + ErrorHandler.extractErrorMessage(error);
 				notifModalType = 'error';
@@ -695,7 +651,7 @@
 		if (ekstra) {
 			editEkstraId = ekstra.id;
 			ekstraForm.nama = ekstra.nama;
-			ekstraForm.harga = ekstra.harga.toLocaleString('id-ID');
+			ekstraForm.harga = formatRupiah(ekstra.harga);
 		} else {
 			editEkstraId = null;
 			ekstraForm.nama = '';
@@ -710,7 +666,7 @@
 			showNotifModal = true;
 			return;
 		}
-		const harga = parseInt(ekstraForm.harga.toString().replace(/[^\d]/g, ''));
+		const harga = parseRupiah(ekstraForm.harga);
 		if (isNaN(harga) || harga <= 0) {
 			notifModalMsg = 'Harga wajib diisi dan harus lebih dari 0';
 			notifModalType = 'warning';
@@ -781,10 +737,10 @@
 			bahanForm = {
 				nama: bahan.nama,
 				satuan: bahan.satuan || 'gram',
-				stok_saat_ini: String(Number(bahan.stok_saat_ini || 0)),
-				ambang_stok: String(Number(bahan.ambang_stok || 0)),
-				jumlah_beli_terakhir: String(Number(bahan.jumlah_beli_terakhir || 0) || ''),
-				biaya_beli_terakhir: String(Number(bahan.biaya_beli_terakhir || 0) || '')
+				stok_saat_ini: formatRupiah(bahan.stok_saat_ini) || '0',
+				ambang_stok: formatRupiah(bahan.ambang_stok) || '0',
+				jumlah_beli_terakhir: formatRupiah(bahan.jumlah_beli_terakhir),
+				biaya_beli_terakhir: formatRupiah(bahan.biaya_beli_terakhir)
 			};
 		} else {
 			editBahanId = null;
@@ -822,15 +778,15 @@
 		const payload = {
 			nama: bahanForm.nama.trim(),
 			satuan: bahanForm.satuan || 'gram',
-			stok_saat_ini: Math.max(0, Number(bahanForm.stok_saat_ini || 0)),
-			ambang_stok: Math.max(0, Number(bahanForm.ambang_stok || 0)),
-			jumlah_beli_terakhir: Math.max(0, Number(bahanForm.jumlah_beli_terakhir || 0)),
-			biaya_beli_terakhir: Math.max(0, Number(bahanForm.biaya_beli_terakhir || 0)),
+			stok_saat_ini: Math.max(0, parseRupiah(bahanForm.stok_saat_ini)),
+			ambang_stok: Math.max(0, parseRupiah(bahanForm.ambang_stok)),
+			jumlah_beli_terakhir: Math.max(0, parseRupiah(bahanForm.jumlah_beli_terakhir)),
+			biaya_beli_terakhir: Math.max(0, parseRupiah(bahanForm.biaya_beli_terakhir)),
 			biaya_per_satuan:
-				Number(bahanForm.jumlah_beli_terakhir || 0) > 0
+				parseRupiah(bahanForm.jumlah_beli_terakhir) > 0
 					? Math.round(
-							(Number(bahanForm.biaya_beli_terakhir || 0) /
-								Number(bahanForm.jumlah_beli_terakhir || 0)) *
+							(parseRupiah(bahanForm.biaya_beli_terakhir) /
+								parseRupiah(bahanForm.jumlah_beli_terakhir)) *
 								100
 						) / 100
 					: 0
@@ -853,12 +809,12 @@
 
 	async function saveHppSettings() {
 		const payload = {
-			sewa_bulanan: Number(hppForm.sewa_bulanan || 0),
-			listrik_bulanan: Number(hppForm.listrik_bulanan || 0),
-			air_bulanan: Number(hppForm.air_bulanan || 0),
-			gaji_bulanan: Number(hppForm.gaji_bulanan || 0),
-			lainnya_bulanan: Number(hppForm.lainnya_bulanan || 0),
-			target_item_bulanan: Math.max(1, Number(hppForm.target_item_bulanan || 1000))
+			sewa_bulanan: parseRupiah(hppForm.sewa_bulanan),
+			listrik_bulanan: parseRupiah(hppForm.listrik_bulanan),
+			air_bulanan: parseRupiah(hppForm.air_bulanan),
+			gaji_bulanan: parseRupiah(hppForm.gaji_bulanan),
+			lainnya_bulanan: parseRupiah(hppForm.lainnya_bulanan),
+			target_item_bulanan: Math.max(1, parseRupiah(hppForm.target_item_bulanan))
 		};
 		try {
 			const result = await dataService.insertRows('hpp_settings', payload);
@@ -1054,31 +1010,13 @@
 		}
 	}
 
-	function formatRupiahInput(e: Event) {
-		const target = e.target as HTMLInputElement;
-		let value = target.value.replace(/[^\d]/g, '');
-		if (value) {
-			// Simpan nilai asli (angka) untuk database
-			const numericValue = parseInt(value);
-			// Tampilkan format Rupiah untuk user
-			const formattedValue = numericValue.toLocaleString('id-ID');
-			menuForm.harga = formattedValue;
-		} else {
-			menuForm.harga = '';
-		}
-	}
+
 
 	function handleImgError(menuId: string | number) {
 		imageError[menuId] = true;
 	}
 
-	function handleKategoriClick(e: Event, kat: Category) {
-		// Handle kategori click if needed
-	}
 
-	function handleEkstraClick(e: Event, ekstra: AddOn) {
-		// Handle ekstra click if needed
-	}
 
 	function toggleMenuInKategoriRealtime(menuId: string | number) {
 		if (selectedMenuIds.includes(menuId)) {
@@ -1191,25 +1129,6 @@
 	}
 
 
-
-	// Function untuk force refresh data setelah perubahan kategori
-	async function forceRefreshAfterCategoryChange() {
-		// Clear all caches first
-		await dataService.clearAllCaches();
-		await dataService.invalidateCacheOnChange('produk');
-		await dataService.invalidateCacheOnChange('kategori');
-
-		// Force refresh data
-		await fetchKategori();
-		await fetchMenus();
-
-		// Clear memoization cache
-
-
-		// Update POS cache
-		await afterUpdateCachePOS();
-	}
-
 	// Tambahkan auto-dismiss 2 detik untuk notif
 	$effect(() => {
 		if (showNotifModal) {
@@ -1267,35 +1186,35 @@
 								: 'left-[calc(80%+0.125rem)] w-[calc(20%-0.25rem)] bg-gray-700'}"
 			></div>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
 				'menu'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'menu')}>Menu</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
 				'kategori'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'kategori')}>Kategori</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
 				'ekstra'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'ekstra')}>Tambahan</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
 				'bahan'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'bahan')}>Bahan</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
 				'hpp'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
@@ -1342,7 +1261,7 @@
 	<!-- Konten tab dengan transisi geser -->
 	<div class="relative min-h-screen">
 		{#if activeTab === 'menu'}
-			<div transition:slide|local class="flex min-h-0 flex-1 flex-col">
+			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
 				<!-- Fixed Header Section -->
 				<div class="flex-shrink-0 bg-white">
 					<!-- Search Bar -->
@@ -1465,7 +1384,7 @@
 							<div
 								class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center py-12 text-center"
 							>
-								<div class="mb-2 text-6xl">🍽️</div>
+								<svelte:component this={Utensils} class="mb-4 h-14 w-14 text-pink-300" />
 								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Menu</div>
 								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
 							</div>
@@ -1507,9 +1426,9 @@
 													/>
 												{:else}
 													<div
-														class="flex h-full w-full items-center justify-center rounded-lg border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-4xl"
+														class="flex h-full w-full items-center justify-center rounded-lg border border-gray-100 bg-pink-50/50"
 													>
-														🍹
+														<svelte:component this={Utensils} class="h-8 w-8 text-pink-300" />
 													</div>
 												{/if}
 											</div>
@@ -1523,7 +1442,7 @@
 													{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
 												</div>
 												<div class="text-xs font-bold text-pink-500 md:text-base">
-													Rp {menu.harga.toLocaleString('id-ID')}
+													Rp {formatRupiah(menu.harga)}
 												</div>
 											</div>
 										</div>
@@ -1549,7 +1468,7 @@
 												{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
 											</div>
 											<div class="text-base font-bold text-pink-500">
-												Rp {menu.harga.toLocaleString('id-ID')}
+												Rp {formatRupiah(menu.harga)}
 											</div>
 										</div>
 										<div class="ml-2">
@@ -1572,7 +1491,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'kategori'}
-			<div transition:slide|local class="flex min-h-0 flex-1 flex-col">
+			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
 				<!-- Fixed Header Section -->
 				<div class="flex-shrink-0 bg-white px-4">
 					<!-- Search Bar -->
@@ -1613,7 +1532,7 @@
 							<div
 								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
 							>
-								<div class="mb-2 text-5xl">📂</div>
+								<svelte:component this={FolderOpen} class="mb-4 h-12 w-12 text-blue-300" />
 								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Kategori</div>
 								<div class="text-sm text-gray-400">Silakan tambahkan kategori terlebih dahulu.</div>
 							</div>
@@ -1658,7 +1577,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'ekstra'}
-			<div transition:slide|local class="flex min-h-0 flex-1 flex-col">
+			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
 				<!-- Fixed Header Section -->
 				<div class="flex-shrink-0 bg-white px-4">
 					<!-- Search Bar -->
@@ -1699,7 +1618,7 @@
 							<div
 								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
 							>
-								<div class="mb-2 text-5xl">➕</div>
+								<svelte:component this={PlusCircle} class="mb-4 h-12 w-12 text-green-300" />
 								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Tambahan</div>
 								<div class="text-sm text-gray-400">Silakan tambahkan tambahan terlebih dahulu.</div>
 							</div>
@@ -1721,7 +1640,7 @@
 												>{ekstra.nama}</span
 											>
 											<span class="truncate text-xs text-green-700"
-												>Rp {ekstra.harga.toLocaleString('id-ID')}</span
+												>Rp {formatRupiah(ekstra.harga)}</span
 											>
 										</div>
 										<div class="ml-2">
@@ -1744,7 +1663,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'bahan'}
-			<div transition:slide|local class="flex min-h-0 flex-1 flex-col">
+			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
 				<div class="flex-shrink-0 bg-white px-4">
 					<div class="relative mb-3 flex items-center">
 						<svg
@@ -1781,6 +1700,7 @@
 							<div
 								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
 							>
+								<svelte:component this={Wheat} class="mb-4 h-12 w-12 text-amber-300" />
 								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Bahan</div>
 								<div class="text-sm text-gray-400">
 									Tambahkan buah, gula, susu, cup, dan bahan lain.
@@ -1804,10 +1724,10 @@
 													>{bahan.nama}</span
 												>
 												<span class="block text-xs text-amber-800">
-													Stok {Number(bahan.stok_saat_ini || 0).toLocaleString('id-ID')}
+													Stok {formatRupiah(bahan.stok_saat_ini || 0)}
 													{bahan.satuan}
 													{#if Number(bahan.ambang_stok || 0) > 0}
-														/ minimum {Number(bahan.ambang_stok || 0).toLocaleString('id-ID')}
+														/ minimum {formatRupiah(bahan.ambang_stok || 0)}
 														{bahan.satuan}
 													{/if}
 												</span>
@@ -1847,161 +1767,178 @@
 				</div>
 			</div>
 		{:else if activeTab === 'hpp'}
-			<div transition:slide|local class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8">
-				<div class="mb-4 grid gap-3 md:grid-cols-3">
-					<div class="rounded-xl border border-gray-200 bg-white p-4">
-						<div class="text-xs font-semibold text-gray-500">Biaya tetap bulanan</div>
-						<div class="mt-1 text-xl font-bold text-gray-900">
+			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 md:px-8">
+				<!-- Top Summary Cards -->
+				<div class="mb-6 grid gap-4 md:grid-cols-3">
+					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+						<div class="mb-2 flex items-center gap-3">
+							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-500">
+								<svelte:component this={Calculator} class="h-5 w-5" />
+							</div>
+							<div class="text-sm font-semibold text-gray-500">Total Biaya Tetap</div>
+						</div>
+						<div class="text-2xl font-bold tracking-tight text-gray-900">
 							{formatCurrency(getOverheadMonthly())}
 						</div>
 					</div>
-					<div class="rounded-xl border border-gray-200 bg-white p-4">
-						<div class="text-xs font-semibold text-gray-500">Alokasi per item</div>
-						<div class="mt-1 text-xl font-bold text-gray-900">
+					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+						<div class="mb-2 flex items-center gap-3">
+							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
+								<svelte:component this={CupSoda} class="h-5 w-5" />
+							</div>
+							<div class="text-sm font-semibold text-gray-500">Beban per Item</div>
+						</div>
+						<div class="text-2xl font-bold tracking-tight text-gray-900">
 							{formatCurrency(getOverheadPerItem())}
 						</div>
 					</div>
-					<div class="rounded-xl border border-gray-200 bg-white p-4">
-						<div class="text-xs font-semibold text-gray-500">Target item per bulan</div>
-						<div class="mt-1 text-xl font-bold text-gray-900">
-							{Number(hppSettings?.target_item_bulanan || 1000).toLocaleString('id-ID')}
+					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+						<div class="mb-2 flex items-center gap-3">
+							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+								<svelte:component this={Wheat} class="h-5 w-5" />
+							</div>
+							<div class="text-sm font-semibold text-gray-500">Target Sales (Bulan)</div>
+						</div>
+						<div class="text-2xl font-bold tracking-tight text-gray-900">
+							{formatRupiah(hppSettings?.target_item_bulanan || 1000)} <span class="text-sm font-medium text-gray-400">item</span>
 						</div>
 					</div>
 				</div>
 
-				<form
-					class="mb-4 rounded-xl border border-gray-200 bg-white p-4"
-					onsubmit={saveHppSettings}
-				>
-					<h2 class="mb-3 text-lg font-bold text-gray-800">Biaya Tetap</h2>
-					<div class="grid gap-3 md:grid-cols-3">
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="0"
-							placeholder="Kios per bulan"
-							bind:value={hppForm.sewa_bulanan}
-						/>
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="0"
-							placeholder="Listrik per bulan"
-							bind:value={hppForm.listrik_bulanan}
-						/>
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="0"
-							placeholder="Air bersih per bulan"
-							bind:value={hppForm.air_bulanan}
-						/>
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="0"
-							placeholder="Gaji per bulan"
-							bind:value={hppForm.gaji_bulanan}
-						/>
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="0"
-							placeholder="Biaya lain"
-							bind:value={hppForm.lainnya_bulanan}
-						/>
-						<input
-							class="rounded-lg border border-gray-300 px-3 py-2"
-							type="number"
-							min="1"
-							placeholder="Target item/bulan"
-							bind:value={hppForm.target_item_bulanan}
-						/>
-					</div>
-					<button
-						type="submit"
-						class="mt-3 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
-					>
-						Simpan HPP
-					</button>
-				</form>
-
-				<div class="mb-4 rounded-xl border border-gray-200 bg-white p-4">
-					<h2 class="mb-3 text-lg font-bold text-gray-800">AI Baca Cerita Belanja</h2>
-					<textarea
-						class="min-h-24 w-full rounded-lg border border-gray-300 px-3 py-2"
-						placeholder="Contoh: aku tadi belanja buat minggu ini, alpukat 10 kg kena 35000, gula 1 kg 18000, cup 50 pcs 25000"
-						bind:value={hppPurchaseText}
-					></textarea>
-					<button
-						type="button"
-						class="mt-3 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-						disabled={isParsingHpp}
-						onclick={parseHppPurchaseText}
-					>
-						{isParsingHpp ? 'Membaca...' : 'Baca dengan AI'}
-					</button>
-					{#if hppParsedItems.length > 0}
-						<div class="mt-3 flex flex-col gap-2">
-							{#each hppParsedItems as item}
-								<div
-									class="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
-								>
-									<div class="min-w-0">
-										<div class="truncate text-sm font-semibold text-gray-800">{item.nama}</div>
-										<div class="text-xs text-gray-600">
-											{Number(item.purchase_qty).toLocaleString('id-ID')}
-											{item.satuan} /
-											{formatCurrency(item.purchase_cost)} =
-											{formatCurrency(item.biaya_per_satuan)} per {item.satuan}
+				<div class="grid gap-6 md:grid-cols-12 md:items-start">
+					<!-- Left Column: Biaya Tetap (span 5) -->
+					<div class="flex flex-col gap-6 md:col-span-5">
+						<form class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm" onsubmit={saveHppSettings}>
+							<div class="mb-5 border-b border-gray-50 pb-4">
+								<h2 class="text-xl font-bold tracking-tight text-gray-900">Biaya Operasional</h2>
+								<p class="mt-1 text-sm text-gray-500">Masukan rata-rata tagihan bulanan kiosmu.</p>
+							</div>
+							
+							<div class="flex flex-col gap-4">
+								<div class="flex flex-col gap-1.5">
+									<label class="ml-1 text-xs font-semibold text-gray-600">Sewa Kios</label>
+									<div class="relative">
+										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.sewa_bulanan} oninput={handleRupiahInput(hppForm, 'sewa_bulanan')} />
+									</div>
+								</div>
+								<div class="flex gap-4">
+									<div class="flex flex-1 flex-col gap-1.5">
+										<label class="ml-1 text-xs font-semibold text-gray-600">Listrik</label>
+										<div class="relative">
+											<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+											<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.listrik_bulanan} oninput={handleRupiahInput(hppForm, 'listrik_bulanan')} />
 										</div>
 									</div>
-									<button
-										type="button"
-										class="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-amber-800"
-										onclick={() => saveParsedHppItem(item)}
-									>
-										Simpan
+									<div class="flex flex-1 flex-col gap-1.5">
+										<label class="ml-1 text-xs font-semibold text-gray-600">Air Bersih</label>
+										<div class="relative">
+											<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+											<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.air_bulanan} oninput={handleRupiahInput(hppForm, 'air_bulanan')} />
+										</div>
+									</div>
+								</div>
+								<div class="flex flex-col gap-1.5">
+									<label class="ml-1 text-xs font-semibold text-gray-600">Gaji Karyawan</label>
+									<div class="relative">
+										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.gaji_bulanan} oninput={handleRupiahInput(hppForm, 'gaji_bulanan')} />
+									</div>
+								</div>
+								<div class="flex flex-col gap-1.5">
+									<label class="ml-1 text-xs font-semibold text-gray-600">Lain-lain (Internet, Keamanan)</label>
+									<div class="relative">
+										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.lainnya_bulanan} oninput={handleRupiahInput(hppForm, 'lainnya_bulanan')} />
+									</div>
+								</div>
+								<div class="mt-2 flex flex-col gap-1.5 border-t border-gray-50 pt-4">
+									<label class="ml-1 text-xs font-semibold text-gray-600">Target Penjualan (Item/Bulan)</label>
+									<input class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="1000" bind:value={hppForm.target_item_bulanan} oninput={handleRupiahInput(hppForm, 'target_item_bulanan')} />
+								</div>
+								<div class="mt-2">
+									<button type="submit" class="w-full rounded-xl bg-pink-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98]">
+										Simpan Pengaturan
 									</button>
 								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
+							</div>
+						</form>
+					</div>
 
-				<div class="rounded-xl border border-gray-200 bg-white p-4">
-					<h2 class="mb-3 text-lg font-bold text-gray-800">Estimasi HPP Menu</h2>
-					<div class="flex flex-col gap-2">
-						{#each menus.filter((menu) => menu.lacak_bahan) as menu}
-							<div class="rounded-lg border border-gray-200 px-3 py-3">
-								<div class="flex items-start justify-between gap-3">
-									<div class="min-w-0">
-										<div class="truncate text-sm font-semibold text-gray-900">{menu.nama}</div>
-										<div class="text-xs text-gray-500">
-											Bahan {formatCurrency(getProductRecipeCost(menu.id))} + overhead
-											{formatCurrency(getOverheadPerItem())}
-										</div>
-									</div>
-									<div class="text-right">
-										<div class="text-sm font-bold text-gray-900">
-											HPP {formatCurrency(getProductHpp(menu))}
-										</div>
-										<div
-											class="text-xs font-semibold {getProductMargin(menu) >= 0
-												? 'text-green-700'
-												: 'text-red-700'}"
-										>
-											Margin {formatCurrency(getProductMargin(menu))}
-										</div>
-									</div>
+					<!-- Right Column: AI & Estimasi (span 7) -->
+					<div class="flex flex-col gap-6 md:col-span-7">
+						<!-- AI Block -->
+						<div class="rounded-3xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-6 shadow-sm">
+							<div class="mb-4 flex items-center justify-between">
+								<div>
+									<h2 class="text-lg font-bold tracking-tight text-gray-900">AI Baca Bon Belanja</h2>
+									<p class="mt-1 text-xs text-gray-500">Ketik asal-asalan, AI akan paham.</p>
+								</div>
+								<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+									<svelte:component this={Sparkles} class="h-5 w-5" />
 								</div>
 							</div>
-						{/each}
-						{#if menus.filter((menu) => menu.lacak_bahan).length === 0}
-							<div class="rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500">
-								Belum ada menu dengan resep bahan.
+							<textarea class="min-h-24 w-full rounded-xl border border-purple-100 bg-white p-4 text-sm outline-none transition-all focus:border-purple-400 focus:ring-2 focus:ring-purple-100" placeholder="Contoh: aku tadi belanja buat minggu ini, alpukat 10 kg kena 35000, gula 1 kg 18000, cup 50 pcs 25000" bind:value={hppPurchaseText}></textarea>
+							<div class="mt-3 flex items-center justify-end">
+								<button type="button" class="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-200 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:opacity-60" disabled={isParsingHpp} onclick={parseHppPurchaseText}>
+									{isParsingHpp ? 'Membaca...' : 'Baca dengan AI'}
+								</button>
 							</div>
-						{/if}
+							
+							{#if hppParsedItems.length > 0}
+								<div class="mt-4 flex flex-col gap-2 border-t border-purple-50 pt-4">
+									{#each hppParsedItems as item}
+										<div class="flex items-center justify-between gap-3 rounded-xl border border-purple-100 bg-white p-3 shadow-sm">
+											<div class="min-w-0">
+												<div class="truncate text-sm font-bold text-gray-800">{item.nama}</div>
+												<div class="mt-0.5 text-xs font-medium text-gray-500">
+													<span class="rounded-md bg-purple-50 px-1.5 py-0.5 text-purple-600">{formatRupiah(item.purchase_qty)} {item.satuan}</span>
+													seharga {formatCurrency(item.purchase_cost)} = 
+													<span class="font-semibold text-gray-900">{formatCurrency(item.biaya_per_satuan)}</span>/{item.satuan}
+												</div>
+											</div>
+											<button type="button" class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200" onclick={() => saveParsedHppItem(item)}>
+												Simpan
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+
+						<!-- Estimasi Block -->
+						<div class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+							<h2 class="mb-4 text-lg font-bold tracking-tight text-gray-900">Estimasi HPP Menu</h2>
+							<div class="flex flex-col gap-3">
+								{#each menus.filter((menu) => menu.lacak_bahan) as menu}
+									<div class="flex flex-col justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-4 transition-colors hover:bg-white hover:shadow-sm sm:flex-row sm:items-center">
+										<div class="min-w-0">
+											<div class="truncate text-base font-bold text-gray-900">{menu.nama}</div>
+											<div class="mt-1 flex items-center gap-2 text-xs font-medium text-gray-500">
+												<span class="rounded bg-gray-200/50 px-1.5 py-0.5">Bahan {formatCurrency(getProductRecipeCost(menu.id))}</span>
+												<span>+</span>
+												<span class="rounded bg-gray-200/50 px-1.5 py-0.5">Beban {formatCurrency(getOverheadPerItem())}</span>
+											</div>
+										</div>
+										<div class="flex items-end justify-between gap-1 sm:flex-col sm:items-end">
+											<div class="text-sm font-bold text-gray-900">
+												HPP {formatCurrency(getProductHpp(menu))}
+											</div>
+											<div class="rounded-lg px-2 py-1 text-xs font-bold {getProductMargin(menu) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+												Margin {formatCurrency(getProductMargin(menu))}
+											</div>
+										</div>
+									</div>
+								{/each}
+								{#if menus.filter((menu) => menu.lacak_bahan).length === 0}
+									<div class="pointer-events-none flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-100 py-10 text-center">
+										<svelte:component this={Calculator} class="mb-3 h-10 w-10 text-gray-300" />
+										<div class="text-sm font-bold text-gray-700">Belum Ada Menu dengan Resep</div>
+										<div class="mt-1 text-xs font-medium text-gray-400">Tambahkan resep bahan pada detail menu.</div>
+									</div>
+								{/if}
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -2163,7 +2100,7 @@
 								id="menu-harga"
 								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-pink-500"
 								bind:value={menuForm.harga}
-								oninput={formatRupiahInput}
+								oninput={handleRupiahInput(menuForm, 'harga')}
 								required
 								placeholder="0"
 							/>
@@ -2261,7 +2198,7 @@
 														{getBahanName(recipe.bahan_id)}
 													</div>
 													<div class="text-xs text-gray-500">
-														{Number(recipe.jumlah_per_item || 0).toLocaleString('id-ID')}
+														{formatRupiah(recipe.jumlah_per_item || 0)}
 														{getBahanUnit(recipe.bahan_id)} per item
 													</div>
 												</div>
@@ -2293,7 +2230,7 @@
 								onclick={() => setMenuType('minuman')}
 							>
 								<div class="flex items-center justify-center gap-2">
-									<span class="text-base">🥤</span>
+									<svelte:component this={CupSoda} class="h-5 w-5" />
 									<span class="text-sm">Minuman</span>
 								</div>
 							</button>
@@ -2306,7 +2243,7 @@
 								onclick={() => setMenuType('makanan')}
 							>
 								<div class="flex items-center justify-center gap-2">
-									<span class="text-base">🍽️</span>
+									<svelte:component this={Pizza} class="h-5 w-5" />
 									<span class="text-sm">Makanan</span>
 								</div>
 							</button>
@@ -2348,7 +2285,7 @@
 								>
 									<div class="mb-0.5 text-sm font-medium text-gray-800">{ekstra.nama}</div>
 									<div class="text-xs font-semibold text-pink-600">
-										+Rp {ekstra.harga?.toLocaleString('id-ID')}
+										+Rp {formatRupiah(ekstra.harga)}
 									</div>
 								</button>
 							{/each}
@@ -2545,6 +2482,7 @@
 								type="text"
 								class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base transition-all focus:border-transparent focus:ring-2 focus:ring-green-500"
 								bind:value={ekstraForm.harga}
+								oninput={handleRupiahInput(ekstraForm, 'harga')}
 								required
 								placeholder="0"
 							/>
@@ -2618,11 +2556,10 @@
 							<label for="bahan-stock" class="font-semibold text-gray-700">Stok Awal</label>
 							<input
 								id="bahan-stock"
-								type="number"
-								min="0"
-								step="0.01"
+								type="text"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
 								bind:value={bahanForm.stok_saat_ini}
+								oninput={handleRupiahInput(bahanForm, 'stok_saat_ini')}
 								placeholder="0"
 							/>
 						</div>
@@ -2631,11 +2568,10 @@
 						<label for="bahan-low" class="font-semibold text-gray-700">Minimum Stok</label>
 						<input
 							id="bahan-low"
-							type="number"
-							min="0"
-							step="0.01"
+							type="text"
 							class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
 							bind:value={bahanForm.ambang_stok}
+							oninput={handleRupiahInput(bahanForm, 'ambang_stok')}
 							placeholder="0"
 						/>
 					</div>
@@ -2646,33 +2582,33 @@
 							>
 							<input
 								id="bahan-purchase-jumlah"
-								type="number"
-								min="0"
-								step="0.01"
+								type="text"
 								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
 								bind:value={bahanForm.jumlah_beli_terakhir}
-								placeholder="Contoh: 1000"
+								oninput={handleRupiahInput(bahanForm, 'jumlah_beli_terakhir')}
+								placeholder="Contoh: 1.000"
 							/>
 						</div>
 						<div class="flex flex-col gap-2">
-							<label for="bahan-purchase-cost" class="font-semibold text-gray-700">Harga Beli</label
-							>
-							<input
-								id="bahan-purchase-cost"
-								type="number"
-								min="0"
-								step="1"
-								class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:ring-2 focus:ring-amber-300"
-								bind:value={bahanForm.biaya_beli_terakhir}
-								placeholder="Contoh: 18000"
-							/>
+							<label for="bahan-purchase-cost" class="font-semibold text-gray-700">Harga Beli</label>
+							<div class="relative">
+								<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+								<input
+									id="bahan-purchase-cost"
+									type="text"
+									class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-12 text-base focus:ring-2 focus:ring-amber-300"
+									bind:value={bahanForm.biaya_beli_terakhir}
+									oninput={handleRupiahInput(bahanForm, 'biaya_beli_terakhir')}
+									placeholder="18.000"
+								/>
+							</div>
 						</div>
 					</div>
-					{#if Number(bahanForm.jumlah_beli_terakhir || 0) > 0}
+					{#if Number(String(bahanForm.jumlah_beli_terakhir).replace(/\./g, '') || 0) > 0}
 						<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
 							HPP bahan {formatCurrency(
-								Number(bahanForm.biaya_beli_terakhir || 0) /
-									Number(bahanForm.jumlah_beli_terakhir || 1)
+								Number(String(bahanForm.biaya_beli_terakhir).replace(/\./g, '') || 0) /
+									Number(String(bahanForm.jumlah_beli_terakhir).replace(/\./g, '') || 1)
 							)}
 							per {bahanForm.satuan}
 						</div>
