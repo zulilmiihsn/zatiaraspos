@@ -16,7 +16,7 @@
 
 	let indicatorLeft = $state(0);
 	let indicatorWidth = $state(0);
-	let navRefs: HTMLElement[] = [];
+	let navRefs: HTMLElement[] = $state([]);
 
 	let currentTabIndex = $state(0);
 

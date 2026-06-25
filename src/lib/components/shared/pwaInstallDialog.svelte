@@ -172,8 +172,8 @@
 					? edgeSteps
 					: platform === 'firefox'
 						? firefoxSteps
-						: null;
-
+						: null
+	);
 	let platformLabel = $derived(
 		platform === 'ios'
 			? 'Safari / iOS'
@@ -185,7 +185,8 @@
 						? 'Firefox'
 						: platform === 'chrome-desktop'
 							? 'Chrome Desktop'
-							: 'Browser';
+							: 'Browser'
+	);
 </script>
 
 {#if show}

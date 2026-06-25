@@ -107,7 +107,7 @@ export default defineConfig({
 			manifest: {
 				name: 'Zatiaras POS',
 				short_name: 'ZatiarasPOS',
-				description: 'Point of Sale System untuk Bisnis Minuman',
+				description: 'Zatiaras POS - Aplikasi Kasir Modern, Cepat & Mudah untuk Bisnis Minuman Anda.',
 				theme_color: '#ec4899',
 				background_color: '#ffffff',
 				display: 'standalone',
@@ -116,32 +116,32 @@ export default defineConfig({
 				start_url: '/',
 				screenshots: [
 					{
-						src: 'screenshots/app-1080x1920-01.png',
-						sizes: '1080x1920',
-						type: 'image/png',
+						src: 'screenshots/beranda.jpg',
+						sizes: '1080x2400',
+						type: 'image/jpeg',
 						form_factor: 'narrow',
-						label: 'Dashboard'
+						label: 'Dashboard Beranda'
 					},
 					{
-						src: 'screenshots/app-1080x1920-02.png',
-						sizes: '1080x1920',
-						type: 'image/png',
+						src: 'screenshots/kasir.jpg',
+						sizes: '1080x2400',
+						type: 'image/jpeg',
 						form_factor: 'narrow',
-						label: 'Kasir / POS'
+						label: 'Kasir / POS Pintar'
 					},
 					{
-						src: 'screenshots/app-1080x1920-03.png',
-						sizes: '1080x1920',
-						type: 'image/png',
+						src: 'screenshots/laporan.jpg',
+						sizes: '1080x2400',
+						type: 'image/jpeg',
 						form_factor: 'narrow',
-						label: 'Laporan'
+						label: 'Laporan Penjualan'
 					},
 					{
-						src: 'screenshots/app-1080x1920-04.png',
-						sizes: '1080x1920',
-						type: 'image/png',
+						src: 'screenshots/pengaturan.jpg',
+						sizes: '1080x2400',
+						type: 'image/jpeg',
 						form_factor: 'narrow',
-						label: 'Pengaturan'
+						label: 'Manajemen Cabang & Menu'
 					}
 				],
 				icons: [
