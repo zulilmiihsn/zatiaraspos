@@ -9,9 +9,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
-
-	import * as pako from 'pako';
-	import { Base64 } from 'js-base64';
+	import { printViaIntent, DEFAULT_RECEIPT_SETTINGS } from '$lib/utils/receiptPrint';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -398,13 +396,7 @@
 
 	function printStrukViaEscPosService() {
 		// Gunakan pengaturanStruk jika ada, fallback default
-		const pengaturan = pengaturanStruk || {
-			nama_toko: 'Zatiaras Juice',
-			alamat: 'Jl. Contoh Alamat No. 123, Kota',
-			telepon: '0812-3456-7890',
-			instagram: '@zatiarasjuice',
-			ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
-		};
+		const pengaturan = pengaturanStruk || DEFAULT_RECEIPT_SETTINGS;
 		let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
 		// Header
 		html += `<div style='text-align:center;margin-bottom:16px;'>`;
@@ -477,12 +469,7 @@
 		html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
 		html += `</body></html>`;
 
-		// 2. Gzip + base64 encode
-		const gzip = pako.gzip(JSON.stringify([html]));
-		const base64 = Base64.fromUint8Array(gzip);
-		// 3. Intent URL
-		const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
-		window.location.href = intentUrl;
+		printViaIntent(html);
 	}
 
 	function handleAddCashTemplate(t: number) {

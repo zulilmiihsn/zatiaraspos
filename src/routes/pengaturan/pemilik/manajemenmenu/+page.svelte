@@ -104,11 +104,8 @@
 	let showDeleteModal = $state(false);
 	let menuIdToDelete = $state<string | number | null>(null);
 
-	let selectedImage = $state<File | null>(null);
 	let showCropperDialog = $state(false);
 	let cropperDialogImage = $state('');
-	let touchStartX = $state(0);
-	let touchEndX = $state(0);
 
 	let showDeleteKategoriModal = $state(false);
 	let kategoriIdToDelete = $state<string | number | null>(null);
@@ -491,13 +488,8 @@
 	}
 
 	function confirmDeleteMenu(id: string | number) {
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
 		menuIdToDelete = id;
 		showDeleteModal = true;
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	async function doDeleteMenu() {
@@ -546,11 +538,6 @@
 	function cancelDeleteMenu() {
 		showDeleteModal = false;
 		menuIdToDelete = null;
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	function openKategoriForm(kat: Category | null) {
@@ -575,9 +562,6 @@
 	function closeKategoriDetailModal() {
 		showKategoriDetailModal = false;
 		kategoriDetail = null;
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
 	}
 
 	async function saveKategoriDetail() {
@@ -601,13 +585,8 @@
 	}
 
 	function confirmDeleteKategori(id: string | number) {
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
 		kategoriIdToDelete = id;
 		showDeleteKategoriModal = true;
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	async function doDeleteKategori() {
@@ -639,11 +618,6 @@
 	function cancelDeleteKategori() {
 		showDeleteKategoriModal = false;
 		kategoriIdToDelete = null;
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	function openEkstraForm(ekstra: (AddOn & { harga: number }) | null = null) {
@@ -697,13 +671,8 @@
 	}
 
 	function confirmDeleteEkstra(id: string | number) {
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
 		ekstraIdToDelete = id;
 		showDeleteEkstraModal = true;
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	async function doDeleteEkstra() {
@@ -723,11 +692,6 @@
 	function cancelDeleteEkstra() {
 		showDeleteEkstraModal = false;
 		ekstraIdToDelete = null;
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('click', blockNextClick, true);
-		}
-		touchStartX = 0;
-		touchEndX = 0;
 	}
 
 	function openBahanForm(bahan: Ingredient | null = null) {
@@ -976,7 +940,6 @@
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (!file) return;
-		selectedImage = file;
 		const reader = new FileReader();
 		reader.onload = (ev) => {
 			cropperDialogImage = '';
@@ -1075,11 +1038,6 @@
 
 		const data = await uploadRes.json();
 		return data.url;
-	}
-
-	function blockNextClick(e: Event) {
-		e.preventDefault();
-		e.stopPropagation();
 	}
 
 	// Helper functions for modal buttons
