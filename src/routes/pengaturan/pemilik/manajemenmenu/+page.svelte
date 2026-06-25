@@ -28,6 +28,12 @@
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { formatRupiah, parseRupiah, handleRupiahInput } from '$lib/utils/currency';
 
+	import MenuTab from '$lib/components/pengaturan/manajemenmenu/MenuTab.svelte';
+	import KategoriTab from '$lib/components/pengaturan/manajemenmenu/KategoriTab.svelte';
+	import EkstraTab from '$lib/components/pengaturan/manajemenmenu/EkstraTab.svelte';
+	import BahanTab from '$lib/components/pengaturan/manajemenmenu/BahanTab.svelte';
+	import HppTab from '$lib/components/pengaturan/manajemenmenu/HppTab.svelte';
+
 	import type {
 		Product,
 		Category,
@@ -1215,687 +1221,63 @@
 	<!-- Konten tab dengan transisi geser -->
 	<div class="relative min-h-screen">
 		{#if activeTab === 'menu'}
-			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
-				<!-- Fixed Header Section -->
-				<div class="flex-shrink-0 bg-white">
-					<!-- Search Bar -->
-					<div class="mx-auto max-w-4xl px-4 pb-2">
-						<div class="relative flex items-center">
-							<svg
-								class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								viewBox="0 0 24 24"
-								><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
-							>
-							<input
-								type="text"
-								class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-								placeholder="Cari menu..."
-								bind:value={searchKeyword}
-							/>
-						</div>
-					</div>
-					<!-- Header Daftar Menu -->
-					<div class="mx-auto max-w-4xl px-4 pb-2">
-						<h2 class="text-lg font-bold text-gray-800">Daftar Menu</h2>
-					</div>
-					<!-- Bar Filter Kategori (button group, horizontal scroll, seperti POS) -->
-					<div class="mx-auto flex max-w-4xl items-center gap-2 px-4 pb-4">
-						<button
-							class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-200 border-pink-500 bg-pink-50 bg-white p-2 transition-colors hover:bg-gray-100"
-							onclick={() => (isGridView = !isGridView)}
-							aria-label={isGridView ? 'Tampilkan List' : 'Tampilkan Grid'}
-						>
-							{#if isGridView}
-								<svg
-									class="h-5 w-5 text-gray-600"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									viewBox="0 0 24 24"
-									transition:fade={{ duration: 120 }}
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M4 6h16M4 12h16M4 18h16"
-									/></svg
-								>
-							{:else}
-								<svg
-									class="h-5 w-5 text-gray-600"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									viewBox="0 0 24 24"
-									transition:fade={{ duration: 120 }}
-									><rect x="4" y="4" width="7" height="7" rx="2" /><rect
-										x="13"
-										y="4"
-										width="7"
-										height="7"
-										rx="2"
-									/><rect x="4" y="13" width="7" height="7" rx="2" /><rect
-										x="13"
-										y="13"
-										width="7"
-										height="7"
-										rx="2"
-									/></svg
-								>
-							{/if}
-						</button>
-						<div class="scrollbar-hide flex w-max items-center gap-2 overflow-x-auto">
-							{#if isLoadingKategori}
-								{#each Array(5) as _, i}
-									<div
-										class="h-10 max-w-none animate-pulse rounded-lg bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 whitespace-nowrap"
-										style="min-width:6rem;"
-									></div>
-								{/each}
-							{:else}
-								<button
-									class="max-w-none rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all focus:outline-none {selectedKategori ===
-									'Semua'
-										? 'border-pink-500 bg-pink-500 text-white'
-										: 'border-pink-200 bg-white text-pink-500'}"
-									onclick={() => (selectedKategori = 'Semua')}>Semua</button
-								>
-								{#each kategoriList as kat}
-									<button
-										class="max-w-none rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all focus:outline-none {selectedKategori ==
-										kat.id
-											? 'border-pink-500 bg-pink-500 text-white'
-											: 'border-pink-200 bg-white text-pink-500'}"
-										onclick={() => (selectedKategori = kat.id)}>{kat.nama}</button
-									>
-								{/each}
-							{/if}
-						</div>
-					</div>
-				</div>
-
-				<!-- Scrollable Menu List -->
-				<div class="flex-1 overflow-y-auto">
-					<div class="mx-auto max-w-4xl px-4 pb-6">
-						{#if isLoadingMenus}
-							<div class="grid min-h-screen grid-cols-2 gap-3 pb-4">
-								{#each Array(6) as _, i}
-									<div
-										class="flex aspect-[3/4] max-h-[260px] min-h-[140px] w-full animate-pulse flex-col items-center justify-between rounded-xl border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-4 shadow-md"
-									>
-										<div
-											class="mb-2 aspect-square w-full rounded-lg border border-gray-100 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100"
-										></div>
-										<div class="mb-1 h-4 w-full rounded bg-gray-200"></div>
-										<div class="mb-1 h-3 w-2/3 rounded bg-gray-100"></div>
-										<div class="h-3 w-1/2 rounded bg-gray-100"></div>
-									</div>
-								{/each}
-							</div>
-						{:else if filteredMenus.length === 0}
-							<div
-								class="pointer-events-none flex min-h-[50vh] flex-col items-center justify-center py-12 text-center"
-							>
-								<svelte:component this={Utensils} class="mb-4 h-14 w-14 text-pink-300" />
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Menu</div>
-								<div class="text-sm text-gray-400">Silakan tambahkan menu terlebih dahulu.</div>
-							</div>
-						{:else if isGridView}
-							<div
-								class="grid grid-cols-2 gap-3 pb-4 md:mx-auto md:max-w-4xl md:grid-cols-3 md:gap-8"
-								transition:fade={{ duration: 120 }}
-							>
-								{#each filteredMenus as menu}
-									<div
-										class="relative flex h-[260px] cursor-pointer flex-col rounded-xl border border-gray-100 bg-white p-4 shadow transition-shadow md:h-[300px] md:items-center md:justify-center md:gap-2 md:rounded-2xl md:p-6 md:text-base md:shadow-lg"
-										role="button"
-										tabindex="0"
-										onclick={() => openMenuForm(menu)}
-										onkeydown={(e) => e.key === 'Enter' && openMenuForm(menu)}
-										onkeypress={(e) => e.key === 'Enter' && openMenuForm(menu)}
-									>
-										<!-- Tombol Delete floating di pojok kanan atas -->
-										<div class="absolute top-2 right-2 z-10">
-											<button
-												class="rounded-full border border-red-200 bg-red-50 p-2 hover:bg-red-100"
-												onclick={(e) => {
-													e.stopPropagation();
-													confirmDeleteMenu(menu.id);
-												}}
-												aria-label="Hapus Menu"
-											>
-												<svelte:component this={Trash} class="h-4 w-4 text-red-600 md:h-5 md:w-5" />
-											</button>
-										</div>
-										<div class="flex h-full w-full flex-col items-center justify-center">
-											<div class="mb-2 flex w-full flex-1 items-center justify-center">
-												{#if menu.gambar}
-													<img
-														src={menu.gambar}
-														alt={menu.nama}
-														class="h-full w-full rounded-lg border border-gray-100 object-cover"
-														onerror={() => handleImgError(menu.id)}
-													/>
-												{:else}
-													<div
-														class="flex h-full w-full items-center justify-center rounded-lg border border-gray-100 bg-pink-50/50"
-													>
-														<svelte:component this={Utensils} class="h-8 w-8 text-pink-300" />
-													</div>
-												{/if}
-											</div>
-											<div class="w-full flex-shrink-0 text-center">
-												<div
-													class="mb-1 truncate text-base font-semibold text-gray-800 md:text-base"
-												>
-													{menu.nama}
-												</div>
-												<div class="mb-1 truncate text-xs text-gray-500 md:text-base">
-													{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
-												</div>
-												<div class="text-xs font-bold text-pink-500 md:text-base">
-													Rp {formatRupiah(menu.harga)}
-												</div>
-											</div>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{:else}
-							<div class="flex flex-col gap-2 px-0 pb-4" transition:fade={{ duration: 120 }}>
-								{#each filteredMenus as menu}
-									<div
-										class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:shadow-md"
-										role="button"
-										tabindex="0"
-										onclick={() => openMenuForm(menu)}
-										onkeydown={(e) => e.key === 'Enter' && openMenuForm(menu)}
-										onkeypress={(e) => e.key === 'Enter' && openMenuForm(menu)}
-									>
-										<div class="min-w-0 flex-1">
-											<div class="mb-0.5 truncate text-base font-semibold text-gray-800">
-												{menu.nama}
-											</div>
-											<div class="mb-0.5 truncate text-xs text-gray-500">
-												{kategoriList.find((k) => k.id === menu.kategori_id)?.nama || '-'}
-											</div>
-											<div class="text-base font-bold text-pink-500">
-												Rp {formatRupiah(menu.harga)}
-											</div>
-										</div>
-										<div class="ml-2">
-											<button
-												class="rounded-full border border-red-200 bg-red-50 p-2 hover:bg-red-100"
-												onclick={(e) => {
-													e.stopPropagation();
-													confirmDeleteMenu(menu.id);
-												}}
-												aria-label="Hapus Menu"
-											>
-												<svelte:component this={Trash} class="h-4 w-4 text-red-600" />
-											</button>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<MenuTab
+				bind:searchKeyword
+				bind:selectedKategori
+				bind:isGridView
+				{isLoadingKategori}
+				{isLoadingMenus}
+				{kategoriList}
+				{filteredMenus}
+				{openMenuForm}
+				{confirmDeleteMenu}
+				{handleImgError}
+			/>
 		{:else if activeTab === 'kategori'}
-			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
-				<!-- Fixed Header Section -->
-				<div class="flex-shrink-0 bg-white px-4">
-					<!-- Search Bar -->
-					<div class="relative mb-3 flex items-center">
-						<svg
-							class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							viewBox="0 0 24 24"
-							><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
-						>
-						<input
-							type="text"
-							class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-							placeholder="Cari kategori..."
-							bind:value={searchKategoriKeyword}
-						/>
-					</div>
-					<!-- Header Daftar Kategori -->
-					<div class="mb-2 flex items-center justify-between">
-						<h2 class="text-lg font-bold text-gray-800">Daftar Kategori</h2>
-					</div>
-				</div>
-
-				<!-- Scrollable Kategori List -->
-				<div class="flex-1 overflow-y-auto">
-					<div class="px-4 pb-6">
-						{#if isLoadingKategori}
-							<div class="flex min-h-screen flex-col gap-2">
-								{#each Array(4) as _, i}
-									<div
-										class="flex animate-pulse items-center justify-between rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 px-4 py-3 shadow-md"
-									></div>
-								{/each}
-							</div>
-						{:else if kategoriList.length === 0}
-							<div
-								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
-							>
-								<svelte:component this={FolderOpen} class="mb-4 h-12 w-12 text-blue-300" />
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Kategori</div>
-								<div class="text-sm text-gray-400">Silakan tambahkan kategori terlebih dahulu.</div>
-							</div>
-						{:else}
-							<div class="flex flex-col gap-2">
-								{#each kategoriList.filter((kat) => kat.nama
-										.toLowerCase()
-										.includes(searchKategoriKeyword.trim().toLowerCase())) as kat}
-									<div
-										class="flex cursor-pointer items-center justify-between rounded-xl border border-blue-200 bg-blue-100 px-4 py-3 shadow-sm transition-all hover:bg-blue-200"
-										role="button"
-										tabindex="0"
-										onclick={() => openKategoriForm(kat)}
-										onkeydown={(e) => e.key === 'Enter' && openKategoriForm(kat)}
-										onkeypress={(e) => e.key === 'Enter' && openKategoriForm(kat)}
-									>
-										<div class="flex flex-col">
-											<span class="mb-0.5 truncate text-base font-semibold text-blue-900"
-												>{kat.nama}</span
-											>
-											<span class="truncate text-xs text-blue-700"
-												>{menus.filter((m) => m.kategori_id === kat.id).length} menu</span
-											>
-										</div>
-										<div class="ml-2">
-											<button
-												class="rounded-full border border-red-200 bg-red-50 p-3 hover:bg-red-100"
-												onclick={(e) => {
-													e.stopPropagation();
-													confirmDeleteKategori(kat.id);
-												}}
-												aria-label="Hapus Kategori"
-											>
-												<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
-											</button>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<KategoriTab
+				bind:searchKategoriKeyword
+				{isLoadingKategori}
+				{kategoriList}
+				{menus}
+				{openKategoriForm}
+				{confirmDeleteKategori}
+			/>
 		{:else if activeTab === 'ekstra'}
-			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
-				<!-- Fixed Header Section -->
-				<div class="flex-shrink-0 bg-white px-4">
-					<!-- Search Bar -->
-					<div class="relative mb-3 flex items-center">
-						<svg
-							class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							viewBox="0 0 24 24"
-							><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
-						>
-						<input
-							type="text"
-							class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
-							placeholder="Cari tambahan..."
-							bind:value={searchEkstra}
-						/>
-					</div>
-					<!-- Header Daftar Tambahan -->
-					<div class="mb-2 flex items-center justify-between">
-						<h2 class="text-lg font-bold text-gray-800">Daftar Tambahan</h2>
-					</div>
-				</div>
-
-				<!-- Scrollable Tambahan List -->
-				<div class="flex-1 overflow-y-auto">
-					<div class="px-4 pb-6">
-						{#if isLoadingEkstra}
-							<div class="flex min-h-screen flex-col gap-2">
-								{#each Array(4) as _, i}
-									<div
-										class="flex animate-pulse items-center justify-between rounded-xl border border-green-200 bg-gradient-to-br from-green-50 via-purple-50 to-green-100 px-4 py-3 shadow-md"
-									></div>
-								{/each}
-							</div>
-						{:else if ekstraList.length === 0}
-							<div
-								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
-							>
-								<svelte:component this={PlusCircle} class="mb-4 h-12 w-12 text-green-300" />
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Tambahan</div>
-								<div class="text-sm text-gray-400">Silakan tambahkan tambahan terlebih dahulu.</div>
-							</div>
-						{:else}
-							<div class="flex flex-col gap-2">
-								{#each ekstraList.filter((ekstra) => ekstra.nama
-										.toLowerCase()
-										.includes(searchEkstra.trim().toLowerCase())) as ekstra}
-									<div
-										class="flex cursor-pointer items-center justify-between rounded-xl border border-green-200 bg-green-100 px-4 py-3 shadow-sm transition-all hover:bg-green-200"
-										role="button"
-										tabindex="0"
-										onclick={() => openEkstraForm(ekstra)}
-										onkeydown={(e) => e.key === 'Enter' && openEkstraForm(ekstra)}
-										onkeypress={(e) => e.key === 'Enter' && openEkstraForm(ekstra)}
-									>
-										<div class="flex flex-col">
-											<span class="mb-0.5 truncate text-base font-semibold text-green-900"
-												>{ekstra.nama}</span
-											>
-											<span class="truncate text-xs text-green-700"
-												>Rp {formatRupiah(ekstra.harga)}</span
-											>
-										</div>
-										<div class="ml-2">
-											<button
-												class="rounded-full border border-red-200 bg-red-50 p-3 hover:bg-red-100"
-												onclick={(e) => {
-													e.stopPropagation();
-													confirmDeleteEkstra(ekstra.id);
-												}}
-												aria-label="Hapus Tambahan"
-											>
-												<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
-											</button>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<EkstraTab
+				bind:searchEkstra
+				{isLoadingEkstra}
+				{ekstraList}
+				{openEkstraForm}
+				{confirmDeleteEkstra}
+			/>
 		{:else if activeTab === 'bahan'}
-			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col">
-				<div class="flex-shrink-0 bg-white px-4">
-					<div class="relative mb-3 flex items-center">
-						<svg
-							class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							viewBox="0 0 24 24"
-							><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
-						>
-						<input
-							type="text"
-							class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-10 text-base text-gray-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-							placeholder="Cari bahan..."
-							bind:value={searchBahan}
-						/>
-					</div>
-					<div class="mb-2 flex items-center justify-between">
-						<h2 class="text-lg font-bold text-gray-800">Stok Bahan</h2>
-					</div>
-				</div>
-
-				<div class="flex-1 overflow-y-auto">
-					<div class="px-4 pb-6">
-						{#if isLoadingBahan}
-							<div class="flex min-h-[60dvh] flex-col gap-2">
-								{#each Array(4) as _, i}
-									<div
-										class="flex animate-pulse items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-md"
-									></div>
-								{/each}
-							</div>
-						{:else if bahanList.length === 0}
-							<div
-								class="pointer-events-none flex min-h-[30vh] flex-col items-center justify-center py-12 text-center"
-							>
-								<svelte:component this={Wheat} class="mb-4 h-12 w-12 text-amber-300" />
-								<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Bahan</div>
-								<div class="text-sm text-gray-400">
-									Tambahkan buah, gula, susu, cup, dan bahan lain.
-								</div>
-							</div>
-						{:else}
-							<div class="flex flex-col gap-2">
-								{#each bahanList.filter((bahan) => bahan.nama
-										.toLowerCase()
-										.includes(searchBahan.trim().toLowerCase())) as bahan}
-									<div
-										class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm transition-all hover:bg-amber-100"
-									>
-										<div class="flex items-start justify-between gap-3">
-											<button
-												type="button"
-												class="min-w-0 flex-1 text-left"
-												onclick={() => openBahanForm(bahan)}
-											>
-												<span class="mb-0.5 block truncate text-base font-semibold text-amber-950"
-													>{bahan.nama}</span
-												>
-												<span class="block text-xs text-amber-800">
-													Stok {formatRupiah(bahan.stok_saat_ini || 0)}
-													{bahan.satuan}
-													{#if Number(bahan.ambang_stok || 0) > 0}
-														/ minimum {formatRupiah(bahan.ambang_stok || 0)}
-														{bahan.satuan}
-													{/if}
-												</span>
-												<span class="block text-xs text-amber-700">
-													HPP {formatCurrency(Number(bahan.biaya_per_satuan || 0))} per {bahan.satuan}
-												</span>
-												{#if Number(bahan.ambang_stok || 0) > 0 && Number(bahan.stok_saat_ini || 0) <= Number(bahan.ambang_stok || 0)}
-													<span
-														class="mt-1 inline-flex rounded-md bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700"
-													>
-														Stok rendah
-													</span>
-												{/if}
-											</button>
-											<div class="flex shrink-0 gap-2">
-												<button
-													type="button"
-													class="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800"
-													onclick={() => openMutasiBahanForm(bahan)}
-												>
-													Stok
-												</button>
-												<button
-													class="rounded-full border border-red-200 bg-red-50 p-3 hover:bg-red-100"
-													onclick={() => confirmDeleteBahan(bahan.id)}
-													aria-label="Hapus Bahan"
-												>
-													<svelte:component this={Trash} class="h-5 w-5 text-red-600" />
-												</button>
-											</div>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<BahanTab
+				bind:searchBahan
+				{isLoadingBahan}
+				{bahanList}
+				{formatCurrency}
+				{openBahanForm}
+				{openMutasiBahanForm}
+				{confirmDeleteBahan}
+			/>
 		{:else if activeTab === 'hpp'}
-			<div in:fade={{ duration: 150 }} class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 md:px-8">
-				<!-- Top Summary Cards -->
-				<div class="mb-6 grid gap-4 md:grid-cols-3">
-					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-						<div class="mb-2 flex items-center gap-3">
-							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-500">
-								<svelte:component this={Calculator} class="h-5 w-5" />
-							</div>
-							<div class="text-sm font-semibold text-gray-500">Total Biaya Tetap</div>
-						</div>
-						<div class="text-2xl font-bold tracking-tight text-gray-900">
-							{formatCurrency(getOverheadMonthly())}
-						</div>
-					</div>
-					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-						<div class="mb-2 flex items-center gap-3">
-							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
-								<svelte:component this={CupSoda} class="h-5 w-5" />
-							</div>
-							<div class="text-sm font-semibold text-gray-500">Beban per Item</div>
-						</div>
-						<div class="text-2xl font-bold tracking-tight text-gray-900">
-							{formatCurrency(getOverheadPerItem())}
-						</div>
-					</div>
-					<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-						<div class="mb-2 flex items-center gap-3">
-							<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-								<svelte:component this={Wheat} class="h-5 w-5" />
-							</div>
-							<div class="text-sm font-semibold text-gray-500">Target Sales (Bulan)</div>
-						</div>
-						<div class="text-2xl font-bold tracking-tight text-gray-900">
-							{formatRupiah(hppSettings?.target_item_bulanan || 1000)} <span class="text-sm font-medium text-gray-400">item</span>
-						</div>
-					</div>
-				</div>
-
-				<div class="grid gap-6 md:grid-cols-12 md:items-start">
-					<!-- Left Column: Biaya Tetap (span 5) -->
-					<div class="flex flex-col gap-6 md:col-span-5">
-						<form class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm" onsubmit={saveHppSettings}>
-							<div class="mb-5 border-b border-gray-50 pb-4">
-								<h2 class="text-xl font-bold tracking-tight text-gray-900">Biaya Operasional</h2>
-								<p class="mt-1 text-sm text-gray-500">Masukan rata-rata tagihan bulanan kiosmu.</p>
-							</div>
-							
-							<div class="flex flex-col gap-4">
-								<div class="flex flex-col gap-1.5">
-									<label class="ml-1 text-xs font-semibold text-gray-600">Sewa Kios</label>
-									<div class="relative">
-										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
-										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.sewa_bulanan} oninput={handleRupiahInput(hppForm, 'sewa_bulanan')} />
-									</div>
-								</div>
-								<div class="flex gap-4">
-									<div class="flex flex-1 flex-col gap-1.5">
-										<label class="ml-1 text-xs font-semibold text-gray-600">Listrik</label>
-										<div class="relative">
-											<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
-											<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.listrik_bulanan} oninput={handleRupiahInput(hppForm, 'listrik_bulanan')} />
-										</div>
-									</div>
-									<div class="flex flex-1 flex-col gap-1.5">
-										<label class="ml-1 text-xs font-semibold text-gray-600">Air Bersih</label>
-										<div class="relative">
-											<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
-											<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.air_bulanan} oninput={handleRupiahInput(hppForm, 'air_bulanan')} />
-										</div>
-									</div>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<label class="ml-1 text-xs font-semibold text-gray-600">Gaji Karyawan</label>
-									<div class="relative">
-										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
-										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.gaji_bulanan} oninput={handleRupiahInput(hppForm, 'gaji_bulanan')} />
-									</div>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<label class="ml-1 text-xs font-semibold text-gray-600">Lain-lain (Internet, Keamanan)</label>
-									<div class="relative">
-										<span class="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gray-400">Rp</span>
-										<input class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="0" bind:value={hppForm.lainnya_bulanan} oninput={handleRupiahInput(hppForm, 'lainnya_bulanan')} />
-									</div>
-								</div>
-								<div class="mt-2 flex flex-col gap-1.5 border-t border-gray-50 pt-4">
-									<label class="ml-1 text-xs font-semibold text-gray-600">Target Penjualan (Item/Bulan)</label>
-									<input class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition-all focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-100" type="text" placeholder="1000" bind:value={hppForm.target_item_bulanan} oninput={handleRupiahInput(hppForm, 'target_item_bulanan')} />
-								</div>
-								<div class="mt-2">
-									<button type="submit" class="w-full rounded-xl bg-pink-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-200 transition-all hover:bg-pink-600 active:scale-[0.98]">
-										Simpan Pengaturan
-									</button>
-								</div>
-							</div>
-						</form>
-					</div>
-
-					<!-- Right Column: AI & Estimasi (span 7) -->
-					<div class="flex flex-col gap-6 md:col-span-7">
-						<!-- AI Block -->
-						<div class="rounded-3xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-6 shadow-sm">
-							<div class="mb-4 flex items-center justify-between">
-								<div>
-									<h2 class="text-lg font-bold tracking-tight text-gray-900">AI Baca Bon Belanja</h2>
-									<p class="mt-1 text-xs text-gray-500">Ketik asal-asalan, AI akan paham.</p>
-								</div>
-								<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-									<svelte:component this={Sparkles} class="h-5 w-5" />
-								</div>
-							</div>
-							<textarea class="min-h-24 w-full rounded-xl border border-purple-100 bg-white p-4 text-sm outline-none transition-all focus:border-purple-400 focus:ring-2 focus:ring-purple-100" placeholder="Contoh: aku tadi belanja buat minggu ini, alpukat 10 kg kena 35000, gula 1 kg 18000, cup 50 pcs 25000" bind:value={hppPurchaseText}></textarea>
-							<div class="mt-3 flex items-center justify-end">
-								<button type="button" class="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-200 transition-all hover:bg-purple-700 active:scale-[0.98] disabled:opacity-60" disabled={isParsingHpp} onclick={parseHppPurchaseText}>
-									{isParsingHpp ? 'Membaca...' : 'Baca dengan AI'}
-								</button>
-							</div>
-							
-							{#if hppParsedItems.length > 0}
-								<div class="mt-4 flex flex-col gap-2 border-t border-purple-50 pt-4">
-									{#each hppParsedItems as item}
-										<div class="flex items-center justify-between gap-3 rounded-xl border border-purple-100 bg-white p-3 shadow-sm">
-											<div class="min-w-0">
-												<div class="truncate text-sm font-bold text-gray-800">{item.nama}</div>
-												<div class="mt-0.5 text-xs font-medium text-gray-500">
-													<span class="rounded-md bg-purple-50 px-1.5 py-0.5 text-purple-600">{formatRupiah(item.purchase_qty)} {item.satuan}</span>
-													seharga {formatCurrency(item.purchase_cost)} = 
-													<span class="font-semibold text-gray-900">{formatCurrency(item.biaya_per_satuan)}</span>/{item.satuan}
-												</div>
-											</div>
-											<button type="button" class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200" onclick={() => saveParsedHppItem(item)}>
-												Simpan
-											</button>
-										</div>
-									{/each}
-								</div>
-							{/if}
-						</div>
-
-						<!-- Estimasi Block -->
-						<div class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-							<h2 class="mb-4 text-lg font-bold tracking-tight text-gray-900">Estimasi HPP Menu</h2>
-							<div class="flex flex-col gap-3">
-								{#each menus.filter((menu) => menu.lacak_bahan) as menu}
-									<div class="flex flex-col justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-4 transition-colors hover:bg-white hover:shadow-sm sm:flex-row sm:items-center">
-										<div class="min-w-0">
-											<div class="truncate text-base font-bold text-gray-900">{menu.nama}</div>
-											<div class="mt-1 flex items-center gap-2 text-xs font-medium text-gray-500">
-												<span class="rounded bg-gray-200/50 px-1.5 py-0.5">Bahan {formatCurrency(getProductRecipeCost(menu.id))}</span>
-												<span>+</span>
-												<span class="rounded bg-gray-200/50 px-1.5 py-0.5">Beban {formatCurrency(getOverheadPerItem())}</span>
-											</div>
-										</div>
-										<div class="flex items-end justify-between gap-1 sm:flex-col sm:items-end">
-											<div class="text-sm font-bold text-gray-900">
-												HPP {formatCurrency(getProductHpp(menu))}
-											</div>
-											<div class="rounded-lg px-2 py-1 text-xs font-bold {getProductMargin(menu) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-												Margin {formatCurrency(getProductMargin(menu))}
-											</div>
-										</div>
-									</div>
-								{/each}
-								{#if menus.filter((menu) => menu.lacak_bahan).length === 0}
-									<div class="pointer-events-none flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-100 py-10 text-center">
-										<svelte:component this={Calculator} class="mb-3 h-10 w-10 text-gray-300" />
-										<div class="text-sm font-bold text-gray-700">Belum Ada Menu dengan Resep</div>
-										<div class="mt-1 text-xs font-medium text-gray-400">Tambahkan resep bahan pada detail menu.</div>
-									</div>
-								{/if}
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+			<HppTab
+				bind:hppForm
+				bind:hppPurchaseText
+				{hppSettings}
+				{hppParsedItems}
+				{isParsingHpp}
+				{menus}
+				{formatCurrency}
+				{getOverheadMonthly}
+				{getOverheadPerItem}
+				{getProductRecipeCost}
+				{getProductHpp}
+				{getProductMargin}
+				{saveHppSettings}
+				{parseHppPurchaseText}
+				{saveParsedHppItem}
+			/>
 		{/if}
 	</div>
 
