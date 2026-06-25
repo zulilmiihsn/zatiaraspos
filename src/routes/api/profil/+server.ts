@@ -24,7 +24,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(profil)
-		.set({ ...(body.payload as Partial<typeof profilToko.$inferInsert>) })
+		.set({ ...(body.payload as Partial<typeof profil.$inferInsert>) })
 		.where(and(eq(profil.cabang_id, branch), eq(profil.id, String(body.where.id))));
 	await publish(platform, branch, 'profil', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'profil', 'update', body.where.id, {

@@ -191,8 +191,9 @@
 			confirmPin = '';
 			pinError = '';
 			pin = newPin;
-		} catch (error: any) {
-			pinError = 'Gagal menyimpan perubahan: ' + error.message;
+		} catch (error) {
+			console.error('[gantikeamanan] update PIN gagal:', error);
+			pinError = 'Gagal menyimpan perubahan. Coba lagi.';
 		}
 	}
 

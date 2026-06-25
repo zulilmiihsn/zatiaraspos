@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { uploadToR2, deleteFromR2 } from '$lib/server/s3Client';
+import { requireAuthSession, requireAnyRole } from '$lib/server/apiAuth';
 import { v4 as uuidv4 } from 'uuid';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -25,7 +26,11 @@ export async function GET({ url, platform }) {
 	});
 }
 
-export async function POST({ request, platform }) {
+export async function POST({ request, platform, locals }) {
+	// Auth sebelum try: kitError tidak boleh ketelan catch jadi 500
+	const session = requireAuthSession(locals);
+	requireAnyRole(session.role, ['pemilik']);
+
 	try {
 		const formData = await request.formData();
 		const file = formData.get('file') as File | null;
@@ -60,7 +65,11 @@ export async function POST({ request, platform }) {
 	}
 }
 
-export async function DELETE({ request, platform }) {
+export async function DELETE({ request, platform, locals }) {
+	// Auth sebelum try: kitError tidak boleh ketelan catch jadi 500
+	const session = requireAuthSession(locals);
+	requireAnyRole(session.role, ['pemilik']);
+
 	try {
 		const { key } = (await request.json()) as { key: string };
 

@@ -70,7 +70,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	const rows: Array<Record<string, any>> = payloadRows(body.payload, branch).map((row) => ({
 		...row,
-		nominal: row.nominal ?? row.nominal ?? 0
+		nominal: row.nominal ?? 0
 	}));
 
 	// Dedup by id: cek baris yang sudah ada, hanya insert yang baru.
