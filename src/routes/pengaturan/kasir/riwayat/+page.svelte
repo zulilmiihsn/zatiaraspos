@@ -17,15 +17,15 @@
 	import { fetchTransaksiHariIni as fetchRiwayatHarian } from '$lib/services/riwayatService';
 	import { buildReceiptHtml, printViaIntent, loadReceiptSettings } from '$lib/utils/receiptPrint';
 
-	let pengaturanStruk: import('$lib/types/laporan').ReceiptSettings | null = null;
+	let pengaturanStruk = $state<import('$lib/types/laporan').ReceiptSettings | null>(null);
 
-	let transaksiHariIni: HistoryItem[] = [];
-	let loading = true;
-	let searchKeyword = '';
-	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
+	let transaksiHariIni = $state<HistoryItem[]>([]);
+	let loading = $state(true);
+	let searchKeyword = $state('');
+	let filterPayment = $state('all'); // 'all' | 'qris' | 'tunai'
 
-	let showDetailModal = false;
-	let selectedTransaksi: HistoryItem | null = null;
+	let showDetailModal = $state(false);
+	let selectedTransaksi = $state<HistoryItem | null>(null);
 
 	const paymentOptions = [
 		{ value: 'tunai', label: 'Tunai' },

@@ -19,19 +19,19 @@
 	import { fetchTransaksiHariIni as fetchRiwayatHarian } from '$lib/services/riwayatService';
 	import { buildReceiptHtml, printViaIntent, loadReceiptSettings } from '$lib/utils/receiptPrint';
 
-	let pengaturanStruk: ReceiptSettings | null = null;
+	let pengaturanStruk = $state<ReceiptSettings | null>(null);
 
-	let transaksiHariIni: HistoryItem[] = [];
-	let loading = true;
-	let showDeleteModal = false;
-	let transaksiToDelete: HistoryItem | null = null;
-	let searchKeyword = '';
-	let filterPayment = 'all'; // 'all' | 'qris' | 'tunai'
-	let Trash: ComponentType | null = null;
+	let transaksiHariIni = $state<HistoryItem[]>([]);
+	let loading = $state(true);
+	let showDeleteModal = $state(false);
+	let transaksiToDelete = $state<HistoryItem | null>(null);
+	let searchKeyword = $state('');
+	let filterPayment = $state('all'); // 'all' | 'qris' | 'tunai'
+	let Trash = $state<ComponentType | null>(null);
 
-	let showDetailModal = false;
-	let selectedTransaksi: HistoryItem | null = null;
-	let showDropdownPayment = false;
+	let showDetailModal = $state(false);
+	let selectedTransaksi = $state<HistoryItem | null>(null);
+	let showDropdownPayment = $state(false);
 	const paymentOptions = [
 		{ value: 'tunai', label: 'Tunai' },
 		{ value: 'qris', label: 'QRIS/Non-Tunai' }
