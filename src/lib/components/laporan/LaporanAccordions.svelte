@@ -64,6 +64,84 @@
 	}
 </script>
 
+{#snippet accordionGroup(
+	judul: string,
+	show: boolean,
+	toggle: () => void,
+	qrisData: BukuKasRecord[],
+	tunaiData: BukuKasRecord[],
+	isFirst: boolean
+)}
+	<button
+		class="{isFirst
+			? 'mb-0.5 md:mb-1'
+			: 'mt-2 mb-0.5 md:mt-3 md:mb-1'} flex w-full items-center justify-between px-4 py-1 text-sm font-semibold text-gray-700 md:px-6 md:py-2 md:text-base"
+		onclick={toggle}
+	>
+		<span>{judul}</span>
+		<svg class="ml-2 h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20">
+			<polygon
+				points="5,8 10,13 15,8"
+				fill="currentColor"
+				style="transform:rotate({show ? 0 : 180}deg);transform-origin:center"
+			/>
+		</svg>
+	</button>
+	{#if show}
+		<div
+			class="flex flex-col gap-1 px-4 pt-0.5 pb-1 md:gap-2 md:px-6 md:pt-1 md:pb-2"
+			transition:slide|local
+		>
+			<div class="mt-1 mb-1 text-xs font-semibold text-pink-500 md:mt-2 md:mb-2 md:text-sm">
+				QRIS
+			</div>
+			<ul class="flex flex-col gap-0.5 md:gap-1">
+				{#if qrisData.length === 0}
+					<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+				{/if}
+				{#each groupAndSumByName(qrisData).sort((a, b) => b.total - a.total) as grouped}
+						<li class="flex justify-between text-sm text-gray-600 md:text-base">
+							<span
+								class="{expandedItems.has(grouped.nama)
+									? ''
+									: 'max-w-[60%] truncate'} cursor-pointer"
+								title={grouped.nama}
+								onclick={() => toggleExpand(grouped.nama)}
+								onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+								role="button"
+								tabindex="0">{grouped.nama}</span>
+							<span class="font-bold whitespace-nowrap text-gray-700"
+								>Rp {formatRupiah(grouped.total)}</span>
+						</li>
+					{/each}
+			</ul>
+			<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
+				Tunai
+			</div>
+			<ul class="flex flex-col gap-0.5 md:gap-1">
+				{#if tunaiData.length === 0}
+					<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
+				{/if}
+				{#each groupAndSumByName(tunaiData).sort((a, b) => b.total - a.total) as grouped}
+						<li class="flex justify-between text-sm text-gray-600 md:text-base">
+							<span
+								class="{expandedItems.has(grouped.nama)
+									? ''
+									: 'max-w-[60%] truncate'} cursor-pointer"
+								title={grouped.nama}
+								onclick={() => toggleExpand(grouped.nama)}
+								onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+								role="button"
+								tabindex="0">{grouped.nama}</span>
+							<span class="font-bold whitespace-nowrap text-gray-700"
+								>Rp {formatRupiah(grouped.total)}</span>
+						</li>
+					{/each}
+			</ul>
+		</div>
+	{/if}
+{/snippet}
+
 <div
 	class="overflow-hidden rounded-xl bg-white shadow-sm md:mb-4 md:rounded-2xl md:p-4 md:shadow lg:mb-0 lg:flex-1"
 >
@@ -96,140 +174,22 @@
 			>
 		</div>
 		<div class="flex flex-col gap-0.5 bg-white py-2 md:gap-2 md:py-4" transition:slide|local>
-			<!-- Sub: Pendapatan Usaha -->
-			<button
-				class="mb-0.5 flex w-full items-center justify-between px-4 py-1 text-sm font-semibold text-gray-700 md:mb-1 md:px-6 md:py-2 md:text-base"
-				onclick={() => (showPendapatanUsaha = !showPendapatanUsaha)}
-			>
-				<span>Pendapatan Usaha</span>
-				<svg class="ml-2 h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20">
-					<polygon
-						points="5,8 10,13 15,8"
-						fill="currentColor"
-						style="transform:rotate({showPendapatanUsaha ? 0 : 180}deg);transform-origin:center"
-					/>
-				</svg>
-			</button>
-			{#if showPendapatanUsaha}
-				<div
-					class="flex flex-col gap-1 px-4 pt-0.5 pb-1 md:gap-2 md:px-6 md:pt-1 md:pb-2"
-					transition:slide|local
-				>
-					<div class="mt-1 mb-1 text-xs font-semibold text-pink-500 md:mt-2 md:mb-2 md:text-sm">
-						QRIS
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanUsahaQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
-						Tunai
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanUsahaTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-				</div>
-			{/if}
-			<!-- Sub: Pemasukan Lainnya -->
-			<button
-				class="mt-2 mb-0.5 flex w-full items-center justify-between px-4 py-1 text-sm font-semibold text-gray-700 md:mt-3 md:mb-1 md:px-6 md:py-2 md:text-base"
-				onclick={() => (showPemasukanLain = !showPemasukanLain)}
-			>
-				<span>Pemasukan Lainnya</span>
-				<svg class="ml-2 h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20">
-					<polygon
-						points="5,8 10,13 15,8"
-						fill="currentColor"
-						style="transform:rotate({showPemasukanLain ? 0 : 180}deg);transform-origin:center"
-					/>
-				</svg>
-			</button>
-			{#if showPemasukanLain}
-				<div
-					class="flex flex-col gap-1 px-4 pt-0.5 pb-1 md:gap-2 md:px-6 md:pt-1 md:pb-2"
-					transition:slide|local
-				>
-					<div class="mt-1 mb-1 text-xs font-semibold text-pink-500 md:mt-2 md:mb-2 md:text-sm">
-						QRIS
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanLainQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanLainQris).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
-						Tunai
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if pemasukanLainTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(pemasukanLainTunai).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-				</div>
-			{/if}
+			{@render accordionGroup(
+				'Pendapatan Usaha',
+				showPendapatanUsaha,
+				() => (showPendapatanUsaha = !showPendapatanUsaha),
+				pemasukanUsahaQris,
+				pemasukanUsahaTunai,
+				true
+			)}
+			{@render accordionGroup(
+				'Pemasukan Lainnya',
+				showPemasukanLain,
+				() => (showPemasukanLain = !showPemasukanLain),
+				pemasukanLainQris,
+				pemasukanLainTunai,
+				false
+			)}
 		</div>
 	{/if}
 </div>
@@ -266,140 +226,22 @@
 			>
 		</div>
 		<div class="flex flex-col gap-0.5 bg-white py-2 md:gap-2 md:py-4" transition:slide|local>
-			<!-- Sub: Beban Usaha -->
-			<button
-				class="mb-0.5 flex w-full items-center justify-between px-4 py-1 text-sm font-semibold text-gray-700 md:mb-1 md:px-6 md:py-2 md:text-base"
-				onclick={() => (showBebanUsaha = !showBebanUsaha)}
-			>
-				<span>Beban Usaha</span>
-				<svg class="ml-2 h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20">
-					<polygon
-						points="5,8 10,13 15,8"
-						fill="currentColor"
-						style="transform:rotate({showBebanUsaha ? 0 : 180}deg);transform-origin:center"
-					/>
-				</svg>
-			</button>
-			{#if showBebanUsaha}
-				<div
-					class="flex flex-col gap-1 px-4 pt-0.5 pb-1 md:gap-2 md:px-6 md:pt-1 md:pb-2"
-					transition:slide|local
-				>
-					<div class="mt-1 mb-1 text-xs font-semibold text-pink-500 md:mt-2 md:mb-2 md:text-sm">
-						QRIS
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanUsahaQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanUsahaQris).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
-						Tunai
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanUsahaTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanUsahaTunai).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-				</div>
-			{/if}
-			<!-- Sub: Beban Lainnya -->
-			<button
-				class="mt-2 mb-0.5 flex w-full items-center justify-between px-4 py-1 text-sm font-semibold text-gray-700 md:mt-3 md:mb-1 md:px-6 md:py-2 md:text-base"
-				onclick={() => (showBebanLain = !showBebanLain)}
-			>
-				<span>Beban Lainnya</span>
-				<svg class="ml-2 h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20">
-					<polygon
-						points="5,8 10,13 15,8"
-						fill="currentColor"
-						style="transform:rotate({showBebanLain ? 0 : 180}deg);transform-origin:center"
-					/>
-				</svg>
-			</button>
-			{#if showBebanLain}
-				<div
-					class="flex flex-col gap-1 px-4 pt-0.5 pb-1 md:gap-2 md:px-6 md:pt-1 md:pb-2"
-					transition:slide|local
-				>
-					<div class="mt-1 mb-1 text-xs font-semibold text-pink-500 md:mt-2 md:mb-2 md:text-sm">
-						QRIS
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanLainQris.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanLainQris).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-					<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
-						Tunai
-					</div>
-					<ul class="flex flex-col gap-0.5 md:gap-1">
-						{#if bebanLainTunai.length === 0}
-							<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
-						{/if}
-						{#each groupAndSumByName(bebanLainTunai).sort((a, b) => b.total - a.total) as grouped}
-								<li class="flex justify-between text-sm text-gray-600 md:text-base">
-									<span
-										class="{expandedItems.has(grouped.nama)
-											? ''
-											: 'max-w-[60%] truncate'} cursor-pointer"
-										title={grouped.nama}
-										onclick={() => toggleExpand(grouped.nama)}
-										onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-										role="button"
-										tabindex="0">{grouped.nama}</span>
-									<span class="font-bold whitespace-nowrap text-gray-700"
-										>Rp {formatRupiah(grouped.total)}</span>
-								</li>
-							{/each}
-					</ul>
-				</div>
-			{/if}
+			{@render accordionGroup(
+				'Beban Usaha',
+				showBebanUsaha,
+				() => (showBebanUsaha = !showBebanUsaha),
+				bebanUsahaQris,
+				bebanUsahaTunai,
+				true
+			)}
+			{@render accordionGroup(
+				'Beban Lainnya',
+				showBebanLain,
+				() => (showBebanLain = !showBebanLain),
+				bebanLainQris,
+				bebanLainTunai,
+				false
+			)}
 		</div>
 	{/if}
 </div>
