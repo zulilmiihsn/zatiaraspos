@@ -21,6 +21,8 @@
 	import type { Workbox as WorkboxInstance } from 'workbox-window';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import WifiOff from 'lucide-svelte/icons/wifi-off';
+	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
+	import { createToastManager } from '$lib/utils/ui';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -35,7 +37,7 @@
 	let pendingCount = $state(0);
 	let pendingFailedCount = $state(0);
 	let isPendingSyncing = $state(false);
-	let showToast = $state(false);
+	const toastManager = createToastManager();
 
 	async function updatePending() {
 		const pending = await getPendingTransactions();
@@ -150,9 +152,11 @@
 			updatePending();
 		});
 		window.addEventListener('pending-synced', () => {
-			showToast = true;
+			toastManager.showToastNotification(
+				'Transaksi offline berhasil dikirim ke server!',
+				'success'
+			);
 			updatePending();
-			setTimeout(() => (showToast = false), 3000);
 		});
 		window.addEventListener('pending-sync-start', () => {
 			isPendingSyncing = true;
@@ -329,12 +333,12 @@
 	</div>
 {/if}
 
-{#if showToast}
-	<div
-		class="animate-fade-in fixed top-16 left-1/2 z-50 -translate-x-1/2 transform rounded-xl bg-green-500 px-6 py-3 text-center text-white shadow-lg"
-	>
-		Transaksi offline berhasil dikirim ke server!
-	</div>
+{#if toastManager.showToast}
+	<ToastNotification
+		show={toastManager.showToast}
+		message={toastManager.toastMessage}
+		type={toastManager.toastType}
+	/>
 {/if}
 
 <!-- PWA Update Notification -->
