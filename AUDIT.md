@@ -71,13 +71,13 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | Temuan | Bukti | Status |
 |--------|-------|--------|
 | 🔁×4 **`formatRupiah` tak diadopsi** | **102× `toLocaleString('id-ID')`** → migrasi **97 situs** (74 client + 23 server prompt). Sisa 4: currency.ts (2, util) + pengaturan dates (2, skip) | ✅ **DONE** (app-wide) |
-| `formatRupiah`/`formatCurrency` lokal duplikat | `catat:186` (dihapus→import util), `laporan formatCurrency` (dihapus, zero-caller). `CustomItemModal:15` formatter input → ditunda | ✅ sebagian / ◐ CustomItemModal |
+| `formatRupiah`/`formatCurrency` lokal duplikat | `catat:186` (dihapus→util), `laporan formatCurrency` (dihapus), `CustomItemModal` `formatRupiahInput` → pakai `formatRupiah` util | ✅ **DONE** |
 | 🔁×2 **builder struk ~70 baris ×3 verbatim** | → `lib/utils/receiptPrint.ts` (`buildReceiptHtml`+`printViaIntent`+`loadReceiptSettings`). 3 riwayat migrasi. **`bayar:400-487` masih → ikut P4-followup** | ✅ **DONE** (3 riwayat) |
 | `fetchTransaksiHariIni`/`fetchPengaturanStruk`/`HistoryItem` identik ×3 | → `lib/services/riwayatService.ts` + `HistoryItem` ke `lib/types/laporan`. Reconcile: `ref_transaksi_kasir_id ?? transaction_id`, ucapan `\n` | ✅ **DONE** |
 | aichat OpenRouter fetch ×3 + fence-parse ×2 | `aichat:146,305,682` | ◐ |
-| `methodLabels` map di-copy | pos/bayar/aichat/riwayat | ◐ |
-| `LaporanAccordions` 4 sub-accordion copy-paste (~110×4) | — | ◐ |
-| 3 impl sanitasi XSS + 2× validateEmail/Password | validation.ts vs security.ts | ◐ |
+| `methodLabels` map di-copy | → `METHOD_LABELS` export di `receiptPrint.ts`; bayar pakai itu. (riwayat sudah via `buildReceiptHtml`; aichat = konteks beda, biar) | ✅ **DONE** |
+| `LaporanAccordions` 4 sub-accordion copy-paste (~110×4) | → 1 `{#snippet accordionGroup}` render 4×. 406→287 baris | ✅ **DONE** |
+| 3 impl sanitasi XSS + 2× validateEmail/Password | validation.ts vs security.ts | ◐ (security-sensitive, ditunda) |
 | `dataService` getProducts/Categories/AddOns nyaris identik | → `getCachedTable(table, cacheKey, offlineKey)` private method | ✅ **DONE** |
 | `autoApplyService` pola `if(!res.ok)` ×4 | → `throwIfNotOk(res, label)` helper | ✅ **DONE** |
 
@@ -89,7 +89,7 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 
 | File | LOC | Aksi | Status |
 |------|-----|------|--------|
-| `api/aichat/+server.ts` | 1652→**1162** | ✅ DRY (`callOpenRouter`/`stripJsonFence`) + Rupiah + 3 prompt → `prompts.ts` (521). **◐ Sisa opsional:** dekomposisi data-logic `handleRegularChat` (risiko logika, diminishing returns) | ✅ done (decomp opsional) |
+| `api/aichat/+server.ts` | 1652→**~780** | ✅ DRY + 3 prompt → `prompts.ts` + `handleRegularChat` 779→396 (4 helper → `reportData.ts`) | ✅ **DONE** |
 | `pengaturan/pemilik/manajemenmenu/+page.svelte` | 2831→**2167** | ✅ Dead-code dihapus + `resetMenuForm` + **pecah 5 tab** (`MenuTab/KategoriTab/EkstraTab/BahanTab/HppTab`, dumb-component) | ✅ done ⚠️ tes runtime |
 | `bayar/+page.svelte` | 1008 | ✅ `printStruk` → pakai `printViaIntent` + `DEFAULT_RECEIPT_SETTINGS` (buang pako/Base64 dup). `addToCart` split → opsional | ✅ done (receipt) |
 | `laporan:38-79` | — | `computeReportFingerprint` → **KEPT** (simplifikasi buang sensitivitas detail-edit → risiko report stale; cost negligible di skala POS). Documented, bukan defect | ✅ resolved (kept) |
@@ -105,7 +105,7 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | Error-handling frontend tak konsisten (`catch {}` silent vs string lokal vs `ErrorHandler`) | ◐ |
 | 4 komponen reimplement modal backdrop + `@keyframes slideUp` | ◐ |
 | Icon: `<ArrowLeft/>` vs `<svelte:component>` (deprecated) campur | ✅ **DONE** — 47× `svelte:component` → render langsung (14 file); grep 0, `pnpm build` lulus |
-| Runes vs Svelte 4 `let` campur di file riwayat | ◐ |
+| Runes vs Svelte 4 `let` campur di file riwayat | ✅ **DONE** — kasir + pemilik riwayat → `$state` (umum sudah runes). Nol `$:`, malah ngapus 2 latent error |
 | Callback prop `onClose` vs `onclose`/`ondone` campur | ◐ |
 | `each` key `(trx.id)` vs `(_i)` index vs tanpa key | ◐ |
 
