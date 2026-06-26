@@ -132,7 +132,9 @@
 		if (saved) {
 			try {
 				cart = JSON.parse(saved);
-			} catch {}
+			} catch {
+				/* cart localStorage korup → biarkan keranjang kosong */
+			}
 		}
 		transactionId = uuidv4(); // UUID untuk database
 		transactionCode = generateTransactionCode(); // Untuk tampilan/struk

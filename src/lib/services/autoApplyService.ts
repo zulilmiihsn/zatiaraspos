@@ -156,7 +156,9 @@ export class AutoApplyService {
 				);
 				refreshBus.emit('laporan');
 				refreshBus.emit('riwayat');
-			} catch {}
+			} catch {
+				/* sinyal refresh UI best-effort */
+			}
 		}
 	}
 

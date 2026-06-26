@@ -278,7 +278,9 @@
 			try {
 				// Pastikan cache laporan ter-invalidate agar fetch berikutnya tidak menggunakan data lama
 				await dataService.invalidateCacheOnChange('buku_kas');
-			} catch {}
+			} catch {
+				/* invalidate cache best-effort, refresh tetap lanjut */
+			}
 			await scheduleLaporanRefresh(80, true);
 		};
 
@@ -288,7 +290,9 @@
 			offLaporan = refreshBus.on('laporan', async () => {
 				try {
 					await dataService.invalidateCacheOnChange('buku_kas');
-				} catch {}
+				} catch {
+					/* invalidate cache best-effort, refresh tetap lanjut */
+				}
 				await scheduleLaporanRefresh(80, true);
 			});
 		}
