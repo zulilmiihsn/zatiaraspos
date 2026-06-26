@@ -77,7 +77,7 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | aichat OpenRouter fetch ×3 + fence-parse ×2 | `aichat:146,305,682` | ◐ |
 | `methodLabels` map di-copy | → `METHOD_LABELS` export di `receiptPrint.ts`; bayar pakai itu. (riwayat sudah via `buildReceiptHtml`; aichat = konteks beda, biar) | ✅ **DONE** |
 | `LaporanAccordions` 4 sub-accordion copy-paste (~110×4) | → 1 `{#snippet accordionGroup}` render 4×. 406→287 baris | ✅ **DONE** |
-| 3 impl sanitasi XSS + 2× validateEmail/Password | validation.ts vs security.ts | ◐ (security-sensitive, ditunda) |
+| 3 impl sanitasi XSS + 2× validateEmail/Password | `XSSProtection`+`InputValidation` (security.ts) **nol caller** → dihapus (~180 baris). `validation.sanitizeInput` = canonical | ✅ **DONE** |
 | `dataService` getProducts/Categories/AddOns nyaris identik | → `getCachedTable(table, cacheKey, offlineKey)` private method | ✅ **DONE** |
 | `autoApplyService` pola `if(!res.ok)` ×4 | → `throwIfNotOk(res, label)` helper | ✅ **DONE** |
 
@@ -101,13 +101,13 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 | Temuan | Status |
 |--------|--------|
 | Kontrak error API 4 gaya (`kitError` vs `json({success})` vs `json({error})`) lintas 27 endpoint | ✅ **DONE (no-code)** — impact-check: konversi paksa UNSAFE (`csrf.ts:56` baca `code:'CSRF_INVALID'` utk retry; success `token`/`{url,key}` coupled; normalizer `message\|\|error\|\|code` sudah toleran). Resolusi: 2-tier didokumentasikan di `CONVENTIONS §4` |
-| Toast 3 pola (`createToastManager` vs inline `+layout:332` vs state lokal) | ◐ |
-| Error-handling frontend tak konsisten (`catch {}` silent vs string lokal vs `ErrorHandler`) | ◐ |
-| 4 komponen reimplement modal backdrop + `@keyframes slideUp` | ◐ |
+| Toast 3 pola (`createToastManager` vs inline `+layout:332` vs state lokal) | ✅ **DONE** — `+layout` inline toast → `createToastManager`+`ToastNotification` (sama kayak page lain) |
+| Error-handling frontend tak konsisten (`catch {}` silent vs string lokal vs `ErrorHandler`) | ✅ **REVIEWED** — leaks sudah difix (gantikeamanan); riwayat/dsb pakai `ErrorHandler`; 4 `catch {}` sisa = best-effort benign → diberi comment intent. String-lokal utk display = legit |
+| 4 komponen reimplement modal backdrop + `@keyframes slideUp` | ⚠️ **KEPT** — animasi/sheet **genuinely beda** (modalSheet full-height tanpa opacity vs dropdownSheet auto-height + opacity fade). Maksa ke base = visual regression demi ~10 baris. Tidak diubah |
 | Icon: `<ArrowLeft/>` vs `<svelte:component>` (deprecated) campur | ✅ **DONE** — 47× `svelte:component` → render langsung (14 file); grep 0, `pnpm build` lulus |
 | Runes vs Svelte 4 `let` campur di file riwayat | ✅ **DONE** — kasir + pemilik riwayat → `$state` (umum sudah runes). Nol `$:`, malah ngapus 2 latent error |
-| Callback prop `onClose` vs `onclose`/`ondone` campur | ◐ |
-| `each` key `(trx.id)` vs `(_i)` index vs tanpa key | ◐ |
+| Callback prop `onClose` vs `onclose`/`ondone` campur | ✅ **DONE** — semua → camelCase (`onClose`/`onDone`/`onCancel`), modalSheet+cropperDialog + consumers |
+| `each` key `(trx.id)` vs `(_i)` index vs tanpa key | ✅ **DONE** — kasir riwayat `(_i)` → `(trx.id)` |
 
 ---
 
