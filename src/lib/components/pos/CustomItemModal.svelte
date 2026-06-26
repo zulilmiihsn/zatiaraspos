@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	let { show = $bindable(false), onAdd } = $props<{
 		show: boolean;
@@ -12,17 +13,11 @@
 	let customItemNote = $state('');
 	let jumlah = $state(1);
 
-	function formatRupiahInput(value: string): string {
-		const numberString = value.replace(/[^\d]/g, '');
-		if (!numberString) return '';
-		return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-	}
-
 	function handleCustomPriceInput(e: Event): void {
 		const target = e.target as HTMLInputElement;
 		const raw = target.value.replace(/[^\d]/g, '');
 		customItemPriceRaw = raw;
-		customItemPriceFormatted = formatRupiahInput(raw);
+		customItemPriceFormatted = formatRupiah(raw);
 	}
 
 	function decQty() {

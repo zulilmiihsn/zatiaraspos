@@ -9,7 +9,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
-	import { printViaIntent, DEFAULT_RECEIPT_SETTINGS } from '$lib/utils/receiptPrint';
+	import { printViaIntent, DEFAULT_RECEIPT_SETTINGS, METHOD_LABELS } from '$lib/utils/receiptPrint';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -437,14 +437,7 @@
 		// Ringkasan
 		html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
 		html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${formatRupiah(totalHarga)}</td></tr>`;
-		const methodLabels: Record<string, string> = {
-			tunai: 'Tunai',
-			qris: 'QRIS',
-			transfer: 'Transfer',
-			'e-wallet': 'E-Wallet',
-			card: 'Kartu'
-		};
-		html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
+		html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${METHOD_LABELS[paymentMethod] || paymentMethod}</td></tr>`;
 		if (paymentMethod === 'tunai') {
 			html += `<tr><td style='text-align:left;font-size:13px;'>Dibayar:</td><td style='text-align:right;font-size:13px;'>Rp${formatRupiah(parseInt(cashReceived) || 0)}</td></tr>`;
 			html += `<tr><td style='text-align:left;font-size:13px;'>Kembalian:</td><td style='text-align:right;font-size:13px;'>Rp${kembalian >= 0 ? formatRupiah(kembalian) : '0'}</td></tr>`;

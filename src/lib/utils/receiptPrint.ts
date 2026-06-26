@@ -22,7 +22,7 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
 };
 
 /** Label metode bayar untuk tampilan struk. */
-const METHOD_LABELS: Record<string, string> = {
+export const METHOD_LABELS: Record<string, string> = {
 	tunai: 'Tunai',
 	qris: 'QRIS',
 	transfer: 'Transfer',
