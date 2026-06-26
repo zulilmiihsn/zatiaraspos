@@ -635,7 +635,7 @@
 		/>
 
 		{#if showCartModal}
-			<ModalSheet bind:open={showCartModal} title="Keranjang" onclose={closeCartModal}>
+			<ModalSheet bind:open={showCartModal} title="Keranjang" onClose={closeCartModal}>
 				<div
 					class="min-h-0 flex-1 overflow-y-auto px-0 py-2"
 					onclick={handleStopPropagation}
@@ -713,7 +713,7 @@
 			<ModalSheet
 				bind:open={showModal}
 				title={selectedProduct ? selectedProduct.nama : ''}
-				onclose={closeModal}
+				onClose={closeModal}
 			>
 				<div
 					class="addon-list addon-modal-content min-h-0 flex-1 overflow-y-auto pb-48"

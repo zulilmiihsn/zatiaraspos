@@ -623,7 +623,7 @@
 {/if}
 
 {#if showCashModal}
-	<ModalSheet open={showCashModal} title="Pembayaran Tunai" onclose={closeCashModal}>
+	<ModalSheet open={showCashModal} title="Pembayaran Tunai" onClose={closeCashModal}>
 		<div class="pb-24 md:min-h-[60vh]">
 			<div class="mb-4 text-center text-gray-500 md:mb-6 md:text-lg">
 				Masukkan jumlah uang diterima

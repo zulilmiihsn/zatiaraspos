@@ -67,7 +67,7 @@
 	<ModalSheet
 		bind:open={show}
 		title={customItemName ? customItemName : 'Menu Kustom'}
-		onclose={() => (show = false)}
+		onClose={() => (show = false)}
 	>
 		<div
 			class="addon-list addon-modal-content min-h-0 flex-1 overflow-y-auto pb-48"

@@ -4,19 +4,19 @@
 	let {
 		open = $bindable(false),
 		title = '',
-		onclose,
+		onClose,
 		children,
 		footer
 	}: {
 		open?: boolean;
 		title?: string;
-		onclose?: () => void;
+		onClose?: () => void;
 		children?: Snippet;
 		footer?: Snippet;
 	} = $props();
 
 	function close() {
-		onclose?.();
+		onClose?.();
 	}
 
 	// Optional: close modal dengan swipe ke bawah (mobile UX)

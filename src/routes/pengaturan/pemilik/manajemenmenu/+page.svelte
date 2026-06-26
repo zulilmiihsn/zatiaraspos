@@ -2136,8 +2136,8 @@
 		<CropperDialog
 			src={cropperDialogImage}
 			bind:open={showCropperDialog}
-			ondone={handleCropperDone}
-			oncancel={handleCropperCancel}
+			onDone={handleCropperDone}
+			onCancel={handleCropperCancel}
 		/>
 	{/if}
 </div>

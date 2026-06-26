@@ -3,14 +3,14 @@
 		src = '',
 		open = $bindable(false),
 		aspect = 1,
-		ondone,
-		oncancel
+		onDone,
+		onCancel
 	}: {
 		src?: string;
 		open?: boolean;
 		aspect?: number;
-		ondone?: (data: { cropped: string }) => void;
-		oncancel?: () => void;
+		onDone?: (data: { cropped: string }) => void;
+		onCancel?: () => void;
 	} = $props();
 
 	let canvasEl = $state<HTMLCanvasElement | null>(null);
@@ -151,11 +151,11 @@
 
 	function handleOk() {
 		// preview sudah selalu update, cukup dispatch
-		if (ondone) ondone({ cropped: preview });
+		if (onDone) onDone({ cropped: preview });
 		open = false;
 	}
 	function handleCancel() {
-		if (oncancel) oncancel();
+		if (onCancel) onCancel();
 		open = false;
 	}
 
