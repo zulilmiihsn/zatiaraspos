@@ -70,12 +70,6 @@
 	let showErrorNotification = $state(false);
 	let errorNotificationMessage = $state('');
 	let errorNotificationTimeout: number | null = null;
-	let showSuccessNotification = $state(false);
-	let successNotificationMessage = $state('');
-	let successNotificationTimeout: number | null = null;
-
-	let showNoSessionModal = $state(false);
-	let noSessionModalMsg = $state('');
 
 	let currentUserRole = $derived(userRole.value || '');
 
@@ -91,15 +85,6 @@
 		if (errorNotificationTimeout !== null) clearTimeout(errorNotificationTimeout);
 		errorNotificationTimeout = window.setTimeout(() => {
 			showErrorNotification = false;
-		}, 3000);
-	}
-
-	function showSuccessNotif(message: string) {
-		successNotificationMessage = message;
-		showSuccessNotification = true;
-		if (successNotificationTimeout !== null) clearTimeout(successNotificationTimeout);
-		successNotificationTimeout = window.setTimeout(() => {
-			showSuccessNotification = false;
 		}, 3000);
 	}
 
@@ -490,9 +475,6 @@
 		showSuccessModal = false;
 		goto('/pos');
 	}
-	function handleCloseNoSessionModal() {
-		showNoSessionModal = false;
-	}
 </script>
 
 <main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-white px-4 pt-4 pb-28">
@@ -823,31 +805,6 @@
 	>
 		{errorNotificationMessage}
 	</div>
-{/if}
-
-{#if showSuccessNotification}
-	<div
-		class="fixed top-20 left-1/2 z-50 rounded-xl bg-green-500 px-6 py-3 text-white shadow-lg transition-all duration-300 ease-out"
-		style="transform: translateX(-50%);"
-		in:fly={{ y: -32, duration: 300, easing: cubicOut }}
-		out:fade={{ duration: 200 }}
-	>
-		{successNotificationMessage}
-	</div>
-{/if}
-
-{#if showNoSessionModal}
-	<ModalSheet open={showNoSessionModal} title="Peringatan" onclose={handleCloseNoSessionModal}>
-		<div class="py-6 text-center text-base text-gray-700">{noSessionModalMsg}</div>
-		{#snippet footer()}
-			<div class="flex flex-col gap-2">
-				<button
-					class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600"
-					onclick={handleCloseNoSessionModal}>Tutup</button
-				>
-			</div>
-		{/snippet}
-	</ModalSheet>
 {/if}
 
 {#if showNotifModal}

@@ -1,4 +1,4 @@
-import type { AppError, ValidationError, ApiError } from '$lib/types';
+import type { AppError, ValidationError } from '$lib/types';
 import { securityUtils } from '$lib/utils/security';
 
 type ApiErrorPayload = {
@@ -42,19 +42,6 @@ export class ErrorHandler {
 			field,
 			message,
 			value
-		};
-	}
-
-	/**
-	 * Create an API error
-	 */
-	static createApiError(message: string, statusCode: number, endpoint?: string): ApiError {
-		return {
-			status: statusCode,
-			statusText: 'Error',
-			message,
-			errors: [],
-			timestamp: Date.now()
 		};
 	}
 
@@ -265,87 +252,3 @@ export async function reportApiFailureFromResponse(
 	reportApiFailure(payload, response.status, endpoint);
 }
 
-/**
- * Error boundary for Svelte components
- */
-export function createErrorBoundary() {
-	let error: AppError | null = null;
-
-	return {
-		get error() {
-			return error;
-		},
-		set error(value: AppError | null) {
-			error = value;
-		},
-
-		handleError(err: unknown, context?: string) {
-			error = ErrorHandler.createError(ErrorHandler.extractErrorMessage(err), 'COMPONENT_ERROR', {
-				context
-			});
-			ErrorHandler.logError(err, context);
-		},
-
-		clearError() {
-			error = null;
-		}
-	};
-}
-
-/**
- * Validation helper functions
- */
-export const ValidationHelper = {
-	/**
-	 * Validate required field
-	 */
-	required(value: unknown, fieldName: string): ValidationError | null {
-		if (value === null || value === undefined || value === '') {
-			return ErrorHandler.createValidationError(fieldName, `${fieldName} harus diisi`, value);
-		}
-		return null;
-	},
-
-	/**
-	 * Validate string length
-	 */
-	minLength(value: string, min: number, fieldName: string): ValidationError | null {
-		if (value && value.length < min) {
-			return ErrorHandler.createValidationError(
-				fieldName,
-				`${fieldName} minimal ${min} karakter`,
-				value
-			);
-		}
-		return null;
-	},
-
-	/**
-	 * Validate numeric value
-	 */
-	numeric(value: unknown, fieldName: string): ValidationError | null {
-		if (value && isNaN(Number(value))) {
-			return ErrorHandler.createValidationError(
-				fieldName,
-				`${fieldName} harus berupa angka`,
-				value
-			);
-		}
-		return null;
-	},
-
-	/**
-	 * Validate positive number
-	 */
-	positive(value: unknown, fieldName: string): ValidationError | null {
-		const num = Number(value);
-		if (value && (isNaN(num) || num <= 0)) {
-			return ErrorHandler.createValidationError(
-				fieldName,
-				`${fieldName} harus lebih dari 0`,
-				value
-			);
-		}
-		return null;
-	}
-};
