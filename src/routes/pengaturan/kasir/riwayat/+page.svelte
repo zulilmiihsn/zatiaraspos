@@ -207,7 +207,7 @@
 			</div>
 		{:else}
 			<div class="flex flex-col gap-2">
-				{#each transaksiHariIni as trx, _i (_i)}
+				{#each transaksiHariIni as trx (trx.id)}
 					<div
 						class="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow transition-colors hover:bg-pink-50"
 						onclick={() => openDetail(trx)}
