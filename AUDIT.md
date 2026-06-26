@@ -53,14 +53,14 @@ Grep import: hanya self-reference internal, **nol consumer eksternal**. Catatan:
 
 | Lokasi | Temuan | Status |
 |--------|--------|--------|
-| `bayar/+page.svelte` | modal **NoSession** + notif **Success** (9 occurrence `showNoSessionModal`/`showSuccessNotif` di file ini ✅ ada) tak pernah di-trigger | ◐ trigger-check |
+| `bayar/+page.svelte` | modal **NoSession** + notif **Success** zero-trigger | ✅ **DONE** (verified zero-trigger, dihapus) |
 | `manajemenmenu/+page.svelte` | `blockNextClick` (no-op), `touchStartX/EndX`, `selectedImage` | ✅ **DONE** (27 baris dihapus, grep nol) |
 | `lib/types/index.ts:112-438` | ~300 baris tipe mati; sisakan `AppError`/`ApiError`/`ValidationError`. **Sebagian sudah dibuang saat P1** (`UserState`/`TransactionState`/ref `AppState` — yang rujuk modul terhapus). Sisa (`UIState`/`AppState`/`ButtonProps`/dst) masih ada | ◐ **per-simbol** sebelum trim lanjut |
 | `pengaturan/+page.svelte` | `PengaturanData`, `fetchPengaturan()`, 5 getter role, `settingsSections`, toast lokal | ✅ **DONE** (~110 baris, verify zero-read) |
 | `laporan/+page.svelte` | 8 `$derived` subgroup + `groupAndSumByName`/`toYMD`/`showToastNotification` lokal/`userProfileData`/`pengeluaran`/`produkTerlaris`/`kategoriTerlaris` | ✅ **DONE** (~95 baris, verify zero-read) |
-| `performance.ts` | `throttle` + `measureAsyncPerformance` zero-consumer (`debounce`/`calculateCartTotal`/`fuzzySearch` DIPAKAI — jangan hapus) | ◐ |
-| `errorHandling.ts` | `createApiError`/`createErrorBoundary`/`ValidationHelper` zero-consumer | ◐ |
-| `security.ts` | `CSRFProtection`/`SessionSecurity`/`XSSProtection`/`InputValidation` zero-consumer (CSRF asli di `csrf.ts`) | ◐ |
+| `performance.ts` | ~~`throttle` + `measureAsyncPerformance` zero-consumer~~ | ⚠️ **KOREKSI**: keduanya DIPAKAI di `pos/+page.svelte` (import+call). Audit salah → **KEPT** |
+| `errorHandling.ts` | `createApiError`/`createErrorBoundary`/`ValidationHelper` zero-consumer | ✅ **DONE** (verified, dihapus) |
+| `security.ts` | ~~`CSRFProtection`/`SessionSecurity`/`XSSProtection`/`InputValidation` zero-consumer~~ | ⚠️ **KOREKSI**: dipakai internal oleh `securityUtils`/`csrfProtection` (DIPAKAI). Audit salah → **KEPT** |
 | `autoApplyService.ts:273` | `rollbackChanges()` body kosong `// TODO` | ◐ |
 | `pos/+page.svelte` | `measureAsyncPerformance(..., ()=>Promise.resolve())` no-op; `skeletonCount` dihitung tapi hardcode 12 | ◐ |
 
