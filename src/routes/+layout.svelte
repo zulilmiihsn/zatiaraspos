@@ -272,7 +272,7 @@
 		showPinModal = false;
 	}
 
-	function handlePinError(event: CustomEvent) {
+	function handlePinError(detail: { message: string }) {
 		// Tampilkan toast error jika diperlukan
 	}
 
@@ -380,7 +380,7 @@
 	<div class="page-transition flex min-h-[100dvh] flex-col bg-white">
 		<div class="sticky top-0 z-30 bg-white shadow-md">
 			<Topbar>
-				<svelte:fragment slot="actions">
+				{#snippet actions()}
 					{#if $page.url.pathname === '/pos'}
 						<button
 							class="mr-2 flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 transition-colors hover:bg-pink-50"
@@ -427,8 +427,8 @@
 							{/if}
 						</button>
 					{/if}
-				</svelte:fragment>
-				<svelte:fragment slot="download">
+				{/snippet}
+				{#snippet download()}
 					{#if $page.url.pathname === '/laporan'}
 						<button
 							class="mr-2 flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-gray-200 bg-white text-2xl text-pink-500 shadow-lg shadow-pink-500/7 transition-all duration-150 active:border-pink-500 active:shadow-xl active:shadow-pink-500/12"
@@ -437,7 +437,7 @@
 							<Download size={22} />
 						</button>
 					{/if}
-				</svelte:fragment>
+				{/snippet}
 			</Topbar>
 		</div>
 		<div

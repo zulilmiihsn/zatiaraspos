@@ -1,5 +1,5 @@
 // Performance utilities
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number
 ): (...args: Parameters<T>) => void {
@@ -10,7 +10,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 	};
 }
 
-export function throttle<T extends (...args: unknown[]) => unknown>(
+export function throttle<T extends (...args: any[]) => any>(
 	func: T,
 	limit: number
 ): (...args: Parameters<T>) => void {
@@ -24,7 +24,6 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 	};
 }
 
-
 // Performance measurement
 export async function measureAsyncPerformance(_name: string, fn: () => Promise<void>) {
 	const _start = performance.now();
@@ -33,35 +32,37 @@ export async function measureAsyncPerformance(_name: string, fn: () => Promise<v
 }
 
 // Cart calculations (without memoization)
-export const calculateCartTotal = (cart: Record<string, unknown>[]) => {
+export const calculateCartTotal = <T extends any>(cart: T[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
-		const itemTotal = (item.product?.harga ?? 0) * (item.jumlah ?? 1);
+		const record = item as Record<string, any>;
+		const itemTotal = (record.product?.harga ?? 0) * (record.jumlah ?? 1);
 		const addOnsTotal =
-			(item.addOns || []).reduce(
-				(sum: number, addon: Record<string, unknown>) => sum + (addon.harga ?? 0),
+			(record.addOns || []).reduce(
+				(sum: number, addon: Record<string, any>) => sum + (addon.harga ?? 0),
 				0
-			) * (item.jumlah ?? 1);
+			) * (record.jumlah ?? 1);
 		total += itemTotal + addOnsTotal;
-		items += item.jumlah ?? 1;
+		items += record.jumlah ?? 1;
 	}
 	return { items, total };
 };
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch(
+export function fuzzySearch<T extends any>(
 	query: string,
-	items: Record<string, unknown>[],
+	items: T[],
 	key: string = 'nama'
-): Record<string, unknown>[] {
+): T[] {
 	if (!query.trim()) return items;
 	const searchTerm = query.toLowerCase();
 	// Cari di name dan kategori (jika ada)
 	return items
 		.map((item) => {
-			const name = String(item[key] ?? '').toLowerCase();
-			const kategori = String(item.kategori ?? '').toLowerCase();
+			const record = item as Record<string, any>;
+			const name = String(record[key] ?? '').toLowerCase();
+			const kategori = String(record.kategori ?? '').toLowerCase();
 			let score = 0;
 			if (name.startsWith(searchTerm)) score = 3;
 			else if (name.includes(searchTerm)) score = 2;

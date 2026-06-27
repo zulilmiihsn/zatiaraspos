@@ -162,9 +162,7 @@
 		})()
 	);
 	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
-	let formattedCashReceived = $derived(
-		cashReceived ? formatRupiah(parseInt(cashReceived)) : ''
-	);
+	let formattedCashReceived = $derived(cashReceived ? formatRupiah(parseInt(cashReceived)) : '');
 	let canPay = $derived(
 		Boolean(
 			paymentMethod &&
@@ -474,7 +472,6 @@
 
 <main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-white px-4 pt-4 pb-28">
 	<div class="mx-auto max-w-4xl">
-
 		{#if cart.length === 0}
 			<div
 				class="flex min-h-[62dvh] flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white px-6 py-12 text-center shadow-sm"
@@ -493,7 +490,9 @@
 		{:else}
 			<div class="mx-auto flex max-w-lg flex-col gap-4 pb-8">
 				{#if isOffline}
-					<div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+					<div
+						class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+					>
 						<WifiOff class="mt-0.5 h-5 w-5 shrink-0" />
 						<div>
 							<div class="text-sm font-bold">Mode offline</div>
@@ -505,16 +504,30 @@
 				{/if}
 
 				<!-- 1. Nama Pelanggan -->
-				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-					<label class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700" for="nama">
+				<div
+					class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+				>
+					<label
+						class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						for="nama"
+					>
 						<UserRound class="h-4 w-4 text-pink-500" />
 						Nama Pelanggan
 					</label>
-					<input id="nama" type="text" class="w-full rounded-xl border-[1.5px] border-pink-100 bg-pink-50/30 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-400 focus:bg-white focus:ring-4 focus:ring-pink-500/10" placeholder="Masukkan nama pelanggan..." bind:value={customerName} maxlength="50" />
+					<input
+						id="nama"
+						type="text"
+						class="w-full rounded-xl border-[1.5px] border-pink-100 bg-pink-50/30 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-400 focus:bg-white focus:ring-4 focus:ring-pink-500/10"
+						placeholder="Masukkan nama pelanggan..."
+						bind:value={customerName}
+						maxlength="50"
+					/>
 				</div>
 
 				<!-- 2. Pesanan & 3. Total Tagihan -->
-				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+				<div
+					class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+				>
 					<div class="mb-3 flex items-center justify-between">
 						<div class="flex items-center gap-2 font-semibold text-stone-900">
 							<ReceiptText class="h-5 w-5 text-pink-500" />
@@ -532,39 +545,77 @@
 										<div class="truncate font-semibold text-stone-950">{item.product.nama}</div>
 										<div class="mt-0.5 text-xs font-semibold text-stone-500">x{item.jumlah}</div>
 									</div>
-									<span class="shrink-0 font-bold text-pink-500">Rp {formatRupiah((item.product.harga ?? 0) * item.jumlah)}</span>
+									<span class="shrink-0 font-bold text-pink-500"
+										>Rp {formatRupiah((item.product.harga ?? 0) * item.jumlah)}</span
+									>
 								</div>
 								{#if item.addOns && item.addOns.length > 0}
 									<div class="mt-1 flex flex-col gap-0.5 rounded-lg bg-stone-50 px-3 py-2">
 										{#each item.addOns as ekstra}
 											<div class="flex justify-between gap-3 text-xs font-medium text-stone-600">
 												<span class="truncate">+ {ekstra.nama}</span>
-												<span class="shrink-0">Rp {formatRupiah((ekstra.harga ?? 0) * item.jumlah)}</span>
+												<span class="shrink-0"
+													>Rp {formatRupiah((ekstra.harga ?? 0) * item.jumlah)}</span
+												>
 											</div>
 										{/each}
 									</div>
 								{/if}
 								{#if (item.gula && item.gula !== 'normal') || (item.es && item.es !== 'normal') || (item.catatan && item.catatan.trim())}
 									<div class="text-xs font-medium text-stone-500">
-										{[item.gula && item.gula !== 'normal' ? item.gula === 'no' ? 'Tanpa Gula' : item.gula === 'less' ? 'Sedikit Gula' : item.gula : null, item.es && item.es !== 'normal' ? item.es === 'no' ? 'Tanpa Es' : item.es === 'less' ? 'Sedikit Es' : item.es : null, item.catatan && item.catatan.trim() ? item.catatan : null].filter(Boolean).join(', ')}
+										{[
+											item.gula && item.gula !== 'normal'
+												? item.gula === 'no'
+													? 'Tanpa Gula'
+													: item.gula === 'less'
+														? 'Sedikit Gula'
+														: item.gula
+												: null,
+											item.es && item.es !== 'normal'
+												? item.es === 'no'
+													? 'Tanpa Es'
+													: item.es === 'less'
+														? 'Sedikit Es'
+														: item.es
+												: null,
+											item.catatan && item.catatan.trim() ? item.catatan : null
+										]
+											.filter(Boolean)
+											.join(', ')}
 									</div>
 								{/if}
 							</li>
 						{/each}
 					</ul>
 					<!-- Total Tagihan -->
-					<div class="mt-2 flex items-end justify-between border-t border-dashed border-stone-200 pt-4 pb-1">
+					<div
+						class="mt-2 flex items-end justify-between border-t border-dashed border-stone-200 pt-4 pb-1"
+					>
 						<div class="text-sm font-semibold text-stone-500">Total Tagihan</div>
-						<div class="text-2xl font-bold tracking-tight text-stone-900">Rp {formatRupiah(totalHarga)}</div>
+						<div class="text-2xl font-bold tracking-tight text-stone-900">
+							Rp {formatRupiah(totalHarga)}
+						</div>
 					</div>
 				</div>
 
 				<!-- 4. Metode Pembayaran -->
-				<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+				<div
+					class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+				>
 					<div class="mb-3 text-sm font-semibold text-stone-700">Metode Pembayaran</div>
 					<div class="grid grid-cols-2 gap-3">
 						{#each paymentOptions as opt}
-							<button type="button" class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98] {paymentMethod === opt.id ? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm' : 'border-pink-100 bg-white text-stone-700'} {isOffline && opt.id !== 'tunai' ? 'cursor-not-allowed opacity-45' : ''}" onclick={() => handleSetPaymentMethod(opt.id)} disabled={isOffline && opt.id !== 'tunai'}>
+							<button
+								type="button"
+								class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98] {paymentMethod ===
+								opt.id
+									? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm'
+									: 'border-pink-100 bg-white text-stone-700'} {isOffline && opt.id !== 'tunai'
+									? 'cursor-not-allowed opacity-45'
+									: ''}"
+								onclick={() => handleSetPaymentMethod(opt.id)}
+								disabled={isOffline && opt.id !== 'tunai'}
+							>
 								{#if opt.id === 'tunai'}
 									<Banknote class="h-5 w-5" />
 								{:else}
@@ -578,7 +629,11 @@
 
 				<!-- 5. Konfirmasi & Batalkan Buttons -->
 				<div class="mt-2 flex flex-col gap-3">
-					<button class="w-full rounded-xl bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-[1.5px] disabled:border-pink-100 disabled:bg-pink-50 disabled:text-pink-300 disabled:shadow-none" onclick={handleBayar} disabled={!canPay}>
+					<button
+						class="w-full rounded-xl bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-[1.5px] disabled:border-pink-100 disabled:bg-pink-50 disabled:text-pink-300 disabled:shadow-none"
+						onclick={handleBayar}
+						disabled={!canPay}
+					>
 						Konfirmasi & Bayar
 					</button>
 					{#if !canPay}
@@ -592,7 +647,11 @@
 							{/if}
 						</div>
 					{/if}
-					<button class="mx-auto block w-full rounded-xl border-[1.5px] border-stone-200 bg-white py-3 text-sm font-bold text-stone-500 shadow-sm transition-all duration-200 hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600 active:scale-[0.98]" type="button" onclick={handleCancel}>
+					<button
+						class="mx-auto block w-full rounded-xl border-[1.5px] border-stone-200 bg-white py-3 text-sm font-bold text-stone-500 shadow-sm transition-all duration-200 hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600 active:scale-[0.98]"
+						type="button"
+						onclick={handleCancel}
+					>
 						Batalkan pembayaran
 					</button>
 				</div>

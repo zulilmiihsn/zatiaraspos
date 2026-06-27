@@ -22,11 +22,13 @@
 > ✅ **Diterapkan (app-wide):** 97 situs migrasi ke `formatRupiah` (74 client + 23 server prompt). Sisa 4 = util sendiri (currency.ts) + 2 tanggal. **Selesai.**
 
 **Kanonik:** `src/lib/utils/currency.ts`
+
 - `formatRupiah(value)` → `"1.000.000"` — **TIDAK** menambah prefix `Rp`.
 - `parseRupiah(value)` → `number`.
 - `handleRupiahInput(obj, field)` → handler `oninput`.
 
 **Aturan:**
+
 - Tampilan uang: `Rp {formatRupiah(x)}` (prefix "Rp " tetap di markup, angka lewat util).
 - **Larang:** `x.toLocaleString('id-ID')` inline, `formatRupiah` lokal (hapus di `catat/+page.svelte:186`, `CustomItemModal.svelte:15`), `formatCurrency` lokal (laporan).
 - ⚠️ Saat migrasi cek tiap call lama: kalau sebelumnya hasil sudah termasuk "Rp", jangan dobel.
@@ -40,17 +42,20 @@
 > ✅ **Dibuat & dipakai (3 riwayat).** `bayar/+page.svelte` belum migrasi → P4-followup (variannya = print POS, bukan cetak-ulang; perlu param header).
 
 **Kanonik (BARU):** `src/lib/utils/receiptPrint.ts`
+
 - `buildReceiptHtml(trx, pengaturan, items): string`
 - `printViaIntent(html): void` (gzip + base64 + `intent://...print-intent`)
 - `loadReceiptSettings(): Promise<...>` (fetch pengaturan struk + fallback localStorage)
 
 **Consumer yang WAJIB migrasi sekaligus (jangan parsial):**
+
 - `pengaturan/riwayat/+page.svelte` (`printStruk`)
 - `pengaturan/kasir/riwayat/+page.svelte` (`printStrukDariRiwayat`)
 - `pengaturan/pemilik/riwayat/+page.svelte` (`printStrukDariRiwayat`)
 - `pos/bayar/+page.svelte` (`printStrukViaEscPosService`)
 
 **Konsistensi data yang harus diseragamkan saat extract:**
+
 - `methodLabels` (tunai/qris/lainnya) → const module-level di `receiptPrint.ts`, dipakai semua.
 - transaction_id mapping → `t.ref_transaksi_kasir_id ?? t.transaction_id` (versi pemilik benar; kasir salah).
 - default `ucapan` newline → `'\n'` (bukan literal `\\n`).
@@ -60,7 +65,6 @@
 ## 3. Riwayat (data + komponen)
 
 > ✅ **Data layer + tipe selesai:** `riwayatService.ts` + `HistoryItem` di `lib/types/laporan`, 3 file migrasi. **Belum:** komponen `RiwayatHarian.svelte` tunggal (markup masih 3×) + seragamkan runes — sisakan untuk P5/follow-up.
-
 
 - **Tipe:** `HistoryItem` → pindah ke `src/lib/types/` (satu definisi, hapus 3 duplikat).
 - **Service:** `src/lib/services/riwayatService.ts` → `fetchTransaksiHariIni()`, `todayRange()`.
@@ -73,6 +77,7 @@
 
 > ✅ **Impact-check selesai (batch 5) — KONTRAK 2-TIER, BUKAN konversi paksa.**
 > Audit awal menyuruh "samakan semua ke `kitError`". Setelah cek consumer: **itu UNSAFE** dan ditolak. Bukti:
+>
 > - `csrf.ts:56` membaca `payload.code === 'CSRF_INVALID'` untuk retry → field **`code` load-bearing**; `kitError` membuangnya → CSRF retry rusak.
 > - `csrf` (token), `upload` (`{url,key}`) punya **shape sukses yang dikonsumsi** → ubah = breakage runtime (tak tertangkap `pnpm check`).
 > - Frontend `normalizeApiErrorPayload` sudah baca `message || error || code` → **variasi error sudah terserap**; konversi = risiko tanpa benefit.
@@ -80,14 +85,17 @@
 **Dua kontrak yang SAH (jangan dipaksa jadi satu):**
 
 **Tier A — resource routes (≈22 endpoint, DEFAULT untuk endpoint baru):**
+
 - **Error:** `throw kitError(status, msg)` — `import { error as kitError } from '@sveltejs/kit'`.
 - **Sukses:** `{ ok: true, data }` / `{ ok: true }`; GET list boleh raw array / `{ items, nextCursor }`.
 - **Baseline contoh:** `api/pos/transaction/+server.ts`.
 
 **Tier B — telemetri & auth (`aichat`, `cache-metrics`, `security-events`, `csrf`, `logout`, `veriflogin`, `gantikeamanan`):**
+
 - **Tetap** `json({ success, code, message })`. **JANGAN konversi** — `code` dipakai consumer (CSRF retry, rate-limit) & shape sukses coupled.
 
 **Auth (wajib tiap handler mutasi, kedua tier):**
+
 - `requireAuthSession(locals)` / `requireSessionBranch(locals, body?.branch)` + `requireAnyRole(session.role, ['kasir'|'pemilik'])`.
 
 **Aturan endpoint BARU:** default Tier A. Pakai Tier B hanya kalau consumer butuh `code` terstruktur.
@@ -95,6 +103,7 @@
 ✅ **`api/upload` auth gap — FIXED (batch 2):** POST/DELETE pakai `requireAuthSession` + `requireAnyRole(['pemilik'])`; GET publik (serving gambar). Error tetap `json({error})` — ditoleransi normalizer, consumer DELETE fire-and-forget.
 
 **Helper anti-duplikat:**
+
 - ✅ `callOpenRouter(apiKey, systemMessage, opts)` + `stripJsonFence(content)` → **DONE** (in-file `aichat`, 3 fetch + 2 fence deduped).
 - ◐ `throwIfNotOk(res, label)` → untuk `autoApplyService.ts` (4 duplikat) — belum.
 - ◐ `getCachedTable(table, cacheKey, offlineKey)` → untuk `dataService.ts` (getProducts/Categories/AddOns) — belum.
@@ -104,6 +113,7 @@
 ## 5. Error handling (frontend)
 
 **Kanonik:** `src/lib/utils/errorHandling.ts`
+
 - `ErrorHandler.extractErrorMessage(e)`, `ErrorHandler.logError(...)`
 - `getApiErrorMessage(...)` / `getApiErrorMessageFromResponse(res)`
 - `reportApiFailure(...)` / `reportApiFailureFromResponse(res)`
@@ -116,6 +126,7 @@
 ## 6. Notifikasi / Toast
 
 **Kanonik:** `createToastManager()` dari `src/lib/utils/ui.ts` + komponen `toastNotification.svelte`.
+
 - API: `{ showToast, toastMessage, toastType, showToastNotification(msg, type?, duration?), hideToast }`.
 
 **Aturan:** semua feedback non-blocking → toast manager ini.
@@ -157,12 +168,15 @@ Sebelum tiap batch refactor dianggap selesai:
 - [ ] Grep cek nol referensi tersisa ke simbol yang dihapus.
 
 ### Impact-check sebelum extract shared file
+
 Setiap mau bikin util/komponen bersama, **grep dulu semua consumer** dan migrasi serempak:
+
 ```
 rtk grep "<nama-fungsi-lama>"      # temukan semua pemakai
 rtk grep "toLocaleString('id-ID')" # untuk batch Rupiah
 rtk grep "from '\$lib/types/transaction'"  # pastikan benar zero-consumer sebelum hapus
 ```
+
 Tujuan: nol scope ketinggalan, nol varian baru.
 
 ---

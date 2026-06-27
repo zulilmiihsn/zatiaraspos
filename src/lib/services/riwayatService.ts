@@ -63,7 +63,8 @@ export async function fetchTransaksiHariIni(filter: RiwayatFilter = {}): Promise
 	// Filter metode bayar
 	if (filterPayment !== 'all') {
 		result = result.filter((t) => {
-			if (filterPayment === 'qris') return t.metode_bayar === 'qris' || t.metode_bayar === 'non-tunai';
+			if (filterPayment === 'qris')
+				return t.metode_bayar === 'qris' || t.metode_bayar === 'non-tunai';
 			if (filterPayment === 'tunai') return t.metode_bayar === 'tunai';
 			return true;
 		});

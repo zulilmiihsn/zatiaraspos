@@ -479,8 +479,6 @@
 			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
 	);
 
-
-
 	// Fungsi untuk menghitung range tanggal berdasarkan filter type
 	function calculateDateRange(type: string, date?: string, month?: string, year?: string) {
 		if (!date && !month && !year) return { startDate: '', endDate: '' };

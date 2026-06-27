@@ -1,4 +1,4 @@
-import type { Product, AddOn } from '$lib/types/product';
+import type { Product, AddOn, Category } from '$lib/types/product';
 import { dataService } from './dataService';
 import { formatRupiah } from '$lib/utils/currency';
 
@@ -8,7 +8,7 @@ export interface ProductWithAddOns extends Product {
 
 export interface ProductAnalysisData {
 	products: ProductWithAddOns[];
-	categories: unknown[];
+	categories: Category[];
 	addOns: AddOn[];
 }
 
@@ -37,11 +37,7 @@ export class ProductAnalysisService {
 		}
 
 		try {
-			let products: unknown[] = [];
-			let categories: unknown[] = [];
-			let addOns: unknown[] = [];
-
-			[products, categories, addOns] = await Promise.all([
+			const [products, categories, addOns] = await Promise.all([
 				dataService.getProducts(),
 				dataService.getCategories(),
 				dataService.getAddOns()
@@ -60,7 +56,7 @@ export class ProductAnalysisService {
 			};
 			this.cacheTimestamp = now;
 
-			return this.cache;
+			return this.cache as ProductAnalysisData;
 		} catch (error) {
 			throw error;
 		}

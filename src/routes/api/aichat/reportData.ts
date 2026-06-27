@@ -100,10 +100,7 @@ export async function fetchReportData(
 					.where(
 						and(
 							eq(transaksiKasir.cabang_id, requestedBranch),
-							inArray(
-								transaksiKasir.buku_kas_id,
-								bukuKasIds.map(String)
-							)
+							inArray(transaksiKasir.buku_kas_id, bukuKasIds.map(String))
 						)
 					);
 			} catch (error) {

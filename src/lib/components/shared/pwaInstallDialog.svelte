@@ -12,7 +12,8 @@
 		onClose?: () => void;
 	} = $props();
 
-	let platform: 'ios' | 'android' | 'chrome-desktop' | 'edge' | 'firefox' | 'other' = $state('other');
+	type Platform = 'ios' | 'android' | 'chrome-desktop' | 'edge' | 'firefox' | 'other';
+	let platform = $state<Platform>('other');
 	let isAlreadyInstalled = $state(false);
 	let deferredPrompt: any = $state(null);
 	let installing = $state(false);

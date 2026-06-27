@@ -82,9 +82,7 @@
 								<span class="mb-0.5 truncate text-base font-semibold text-green-900"
 									>{ekstra.nama}</span
 								>
-								<span class="truncate text-xs text-green-700"
-									>Rp {formatRupiah(ekstra.harga)}</span
-								>
+								<span class="truncate text-xs text-green-700">Rp {formatRupiah(ekstra.harga)}</span>
 							</div>
 							<div class="ml-2">
 								<button

@@ -107,7 +107,8 @@ export default defineConfig({
 			manifest: {
 				name: 'Zatiaras POS',
 				short_name: 'ZatiarasPOS',
-				description: 'Zatiaras POS - Aplikasi Kasir Modern, Cepat & Mudah untuk Bisnis Minuman Anda.',
+				description:
+					'Zatiaras POS - Aplikasi Kasir Modern, Cepat & Mudah untuk Bisnis Minuman Anda.',
 				theme_color: '#ec4899',
 				background_color: '#ffffff',
 				display: 'standalone',

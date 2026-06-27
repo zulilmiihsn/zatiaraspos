@@ -107,18 +107,29 @@
 </div>
 
 <div class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-white p-4 lg:p-8">
-	<div class="mx-auto transition-all duration-300 {activeTab === 'preview' ? 'max-w-4xl' : 'max-w-xl'}">
+	<div
+		class="mx-auto transition-all duration-300 {activeTab === 'preview' ? 'max-w-4xl' : 'max-w-xl'}"
+	>
 		<!-- Tabs Navigation -->
-		<div class="mb-6 flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none;-ms-overflow-style:none;">
+		<div
+			class="mb-6 flex gap-3 overflow-x-auto pb-2"
+			style="scrollbar-width:none;-ms-overflow-style:none;"
+		>
 			<button
-				class="min-w-[120px] flex-1 cursor-pointer rounded-xl border px-5 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {activeTab === 'detail' ? 'border-pink-500 bg-pink-500 text-white shadow-sm shadow-pink-500/20' : 'border-pink-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50/50'}"
-				onclick={() => activeTab = 'detail'}
+				class="min-w-[120px] flex-1 cursor-pointer rounded-xl border px-5 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {activeTab ===
+				'detail'
+					? 'border-pink-500 bg-pink-500 text-white shadow-sm shadow-pink-500/20'
+					: 'border-pink-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50/50'}"
+				onclick={() => (activeTab = 'detail')}
 			>
 				Detail Struk
 			</button>
 			<button
-				class="min-w-[120px] flex-1 cursor-pointer rounded-xl border px-5 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {activeTab === 'preview' ? 'border-pink-500 bg-pink-500 text-white shadow-sm shadow-pink-500/20' : 'border-pink-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50/50'}"
-				onclick={() => activeTab = 'preview'}
+				class="min-w-[120px] flex-1 cursor-pointer rounded-xl border px-5 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {activeTab ===
+				'preview'
+					? 'border-pink-500 bg-pink-500 text-white shadow-sm shadow-pink-500/20'
+					: 'border-pink-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50/50'}"
+				onclick={() => (activeTab = 'preview')}
 			>
 				Tampilan Struk
 			</button>
@@ -128,8 +139,13 @@
 			<!-- Form Section -->
 			<div class="rounded-2xl bg-white pb-6 sm:pb-8">
 				<form class="space-y-5" onsubmit={simpanPengaturan}>
-					<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-						<label for="nama-toko" class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700">
+					<div
+						class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+					>
+						<label
+							for="nama-toko"
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						>
 							<Store class="h-4 w-4 text-pink-500" />
 							Nama Toko
 						</label>
@@ -142,8 +158,13 @@
 							required
 						/>
 					</div>
-					<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-						<label for="alamat" class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700">
+					<div
+						class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+					>
+						<label
+							for="alamat"
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						>
 							<MapPin class="h-4 w-4 text-pink-500" />
 							Alamat
 						</label>
@@ -156,8 +177,13 @@
 							required
 						/>
 					</div>
-					<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-						<label for="telepon" class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700">
+					<div
+						class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+					>
+						<label
+							for="telepon"
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						>
 							<Phone class="h-4 w-4 text-pink-500" />
 							Nomor Telepon
 						</label>
@@ -170,8 +196,13 @@
 							required
 						/>
 					</div>
-					<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-						<label for="instagram" class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700">
+					<div
+						class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+					>
+						<label
+							for="instagram"
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						>
 							<InstagramIcon class="h-4 w-4 text-pink-500" />
 							Instagram
 						</label>
@@ -183,8 +214,13 @@
 							maxlength="30"
 						/>
 					</div>
-					<div class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
-						<label for="ucapan" class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700">
+					<div
+						class="rounded-2xl border-[1.5px] border-pink-100 bg-white p-4 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+					>
+						<label
+							for="ucapan"
+							class="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-700"
+						>
 							<MessageSquareHeart class="h-4 w-4 text-pink-500" />
 							Ucapan di Bawah Struk
 						</label>
@@ -215,12 +251,24 @@
 			<!-- Preview Section -->
 			<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
 				<!-- Receipt Struk Preview -->
-				<div class="w-full max-w-sm mx-auto">
-					<div class="relative overflow-hidden rounded-t-lg bg-white p-6 shadow-xl shadow-stone-200/50 sm:p-8" style="border-bottom: 4px dotted #e5e7eb;">
-						<div class="font-mono text-black" style="font-size: 14px; line-height: 1.5; padding: 8px;">
+				<div class="mx-auto w-full max-w-sm">
+					<div
+						class="relative overflow-hidden rounded-t-lg bg-white p-6 shadow-xl shadow-stone-200/50 sm:p-8"
+						style="border-bottom: 4px dotted #e5e7eb;"
+					>
+						<div
+							class="font-mono text-black"
+							style="font-size: 14px; line-height: 1.5; padding: 8px;"
+						>
 							<div style="text-align:center; margin-bottom: 16px;">
-								<img src={LOGO_BASE64} style="width:120px; height:120px; margin:0 auto 12px; display:block; filter:grayscale(100%) contrast(1.2);" alt="Logo" />
-								<div style="font-weight:bold; font-size: 20px; text-transform: uppercase;">{namaToko || 'Nama Toko'}</div>
+								<img
+									src={LOGO_BASE64}
+									style="width:120px; height:120px; margin:0 auto 12px; display:block; filter:grayscale(100%) contrast(1.2);"
+									alt="Logo"
+								/>
+								<div style="font-weight:bold; font-size: 20px; text-transform: uppercase;">
+									{namaToko || 'Nama Toko'}
+								</div>
 								<div style="font-size: 13px; margin-top: 4px;">{alamat || 'Alamat Toko'}</div>
 								{#if instagram || telepon}
 									<div style="font-size: 13px; margin-top: 2px;">
@@ -228,18 +276,24 @@
 									</div>
 								{/if}
 							</div>
-							
+
 							<div style="border-bottom: 1px dashed #333; margin-bottom: 12px;"></div>
-							
-							<div style="text-align:left; font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between;">
+
+							<div
+								style="text-align:left; font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between;"
+							>
 								<div>nama pelanggan</div>
 								<div>01/01/2024 10.00</div>
 							</div>
-							
-							<table style="width:100%; font-size: 14px; border-collapse:collapse; margin-bottom: 12px;">
+
+							<table
+								style="width:100%; font-size: 14px; border-collapse:collapse; margin-bottom: 12px;"
+							>
 								<tbody>
 									<tr>
-										<td style="text-align:left; padding-bottom:4px; font-weight: bold;">Jus Mangga <span style="font-size: 12px; font-weight: normal;">x2</span></td>
+										<td style="text-align:left; padding-bottom:4px; font-weight: bold;"
+											>Jus Mangga <span style="font-size: 12px; font-weight: normal;">x2</span></td
+										>
 										<td style="text-align:right; padding-bottom:4px;">Rp20.000</td>
 									</tr>
 									<tr>
@@ -247,18 +301,26 @@
 										<td style="font-size: 12px; text-align:right; color: #333;">Rp4.000</td>
 									</tr>
 									<tr>
-										<td colspan="2" style="font-size: 12px; padding-left: 8px; padding-bottom:8px; color: #333; font-style: italic;">Tanpa Gula, Sedikit Es</td>
+										<td
+											colspan="2"
+											style="font-size: 12px; padding-left: 8px; padding-bottom:8px; color: #333; font-style: italic;"
+											>Tanpa Gula, Sedikit Es</td
+										>
 									</tr>
 									<tr>
-										<td style="text-align:left; padding-bottom:4px; font-weight: bold;">Jus Alpukat <span style="font-size: 12px; font-weight: normal;">x1</span></td>
+										<td style="text-align:left; padding-bottom:4px; font-weight: bold;"
+											>Jus Alpukat <span style="font-size: 12px; font-weight: normal;">x1</span></td
+										>
 										<td style="text-align:right; padding-bottom:4px;">Rp15.000</td>
 									</tr>
 								</tbody>
 							</table>
-							
+
 							<div style="border-bottom: 1px dashed #333; margin-bottom: 12px;"></div>
-							
-							<table style="width:100%; font-size: 14px; border-collapse:collapse; margin-bottom: 24px;">
+
+							<table
+								style="width:100%; font-size: 14px; border-collapse:collapse; margin-bottom: 24px;"
+							>
 								<tbody>
 									<tr>
 										<td style="text-align:left; padding-bottom:4px;">Total:</td>
@@ -278,7 +340,7 @@
 									</tr>
 								</tbody>
 							</table>
-							
+
 							<div style="text-align:center; font-size: 13px; white-space:pre-line;">
 								{ucapan || 'Terima kasih'}
 							</div>
@@ -287,14 +349,20 @@
 				</div>
 
 				<!-- ASCII (Base64) Info Card -->
-				<div class="flex flex-col justify-between rounded-2xl border-[1.5px] border-pink-100 bg-white p-6 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]">
+				<div
+					class="flex flex-col justify-between rounded-2xl border-[1.5px] border-pink-100 bg-white p-6 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)]"
+				>
 					<div>
 						<h3 class="text-lg font-bold text-stone-800">Kode ASCII (Base64) Logo</h3>
-						<p class="mt-2 text-sm text-stone-600 leading-relaxed">
-							Ini adalah representasi teks ASCII (Base64) dari logo toko. Data gambar ini ditanamkan langsung dalam kode agar struk dapat dicetak kapan saja, bahkan saat perangkat kasir sedang offline.
+						<p class="mt-2 text-sm leading-relaxed text-stone-600">
+							Ini adalah representasi teks ASCII (Base64) dari logo toko. Data gambar ini ditanamkan
+							langsung dalam kode agar struk dapat dicetak kapan saja, bahkan saat perangkat kasir
+							sedang offline.
 						</p>
 						<div class="mt-4 rounded-xl border border-stone-200 bg-stone-900 p-4">
-							<div class="max-h-40 overflow-y-auto font-mono text-[10px] text-stone-400 break-all select-all pr-1">
+							<div
+								class="max-h-40 overflow-y-auto pr-1 font-mono text-[10px] break-all text-stone-400 select-all"
+							>
 								{LOGO_BASE64}
 							</div>
 						</div>
@@ -303,18 +371,34 @@
 					<div class="mt-6">
 						<button
 							type="button"
-							class="w-full flex items-center justify-center gap-2 rounded-xl bg-pink-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 hover:bg-pink-600 active:scale-[0.98]"
+							class="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 hover:bg-pink-600 active:scale-[0.98]"
 							onclick={copyBase64}
 						>
 							{#if copied}
 								<!-- Check Icon -->
-								<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<svg
+									class="h-4 w-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
 									<polyline points="20 6 9 17 4 12"></polyline>
 								</svg>
 								Tersalin!
 							{:else}
 								<!-- Copy Icon -->
-								<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<svg
+									class="h-4 w-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
 									<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
 									<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
 								</svg>

@@ -80,8 +80,7 @@
 							onkeypress={(e) => e.key === 'Enter' && openKategoriForm(kat)}
 						>
 							<div class="flex flex-col">
-								<span class="mb-0.5 truncate text-base font-semibold text-blue-900"
-									>{kat.nama}</span
+								<span class="mb-0.5 truncate text-base font-semibold text-blue-900">{kat.nama}</span
 								>
 								<span class="truncate text-xs text-blue-700"
 									>{menus.filter((m) => m.kategori_id === kat.id).length} menu</span

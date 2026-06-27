@@ -1,4 +1,5 @@
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
+import type { Product, Category, AddOn } from '$lib/types/product';
 import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import {
 	addDaysYmd,
@@ -305,11 +306,10 @@ export class DataService {
 			return offlineData;
 		}
 		try {
-			const data = await smartCache.get(
-				`${cacheKey}_${branch}`,
-				async () => dbGetStrict(table),
-				{ ttl: 180000, backgroundRefresh: true }
-			);
+			const data = await smartCache.get(`${cacheKey}_${branch}`, async () => dbGetStrict(table), {
+				ttl: 180000,
+				backgroundRefresh: true
+			});
 			await idbSet(offlineKey, data || []);
 			return data || [];
 		} catch {
@@ -317,16 +317,16 @@ export class DataService {
 		}
 	}
 
-	async getProducts() {
-		return this.getCachedTable('produk', CACHE_KEYS.PRODUCTS, 'products');
+	async getProducts(): Promise<Product[]> {
+		return this.getCachedTable('produk', CACHE_KEYS.PRODUCTS, 'products') as unknown as Product[];
 	}
 
-	async getCategories() {
-		return this.getCachedTable('kategori', CACHE_KEYS.CATEGORIES, 'categories');
+	async getCategories(): Promise<Category[]> {
+		return this.getCachedTable('kategori', CACHE_KEYS.CATEGORIES, 'categories') as unknown as Category[];
 	}
 
-	async getAddOns() {
-		return this.getCachedTable('tambahan', CACHE_KEYS.ADDONS, 'addons');
+	async getAddOns(): Promise<AddOn[]> {
+		return this.getCachedTable('tambahan', CACHE_KEYS.ADDONS, 'addons') as unknown as AddOn[];
 	}
 
 	async getIngredients() {
@@ -437,8 +437,8 @@ export class DataService {
 
 				const pemasukan = laporan.filter((t) => t.tipe === 'in');
 				const pengeluaran = laporan.filter((t) => t.tipe === 'out');
-				const totalPemasukan = pemasukan.reduce((s, t) => s + (t.nominal || 0), 0);
-				const totalPengeluaran = pengeluaran.reduce((s, t) => s + (t.nominal || 0), 0);
+				const totalPemasukan = pemasukan.reduce((s, t) => s + ((t.nominal as number) || 0), 0);
+				const totalPengeluaran = pengeluaran.reduce((s, t) => s + ((t.nominal as number) || 0), 0);
 				const labaKotor = totalPemasukan - totalPengeluaran;
 				const pajak = labaKotor > 0 ? Math.round(labaKotor * 0.005) : 0;
 

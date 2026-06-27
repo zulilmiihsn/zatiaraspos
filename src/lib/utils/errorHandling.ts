@@ -251,4 +251,3 @@ export async function reportApiFailureFromResponse(
 
 	reportApiFailure(payload, response.status, endpoint);
 }
-

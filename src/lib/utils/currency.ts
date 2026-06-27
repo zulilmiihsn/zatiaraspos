@@ -8,10 +8,10 @@
  */
 export function formatRupiah(value: number | string | null | undefined): string {
 	if (value === null || value === undefined || value === '') return '';
-	
+
 	const num = typeof value === 'string' ? parseRupiah(value) : value;
 	if (isNaN(num)) return '';
-	
+
 	return num.toLocaleString('id-ID');
 }
 
@@ -21,7 +21,7 @@ export function formatRupiah(value: number | string | null | undefined): string 
 export function parseRupiah(value: string | number | null | undefined): number {
 	if (value === null || value === undefined || value === '') return 0;
 	if (typeof value === 'number') return value;
-	
+
 	const raw = String(value).replace(/[^\d-]/g, '');
 	const parsed = parseInt(raw, 10);
 	return isNaN(parsed) ? 0 : parsed;
@@ -35,7 +35,7 @@ export function handleRupiahInput<T extends Record<string, any>>(obj: T, field: 
 	return (e: Event) => {
 		const target = e.target as HTMLInputElement;
 		const raw = target.value.replace(/[^\d]/g, '');
-		
+
 		if (raw) {
 			obj[field] = parseInt(raw, 10).toLocaleString('id-ID') as any;
 		} else {

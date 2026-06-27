@@ -773,7 +773,7 @@ export class FeatureTestRunner {
 					success: result.success,
 					message: result.message,
 					data: result.data,
-					error: result.error,
+					error: result.error ? String(result.error) : undefined,
 					executionTime
 				});
 

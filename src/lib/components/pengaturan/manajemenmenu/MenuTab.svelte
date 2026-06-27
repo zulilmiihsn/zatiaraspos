@@ -202,9 +202,7 @@
 									{/if}
 								</div>
 								<div class="w-full flex-shrink-0 text-center">
-									<div
-										class="mb-1 truncate text-base font-semibold text-gray-800 md:text-base"
-									>
+									<div class="mb-1 truncate text-base font-semibold text-gray-800 md:text-base">
 										{menu.nama}
 									</div>
 									<div class="mb-1 truncate text-xs text-gray-500 md:text-base">

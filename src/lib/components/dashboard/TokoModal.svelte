@@ -168,21 +168,18 @@
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
-						<span>Modal Awal</span><span>Rp {formatRupiah(ringkasanTutup.modalAwal)}</span
+						<span>Modal Awal</span><span>Rp {formatRupiah(ringkasanTutup.modalAwal)}</span>
+					</div>
+					<div
+						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
+					>
+						<span>Total Penjualan</span><span>Rp {formatRupiah(ringkasanTutup.totalPenjualan)}</span
 						>
 					</div>
 					<div
 						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
 					>
-						<span>Total Penjualan</span><span
-							>Rp {formatRupiah(ringkasanTutup.totalPenjualan)}</span
-						>
-					</div>
-					<div
-						class="flex items-center justify-between rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 font-semibold"
-					>
-						<span>Pemasukan Tunai</span><span
-							>Rp {formatRupiah(ringkasanTutup.pemasukanTunai)}</span
+						<span>Pemasukan Tunai</span><span>Rp {formatRupiah(ringkasanTutup.pemasukanTunai)}</span
 						>
 					</div>
 					<div

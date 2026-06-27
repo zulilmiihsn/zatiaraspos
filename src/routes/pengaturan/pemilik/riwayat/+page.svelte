@@ -229,9 +229,7 @@
 			class="ml-2 rounded-xl bg-pink-50 p-2 transition-colors hover:bg-pink-100"
 			aria-label="Refresh"
 		>
-			<RefreshCw
-				class="h-5 w-5 text-pink-500 {loading ? 'animate-spin' : ''}"
-			/>
+			<RefreshCw class="h-5 w-5 text-pink-500 {loading ? 'animate-spin' : ''}" />
 		</button>
 	</div>
 	<!-- Search Bar dan Filter Payment Method digabung -->

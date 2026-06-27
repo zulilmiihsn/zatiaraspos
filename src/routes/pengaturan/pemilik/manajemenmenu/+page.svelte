@@ -9,7 +9,6 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { get as getCache, set as setCache } from 'idb-keyval';
 
-
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Trash from 'lucide-svelte/icons/trash';
@@ -399,7 +398,6 @@
 		await fetchMenus();
 		await fetchRecipes();
 		await afterUpdateCachePOS();
-
 	}
 
 	async function saveMenuRecipe(productId: string | number) {
@@ -486,7 +484,7 @@
 	}
 
 	function formatCurrency(value: number) {
-		return `Rp ${formatRupiah(Math.round(Number(value || 0)))}` ;
+		return `Rp ${formatRupiah(Math.round(Number(value || 0)))}`;
 	}
 
 	function confirmDeleteMenu(id: string | number) {
@@ -533,7 +531,6 @@
 			menuIdToDelete = null;
 			await fetchMenus();
 			await afterUpdateCachePOS();
-
 		}
 	}
 
@@ -687,7 +684,6 @@
 			await fetchEkstra();
 
 			await afterUpdateCachePOS();
-
 		}
 	}
 
@@ -975,13 +971,9 @@
 		}
 	}
 
-
-
 	function handleImgError(menuId: string | number) {
 		imageError[menuId] = true;
 	}
-
-
 
 	function toggleMenuInKategoriRealtime(menuId: string | number) {
 		if (selectedMenuIds.includes(menuId)) {
@@ -1088,7 +1080,6 @@
 		}
 	}
 
-
 	// Tambahkan auto-dismiss 2 detik untuk notif
 	$effect(() => {
 		if (showNotifModal) {
@@ -1146,35 +1137,35 @@
 								: 'left-[calc(80%+0.125rem)] w-[calc(20%-0.25rem)] bg-gray-700'}"
 			></div>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] font-semibold transition-all focus:outline-none sm:text-xs md:text-base {activeTab ===
 				'menu'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'menu')}>Menu</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] font-semibold transition-all focus:outline-none sm:text-xs md:text-base {activeTab ===
 				'kategori'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'kategori')}>Kategori</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] font-semibold transition-all focus:outline-none sm:text-xs md:text-base {activeTab ===
 				'ekstra'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'ekstra')}>Tambahan</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] font-semibold transition-all focus:outline-none sm:text-xs md:text-base {activeTab ===
 				'bahan'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
 				onclick={() => (activeTab = 'bahan')}>Bahan</button
 			>
 			<button
-				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] sm:text-xs md:text-base font-semibold transition-all focus:outline-none {activeTab ===
+				class="relative z-10 flex-1 rounded-lg py-2 text-[11px] font-semibold transition-all focus:outline-none sm:text-xs md:text-base {activeTab ===
 				'hpp'
 					? 'text-white'
 					: 'text-gray-700'} md:px-8 md:py-4"
@@ -1926,9 +1917,12 @@
 							/>
 						</div>
 						<div class="flex flex-col gap-2">
-							<label for="bahan-purchase-cost" class="font-semibold text-gray-700">Harga Beli</label>
+							<label for="bahan-purchase-cost" class="font-semibold text-gray-700">Harga Beli</label
+							>
 							<div class="relative">
-								<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400">Rp</span>
+								<span class="absolute top-1/2 left-4 -translate-y-1/2 font-medium text-gray-400"
+									>Rp</span
+								>
 								<input
 									id="bahan-purchase-cost"
 									type="text"

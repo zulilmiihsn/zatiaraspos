@@ -33,9 +33,8 @@
 				</div>
 				<div class="text-xl font-bold text-green-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.pendapatan !== null && summary?.pendapatan !== undefined
-							? formatRupiah(summary.pendapatan)
-							: '0'}
-					
+						? formatRupiah(summary.pendapatan)
+						: '0'}
 				</div>
 			</div>
 			<div
@@ -49,9 +48,8 @@
 				</div>
 				<div class="text-xl font-bold text-red-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.pengeluaran !== null && summary?.pengeluaran !== undefined
-							? formatRupiah(summary.pengeluaran)
-							: '0'}
-					
+						? formatRupiah(summary.pengeluaran)
+						: '0'}
 				</div>
 			</div>
 			<div
@@ -63,9 +61,8 @@
 				</div>
 				<div class="text-xl font-bold text-cyan-900 md:text-center md:text-2xl lg:text-lg">
 					Rp {summary?.saldo !== null && summary?.saldo !== undefined
-							? formatRupiah(summary.saldo)
-							: '0'}
-					
+						? formatRupiah(summary.saldo)
+						: '0'}
 				</div>
 			</div>
 		</div>
@@ -74,13 +71,11 @@
 			class="mt-3 flex flex-wrap gap-4 px-1 text-xs font-semibold text-gray-500 md:mt-6 md:gap-6 md:px-0 md:text-base lg:mt-4 lg:text-sm"
 		>
 			<span
-				>Total QRIS: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalQrisAll)}</span
+				>Total QRIS: <span class="font-bold text-pink-500">Rp {formatRupiah(totalQrisAll)}</span
 				></span
 			>
 			<span
-				>Total Tunai: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalTunaiAll)}</span
+				>Total Tunai: <span class="font-bold text-pink-500">Rp {formatRupiah(totalTunaiAll)}</span
 				></span
 			>
 		</div>

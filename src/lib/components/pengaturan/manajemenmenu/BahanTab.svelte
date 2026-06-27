@@ -63,9 +63,7 @@
 				>
 					<Wheat class="mb-4 h-12 w-12 text-amber-300" />
 					<div class="mb-1 text-base font-semibold text-gray-700">Belum ada Bahan</div>
-					<div class="text-sm text-gray-400">
-						Tambahkan buah, gula, susu, cup, dan bahan lain.
-					</div>
+					<div class="text-sm text-gray-400">Tambahkan buah, gula, susu, cup, dan bahan lain.</div>
 				</div>
 			{:else}
 				<div class="flex flex-col gap-2">

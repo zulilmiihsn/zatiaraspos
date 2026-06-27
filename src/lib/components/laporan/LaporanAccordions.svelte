@@ -100,20 +100,20 @@
 					<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
 				{/if}
 				{#each groupAndSumByName(qrisData).sort((a, b) => b.total - a.total) as grouped}
-						<li class="flex justify-between text-sm text-gray-600 md:text-base">
-							<span
-								class="{expandedItems.has(grouped.nama)
-									? ''
-									: 'max-w-[60%] truncate'} cursor-pointer"
-								title={grouped.nama}
-								onclick={() => toggleExpand(grouped.nama)}
-								onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-								role="button"
-								tabindex="0">{grouped.nama}</span>
-							<span class="font-bold whitespace-nowrap text-gray-700"
-								>Rp {formatRupiah(grouped.total)}</span>
-						</li>
-					{/each}
+					<li class="flex justify-between text-sm text-gray-600 md:text-base">
+						<span
+							class="{expandedItems.has(grouped.nama) ? '' : 'max-w-[60%] truncate'} cursor-pointer"
+							title={grouped.nama}
+							onclick={() => toggleExpand(grouped.nama)}
+							onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+							role="button"
+							tabindex="0">{grouped.nama}</span
+						>
+						<span class="font-bold whitespace-nowrap text-gray-700"
+							>Rp {formatRupiah(grouped.total)}</span
+						>
+					</li>
+				{/each}
 			</ul>
 			<div class="mt-2 mb-1 text-xs font-semibold text-pink-500 md:mt-3 md:mb-2 md:text-sm">
 				Tunai
@@ -123,20 +123,20 @@
 					<li class="py-2 text-sm text-gray-400 italic md:py-3 md:text-base">Tidak ada data</li>
 				{/if}
 				{#each groupAndSumByName(tunaiData).sort((a, b) => b.total - a.total) as grouped}
-						<li class="flex justify-between text-sm text-gray-600 md:text-base">
-							<span
-								class="{expandedItems.has(grouped.nama)
-									? ''
-									: 'max-w-[60%] truncate'} cursor-pointer"
-								title={grouped.nama}
-								onclick={() => toggleExpand(grouped.nama)}
-								onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
-								role="button"
-								tabindex="0">{grouped.nama}</span>
-							<span class="font-bold whitespace-nowrap text-gray-700"
-								>Rp {formatRupiah(grouped.total)}</span>
-						</li>
-					{/each}
+					<li class="flex justify-between text-sm text-gray-600 md:text-base">
+						<span
+							class="{expandedItems.has(grouped.nama) ? '' : 'max-w-[60%] truncate'} cursor-pointer"
+							title={grouped.nama}
+							onclick={() => toggleExpand(grouped.nama)}
+							onkeydown={(e) => e.key === 'Enter' && toggleExpand(grouped.nama)}
+							role="button"
+							tabindex="0">{grouped.nama}</span
+						>
+						<span class="font-bold whitespace-nowrap text-gray-700"
+							>Rp {formatRupiah(grouped.total)}</span
+						>
+					</li>
+				{/each}
 			</ul>
 		</div>
 	{/if}
@@ -163,13 +163,11 @@
 			class="flex gap-4 px-4 pt-1 pb-2 text-xs font-semibold text-gray-500 md:gap-6 md:px-6 md:pt-2 md:pb-4 md:text-base"
 		>
 			<span
-				>QRIS: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalQrisPemasukan)}</span
+				>QRIS: <span class="font-bold text-pink-500">Rp {formatRupiah(totalQrisPemasukan)}</span
 				></span
 			>
 			<span
-				>Tunai: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalTunaiPemasukan)}</span
+				>Tunai: <span class="font-bold text-pink-500">Rp {formatRupiah(totalTunaiPemasukan)}</span
 				></span
 			>
 		</div>
@@ -215,13 +213,11 @@
 			class="flex gap-4 px-4 pt-1 pb-2 text-xs font-semibold text-gray-500 md:gap-6 md:px-6 md:pt-2 md:pb-4 md:text-base"
 		>
 			<span
-				>QRIS: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalQrisPengeluaran)}</span
+				>QRIS: <span class="font-bold text-pink-500">Rp {formatRupiah(totalQrisPengeluaran)}</span
 				></span
 			>
 			<span
-				>Tunai: <span class="font-bold text-pink-500"
-					>Rp {formatRupiah(totalTunaiPengeluaran)}</span
+				>Tunai: <span class="font-bold text-pink-500">Rp {formatRupiah(totalTunaiPengeluaran)}</span
 				></span
 			>
 		</div>

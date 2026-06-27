@@ -141,9 +141,7 @@
 					<div
 						class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
 					>
-						<CheckCircle2
-							class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500"
-						/>
+						<CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
 						<div class="text-sm text-emerald-800">
 							<b>{result.count} baris</b> berhasil diarsipkan & diunduh (<code class="text-xs"
 								>{result.filename}</code

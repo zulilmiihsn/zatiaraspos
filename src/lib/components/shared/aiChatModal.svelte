@@ -169,7 +169,7 @@
 		currentMessage = '';
 		isLoading = false;
 		appliedSinceOpen = false;
-		onClose();
+		onClose?.();
 	}
 </script>
 

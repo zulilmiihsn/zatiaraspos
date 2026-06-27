@@ -61,20 +61,20 @@ export class AutoApplyService {
 	private async applySingleRecommendation(recommendation: AiRecommendation): Promise<void> {
 		switch (recommendation.action) {
 			case 'create_transaction':
-				await this.createTransaction(recommendation.data);
+				await this.createTransaction(recommendation.data as any);
 				break;
 			case 'update_transaction':
-				await this.updateTransaction(recommendation.data);
+				await this.updateTransaction(recommendation.data as any);
 				break;
 			case 'create_category':
-				await this.createCategory(recommendation.data);
+				await this.createCategory(recommendation.data as any);
 				break;
 			default:
 				throw new Error(`Action tidak didukung: ${recommendation.action}`);
 		}
 	}
 
-	private async createTransaction(data: Record<string, unknown>): Promise<void> {
+	private async createTransaction(data: any): Promise<void> {
 		if (!data.type) throw new Error('Type transaksi tidak valid');
 		if (!data.amount || data.amount <= 0)
 			throw new Error('Amount transaksi tidak valid atau kosong');
@@ -97,8 +97,8 @@ export class AutoApplyService {
 								nama_kustom: product.id ? null : product.nama || data.deskripsi,
 								custom_price: product.id ? null : Number(product.harga || data.amount),
 								jumlah: product.quantity || product.jumlah || 1,
-								add_on_ids: (product.addOns || [])
-									.map((addOn: Record<string, unknown>) => addOn.id)
+								add_on_ids: (product.addOns as any[] || [])
+									.map((addOn: any) => addOn.id)
 									.filter(Boolean)
 							}))
 						: [
@@ -127,7 +127,7 @@ export class AutoApplyService {
 			tipe,
 			nominal: Number(data.amount),
 			deskripsi: String(data.deskripsi).trim(),
-			jenis: data.category || this.getDefaultCategory(data.type),
+			jenis: data.category || this.getDefaultCategory(data.type as string),
 			sumber: data.type === 'penjualan' ? 'pos' : 'catat',
 			waktu: new Date().toISOString(),
 			metode_bayar: 'tunai',
@@ -164,13 +164,13 @@ export class AutoApplyService {
 
 	private async createTransactionItems(
 		bukuKasId: string,
-		products: Record<string, unknown>[],
+		products: any[],
 		transactionId: string,
 		branch: string
 	): Promise<void> {
 		const items = products.map((product) => {
 			const addOnsTotal = (product.addOns || []).reduce(
-				(sum: number, addOn: Record<string, unknown>) => sum + (addOn.harga || 0),
+				(sum: number, addOn: any) => sum + (addOn.harga || 0),
 				0
 			);
 			const unitPrice = (product.harga || 0) + addOnsTotal;
@@ -196,7 +196,7 @@ export class AutoApplyService {
 		});
 	}
 
-	private async updateTransaction(data: Record<string, unknown>): Promise<void> {
+	private async updateTransaction(data: any): Promise<void> {
 		if (!data.id) throw new Error('ID transaksi diperlukan untuk update');
 		const branch = selectedBranch.value;
 		const payload = {
@@ -219,7 +219,7 @@ export class AutoApplyService {
 		await throwIfNotOk(res, 'Gagal mengupdate transaksi');
 	}
 
-	private async createCategory(data: Record<string, unknown>): Promise<void> {
+	private async createCategory(data: any): Promise<void> {
 		const branch = selectedBranch.value;
 		const res = await apiFetch('/api/kategori', {
 			method: 'POST',
@@ -251,7 +251,8 @@ export class AutoApplyService {
 			if (!rec.id) errors.push(`Rekomendasi ${i + 1}: ID tidak valid`);
 			if (!rec.action) errors.push(`Rekomendasi ${i + 1}: Action tidak valid`);
 			if (!rec.data) errors.push(`Rekomendasi ${i + 1}: Data tidak valid`);
-			if (rec.action === 'create_transaction' && (!rec.data.type || !rec.data.amount)) {
+			const data = rec.data as any;
+			if (rec.action === 'create_transaction' && (!data.type || !data.amount)) {
 				errors.push(`Rekomendasi ${i + 1}: Data transaksi tidak lengkap`);
 			}
 		});
@@ -261,7 +262,8 @@ export class AutoApplyService {
 	private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
 		const seen = new Set<string>();
 		return recommendations.filter((rec) => {
-			const key = `${rec.action}_${rec.data?.amount}_${rec.data?.type}_${rec.data?.deskripsi}`;
+			const data = rec.data as any;
+			const key = `${rec.action}_${data?.amount}_${data?.type}_${data?.deskripsi}`;
 			if (seen.has(key)) return false;
 			seen.add(key);
 			return true;

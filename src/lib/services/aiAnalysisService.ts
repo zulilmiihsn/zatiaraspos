@@ -60,8 +60,8 @@ export class AiAnalysisService {
 		const recommendations: AiRecommendation[] = [];
 
 		// Parse detected transactions
-		if (data.transactions) {
-			data.transactions.forEach((tx: Record<string, unknown>, index: number) => {
+		if (data.transactions && Array.isArray(data.transactions)) {
+			data.transactions.forEach((tx: any, index: number) => {
 				detectedTransactions.push({
 					type: this.mapTransactionType(tx.type),
 					amount: Number(tx.amount) || 0,
@@ -74,7 +74,8 @@ export class AiAnalysisService {
 		}
 
 		// Generate recommendations - hanya jika AI tidak mengirim rekomendasi langsung
-		if (!data.recommendations || data.recommendations.length === 0) {
+		const aiRecs = data.recommendations as any[];
+		if (!aiRecs || aiRecs.length === 0) {
 			detectedTransactions.forEach((tx, index) => {
 				if (tx.type !== 'unknown' && tx.amount > 0) {
 					const recommendationData = {
@@ -97,7 +98,7 @@ export class AiAnalysisService {
 			});
 		} else {
 			// Gunakan rekomendasi dari AI langsung
-			data.recommendations.forEach((rec: Record<string, unknown>, index: number) => {
+			aiRecs.forEach((rec: any, index: number) => {
 				// Jika AI tidak mengirim data, gunakan detected transactions
 				let recommendationData = rec.data || {};
 
@@ -129,7 +130,7 @@ export class AiAnalysisService {
 			originalText,
 			detectedTransactions,
 			recommendations,
-			confidence: data.confidence || 0.7
+			confidence: (data.confidence as number) || 0.7
 		};
 	}
 

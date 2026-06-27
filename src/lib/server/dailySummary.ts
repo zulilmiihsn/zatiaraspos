@@ -1,8 +1,6 @@
 import type { BranchId } from '$lib/server/branchResolver';
 import type { D1Database } from '@cloudflare/workers-types';
 
-
-
 /**
  * Membalik (decrement) kontribusi sebuah transaksi POS terhadap tabel ringkasan
  * harian ketika transaksi tersebut dihapus/void.

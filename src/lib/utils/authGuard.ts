@@ -60,8 +60,9 @@ export class AuthGuard {
 		if (!payload?.authenticated || !payload?.user || !Number.isFinite(Number(payload.expiresAt))) {
 			return;
 		}
-		persistOfflineSessionSnapshot(payload.user, Number(payload.expiresAt));
-		setUserRole(String(payload.user.role || ''), payload.user);
+		const user = payload.user as Record<string, unknown>;
+		persistOfflineSessionSnapshot(user, Number(payload.expiresAt));
+		setUserRole(String(user.role || ''), user);
 		window.dispatchEvent(new CustomEvent('auth-session-refreshed'));
 	}
 

@@ -147,13 +147,13 @@
 			const nextFingerprint = [
 				(nextProducts || []).length,
 				(nextProducts || [])
-					.map((item: { id?: string; harga?: number }) => `${item?.id || ''}:${item?.harga ?? 0}`)
+					.map((item) => `${item?.id || ''}:${item?.harga ?? 0}`)
 					.join(','),
 				(nextCategories || []).length,
-				(nextCategories || []).map((item: { id?: string }) => item?.id || '').join(','),
+				(nextCategories || []).map((item) => item?.id || '').join(','),
 				(nextAddons || []).length,
 				(nextAddons || [])
-					.map((item: { id?: string; harga?: number }) => `${item?.id || ''}:${item?.harga ?? 0}`)
+					.map((item) => `${item?.id || ''}:${item?.harga ?? 0}`)
 					.join(',')
 			].join('|');
 
@@ -164,9 +164,9 @@
 			}
 
 			lastPOSPayloadFingerprint = nextFingerprint;
-			produkData = nextProducts || [];
-			kategoriData = nextCategories || [];
-			tambahanData = nextAddons || [];
+			produkData = (nextProducts as unknown as PosProduct[]) || [];
+			kategoriData = (nextCategories as unknown as PosCategory[]) || [];
+			tambahanData = (nextAddons as unknown as PosAddOn[]) || [];
 			posLoadError = '';
 			await reportCacheMetrics('pos');
 		} catch (error) {
@@ -286,7 +286,6 @@
 			return filtered;
 		})()
 	);
-
 
 	let showCartModal = $state(false);
 	function openCartModal() {
@@ -673,7 +672,7 @@
 								</div>
 							</div>
 							<button
-								class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+								class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-transform duration-150 active:scale-[0.98]"
 								onclick={() => handleRemoveCartItem(idx)}>Hapus</button
 							>
 						</div>
@@ -682,7 +681,7 @@
 				{#snippet footer()}
 					<div>
 						<button
-							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
+							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-all duration-150 hover:bg-pink-600 active:scale-[0.98]"
 							onclick={handleGoToBayar}>Bayar</button
 						>
 					</div>
@@ -728,7 +727,7 @@
 						<div class="mb-3 flex gap-2">
 							{#each sugarOptions as s}
 								<button
-									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-colors duration-150 {selectedSugar ===
+									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-all duration-150 active:scale-[0.98] {selectedSugar ===
 									s.id
 										? 'border-pink-500 bg-pink-500 text-white'
 										: 'border-pink-500 bg-white text-pink-500'}"
@@ -743,7 +742,7 @@
 						<div class="mb-3 flex gap-2">
 							{#each iceOptions as i}
 								<button
-									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-colors duration-150 {selectedIce ===
+									class="flex-1 cursor-pointer rounded-lg border px-0 py-2 text-base font-medium transition-all duration-150 active:scale-[0.98] {selectedIce ===
 									i.id
 										? 'border-pink-500 bg-pink-500 text-white'
 										: 'border-pink-500 bg-white text-pink-500'}"
@@ -758,7 +757,7 @@
 						<div class="mb-6 grid grid-cols-2 gap-3">
 							{#each addOns.filter((a) => selectedProduct?.ekstra_ids?.includes(a.id)) as a}
 								<button
-									class="flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border py-1.5 text-center text-base font-medium whitespace-normal transition-colors duration-150 {selectedAddOns.includes(
+									class="flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border py-1.5 text-center text-base font-medium whitespace-normal transition-all duration-150 active:scale-[0.98] {selectedAddOns.includes(
 										a.id
 									)
 										? 'border-pink-500 bg-pink-500 text-white'
@@ -798,7 +797,7 @@
 						<div class="mt-0 mb-2 text-base font-semibold text-gray-800">Jumlah</div>
 						<div class="mb-4 flex items-center justify-center gap-3">
 							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
+								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-all duration-150 active:scale-[0.98]"
 								type="button"
 								onclick={decQty}>-</button
 							>
@@ -810,13 +809,13 @@
 								bind:value={jumlah}
 							/>
 							<button
-								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-colors duration-150"
+								class="flex h-10 w-10 items-center justify-center rounded-lg border border-pink-400 text-xl font-bold text-pink-400 transition-all duration-150 active:scale-[0.98]"
 								type="button"
 								onclick={incQty}>+</button
 							>
 						</div>
 						<button
-							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors duration-150 hover:bg-pink-600 active:bg-pink-700"
+							class="mb-1 w-full rounded-lg bg-pink-500 px-6 py-3 text-lg font-bold text-white shadow transition-all duration-150 hover:bg-pink-600 active:scale-[0.98]"
 							onclick={addToCart}>Tambah ke Keranjang</button
 						>
 					</div>
