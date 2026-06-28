@@ -30,3 +30,22 @@ export function requirePayload(
 	if (!body?.payload) throw kitError(400, 'Payload tidak valid');
 	return body.payload;
 }
+
+/**
+ * Kunci immutable yang TIDAK boleh diubah lewat UPDATE: identitas baris (`id`) dan
+ * scope tenant (`cabang_id`). Tanpa ini, PATCH yang spread payload mentah ke `.set()`
+ * memungkinkan mass-assignment — caller bisa memindah baris ke cabang/tenant lain.
+ */
+const IMMUTABLE_UPDATE_KEYS = ['cabang_id', 'id'] as const;
+
+/**
+ * Buang kunci scoping immutable dari payload UPDATE. WAJIB dipakai di semua PATCH
+ * sebelum `.set()` agar `cabang_id`/`id` tidak bisa ditimpa caller (lihat P0-3 audit).
+ */
+export function sanitizeUpdatePayload<T extends Record<string, unknown>>(
+	payload: T
+): Partial<T> {
+	const clean: Record<string, unknown> = { ...payload };
+	for (const key of IMMUTABLE_UPDATE_KEYS) delete clean[key];
+	return clean as Partial<T>;
+}

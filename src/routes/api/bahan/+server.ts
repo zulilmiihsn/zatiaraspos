@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { bahan } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -65,7 +65,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
-	const safePayload = { ...(body.payload as Record<string, unknown>) };
+	const safePayload = sanitizeUpdatePayload(body.payload as Record<string, unknown>);
 	// Coerce field numerik bila ada di payload.
 	if ('stok_saat_ini' in safePayload)
 		safePayload.stok_saat_ini = Number(safePayload.stok_saat_ini || 0);

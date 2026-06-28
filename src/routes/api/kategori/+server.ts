@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { kategori } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -56,7 +56,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(kategori)
-		.set({ ...(body.payload as Partial<typeof kategori.$inferInsert>) })
+		.set(sanitizeUpdatePayload(body.payload as Partial<typeof kategori.$inferInsert>))
 		.where(and(eq(kategori.cabang_id, branch), eq(kategori.id, String(body.where.id))));
 	await publish(platform, branch, 'kategori', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'kategori', 'update', body.where.id, {

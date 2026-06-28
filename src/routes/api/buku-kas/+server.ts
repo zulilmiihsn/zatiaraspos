@@ -4,7 +4,7 @@ import { bukuKas } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
 import { decodeDataCursor, parseDataLimit, toCursorPage } from '$lib/server/dataPagination';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -110,7 +110,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(bukuKas)
-		.set({ ...(body.payload as Partial<typeof bukuKas.$inferInsert>) })
+		.set(sanitizeUpdatePayload(body.payload as Partial<typeof bukuKas.$inferInsert>))
 		.where(and(eq(bukuKas.cabang_id, branch), eq(bukuKas.id, String(body.where.id))));
 	await publish(platform, branch, 'buku_kas', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'buku_kas', 'update', body.where.id, {

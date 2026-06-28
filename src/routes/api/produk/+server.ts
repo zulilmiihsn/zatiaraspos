@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { produk } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -64,7 +64,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	if (kategoriId !== undefined && id == null) {
 		await db
 			.update(produk)
-			.set({ ...(body.payload as Partial<typeof produk.$inferInsert>) })
+			.set(sanitizeUpdatePayload(body.payload as Partial<typeof produk.$inferInsert>))
 			.where(and(eq(produk.cabang_id, branch), eq(produk.kategori_id, String(kategoriId))));
 		await publish(platform, branch, 'produk', 'update');
 		await auditDataChange(rawDb, branch, session, 'produk', 'bulk_update', null, {
@@ -77,7 +77,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	// Mode single: update satu produk by id.
 	await db
 		.update(produk)
-		.set({ ...(body.payload as Partial<typeof produk.$inferInsert>) })
+		.set(sanitizeUpdatePayload(body.payload as Partial<typeof produk.$inferInsert>))
 		.where(and(eq(produk.cabang_id, branch), eq(produk.id, String(id))));
 	await publish(platform, branch, 'produk', 'update', { id });
 	await auditDataChange(rawDb, branch, session, 'produk', 'update', id, {

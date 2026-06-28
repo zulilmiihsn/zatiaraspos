@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { pengaturan } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -62,7 +62,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const idNum = Number(body.where!.id);
 	await db
 		.update(pengaturan)
-		.set({ ...(body.payload as Partial<typeof pengaturan.$inferInsert>) })
+		.set(sanitizeUpdatePayload(body.payload as Partial<typeof pengaturan.$inferInsert>))
 		.where(and(eq(pengaturan.cabang_id, branch), eq(pengaturan.id, idNum)));
 	await publish(platform, branch, 'pengaturan', 'update', { id: idNum });
 	await auditDataChange(rawDb, branch, session, 'pengaturan', 'update', idNum, {

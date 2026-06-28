@@ -3,7 +3,7 @@ import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { sesiToko } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
 /**
@@ -64,7 +64,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await db
 		.update(sesiToko)
-		.set({ ...(body.payload as Partial<typeof sesiToko.$inferInsert>) })
+		.set(sanitizeUpdatePayload(body.payload as Partial<typeof sesiToko.$inferInsert>))
 		.where(and(eq(sesiToko.cabang_id, branch), eq(sesiToko.id, String(body.where.id))));
 	await publish(platform, branch, 'sesi_toko', 'update', { id: body.where.id });
 	await auditDataChange(rawDb, branch, session, 'sesi_toko', 'update', body.where.id, {
