@@ -30,16 +30,9 @@
 	let Clock = $state<ComponentType | null>(null);
 	let TrendingUp = $state<ComponentType | null>(null);
 
-	let omzet = $state(0);
-	let jumlahTransaksi = $state(0);
-	let profit = $state(0);
-	let itemTerjual = $state(0);
-	let totalItem = $state(0);
-	let avgTransaksi = $state(0);
-	let jamRamai = $state('');
-	let weeklyIncome = $state<number[]>([]);
-	let weeklyMax = $state(1);
-	let bestSellers = $state<BestSeller[]>([]);
+	import { createDashboardState } from '$lib/stores/dashboardState.svelte';
+	
+	const dashboard = createDashboardState();
 
 	// Subscribe ke store
 	let currentUserRole = $state('');
@@ -47,16 +40,6 @@
 	$effect(() => {
 		currentUserRole = userRole.value || '';
 	});
-
-	let isLoadingBestSellers = $state(true);
-	let errorBestSellers = $state('');
-	let isLoadingDashboard = $state(true);
-
-	let dashboardRefreshTimer = $state<ReturnType<typeof setTimeout> | null>(null);
-	let dashboardRefreshInFlight = false;
-	let lastDashboardPayloadFingerprint = '';
-
-	let isInitialLoad = true; // Add flag to prevent double fetching
 
 	onMount(async () => {
 		// Preload ikon untuk halaman beranda agar ikon metrik muncul cepat
@@ -82,12 +65,6 @@
 		Clock = icons[4].default;
 		TrendingUp = icons[5].default;
 
-		// Load data dengan smart caching
-		await loadDashboardData();
-
-		// Setup real-time subscriptions
-		setupRealtimeSubscriptions();
-
 		// Jika role belum ada di store, validasi dari session backend.
 		if (!currentUserRole) {
 			const res = await fetch('/api/session');
@@ -98,174 +75,9 @@
 		}
 	});
 
-	// Reactive: fetch ulang data saat cabang berubah
-	$effect(() => {
-		// Read .value untuk tracking reaktif
-		const _branch = selectedBranch.value;
-
-		if (isInitialLoad) {
-			isInitialLoad = false;
-			return;
-		}
-
-		// Reset semua metriks
-		omzet = 0;
-		jumlahTransaksi = 0;
-		profit = 0;
-		itemTerjual = 0;
-		totalItem = 0;
-		avgTransaksi = 0;
-		jamRamai = '';
-		weeklyIncome = [];
-		weeklyMax = 1;
-		bestSellers = [];
-		isLoadingDashboard = true;
-		isLoadingBestSellers = true;
-
-		// Async dalam effect: jalankan via fire-and-forget
-		(async () => {
-			await dataService.invalidateDashboardCaches();
-			await loadDashboardData();
-		})();
-	});
-
-	let offDashboardRefreshBus: (() => void) | null = null;
-
-	onDestroy(() => {
-		realtimeManager.unsubscribeAll();
-		if (dashboardRefreshTimer) {
-			clearTimeout(dashboardRefreshTimer);
-			dashboardRefreshTimer = null;
-		}
-		if (offDashboardRefreshBus) {
-			offDashboardRefreshBus();
-			offDashboardRefreshBus = null;
-		}
-	});
-
-	function scheduleDashboardRealtimeRefresh(delayMs = 220) {
-		if (dashboardRefreshTimer) {
-			clearTimeout(dashboardRefreshTimer);
-		}
-
-		dashboardRefreshTimer = setTimeout(async () => {
-			dashboardRefreshTimer = null;
-			if (dashboardRefreshInFlight) return;
-
-			dashboardRefreshInFlight = true;
-			try {
-				const dashboardStats = await dataService.getDashboardStats();
-				const nextBestSellers = await dataService.getBestSellers();
-				const weeklyData = await dataService.getWeeklyIncome();
-				applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
-				await reportCacheMetrics('dashboard');
-			} finally {
-				dashboardRefreshInFlight = false;
-			}
-		}, delayMs);
-	}
-
-	// Load dashboard data dengan smart caching
-	async function loadDashboardData() {
-		try {
-			isLoadingDashboard = true;
-
-			// Load dashboard stats dengan cache
-			const dashboardStats = await dataService.getDashboardStats();
-
-			// Load best sellers dengan cache
-			isLoadingBestSellers = true;
-			const nextBestSellers = await dataService.getBestSellers();
-			isLoadingBestSellers = false;
-
-			// Load weekly income dengan cache
-			const weeklyData = await dataService.getWeeklyIncome();
-			applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
-			await reportCacheMetrics('dashboard');
-		} catch (error) {
-			errorBestSellers = 'Gagal memuat data dashboard';
-		} finally {
-			isLoadingDashboard = false;
-			isLoadingBestSellers = false;
-		}
-	}
-
-	// Setup real-time subscriptions
-	function setupRealtimeSubscriptions() {
-		// Subscribe to buku_kas changes for real-time dashboard updates
-		realtimeManager.subscribe('buku_kas', async () => {
-			scheduleDashboardRealtimeRefresh();
-		});
-
-		// Subscribe to transaksi_kasir changes
-		realtimeManager.subscribe('transaksi_kasir', async () => {
-			scheduleDashboardRealtimeRefresh();
-		});
-
-		// Listen for explicit dashboard refresh (e.g. from pos/bayar after successful transaction)
-		offDashboardRefreshBus = refreshBus.on('dashboard', () => {
-			scheduleDashboardRealtimeRefresh();
-		});
-	}
-
-	function computeDashboardPayloadFingerprint(
-		data: DashboardStats | null,
-		nextBestSellers: BestSeller[],
-		weeklyData: WeeklyIncomeData
-	): string {
-		const weekly = Array.isArray(weeklyData?.weeklyIncome) ? weeklyData.weeklyIncome : [];
-		const sellers = Array.isArray(nextBestSellers) ? nextBestSellers : [];
-		const sellersSignature = sellers
-			.map((item) => `${item?.nama || ''}:${Number(item?.total_qty || 0)}`)
-			.join(',');
-
-		return [
-			Number(data?.omzet || 0),
-			Number(data?.jumlahTransaksi || 0),
-			Number(data?.profit || 0),
-			Number(data?.itemTerjual || 0),
-			Number(data?.totalItem || 0),
-			Number(data?.avgTransaksi || 0),
-			String(data?.jamRamai || ''),
-			weekly.length,
-			weekly.reduce((sum, value) => sum + Number(value || 0), 0),
-			Number(weeklyData?.weeklyMax || 1),
-			sellers.length,
-			sellersSignature
-		].join('|');
-	}
-
-	function applyDashboardData(data: DashboardStats | null) {
-		if (!data) return;
-		omzet = data.omzet;
-		jumlahTransaksi = data.jumlahTransaksi;
-		profit = data.profit;
-		itemTerjual = data.itemTerjual;
-		totalItem = data.totalItem;
-		avgTransaksi = data.avgTransaksi;
-		jamRamai = data.jamRamai;
-	}
-
-	function applyDashboardPayload(
-		data: DashboardStats | null,
-		nextBestSellers: BestSeller[],
-		weeklyData: WeeklyIncomeData
-	) {
-		const nextFingerprint = computeDashboardPayloadFingerprint(data, nextBestSellers, weeklyData);
-		if (nextFingerprint === lastDashboardPayloadFingerprint) {
-			return;
-		}
-
-		lastDashboardPayloadFingerprint = nextFingerprint;
-		applyDashboardData(data);
-		bestSellers = nextBestSellers || [];
-		weeklyIncome = weeklyData?.weeklyIncome || [];
-		weeklyMax = weeklyData?.weeklyMax || 1;
-	}
-
 	// Manual refresh function (for testing)
 	async function refreshDashboardData() {
-		await loadDashboardData();
+		await dashboard.refreshDashboardData();
 	}
 
 	let modalAwal = $state<number | null>(null);
@@ -488,7 +300,7 @@
 		<div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
 			<div class="flex flex-col space-y-3 md:space-y-10">
 				<!-- Metrik Utama -->
-				<DashboardMetrics {itemTerjual} {jumlahTransaksi} {omzet} {modalAwal} />
+				<DashboardMetrics itemTerjual={dashboard.itemTerjual} jumlahTransaksi={dashboard.jumlahTransaksi} omzet={dashboard.omzet} {modalAwal} />
 				<!-- Menu Terlaris -->
 				<div class="mt-6 md:mt-12">
 					<div
@@ -496,7 +308,7 @@
 					>
 						Menu Terlaris
 					</div>
-					{#if isLoadingBestSellers}
+					{#if dashboard.isLoadingBestSellers}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
 							{#each Array(3) as _, i}
 								<div
@@ -510,15 +322,15 @@
 								</div>
 							{/each}
 						</div>
-					{:else if errorBestSellers}
-						<div class="py-6 text-center text-base text-red-400 md:text-lg">{errorBestSellers}</div>
-					{:else if bestSellers.length === 0}
+					{:else if dashboard.errorBestSellers}
+						<div class="py-6 text-center text-base text-red-400 md:text-lg">{dashboard.errorBestSellers}</div>
+					{:else if dashboard.bestSellers.length === 0}
 						<div class="py-6 text-center text-base text-gray-400 md:text-lg">
 							Belum ada data menu terlaris
 						</div>
 					{:else}
 						<div class="flex flex-col gap-3 md:gap-4 md:space-y-0 md:divide-y md:divide-pink-100">
-							{#each bestSellers.slice(0, 3) as m, i}
+							{#each dashboard.bestSellers.slice(0, 3) as m, i}
 								<div
 									class="relative flex items-center gap-3 rounded-xl bg-white p-3 shadow-md md:min-h-[88px] md:items-center md:gap-6 md:rounded-2xl md:border md:border-pink-200 md:bg-white md:p-6 md:shadow-none {i ===
 									0
@@ -577,7 +389,7 @@
 							class="flex flex-col items-center rounded-xl bg-white p-3 shadow md:rounded-2xl md:border md:border-pink-100 md:p-6 md:shadow-none"
 						>
 							<div class="text-xl font-bold text-pink-400 md:text-2xl lg:text-3xl">
-								{avgTransaksi ?? '--'}
+								{dashboard.avgTransaksi ?? '--'}
 							</div>
 							<div class="mt-1 text-xs text-gray-500 md:text-sm">Rata-rata transaksi</div>
 						</div>
@@ -585,8 +397,8 @@
 							class="flex flex-col items-center rounded-xl bg-white p-3 shadow md:rounded-2xl md:border md:border-pink-100 md:p-6 md:shadow-none"
 						>
 							<div class="text-xl font-bold text-pink-400 md:text-2xl lg:text-3xl">
-								{#if jamRamai}
-									{jamRamai}
+								{#if dashboard.jamRamai}
+									{dashboard.jamRamai}
 								{:else}
 									00.00
 								{/if}
@@ -596,7 +408,7 @@
 					</div>
 					<!-- Grafik Pendapatan 7 Hari -->
 					<div class="mt-3 md:mt-0">
-						<WeeklyChart {weeklyIncome} {weeklyMax} />
+						<WeeklyChart weeklyIncome={dashboard.weeklyIncome} weeklyMax={dashboard.weeklyMax} />
 					</div>
 				</div>
 			</div>

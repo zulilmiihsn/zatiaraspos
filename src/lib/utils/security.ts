@@ -1,23 +1,16 @@
 /**
- * Comprehensive security utilities for Zatiaras POS
- * Implements CSRF protection, XSS prevention, input sanitization, and rate limiting
+ * Security utilities for Zatiaras POS
+ * Client-side rate limiting, login protection, and security event logging.
+ *
+ * CSRF and session management are handled server-side (hooks.server.ts / sessionStore.ts).
  */
 
 // Security configuration
 const SECURITY_CONFIG = {
-	CSRF_TOKEN_LENGTH: 32,
 	RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes
 	MAX_REQUESTS_PER_WINDOW: 100,
 	MAX_LOGIN_ATTEMPTS: 5,
-	LOGIN_BLOCK_DURATION: 30 * 60 * 1000, // 30 minutes
-	SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
-	PASSWORD_MIN_LENGTH: 8,
-	PASSWORD_REQUIREMENTS: {
-		uppercase: true,
-		lowercase: true,
-		numbers: true,
-		symbols: true
-	}
+	LOGIN_BLOCK_DURATION: 30 * 60 * 1000 // 30 minutes
 };
 
 // Rate limiting storage
@@ -25,89 +18,16 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 const loginAttempts = new Map<string, { count: number; blockedUntil: number }>();
 
 /**
- * CSRF Token Management
- */
-export class CSRFProtection {
-	private static instance: CSRFProtection;
-	private tokens: Set<string> = new Set();
-
-	private constructor() {}
-
-	static getInstance(): CSRFProtection {
-		if (!CSRFProtection.instance) {
-			CSRFProtection.instance = new CSRFProtection();
-		}
-		return CSRFProtection.instance;
-	}
-
-	/**
-	 * Generate a new CSRF token
-	 */
-	generateToken(): string {
-		const token = this.generateRandomString(SECURITY_CONFIG.CSRF_TOKEN_LENGTH);
-		this.tokens.add(token);
-
-		// Clean up old tokens periodically
-		if (this.tokens.size > 1000) {
-			this.cleanupOldTokens();
-		}
-
-		return token;
-	}
-
-	/**
-	 * Validate a CSRF token
-	 */
-	validateToken(token: string): boolean {
-		if (!token || typeof token !== 'string') {
-			return false;
-		}
-
-		const isValid = this.tokens.has(token);
-		if (isValid) {
-			// Remove used token (one-time use)
-			this.tokens.delete(token);
-		}
-
-		return isValid;
-	}
-
-	/**
-	 * Generate random string for tokens
-	 */
-	private generateRandomString(length: number): string {
-		const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-		let result = '';
-		for (let i = 0; i < length; i++) {
-			result += chars.charAt(Math.floor(Math.random() * chars.length));
-		}
-		return result;
-	}
-
-	/**
-	 * Clean up old tokens
-	 */
-	private cleanupOldTokens(): void {
-		// Keep only the last 500 tokens
-		const tokenArray = Array.from(this.tokens);
-		this.tokens.clear();
-		tokenArray.slice(-500).forEach((token) => this.tokens.add(token));
-	}
-}
-
-/**
- * Rate Limiting Implementation
+ * Client-side rate limiting — provides immediate UX feedback before network round-trip.
+ * Server-side rate limiting (rateLimit.ts) is the authoritative enforcement.
  */
 export class RateLimiter {
-	/**
-	 * Check if request is allowed
-	 */
+	/** Check if request is allowed */
 	static isAllowed(identifier: string): boolean {
 		const now = Date.now();
 		const record = rateLimitStore.get(identifier);
 
 		if (!record || now > record.resetTime) {
-			// Reset or create new record
 			rateLimitStore.set(identifier, {
 				count: 1,
 				resetTime: now + SECURITY_CONFIG.RATE_LIMIT_WINDOW
@@ -119,14 +39,11 @@ export class RateLimiter {
 			return false;
 		}
 
-		// Increment count
 		record.count++;
 		return true;
 	}
 
-	/**
-	 * Get remaining requests for identifier
-	 */
+	/** Get remaining requests for identifier */
 	static getRemainingRequests(identifier: string): number {
 		const record = rateLimitStore.get(identifier);
 		if (!record) {
@@ -137,9 +54,7 @@ export class RateLimiter {
 		return Math.max(0, remaining);
 	}
 
-	/**
-	 * Get reset time for identifier
-	 */
+	/** Get reset time for identifier */
 	static getResetTime(identifier: string): number {
 		const record = rateLimitStore.get(identifier);
 		return record ? record.resetTime : Date.now();
@@ -147,12 +62,10 @@ export class RateLimiter {
 }
 
 /**
- * Login Security Management
+ * Login attempt tracking — blocks brute-force on client side.
  */
 export class LoginSecurity {
-	/**
-	 * Check if login is blocked for IP/username
-	 */
+	/** Check if login is blocked for IP/username */
 	static isLoginBlocked(identifier: string): boolean {
 		const record = loginAttempts.get(identifier);
 		if (!record) {
@@ -162,9 +75,7 @@ export class LoginSecurity {
 		return Date.now() < record.blockedUntil;
 	}
 
-	/**
-	 * Record failed login attempt
-	 */
+	/** Record failed login attempt */
 	static recordFailedLogin(identifier: string): void {
 		const record = loginAttempts.get(identifier);
 		const now = Date.now();
@@ -183,16 +94,12 @@ export class LoginSecurity {
 		}
 	}
 
-	/**
-	 * Reset login attempts for successful login
-	 */
+	/** Reset login attempts for successful login */
 	static resetLoginAttempts(identifier: string): void {
 		loginAttempts.delete(identifier);
 	}
 
-	/**
-	 * Get remaining login attempts
-	 */
+	/** Get remaining login attempts */
 	static getRemainingLoginAttempts(identifier: string): number {
 		const record = loginAttempts.get(identifier);
 		if (!record) {
@@ -204,71 +111,15 @@ export class LoginSecurity {
 }
 
 /**
- * Session Security
+ * Security utility facade — only methods with real consumers.
+ * Used by: bayar, pos, login, catat, pengaturan, unauthorized, errorHandling.
  */
-export class SessionSecurity {
-	/**
-	 * Validate session token
-	 */
-	static validateSession(sessionData: unknown): boolean {
-		if (!sessionData || typeof sessionData !== 'object') {
-			return false;
-		}
-
-		const { timestamp, userId, branchId } = sessionData as {
-			timestamp?: number;
-			userId?: string;
-			branchId?: string;
-		};
-
-		if (!timestamp || !userId || !branchId) {
-			return false;
-		}
-
-		// Check if session has expired
-		const now = Date.now();
-		if (now - timestamp > SECURITY_CONFIG.SESSION_TIMEOUT) {
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Generate secure session data
-	 */
-	static generateSession(
-		userId: string,
-		branchId: string
-	): { userId: string; branchId: string; timestamp: number; token: string } {
-		return {
-			userId,
-			branchId,
-			timestamp: Date.now(),
-			token: CSRFProtection.getInstance().generateToken()
-		};
-	}
-}
-
-// Export singleton instances
-export const csrfProtection = CSRFProtection.getInstance();
-
-// Export utility functions
 export const securityUtils = {
-	isRateLimited: RateLimiter.isAllowed,
-	getRemainingRequests: RateLimiter.getRemainingRequests,
-	isLoginBlocked: LoginSecurity.isLoginBlocked,
-	recordFailedLogin: LoginSecurity.recordFailedLogin,
-	validateSession: SessionSecurity.validateSession,
-	generateSession: SessionSecurity.generateSession,
-
-	// Additional methods for form security
 	checkFormRateLimit: (formName: string): boolean => {
 		return RateLimiter.isAllowed(`form_${formName}`);
 	},
 
-	detectSuspiciousActivity: (action: string, input: string): boolean => {
-		// Simple suspicious activity detection
+	detectSuspiciousActivity: (_action: string, input: string): boolean => {
 		const suspiciousPatterns = [
 			/<script/i,
 			/javascript:/i,
@@ -308,7 +159,7 @@ export const securityUtils = {
 				credentials: 'include'
 			});
 		} catch {
-			// no-op
+			// best-effort telemetry — failure is non-critical
 		}
 	}
 };

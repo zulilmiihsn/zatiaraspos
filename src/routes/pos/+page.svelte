@@ -45,25 +45,8 @@
 		}
 	});
 
-	interface PosProduct {
-		id: string;
-		nama: string;
-		harga: number;
-		tipe: string;
-		image?: string;
-		gambar?: string;
-		ekstra_ids?: string[];
-		kategori_id?: string;
-	}
-	interface PosCategory {
-		id: string;
-		nama: string;
-	}
-	interface PosAddOn {
-		id: string;
-		nama: string;
-		harga: number;
-	}
+	import { createPosState, type PosProduct, type PosCategory, type PosAddOn } from '$lib/stores/posState.svelte';
+	
 	interface PosCartItem {
 		product: PosProduct;
 		jumlah: number;
@@ -73,148 +56,7 @@
 		catatan: string;
 	}
 
-	let produkData = $state<PosProduct[]>([]);
-	let kategoriData = $state<PosCategory[]>([]);
-	let tambahanData = $state<PosAddOn[]>([]);
-
-	let isLoadingProducts = $state(true);
-	let posLoadError = $state('');
-
-	let unsubscribeBranch: (() => void) | null = null;
-	let isInitialLoad = true; // Add flag to prevent double fetching
-	let posRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-	let posRefreshInFlight = false;
-	let lastPOSPayloadFingerprint = '';
-
-	onMount(async () => {
-		// Preload ikon POS untuk percepat transisi dan render ikon inti
-		import('$lib/utils/iconLoader').then(({ loadRouteIcons }) => {
-			loadRouteIcons('pos');
-		});
-		// Load data dengan smart caching
-		await loadPOSData();
-
-		// Setup real-time subscriptions
-		setupRealtimeSubscriptions();
-
-		// Measure performance tanpa double-fetch
-		await measureAsyncPerformance('data fetching', async () => Promise.resolve());
-
-		isLoadingProducts = false;
-
-		// Sync otomatis saat online dengan throttling
-		if (typeof window !== 'undefined') {
-			const throttledSync = throttle(async () => {
-				await loadPOSData();
-			}, 1000); // Throttle to 1 second
-
-			window.addEventListener('online', throttledSync);
-
-			// Store reference for cleanup
-			(window as any)._onlineSyncHandler = throttledSync;
-		}
-
-		// Subscribe ke selectedBranch untuk fetch ulang data saat cabang berubah
-		if (!isInitialLoad && selectedBranch.value) {
-			loadPOSData();
-		}
-		isInitialLoad = false;
-	});
-
-	onDestroy(() => {
-		realtimeManager.unsubscribeAll();
-		if (posRefreshTimer) {
-			clearTimeout(posRefreshTimer);
-			posRefreshTimer = null;
-		}
-
-		// Cleanup event listeners
-		if (typeof window !== 'undefined' && (window as any)._onlineSyncHandler) {
-			window.removeEventListener('online', (window as any)._onlineSyncHandler);
-			delete (window as any)._onlineSyncHandler;
-		}
-	});
-
-	// Load POS data dengan smart caching
-	async function loadPOSData() {
-		try {
-			const [nextProducts, nextCategories, nextAddons] = await Promise.all([
-				dataService.getProducts(),
-				dataService.getCategories(),
-				dataService.getAddOns()
-			]);
-
-			const nextFingerprint = [
-				(nextProducts || []).length,
-				(nextProducts || [])
-					.map((item) => `${item?.id || ''}:${item?.harga ?? 0}`)
-					.join(','),
-				(nextCategories || []).length,
-				(nextCategories || []).map((item) => item?.id || '').join(','),
-				(nextAddons || []).length,
-				(nextAddons || [])
-					.map((item) => `${item?.id || ''}:${item?.harga ?? 0}`)
-					.join(',')
-			].join('|');
-
-			if (nextFingerprint === lastPOSPayloadFingerprint) {
-				posLoadError = '';
-				await reportCacheMetrics('pos');
-				return;
-			}
-
-			lastPOSPayloadFingerprint = nextFingerprint;
-			produkData = (nextProducts as unknown as PosProduct[]) || [];
-			kategoriData = (nextCategories as unknown as PosCategory[]) || [];
-			tambahanData = (nextAddons as unknown as PosAddOn[]) || [];
-			posLoadError = '';
-			await reportCacheMetrics('pos');
-		} catch (error) {
-			posLoadError = 'Koneksi atau data POS bermasalah. Coba muat ulang daftar menu.';
-		}
-	}
-
-	async function retryLoadPOSData() {
-		isLoadingProducts = true;
-		await loadPOSData();
-		isLoadingProducts = false;
-	}
-
-	function schedulePOSRefresh(delayMs = 180) {
-		if (posRefreshTimer) {
-			clearTimeout(posRefreshTimer);
-		}
-
-		posRefreshTimer = setTimeout(async () => {
-			posRefreshTimer = null;
-			if (posRefreshInFlight) return;
-
-			posRefreshInFlight = true;
-			try {
-				await loadPOSData();
-			} finally {
-				posRefreshInFlight = false;
-			}
-		}, delayMs);
-	}
-
-	// Setup real-time subscriptions
-	function setupRealtimeSubscriptions() {
-		// Subscribe to product changes
-		realtimeManager.subscribe('produk', async (payload) => {
-			schedulePOSRefresh();
-		});
-
-		// Subscribe to category changes
-		realtimeManager.subscribe('kategori', async (payload) => {
-			schedulePOSRefresh();
-		});
-
-		// Subscribe to add-on changes
-		realtimeManager.subscribe('tambahan', async (payload) => {
-			schedulePOSRefresh();
-		});
-	}
+	const pos = createPosState();
 
 	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
 
@@ -224,11 +66,11 @@
 	let selectedCategory = $state('all');
 
 	// Produk mock dengan kategori
-	let categories = $derived(kategoriData);
-	let products = $derived(produkData);
+	let categories = $derived(pos.kategoriData);
+	let products = $derived(pos.produkData);
 
 	// Topping mock tanpa emoji/icon
-	let addOns = $derived(tambahanData);
+	let addOns = $derived(pos.tambahanData);
 
 	// Jenis gula dan es
 	const sugarOptions = [
@@ -555,7 +397,7 @@
 				type="button"
 				onclick={handleSelectCategoryAll}>Semua</button
 			>
-			{#if (categories ?? []).length === 0 && isLoadingProducts}
+			{#if (categories ?? []).length === 0 && pos.isLoadingProducts}
 				{#each Array(4) as _, i}
 					<div
 						class="mb-1 h-[40px] min-w-[96px] flex-shrink-0 animate-pulse rounded-lg bg-gray-100"
@@ -611,15 +453,15 @@
 		</div>
 		<ProductGrid
 			posGridView={posGridView.value}
-			{isLoadingProducts}
+			isLoadingProducts={pos.isLoadingProducts}
 			skeletonCount={12}
 			{filteredProducts}
 			{categories}
 			{imageError}
-			loadError={posLoadError}
+			loadError={pos.posLoadError}
 			onSelectProduct={handleOpenAddOnModal}
 			onImgError={handleImgErrorId}
-			onRetry={retryLoadPOSData}
+			onRetry={pos.retryLoadPOSData}
 		/>
 
 		<CustomItemModal bind:show={showCustomItemModal} onAdd={addCustomItemToCart} />
@@ -654,7 +496,7 @@
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
-											? item.addOns.map((a) => a.nama).join(', ')
+											? item.addOns.map((a: PosAddOn) => a.nama).join(', ')
 											: '',
 										item.catatan ? `${item.catatan}` : '',
 										item.product.tipe === 'minuman' && item.gula !== 'normal'
