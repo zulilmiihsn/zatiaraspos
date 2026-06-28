@@ -284,8 +284,8 @@ export function computeAnalytics(
 	const hourCount: Record<string, number> = {};
 	for (const t of bukuKasPos || []) {
 		const waktu = new Date(t.waktu as string | number);
-		const wita = new Date(waktu);
-		const h = wita.getHours();
+		const utcTimestamp = new Date(waktu);
+		const h = utcTimestamp.getHours();
 		const key = h.toString().padStart(2, '0');
 		hourCount[key] = (hourCount[key] || 0) + 1;
 	}
@@ -298,8 +298,8 @@ export function computeAnalytics(
 	const dailyTrend: Record<string, { count: number; revenue: number; avgTicket: number }> = {};
 	for (const t of bukuKasPos || []) {
 		const waktu = new Date(t.waktu as string | number);
-		const wita = new Date(waktu);
-		const dateKey = wita.toISOString().split('T')[0];
+		const utcTimestamp = new Date(waktu);
+		const dateKey = utcTimestamp.toISOString().split('T')[0];
 		const revenue = (t.nominal as number) || 0;
 
 		if (!dailyTrend[dateKey]) {

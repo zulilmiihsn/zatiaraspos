@@ -12,32 +12,32 @@
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 	import { dataService } from '$lib/services/dataService';
 
-	let oldUsername = '';
-	let newUsername = '';
-	let oldPassword = '';
-	let newPassword = '';
-	let confirmPassword = '';
-	let userPassError = '';
+	let oldUsername = $state('');
+	let newUsername = $state('');
+	let oldPassword = $state('');
+	let newPassword = $state('');
+	let confirmPassword = $state('');
+	let userPassError = $state('');
 
 	// State untuk Kasir
-	let kasirOldUsername = '';
-	let kasirNewUsername = '';
-	let kasirOldPassword = '';
-	let kasirNewPassword = '';
-	let kasirConfirmPassword = '';
-	let kasirUserPassError = '';
+	let kasirOldUsername = $state('');
+	let kasirNewUsername = $state('');
+	let kasirOldPassword = $state('');
+	let kasirNewPassword = $state('');
+	let kasirConfirmPassword = $state('');
+	let kasirUserPassError = $state('');
 
-	let oldPin = '';
-	let newPin = '';
-	let confirmPin = '';
-	let lockedPages: string[] = [];
-	let pinError = '';
-	let pin = '';
-	let pengaturanKeamananId = '';
-	let activeSecurityTab = 'pemilik'; // 'pemilik' atau 'kasir'
-	let showNotifModal = false;
-	let notifModalMsg = '';
-	let notifModalType = 'warning'; // 'warning' | 'success' | 'error'
+	let oldPin = $state('');
+	let newPin = $state('');
+	let confirmPin = $state('');
+	let lockedPages = $state<string[]>([]);
+	let pinError = $state('');
+	let pin = $state('');
+	let pengaturanKeamananId = $state('');
+	let activeSecurityTab = $state('pemilik'); // 'pemilik' atau 'kasir'
+	let showNotifModal = $state(false);
+	let notifModalMsg = $state('');
+	let notifModalType = $state('warning'); // 'warning' | 'success' | 'error'
 
 	onMount(async () => {
 		if (userRole.value !== 'pemilik') {

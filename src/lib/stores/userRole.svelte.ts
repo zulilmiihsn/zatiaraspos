@@ -1,8 +1,14 @@
 import { selectedBranch } from './selectedBranch.svelte';
 
+export type UserRole = 'pemilik' | 'kasir' | 'admin';
+
+function isUserRole(role: unknown): role is UserRole {
+	return role === 'pemilik' || role === 'kasir' || role === 'admin';
+}
+
 // Store untuk user role dan profile menggunakan runes Svelte 5
 class RoleState {
-	value = $state<string | null>(null);
+	value = $state<UserRole | null>(null);
 }
 export const userRole = new RoleState();
 
@@ -18,7 +24,7 @@ if (typeof window !== 'undefined') {
 		try {
 			const parsed = JSON.parse(saved);
 			if (parsed.user && parsed.user.role) {
-				userRole.value = parsed.user.role;
+				userRole.value = isUserRole(parsed.user.role) ? parsed.user.role : null;
 				userProfile.value = parsed.user;
 			}
 		} catch (e) {
@@ -29,7 +35,7 @@ if (typeof window !== 'undefined') {
 
 // Fungsi untuk set user role dan profile (dipanggil saat login)
 export function setUserRole(role: string, profile: unknown) {
-	userRole.value = role;
+	userRole.value = isUserRole(role) ? role : null;
 	userProfile.value = profile;
 }
 
@@ -58,7 +64,7 @@ export async function validateRoleWithBackend(): Promise<'valid' | 'invalid' | '
 /**
  * Mendapatkan peran pengguna saat ini.
  */
-export async function getCurrentRole(): Promise<string | null> {
+export async function getCurrentRole(): Promise<UserRole | null> {
 	if (userRole.value) return userRole.value;
 
 	const validationStatus = await validateRoleWithBackend();

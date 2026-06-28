@@ -12,6 +12,7 @@ import { dataService } from '$lib/services/dataService';
 import { createToastManager } from '$lib/utils/ui';
 import { ErrorHandler } from '$lib/utils/errorHandling';
 import { formatRupiah, parseRupiah, handleRupiahInput } from '$lib/utils/currency';
+import { NOTIF } from '$lib/constants/ui';
 import type {
 	Product,
 	Category,
@@ -159,7 +160,7 @@ export function createManajemenmenuState() {
 		if (showNotifModal) {
 			const timeout = setTimeout(() => {
 				showNotifModal = false;
-			}, 2000);
+			}, NOTIF.AUTO_DISMISS_MS);
 			return () => clearTimeout(timeout);
 		}
 	});

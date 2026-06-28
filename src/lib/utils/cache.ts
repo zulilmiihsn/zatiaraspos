@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { clear as clearCache, get as getCache, set as setCache, del as delCache } from 'idb-keyval';
+import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 
 // Cache configuration
 const CACHE_CONFIG = {
@@ -486,11 +487,15 @@ export const CACHE_KEYS = {
 	PENGATURAN: 'pengaturan'
 } as const;
 
+function branchCacheKey(key: string): string {
+	return `${selectedBranch.value || 'default'}:${key}`;
+}
+
 // Cache utilities for specific data types
 export class CacheUtils {
 	// Dashboard data caching
 	static async getDashboardStats(fetcher: () => Promise<any>) {
-		return smartCache.get(CACHE_KEYS.DASHBOARD_STATS, fetcher, {
+		return smartCache.get(branchCacheKey(CACHE_KEYS.DASHBOARD_STATS), fetcher, {
 			ttl: 30000, // 30 seconds
 			backgroundRefresh: true
 		});
@@ -498,7 +503,7 @@ export class CacheUtils {
 
 	// POS data caching
 	static async getProducts(fetcher: () => Promise<any[]>) {
-		return smartCache.get(CACHE_KEYS.PRODUCTS, fetcher, {
+		return smartCache.get(branchCacheKey(CACHE_KEYS.PRODUCTS), fetcher, {
 			ttl: 300000, // 5 minutes
 			backgroundRefresh: true
 		});
@@ -510,7 +515,7 @@ export class CacheUtils {
 		dateRange: string,
 		fetcher: (etag?: string) => Promise<{ data: unknown; etag?: string }>
 	) {
-		const cacheKey = `${key}_${dateRange}`;
+		const cacheKey = branchCacheKey(`${key}_${dateRange}`);
 		return smartCache.getWithETag(cacheKey, fetcher, {
 			ttl: 300000, // 5 menit
 			backgroundRefresh: true
@@ -518,22 +523,22 @@ export class CacheUtils {
 	}
 
 	static async invalidateDashboardData(): Promise<void> {
-		await smartCache.invalidate(CACHE_KEYS.DASHBOARD_STATS);
-		await smartCache.invalidate(CACHE_KEYS.BEST_SELLERS);
-		await smartCache.invalidate(CACHE_KEYS.WEEKLY_INCOME);
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.DASHBOARD_STATS));
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.BEST_SELLERS));
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.WEEKLY_INCOME));
 	}
 
 	static async invalidatePOSData(): Promise<void> {
-		await smartCache.invalidate(CACHE_KEYS.PRODUCTS);
-		await smartCache.invalidate(CACHE_KEYS.CATEGORIES);
-		await smartCache.invalidate(CACHE_KEYS.ADDONS);
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.PRODUCTS));
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.CATEGORIES));
+		await smartCache.invalidate(branchCacheKey(CACHE_KEYS.ADDONS));
 	}
 
 	static async invalidateReportData(): Promise<void> {
 		// Invalidate specific report keys instead of using regex
-		await smartCache.invalidate('daily_report');
-		await smartCache.invalidate('weekly_report');
-		await smartCache.invalidate('monthly_report');
-		await smartCache.invalidate('yearly_report');
+		await smartCache.invalidate(branchCacheKey('daily_report'));
+		await smartCache.invalidate(branchCacheKey('weekly_report'));
+		await smartCache.invalidate(branchCacheKey('monthly_report'));
+		await smartCache.invalidate(branchCacheKey('yearly_report'));
 	}
 }

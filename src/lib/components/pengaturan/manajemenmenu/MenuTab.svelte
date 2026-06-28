@@ -103,7 +103,7 @@
 			</button>
 			<div class="scrollbar-hide flex w-max items-center gap-2 overflow-x-auto">
 				{#if isLoadingKategori}
-					{#each Array(5) as _, i}
+					{#each Array(5) as _, i (i)}
 						<div
 							class="h-10 max-w-none animate-pulse rounded-lg bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 whitespace-nowrap"
 							style="min-width:6rem;"
@@ -117,7 +117,7 @@
 							: 'border-pink-200 bg-white text-pink-500'}"
 						onclick={() => (selectedKategori = 'Semua')}>Semua</button
 					>
-					{#each kategoriList as kat}
+					{#each kategoriList as kat (kat.id)}
 						<button
 							class="max-w-none rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all focus:outline-none {selectedKategori ==
 							kat.id
@@ -136,7 +136,7 @@
 		<div class="mx-auto max-w-4xl px-4 pb-6">
 			{#if isLoadingMenus}
 				<div class="grid min-h-screen grid-cols-2 gap-3 pb-4">
-					{#each Array(6) as _, i}
+					{#each Array(6) as _, i (i)}
 						<div
 							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] w-full animate-pulse flex-col items-center justify-between rounded-xl border border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-4 shadow-md"
 						>
@@ -162,7 +162,7 @@
 					class="grid grid-cols-2 gap-3 pb-4 md:mx-auto md:max-w-4xl md:grid-cols-3 md:gap-8"
 					transition:fade={{ duration: 120 }}
 				>
-					{#each filteredMenus as menu}
+					{#each filteredMenus as menu (menu.id)}
 						<div
 							class="relative flex h-[260px] cursor-pointer flex-col rounded-xl border border-gray-100 bg-white p-4 shadow transition-shadow md:h-[300px] md:items-center md:justify-center md:gap-2 md:rounded-2xl md:p-6 md:text-base md:shadow-lg"
 							role="button"
@@ -218,7 +218,7 @@
 				</div>
 			{:else}
 				<div class="flex flex-col gap-2 px-0 pb-4" transition:fade={{ duration: 120 }}>
-					{#each filteredMenus as menu}
+					{#each filteredMenus as menu (menu.id)}
 						<div
 							class="flex cursor-pointer items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:shadow-md"
 							role="button"

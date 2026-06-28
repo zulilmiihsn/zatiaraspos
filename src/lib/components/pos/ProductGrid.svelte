@@ -2,6 +2,7 @@
 	import { slide } from 'svelte/transition';
 	import { PackageOpen, RefreshCw } from 'lucide-svelte';
 	import { formatRupiah } from '$lib/utils/currency';
+	import type { PosCategory, PosProduct } from '$lib/stores/posState.svelte';
 
 	let {
 		posGridView,
@@ -18,11 +19,11 @@
 		posGridView: boolean;
 		isLoadingProducts: boolean;
 		skeletonCount?: number;
-		filteredProducts: any[];
-		categories: any[];
+		filteredProducts: PosProduct[];
+		categories: PosCategory[];
 		imageError: Record<string, boolean>;
 		loadError?: string;
-		onSelectProduct: (product: any) => void;
+		onSelectProduct: (product: PosProduct) => void;
 		onImgError: (id: string | number) => void;
 		onRetry?: () => void;
 	}>();
@@ -30,7 +31,7 @@
 	// Helper untuk ambil nama kategori dari kategori_id
 	function getKategoriNameById(id: string | number): string {
 		if (!id) return '';
-		const kat = categories?.find((k: any) => String(k.id) === String(id));
+		const kat = categories?.find((k: PosCategory) => String(k.id) === String(id));
 		return kat?.nama || '';
 	}
 </script>
@@ -70,7 +71,7 @@
 						<div class="text-sm text-stone-500">Tambah menu atau ubah filter kategori.</div>
 					</div>
 				{:else}
-					{#each filteredProducts as p}
+					{#each filteredProducts as p (p.id)}
 						<div
 							class="flex cursor-pointer items-center justify-between rounded-lg border border-pink-100 bg-white px-3 py-2 shadow-[0_2px_8px_-2px_rgba(236,72,153,0.05)] transition-all duration-200 hover:border-pink-300 hover:bg-pink-50 active:scale-[0.98]"
 							tabindex="0"
@@ -129,7 +130,7 @@
 						<div class="text-sm text-stone-500">Tambah menu atau ubah filter kategori.</div>
 					</div>
 				{:else}
-					{#each filteredProducts as p}
+					{#each filteredProducts as p (p.id)}
 						<div
 							class="flex aspect-[3/4] max-h-[260px] min-h-[140px] cursor-pointer flex-col items-center justify-between rounded-xl border border-pink-100 bg-white p-3 shadow-[0_4px_12px_-2px_rgba(236,72,153,0.05)] transition-all duration-200 hover:border-pink-300 hover:shadow-md active:scale-[0.98] md:max-h-[320px] md:min-h-[180px] md:gap-3 md:rounded-2xl md:p-6"
 							tabindex="0"

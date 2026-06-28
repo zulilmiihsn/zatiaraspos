@@ -5,7 +5,7 @@
 	import { validateText, validatePasswordDemo, sanitizeInput } from '$lib/utils/validation';
 	import { securityUtils } from '$lib/utils/security';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-	type BranchType = 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2';
+	import type { BranchType } from '$lib/stores/selectedBranch.svelte';
 
 	import { isAuthenticated } from '$lib/utils/authGuard';
 
@@ -356,7 +356,7 @@
 		>
 			<option value="samarinda">Samarinda</option>
 			<option value="berau">Berau</option>
-			<option value="Balikpapan">Balikpapan</option>
+			<option value="balikpapan">Balikpapan</option>
 			<option value="samarinda2">Samarinda 2</option>
 			<option value="balikpapan2">Balikpapan 2</option>
 		</select>

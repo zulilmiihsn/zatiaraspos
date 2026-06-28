@@ -1,16 +1,21 @@
-type BranchType = 'samarinda' | 'berau' | 'Balikpapan' | 'samarinda2' | 'balikpapan2';
+export type BranchType = 'samarinda' | 'berau' | 'balikpapan' | 'samarinda2' | 'balikpapan2';
+
+const VALID_BRANCHES: BranchType[] = [
+	'samarinda',
+	'berau',
+	'balikpapan',
+	'samarinda2',
+	'balikpapan2'
+];
 
 class BranchState {
 	#value = $state<BranchType>('samarinda');
 
 	constructor() {
 		if (typeof window !== 'undefined') {
-			const saved = localStorage.getItem('selectedBranch') as BranchType | null;
-			if (
-				saved &&
-				['berau', 'samarinda', 'Balikpapan', 'samarinda2', 'balikpapan2'].includes(saved)
-			) {
-				this.#value = saved;
+			const saved = localStorage.getItem('selectedBranch')?.toLowerCase();
+			if (saved && VALID_BRANCHES.includes(saved as BranchType)) {
+				this.#value = saved as BranchType;
 			}
 		}
 	}

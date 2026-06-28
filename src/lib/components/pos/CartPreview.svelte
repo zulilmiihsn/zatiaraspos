@@ -11,7 +11,7 @@
 		onGoToBayar,
 		onClearCart
 	} = $props<{
-		cart: any[];
+		cart: unknown[];
 		totalItems: number;
 		totalHarga: number;
 		onOpenCart: () => void;

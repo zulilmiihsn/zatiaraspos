@@ -14,6 +14,7 @@
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { formatRupiah } from '$lib/utils/currency';
+	import { PAYMENT } from '$lib/constants/ui';
 	import { dataService } from '$lib/services/dataService';
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
@@ -54,7 +55,7 @@
 	let showCancelModal = $state(false);
 	let showCashModal = $state(false);
 	let cashReceived = $state('');
-	const cashTemplates = [5000, 10000, 20000, 50000, 100000];
+	const cashTemplates = PAYMENT.QUICK_AMOUNTS;
 	let keypad = [
 		[1, 2, 3],
 		[4, 5, 6],

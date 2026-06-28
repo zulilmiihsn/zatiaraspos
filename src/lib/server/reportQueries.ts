@@ -102,7 +102,7 @@ export async function buildLaporanAggregate(
 		}
 		if (nonCash > 0) {
 			transactions.push({
-				id: `pos:${name}:qris`,
+				id: `pos:${name}:non-tunai`,
 				transaction_id: null,
 				waktu: endDate,
 				sumber: 'pos',
@@ -110,7 +110,7 @@ export async function buildLaporanAggregate(
 				jenis: 'pendapatan_usaha',
 				nominal: nonCash,
 				deskripsi: name,
-				metode_bayar: 'qris'
+				metode_bayar: 'non-tunai'
 			});
 		}
 	}
@@ -118,7 +118,7 @@ export async function buildLaporanAggregate(
 	let manualIncome = 0;
 	let manualExpense = 0;
 	for (const m of manualRows) {
-		// `amount` adalah field kanonik buku_kas (notNull).
+		// `nominal` adalah field kanonik buku_kas (notNull).
 		const value = Number(m.nominal) || 0;
 		transactions.push({
 			...m,

@@ -17,6 +17,7 @@
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import { formatRupiah } from '$lib/utils/currency';
+	import { POS_SKELETON } from '$lib/constants/ui';
 	import { Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
 	$effect(() => {
@@ -277,14 +278,14 @@
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
 
-	let skeletonCount = $state(9);
+	let skeletonCount = $state<number>(POS_SKELETON.TABLET);
 	if (typeof window !== 'undefined') {
 		if (window.innerWidth < 768) {
-			skeletonCount = 6;
+			skeletonCount = POS_SKELETON.MOBILE;
 		} else if (window.innerWidth >= 1024) {
-			skeletonCount = 12;
+			skeletonCount = POS_SKELETON.DESKTOP;
 		} else {
-			skeletonCount = 9;
+			skeletonCount = POS_SKELETON.TABLET;
 		}
 	}
 

@@ -56,7 +56,7 @@
 	<div class="flex h-32 items-end gap-2 md:h-56 lg:h-64">
 		{#if weeklyIncome.length === 0}
 			<div class="relative flex h-32 w-full items-end gap-2 md:h-56 lg:h-64">
-				{#each getLast7DaysLabelsWITA() as label}
+				{#each getLast7DaysLabelsWITA() as label (label)}
 					<div class="flex flex-1 flex-col items-center">
 						<div class="w-6 rounded-t bg-gray-100 md:w-8 lg:w-10" style="height: 8px;"></div>
 						<div class="mt-1 text-xs text-gray-400 md:text-sm">{label}</div>
@@ -69,7 +69,7 @@
 				</div>
 			</div>
 		{:else}
-			{#each weeklyIncome as income, i}
+			{#each weeklyIncome as income, i (i)}
 				<div class="relative flex flex-1 flex-col items-center">
 					<div
 						class="w-6 cursor-pointer rounded-t bg-green-400 transition-all duration-700 md:w-8 lg:w-10"

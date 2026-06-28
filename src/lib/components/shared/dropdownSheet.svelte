@@ -42,7 +42,7 @@
 		<div class="sheet" onclick={(e) => e.stopPropagation()} role="document">
 			<div class="sheet-header">Pilih Opsi</div>
 			<div class="dropdown-list">
-				{#each options as opt}
+				{#each options as opt (opt.value)}
 					<button
 						type="button"
 						class="dropdown-item {selected === opt.value ? 'active' : ''}"

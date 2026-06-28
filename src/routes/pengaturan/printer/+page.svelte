@@ -11,15 +11,15 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { dataService } from '$lib/services/dataService';
 	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
-	let namaToko = '';
-	let alamat = '';
-	let telepon = '';
-	let instagram = '';
-	let ucapan = '';
-	let isSaving = false;
-	let activeTab = 'detail';
+	let namaToko = $state('');
+	let alamat = $state('');
+	let telepon = $state('');
+	let instagram = $state('');
+	let ucapan = $state('');
+	let isSaving = $state(false);
+	let activeTab = $state('detail');
 
-	let copied = false;
+	let copied = $state(false);
 	function copyBase64() {
 		navigator.clipboard.writeText(LOGO_BASE64);
 		copied = true;
