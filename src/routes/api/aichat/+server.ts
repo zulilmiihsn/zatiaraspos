@@ -3,8 +3,8 @@ import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { formatRupiah } from '$lib/utils/currency';
-import { productAnalysisService } from '$lib/services/productAnalysisService';
 import { getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
+import { requireAuthSession, requireSessionBranch } from '$lib/server/apiAuth';
 import { kategori, produk, tambahan } from '$lib/database/schema';
 import { eq } from 'drizzle-orm';
 import {
@@ -189,28 +189,85 @@ async function analyzeBusinessData(
 	);
 }
 
+/**
+ * Bangun teks daftar produk/harga untuk prompt AI — query LANGSUNG dari DB yang
+ * sudah di-scope ke branch (bukan productAnalysisService yang client-coupled +
+ * cache module-global tak ber-key-branch → bocor lintas cabang). Lihat P0-1.
+ */
+async function buildProductPromptData(
+	db: ReturnType<typeof getDrizzleDb>,
+	branch: ReturnType<typeof normalizeBranch>
+): Promise<string> {
+	const [products, cats, addOns] = await Promise.all([
+		db
+			.select({
+				id: produk.id,
+				nama: produk.nama,
+				harga: produk.harga,
+				kategori_id: produk.kategori_id,
+				is_active: produk.is_active,
+				ekstra_ids: produk.ekstra_ids
+			})
+			.from(produk)
+			.where(eq(produk.cabang_id, branch)),
+		db
+			.select({ id: kategori.id, nama: kategori.nama })
+			.from(kategori)
+			.where(eq(kategori.cabang_id, branch)),
+		db
+			.select({ id: tambahan.id, nama: tambahan.nama, harga: tambahan.harga, is_active: tambahan.is_active })
+			.from(tambahan)
+			.where(eq(tambahan.cabang_id, branch))
+	]);
+
+	const idsOf = (p: (typeof products)[number]) => (Array.isArray(p.ekstra_ids) ? p.ekstra_ids : []);
+
+	let promptData = 'DAFTAR PRODUK DAN HARGA:\n\n';
+	const byCategory = products.reduce(
+		(acc, p) => {
+			const name = cats.find((c) => c.id === p.kategori_id)?.nama || 'Lainnya';
+			(acc[name] ||= []).push(p);
+			return acc;
+		},
+		{} as Record<string, typeof products>
+	);
+
+	for (const [catName, items] of Object.entries(byCategory)) {
+		promptData += `📂 ${catName.toUpperCase()}:\n`;
+		for (const p of items) {
+			if (!p.is_active) continue;
+			promptData += `  • ${p.nama}: Rp ${formatRupiah(p.harga)}`;
+			const pAddOns = addOns.filter((a) => a.is_active && idsOf(p).includes(a.id));
+			if (pAddOns.length > 0) {
+				promptData += `\n    Topping/Tambahan:`;
+				for (const a of pAddOns) promptData += `\n      - ${a.nama}: Rp ${formatRupiah(a.harga)}`;
+			}
+			promptData += `\n`;
+		}
+		promptData += `\n`;
+	}
+
+	const standalone = addOns.filter(
+		(a) => a.is_active && !products.some((p) => idsOf(p).includes(a.id))
+	);
+	if (standalone.length > 0) {
+		promptData += `📂 TAMBAHAN/TOPPING STANDALONE:\n`;
+		for (const a of standalone) promptData += `  • ${a.nama}: Rp ${formatRupiah(a.harga)}\n`;
+		promptData += `\n`;
+	}
+	return promptData;
+}
+
 // AI 3: Transaction Analyzer
 async function analyzeTransactionText(
 	text: string,
 	apiKey: string,
-	request?: Request
+	productData = ''
 ): Promise<{
 	transactions: Record<string, unknown>[];
 	confidence: number;
 	recommendations: Record<string, unknown>[];
 }> {
-	// Fetch product data untuk analisis
-	let productData = '';
-	try {
-		// Get current branch from request headers or use default
-		const branch = request?.headers.get('x-branch') || 'default';
-
-		productData = await productAnalysisService.generateProductPromptData(branch);
-	} catch (error) {
-		productData =
-			'Data produk tidak tersedia saat ini. JIKA USER MENYEBUTKAN PRODUK, JANGAN berikan rekomendasi untuk penjualan produk karena tidak ada informasi harga. Minta user untuk memberikan informasi harga atau detail transaksi yang lebih spesifik.';
-	}
-
 	const systemMessage: ChatMessage = {
 		role: 'system',
 		content: buildAnalyzeTransactionTextPrompt(text, productData)
@@ -311,7 +368,9 @@ async function analyzeTransactionText(
 
 // Endpoint untuk analisis transaksi AI
 export const POST: RequestHandler = async (event) => {
-	const { request, url, getClientAddress } = event;
+	const { url, getClientAddress } = event;
+	// P0-1: endpoint ini sebelumnya hanya rate-limit IP tanpa auth. Wajib login.
+	requireAuthSession(event.locals);
 	const clientIp = getClientAddress();
 	if (isRateLimited(clientIp)) {
 		return json(
@@ -339,6 +398,8 @@ export const POST: RequestHandler = async (event) => {
 // Handler untuk analisis transaksi
 async function handleTransactionAnalysis(event: import('./$types').RequestEvent) {
 	const request = event.request;
+	// P0-1: branch dari session, bukan header x-branch yang bisa dipalsukan.
+	const branch = requireSessionBranch(event.locals);
 	try {
 		const { text } = await request.json();
 
@@ -363,8 +424,17 @@ async function handleTransactionAnalysis(event: import('./$types').RequestEvent)
 			);
 		}
 
+		// Data produk untuk konteks AI — query branch-scoped, fallback bila gagal.
+		let productData = '';
+		try {
+			productData = await buildProductPromptData(getDrizzleDb(event.platform, branch), branch);
+		} catch {
+			productData =
+				'Data produk tidak tersedia saat ini. JIKA USER MENYEBUTKAN PRODUK, JANGAN berikan rekomendasi untuk penjualan produk karena tidak ada informasi harga. Minta user untuk memberikan informasi harga atau detail transaksi yang lebih spesifik.';
+		}
+
 		// Analisis transaksi menggunakan AI
-		const analysis = await analyzeTransactionText(text, apiKey, request);
+		const analysis = await analyzeTransactionText(text, apiKey, productData);
 
 		return json({
 			success: true,
@@ -419,13 +489,15 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 			);
 		}
 
+		// P0-1: branch di-scope ke session (admin boleh lintas-branch). Jangan percaya
+		// body mentah — sebelumnya fallback ke 'balikpapan' = baca data tenant lain.
 		let requestedBranch: ReturnType<typeof normalizeBranch>;
 		try {
-			requestedBranch = normalizeBranch(branch || 'balikpapan');
+			requestedBranch = requireSessionBranch(event.locals, branch);
 		} catch {
 			return json(
-				{ success: false, error: 'Branch tidak valid', code: 'INVALID_BRANCH' },
-				{ status: 400 }
+				{ success: false, error: 'Branch tidak sesuai session', code: 'BRANCH_FORBIDDEN' },
+				{ status: 403 }
 			);
 		}
 
