@@ -88,7 +88,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	);
 };
 
-export const POST: RequestHandler = async ({ request, platform, locals }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	const branch = requireSessionBranch(locals);
 	const session = locals.authSession!;
 	requireAnyRole(session.role, ['kasir', 'pemilik']);
@@ -97,12 +97,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!body?.payload) throw kitError(400, 'Payload tidak valid');
 
 	// Blokir: transaksi POS harus lewat /api/pos/transaction (yang juga maintain agregat harian).
-	const rows = Array.isArray(body.payload) ? body.payload : [body.payload];
-	const hasPosInsert = rows.some((row) => (row as Record<string, unknown>)?.sumber === 'pos');
-	if (hasPosInsert) {
-		throw kitError(409, 'Transaksi POS harus lewat /api/pos/transaction');
-	}
-	// Tabel transaksi_kasir sendiri juga dilarang di-insert langsung (semua insert datang dari POS).
 	throw kitError(409, 'Transaksi POS harus lewat /api/pos/transaction');
 };
 

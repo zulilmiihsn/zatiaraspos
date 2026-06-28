@@ -128,7 +128,7 @@ export class AutoApplyService {
 			nominal: Number(data.amount),
 			deskripsi: String(data.deskripsi).trim(),
 			jenis: data.category || this.getDefaultCategory(data.type as string),
-			sumber: data.type === 'penjualan' ? 'pos' : 'catat',
+			sumber: 'catat',
 			waktu: new Date().toISOString(),
 			metode_bayar: 'tunai',
 			transaction_id: transactionId
@@ -142,13 +142,6 @@ export class AutoApplyService {
 
 		await throwIfNotOk(res, 'Gagal menyimpan transaksi');
 
-		const inserted = await res.json();
-		const bukuKasId = inserted?.id ?? transactionId;
-
-		if (data.type === 'penjualan' && Array.isArray(data.products)) {
-			await this.createTransactionItems(bukuKasId, data.products, transactionId, branch);
-		}
-
 		if (typeof window !== 'undefined') {
 			try {
 				window.dispatchEvent(
@@ -160,40 +153,6 @@ export class AutoApplyService {
 				/* sinyal refresh UI best-effort */
 			}
 		}
-	}
-
-	private async createTransactionItems(
-		bukuKasId: string,
-		products: any[],
-		transactionId: string,
-		branch: string
-	): Promise<void> {
-		const items = products.map((product) => {
-			const addOnsTotal = (product.addOns || []).reduce(
-				(sum: number, addOn: any) => sum + (addOn.harga || 0),
-				0
-			);
-			const unitPrice = (product.harga || 0) + addOnsTotal;
-			const jumlah = product.quantity || 1;
-			return {
-				id: crypto.randomUUID(),
-				buku_kas_id: bukuKasId,
-				produk_id: product.id || null,
-				jumlah,
-				nominal: unitPrice * jumlah,
-				transaction_id: transactionId,
-				nama_kustom: product.id ? null : product.nama || 'Produk Custom'
-			};
-		});
-
-		await apiFetch('/api/transaksi-kasir', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				branch,
-				payload: items
-			})
-		});
 	}
 
 	private async updateTransaction(data: any): Promise<void> {
@@ -268,9 +227,5 @@ export class AutoApplyService {
 			seen.add(key);
 			return true;
 		});
-	}
-
-	async rollbackChanges(_appliedRecommendations: string[]): Promise<void> {
-		// TODO: implement rollback
 	}
 }

@@ -97,44 +97,6 @@ export function validateText(value: unknown, rules: ValidationRule = {}): Valida
 	return { isValid: errors.length === 0, errors };
 }
 
-// Validasi email
-export function validateEmail(email: string): ValidationResult {
-	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	return validateText(email, {
-		required: true,
-		pattern: emailPattern,
-		custom: (value: string) => {
-			if (!emailPattern.test(value)) {
-				return 'Format email tidak valid';
-			}
-			return null;
-		}
-	});
-}
-
-// Validasi password (strict - untuk production)
-export function validatePassword(password: string): ValidationResult {
-	return validateText(password, {
-		required: true,
-		minLength: 6,
-		custom: (value: string) => {
-			if (value.length < 6) {
-				return 'Password minimal 6 karakter';
-			}
-			if (!/[A-Z]/.test(value)) {
-				return 'Password harus mengandung huruf besar';
-			}
-			if (!/[a-z]/.test(value)) {
-				return 'Password harus mengandung huruf kecil';
-			}
-			if (!/\d/.test(value)) {
-				return 'Password harus mengandung angka';
-			}
-			return null;
-		}
-	});
-}
-
 // Validasi password (simplified - untuk demo)
 export function validatePasswordDemo(password: string): ValidationResult {
 	return validateText(password, {
@@ -178,45 +140,6 @@ export function validateIncomeExpense(data: {
 	return { isValid: errors.length === 0, errors };
 }
 
-// Rate limiting dummy untuk mencegah spam
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-
-export function checkRateLimit(
-	key: string,
-	maxRequests: number = 10,
-	windowMs: number = 60000
-): boolean {
-	const now = Date.now();
-	const record = rateLimitStore.get(key);
-
-	if (!record || now > record.resetTime) {
-		rateLimitStore.set(key, { count: 1, resetTime: now + windowMs });
-		return true;
-	}
-
-	if (record.count >= maxRequests) {
-		return false;
-	}
-
-	record.count++;
-	return true;
-}
-
-// Validasi tanggal
-export function validateDate(date: string | Date): ValidationResult {
-	const errors: string[] = [];
-	if (!date) {
-		errors.push('Tanggal harus diisi');
-		return { isValid: false, errors };
-	}
-	const dateObj = new Date(date);
-	if (isNaN(dateObj.getTime())) {
-		errors.push('Format tanggal tidak valid');
-		return { isValid: false, errors };
-	}
-	return { isValid: errors.length === 0, errors };
-}
-
 // Validasi waktu
 export function validateTime(time: string): ValidationResult {
 	const errors: string[] = [];
@@ -234,20 +157,4 @@ export function validateTime(time: string): ValidationResult {
 	}
 
 	return { isValid: true, errors: [] };
-}
-
-// Validasi kode produk (SKU)
-export function validateSKU(sku: string): ValidationResult {
-	return validateText(sku, {
-		required: true,
-		minLength: 3,
-		maxLength: 20,
-		pattern: /^[A-Z0-9-]+$/,
-		custom: (value: string) => {
-			if (!/^[A-Z0-9-]+$/.test(value)) {
-				return 'SKU hanya boleh mengandung huruf besar, angka, dan tanda hubung';
-			}
-			return null;
-		}
-	});
 }

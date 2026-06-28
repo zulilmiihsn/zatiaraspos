@@ -119,65 +119,6 @@ export class AuthGuard {
 	}
 
 	/**
-	 * Check role-based access
-	 */
-	async requireRole(requiredRole: string): Promise<boolean> {
-		if (typeof window === 'undefined') return true;
-
-		try {
-			const clientId = this.getClientIdentifier();
-			if (!RateLimiter.isAllowed(`auth_${clientId}`)) {
-				goto('/login?reason=rate_limit');
-				return false;
-			}
-
-			const payload = await this.fetchSessionPayload();
-			if (!payload?.authenticated || !payload?.user) {
-				this.recordFailedAuth(clientId);
-				localStorage.removeItem('zatiaras_session');
-				localStorage.removeItem('selectedBranch');
-				goto('/login?reason=session_expired');
-				return false;
-			}
-
-			if (!payload) {
-				goto('/unauthorized');
-				return false;
-			}
-
-			const userRole = payload?.user?.role;
-			if (typeof userRole !== 'string') {
-				goto('/unauthorized');
-				return false;
-			}
-
-			if (userRole !== requiredRole && userRole !== 'admin') {
-				goto('/unauthorized');
-				return false;
-			}
-
-			return true;
-		} catch (error) {
-			goto('/unauthorized');
-			return false;
-		}
-	}
-
-	/**
-	 * Check admin access
-	 */
-	async requireAdmin(): Promise<boolean> {
-		return this.requireRole('admin');
-	}
-
-	/**
-	 * Check kasir access
-	 */
-	async requireKasir(): Promise<boolean> {
-		return this.requireRole('kasir');
-	}
-
-	/**
 	 * Get client identifier for rate limiting
 	 */
 	private getClientIdentifier(): string {

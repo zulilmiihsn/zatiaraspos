@@ -3,7 +3,7 @@
 	import ProductGrid from '$lib/components/pos/ProductGrid.svelte';
 	import CustomItemModal from '$lib/components/pos/CustomItemModal.svelte';
 	import CartPreview from '$lib/components/pos/CartPreview.svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	import type { TokoSession } from '$lib/types/store';
@@ -13,18 +13,9 @@
 
 	import { cubicOut } from 'svelte/easing';
 	import { posGridView } from '$lib/stores/posGridView.svelte';
-	import {
-		debounce,
-		throttle,
-		measureAsyncPerformance,
-		calculateCartTotal,
-		fuzzySearch
-	} from '$lib/utils/performance';
+	import { debounce, calculateCartTotal, fuzzySearch } from '$lib/utils/performance';
 	import { userRole } from '$lib/stores/userRole.svelte';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-	import { dataService, realtimeManager } from '$lib/services/dataService';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
-	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import { formatRupiah } from '$lib/utils/currency';
 	import { Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
@@ -459,7 +450,7 @@
 		<ProductGrid
 			posGridView={posGridView.value}
 			isLoadingProducts={pos.isLoadingProducts}
-			skeletonCount={12}
+			{skeletonCount}
 			{filteredProducts}
 			{categories}
 			{imageError}
