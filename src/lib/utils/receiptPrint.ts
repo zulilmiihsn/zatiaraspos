@@ -10,6 +10,37 @@ import { LOGO_BASE64 } from '$lib/utils/logoBase64';
 import { formatRupiah } from '$lib/utils/currency';
 import { dataService } from '$lib/services/dataService';
 import type { ReceiptSettings, HistoryItem } from '$lib/types/laporan';
+import { formatOrderDetails } from '$lib/utils/orderDetails';
+
+type SaleReceiptItem = {
+	product: { nama: string; harga?: number | null };
+	jumlah: number;
+	addOns?: Array<{ nama: string; harga?: number | null }>;
+	gula?: string | null;
+	es?: string | null;
+	catatan?: string | null;
+};
+
+type SaleReceiptInput = {
+	settings: ReceiptSettings | null;
+	items: SaleReceiptItem[];
+	customerName: string;
+	total: number;
+	paymentMethod: string;
+	cashReceived: number;
+	change: number;
+	queuedOffline: boolean;
+	printedAt?: Date;
+};
+
+function escapeHtml(value: unknown): string {
+	return String(value ?? '')
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#039;');
+}
 
 /** Default pengaturan struk bila data toko belum tersedia. */
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
@@ -108,6 +139,53 @@ export function buildReceiptHtml(
 	html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${p.ucapan}</div>`;
 	html += `</body></html>`;
 
+	return html;
+}
+
+/** Bangun HTML struk transaksi yang baru selesai dibayar. */
+export function buildSaleReceiptHtml(input: SaleReceiptInput): string {
+	const settings = input.settings ?? DEFAULT_RECEIPT_SETTINGS;
+	const printedAt = input.printedAt ?? new Date();
+	let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
+	html += `<div style='text-align:center;margin-bottom:16px;'>`;
+	html += `<img src='${LOGO_BASE64}' style='width:80px;height:80px;margin:0 auto 8px;display:block;' />`;
+	html += `<div style='font-weight:bold;font-size:20px;text-transform:uppercase;'>${escapeHtml(settings.nama_toko)}</div>`;
+	html += `<div style='font-size:13px;margin-top:4px;'>${escapeHtml(settings.alamat)}</div>`;
+	if (settings.instagram || settings.telepon) {
+		html += `<div style='font-size:13px;margin-top:2px;'>${escapeHtml(settings.instagram)}${settings.instagram && settings.telepon ? ' | ' : ''}${escapeHtml(settings.telepon)}</div>`;
+	}
+	html += `</div>`;
+	html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
+	html += `<div style='text-align:left;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
+	html += `<div>${escapeHtml(input.customerName)}</div>`;
+	html += `<div>${printedAt.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
+	html += `</div>`;
+	if (input.queuedOffline) {
+		html += `<div style='font-size:12px;margin-bottom:12px;'><b>STATUS: MENUNGGU SINKRONISASI</b></div>`;
+	}
+	html += `<table style='width:100%;font-size:14px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
+	for (const item of input.items) {
+		html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${escapeHtml(item.product.nama)} <span style='font-size:12px;font-weight:normal;'>x${item.jumlah}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${formatRupiah(item.product.harga ?? 0)}</td></tr>`;
+		for (const addOn of item.addOns ?? []) {
+			html += `<tr><td style='font-size:12px;padding-left:8px;color:#333;'>+ ${escapeHtml(addOn.nama)}</td><td style='font-size:12px;text-align:right;color:#333;'>Rp${formatRupiah((addOn.harga ?? 0) * item.jumlah)}</td></tr>`;
+		}
+		const detail = formatOrderDetails(item);
+		if (detail) {
+			html += `<tr><td colspan='2' style='font-size:12px;padding-left:8px;padding-bottom:8px;color:#333;font-style:italic;'>${escapeHtml(detail)}</td></tr>`;
+		}
+	}
+	html += `</tbody></table>`;
+	html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
+	html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
+	html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${formatRupiah(input.total)}</td></tr>`;
+	html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${escapeHtml(METHOD_LABELS[input.paymentMethod] || input.paymentMethod)}</td></tr>`;
+	if (input.paymentMethod === 'tunai') {
+		html += `<tr><td style='text-align:left;font-size:13px;'>Dibayar:</td><td style='text-align:right;font-size:13px;'>Rp${formatRupiah(input.cashReceived)}</td></tr>`;
+		html += `<tr><td style='text-align:left;font-size:13px;'>Kembalian:</td><td style='text-align:right;font-size:13px;'>Rp${input.change >= 0 ? formatRupiah(input.change) : '0'}</td></tr>`;
+	}
+	html += `</tbody></table>`;
+	html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${escapeHtml(settings.ucapan)}</div>`;
+	html += `</body></html>`;
 	return html;
 }
 

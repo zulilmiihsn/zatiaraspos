@@ -9,8 +9,7 @@
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { userRole } from '$lib/stores/userRole.svelte';
-	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
-	import { printViaIntent, DEFAULT_RECEIPT_SETTINGS, METHOD_LABELS } from '$lib/utils/receiptPrint';
+	import { buildSaleReceiptHtml, printViaIntent } from '$lib/utils/receiptPrint';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -383,56 +382,18 @@
 	}
 
 	function printStrukViaEscPosService() {
-		// Gunakan pengaturanStruk jika ada, fallback default
-		const pengaturan = pengaturanStruk || DEFAULT_RECEIPT_SETTINGS;
-		let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
-		// Header
-		html += `<div style='text-align:center;margin-bottom:16px;'>`;
-		html += `<img src='${LOGO_BASE64}' style='width:80px;height:80px;margin:0 auto 8px;display:block;' />`;
-		html += `<div style='font-weight:bold;font-size:20px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
-		html += `<div style='font-size:13px;margin-top:4px;'>${pengaturan.alamat}</div>`;
-		if (pengaturan.instagram || pengaturan.telepon) {
-			html += `<div style='font-size:13px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
-		}
-		html += `</div>`;
-		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
-		// Info pelanggan & waktu
-		html += `<div style='text-align:left;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
-		html += `<div>${customerName || ''}</div>`;
-		html += `<div>${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
-		html += `</div>`;
-		if (transactionQueuedOffline) {
-			html += `<div style='font-size:12px;margin-bottom:12px;'><b>STATUS: MENUNGGU SINKRONISASI</b></div>`;
-		}
-		// Daftar pesanan
-		html += `<table style='width:100%;font-size:14px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
-		cart.forEach((item: BayarCartItem, idx: number) => {
-			html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${item.product.nama} <span style='font-size:12px;font-weight:normal;'>x${item.jumlah}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${formatRupiah(item.product.harga ?? 0)}</td></tr>`;
-			if (item.addOns && item.addOns.length > 0) {
-				item.addOns.forEach((a: BayarAddOn) => {
-					html += `<tr><td style='font-size:12px;padding-left:8px;color:#333;'>+ ${a.nama}</td><td style='font-size:12px;text-align:right;color:#333;'>Rp${formatRupiah((a.harga ?? 0) * item.jumlah)}</td></tr>`;
-				});
-			}
-			const detail = formatOrderDetails(item);
-			if (detail)
-				html += `<tr><td colspan='2' style='font-size:12px;padding-left:8px;padding-bottom:8px;color:#333;font-style:italic;'>${detail}</td></tr>`;
-		});
-		html += `</tbody></table>`;
-		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
-		// Ringkasan
-		html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
-		html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${formatRupiah(totalHarga)}</td></tr>`;
-		html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${METHOD_LABELS[paymentMethod] || paymentMethod}</td></tr>`;
-		if (paymentMethod === 'tunai') {
-			html += `<tr><td style='text-align:left;font-size:13px;'>Dibayar:</td><td style='text-align:right;font-size:13px;'>Rp${formatRupiah(parseInt(cashReceived) || 0)}</td></tr>`;
-			html += `<tr><td style='text-align:left;font-size:13px;'>Kembalian:</td><td style='text-align:right;font-size:13px;'>Rp${kembalian >= 0 ? formatRupiah(kembalian) : '0'}</td></tr>`;
-		}
-		html += `</tbody></table>`;
-		// Ucapan
-		html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
-		html += `</body></html>`;
-
-		printViaIntent(html);
+		printViaIntent(
+			buildSaleReceiptHtml({
+				settings: pengaturanStruk,
+				items: cart,
+				customerName,
+				total: totalHarga,
+				paymentMethod,
+				cashReceived: parseInt(cashReceived) || 0,
+				change: kembalian,
+				queuedOffline: transactionQueuedOffline
+			})
+		);
 	}
 
 	function handleAddCashTemplate(t: number) {

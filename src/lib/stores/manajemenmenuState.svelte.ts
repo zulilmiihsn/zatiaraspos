@@ -13,6 +13,20 @@ import { createToastManager } from '$lib/utils/ui';
 import { ErrorHandler } from '$lib/utils/errorHandling';
 import { formatRupiah, parseRupiah, handleRupiahInput } from '$lib/utils/currency';
 import { NOTIF } from '$lib/constants/ui';
+import {
+	createBahanCrud,
+	createEkstraCrud,
+	createHppState,
+	createKategoriCrud,
+	createMenuCrud,
+	type HppParsedItem
+} from '$lib/services/manajemenmenuCrud';
+import {
+	deleteMenuImage,
+	readImageFile,
+	uploadMenuImageFromDataUrl
+} from '$lib/utils/manajemenmenuImage';
+import { createHppCalculator } from '$lib/utils/manajemenmenuHpp';
 import type {
 	Product,
 	Category,
@@ -24,17 +38,14 @@ import type {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export interface HppParsedItem {
-	nama: string;
-	satuan: string;
-	purchase_qty: number;
-	purchase_cost: number;
-	biaya_per_satuan: number;
-}
-
 // ── Store factory ────────────────────────────────────────────────────────────
 
 export function createManajemenmenuState() {
+	const menuCrud = createMenuCrud();
+	const kategoriCrud = createKategoriCrud();
+	const ekstraCrud = createEkstraCrud();
+	const bahanCrud = createBahanCrud();
+	const hppState = createHppState();
 	// ── Data state ──────────────────────────────────────────────────────────
 	let menus = $state<Product[]>([]);
 	const imageError = $state<Record<string, boolean>>({});
@@ -129,6 +140,19 @@ export function createManajemenmenuState() {
 
 	// Toast
 	const toastManager = createToastManager();
+	const {
+		getBahanName,
+		getBahanUnit,
+		getOverheadMonthly,
+		getOverheadPerItem,
+		getProductRecipeCost,
+		getProductHpp,
+		getProductMargin
+	} = createHppCalculator({
+		getSettings: () => hppSettings,
+		getIngredients: () => bahanList,
+		getRecipes: () => allRecipes
+	});
 
 	// ── Derived ────────────────────────────────────────────────────────────
 
@@ -195,7 +219,7 @@ export function createManajemenmenuState() {
 	async function fetchMenus() {
 		isLoadingMenus = true;
 		try {
-			menus = await dataService.getProducts();
+			menus = await menuCrud.load();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data menu: ' + (e?.message || 'Unknown error');
@@ -208,7 +232,7 @@ export function createManajemenmenuState() {
 	async function fetchKategori() {
 		isLoadingKategori = true;
 		try {
-			kategoriList = await dataService.getCategories();
+			kategoriList = await kategoriCrud.load();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data kategori: ' + (e?.message || 'Unknown error');
@@ -221,8 +245,7 @@ export function createManajemenmenuState() {
 	async function fetchEkstra() {
 		isLoadingEkstra = true;
 		try {
-			const data = await dataService.getAddOns();
-			ekstraList = (data || []).map((e: AddOn) => ({ ...e, harga: e.harga }));
+			ekstraList = await ekstraCrud.load();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data ekstra: ' + (e?.message || 'Unknown error');
@@ -235,7 +258,7 @@ export function createManajemenmenuState() {
 	async function fetchBahan() {
 		isLoadingBahan = true;
 		try {
-			bahanList = (await dataService.getIngredients()) as unknown as Ingredient[];
+			bahanList = await bahanCrud.load();
 		} catch (error) {
 			const e = error as Error;
 			notifModalMsg = 'Gagal mengambil data bahan: ' + (e?.message || 'Unknown error');
@@ -247,7 +270,7 @@ export function createManajemenmenuState() {
 
 	async function fetchRecipes() {
 		try {
-			allRecipes = (await dataService.getProductRecipes()) as unknown as ProductRecipe[];
+			allRecipes = await hppState.loadRecipes();
 		} catch {
 			allRecipes = [];
 		}
@@ -255,7 +278,7 @@ export function createManajemenmenuState() {
 
 	async function fetchHppSettings() {
 		try {
-			hppSettings = (await dataService.getHppSettings()) as unknown as HppSettings | null;
+			hppSettings = await hppState.loadSettings();
 			const settings = hppSettings || ({} as Partial<HppSettings>);
 			hppForm = {
 				sewa_bulanan: formatRupiah(settings.sewa_bulanan),
@@ -304,9 +327,7 @@ export function createManajemenmenuState() {
 			menuForm.ekstra_ids = menu.ekstra_ids ?? [];
 			menuForm.gambar = menu.gambar || '';
 			if (menuForm.lacak_bahan) {
-				const recipes = (await dataService.getProductRecipes(
-					menu.id
-				)) as unknown as ProductRecipe[];
+				const recipes = await menuCrud.loadRecipes(menu.id);
 				recipeItems = recipes.map((recipe) => ({
 					bahan_id: recipe.bahan_id,
 					jumlah_per_item: String(recipe.jumlah_per_item || '')
@@ -370,11 +391,7 @@ export function createManajemenmenuState() {
 		};
 		let result;
 		try {
-			if (editMenuId) {
-				result = await dataService.updateRows('produk', payload, { id: String(editMenuId) });
-			} else {
-				result = await dataService.insertRows('produk', payload);
-			}
+			result = await menuCrud.save(payload, editMenuId);
 			const productId = editMenuId ?? (result?.data?.[0]?.id as string);
 			if (productId) {
 				await saveMenuRecipe(productId);
@@ -392,15 +409,7 @@ export function createManajemenmenuState() {
 	}
 
 	async function saveMenuRecipe(productId: string | number) {
-		await dataService.deleteRows('resep_produk', { produk_id: String(productId) });
-		if (!menuForm.lacak_bahan || recipeItems.length === 0) return;
-
-		const rows = recipeItems.map((item) => ({
-			produk_id: String(productId),
-			bahan_id: String(item.bahan_id),
-			jumlah_per_item: Number(item.jumlah_per_item || 0)
-		}));
-		await dataService.insertRows('resep_produk', rows);
+		await menuCrud.saveRecipes(productId, recipeItems, menuForm.lacak_bahan);
 	}
 
 	function addRecipeItem() {
@@ -435,28 +444,8 @@ export function createManajemenmenuState() {
 		if (menuIdToDelete !== null) {
 			try {
 				const menu = menus.find((m) => m.id === menuIdToDelete);
-				if (menu?.gambar) {
-					let key = '';
-					if (menu.gambar.includes('/produk/')) {
-						key = 'produk/' + menu.gambar.split('/produk/').pop();
-					} else {
-						const parts = menu.gambar.split('/');
-						const filename = parts.pop();
-						if (filename) {
-							key = `produk/${filename}`;
-						}
-					}
-					if (key) {
-						await fetch('/api/upload', {
-							method: 'DELETE',
-							headers: {
-								'Content-Type': 'application/json'
-							},
-							body: JSON.stringify({ key })
-						});
-					}
-				}
-				await dataService.deleteRows('produk', { id: String(menuIdToDelete) });
+				await deleteMenuImage(menu?.gambar);
+				await menuCrud.remove(menuIdToDelete);
 				notifModalMsg = 'Menu berhasil dihapus!';
 				notifModalType = 'success';
 				showNotifModal = true;
@@ -506,14 +495,10 @@ export function createManajemenmenuState() {
 
 	async function saveKategoriDetail() {
 		if (kategoriDetail) {
-			await dataService.updateRows(
-				'kategori',
-				{ nama: kategoriDetailName },
-				{ id: String(kategoriDetail.id) }
-			);
+			await kategoriCrud.save(kategoriDetailName, kategoriDetail.id);
 			await updateMenusKategori(kategoriDetail.id, selectedMenuIds, kategoriDetail.id);
 		} else {
-			const { data } = await dataService.insertRows('kategori', { nama: kategoriDetailName });
+			const { data } = await kategoriCrud.save(kategoriDetailName);
 			const newKategoriId = (data?.[0]?.id as string) ?? null;
 			await updateMenusKategori(newKategoriId, selectedMenuIds, null);
 		}
@@ -532,12 +517,8 @@ export function createManajemenmenuState() {
 	async function doDeleteKategori() {
 		if (kategoriIdToDelete !== null) {
 			try {
-				await dataService.updateRows(
-					'produk',
-					{ kategori_id: null },
-					{ kategori_id: String(kategoriIdToDelete) }
-				);
-				await dataService.deleteRows('kategori', { id: String(kategoriIdToDelete) });
+				await kategoriCrud.clearProducts(kategoriIdToDelete);
+				await kategoriCrud.remove(kategoriIdToDelete);
 				showDeleteKategoriModal = false;
 				kategoriIdToDelete = null;
 				await fetchKategori();
@@ -592,15 +573,7 @@ export function createManajemenmenuState() {
 			return;
 		}
 		try {
-			if (editEkstraId) {
-				await dataService.updateRows(
-					'tambahan',
-					{ nama: ekstraForm.nama, harga: harga },
-					{ id: String(editEkstraId) }
-				);
-			} else {
-				await dataService.insertRows('tambahan', { nama: ekstraForm.nama, harga: harga });
-			}
+			await ekstraCrud.save({ nama: ekstraForm.nama, harga }, editEkstraId);
 			await fetchEkstra();
 			showEkstraForm = false;
 			ekstraForm.nama = '';
@@ -621,7 +594,7 @@ export function createManajemenmenuState() {
 
 	async function doDeleteEkstra() {
 		if (ekstraIdToDelete !== null) {
-			await dataService.deleteRows('tambahan', { id: String(ekstraIdToDelete) });
+			await ekstraCrud.remove(ekstraIdToDelete);
 			showDeleteEkstraModal = false;
 			ekstraIdToDelete = null;
 			await fetchEkstra();
@@ -698,11 +671,7 @@ export function createManajemenmenuState() {
 					: 0
 		};
 		try {
-			if (editBahanId) {
-				await dataService.updateRows('bahan', payload, { id: String(editBahanId) });
-			} else {
-				await dataService.insertRows('bahan', payload);
-			}
+			await bahanCrud.save(payload, editBahanId);
 			closeBahanForm();
 			await dataService.invalidateCacheOnChange('bahan');
 			await fetchBahan();
@@ -735,12 +704,7 @@ export function createManajemenmenuState() {
 			return;
 		}
 		try {
-			await dataService.insertRows('bahan_mutasi', {
-				bahan_id: String(mutasiBahanId),
-				delta_jumlah: delta,
-				source: 'manual',
-				catatan: mutasiBahanForm.catatan
-			});
+			await bahanCrud.mutate(mutasiBahanId, delta, mutasiBahanForm.catatan);
 			closeMutasiBahanForm();
 			await dataService.invalidateCacheOnChange('bahan');
 			await fetchBahan();
@@ -759,7 +723,7 @@ export function createManajemenmenuState() {
 	async function doDeleteBahan() {
 		if (bahanIdToDelete === null) return;
 		try {
-			await dataService.deleteRows('bahan', { id: String(bahanIdToDelete) });
+			await bahanCrud.remove(bahanIdToDelete);
 			showDeleteBahanModal = false;
 			bahanIdToDelete = null;
 			await dataService.invalidateCacheOnChange('bahan');
@@ -788,7 +752,7 @@ export function createManajemenmenuState() {
 			target_item_bulanan: Math.max(1, parseRupiah(hppForm.target_item_bulanan))
 		};
 		try {
-			const result = await dataService.insertRows('hpp_settings', payload);
+			const result = await hppState.saveSettings(payload);
 			hppSettings = (result.data?.[0] as unknown as HppSettings) || ({ ...payload } as HppSettings);
 			await dataService.invalidateCacheOnChange('hpp_settings');
 			await fetchHppSettings();
@@ -811,14 +775,7 @@ export function createManajemenmenuState() {
 		}
 		isParsingHpp = true;
 		try {
-			const res = await fetch('/api/hpp/parse', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text: hppPurchaseText })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data?.message || 'Gagal parse belanja');
-			hppParsedItems = data.items || [];
+			hppParsedItems = await hppState.parsePurchase(hppPurchaseText);
 		} catch (error) {
 			notifModalMsg = 'Gagal membaca catatan belanja: ' + ErrorHandler.extractErrorMessage(error);
 			notifModalType = 'error';
@@ -832,34 +789,7 @@ export function createManajemenmenuState() {
 			(bahan) => bahan.nama.trim().toLowerCase() === item.nama.trim().toLowerCase()
 		);
 		try {
-			if (existing) {
-				await dataService.updateRows(
-					'bahan',
-					{
-						satuan: item.satuan,
-						jumlah_beli_terakhir: item.purchase_qty,
-						biaya_beli_terakhir: item.purchase_cost,
-						biaya_per_satuan: item.biaya_per_satuan
-					},
-					{ id: String(existing.id) }
-				);
-				await dataService.insertRows('bahan_mutasi', {
-					bahan_id: String(existing.id),
-					delta_jumlah: item.purchase_qty,
-					source: 'purchase',
-					catatan: `Belanja Rp ${formatRupiah(Math.round(Number(item.purchase_cost || 0)))}`
-				});
-			} else {
-				await dataService.insertRows('bahan', {
-					nama: item.nama,
-					satuan: item.satuan,
-					stok_saat_ini: item.purchase_qty,
-					ambang_stok: 0,
-					jumlah_beli_terakhir: item.purchase_qty,
-					biaya_beli_terakhir: item.purchase_cost,
-					biaya_per_satuan: item.biaya_per_satuan
-				});
-			}
+			await hppState.savePurchasedItem(item, existing);
 			await dataService.invalidateCacheOnChange('bahan');
 			await fetchBahan();
 			notifModalMsg = 'Bahan HPP tersimpan';
@@ -874,71 +804,16 @@ export function createManajemenmenuState() {
 
 	// ── Helper functions ───────────────────────────────────────────────────
 
-	function getBahanName(id: string | number) {
-		return bahanList.find((item) => String(item.id) === String(id))?.nama || 'Bahan';
-	}
-
-	function getBahanUnit(id: string | number) {
-		return bahanList.find((item) => String(item.id) === String(id))?.satuan || '';
-	}
-
-	function getBahanCostPerUnit(id: string | number) {
-		return Number(bahanList.find((item) => String(item.id) === String(id))?.biaya_per_satuan || 0);
-	}
-
-	function getOverheadMonthly() {
-		const settings = hppSettings || ({} as Partial<HppSettings>);
-		return (
-			Number(settings.sewa_bulanan || 0) +
-			Number(settings.listrik_bulanan || 0) +
-			Number(settings.air_bulanan || 0) +
-			Number(settings.gaji_bulanan || 0) +
-			Number(settings.lainnya_bulanan || 0)
-		);
-	}
-
-	function getOverheadPerItem() {
-		const target = Math.max(1, Number(hppSettings?.target_item_bulanan || 1000));
-		return Math.round(getOverheadMonthly() / target);
-	}
-
-	function getProductRecipeCost(productId: string | number) {
-		return allRecipes
-			.filter((recipe) => String(recipe.produk_id) === String(productId))
-			.reduce(
-				(sum, recipe) =>
-					sum + Number(recipe.jumlah_per_item || 0) * getBahanCostPerUnit(recipe.bahan_id),
-				0
-			);
-	}
-
-	function getProductHpp(menu: Product) {
-		const bahanCost = getProductRecipeCost(menu.id);
-		return Math.round(bahanCost + getOverheadPerItem());
-	}
-
-	function getProductMargin(menu: Product) {
-		const harga = Number(menu.harga || 0);
-		return harga - getProductHpp(menu);
-	}
-
 	// ── Image helpers ──────────────────────────────────────────────────────
 
-	function handleFileChange(e: Event) {
+	async function handleFileChange(e: Event) {
 		if (isCropping) return;
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = (ev) => {
-			cropperDialogImage = '';
-			setTimeout(() => {
-				cropperDialogImage = (ev.target as FileReader).result as string;
-				showCropperDialog = true;
-				isCropping = true;
-			}, 10);
-		};
-		reader.readAsDataURL(file);
+		cropperDialogImage = await readImageFile(file);
+		showCropperDialog = true;
+		isCropping = true;
 	}
 
 	function handleCropperDone(data: { cropped: string }) {
@@ -966,27 +841,6 @@ export function createManajemenmenuState() {
 		imageError[menuId] = true;
 	}
 
-	async function uploadMenuImageFromDataUrl(dataUrl: string, menuId: string | number) {
-		const res = await fetch(dataUrl);
-		const blob = await res.blob();
-		const file = new File([blob], `menu-${menuId}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-		const formData = new FormData();
-		formData.append('file', file);
-
-		const uploadRes = await fetch('/api/upload', {
-			method: 'POST',
-			body: formData
-		});
-
-		if (!uploadRes.ok) {
-			const err = await uploadRes.json();
-			throw new Error(err.error || 'Gagal mengunggah gambar');
-		}
-
-		const data = await uploadRes.json();
-		return data.url;
-	}
-
 	// ── Kategori-menu assignment ───────────────────────────────────────────
 
 	function toggleMenuInKategoriRealtime(menuId: string | number) {
@@ -1006,7 +860,7 @@ export function createManajemenmenuState() {
 	) {
 		try {
 			for (const menuId of menuIds) {
-				await dataService.updateRows('produk', { kategori_id: kategoriId }, { id: String(menuId) });
+				await menuCrud.updateCategory(menuId, kategoriId);
 			}
 			if (oldKategoriId) {
 				const menusInOldKategori = menus.filter((m) => m.kategori_id === oldKategoriId);
@@ -1014,7 +868,7 @@ export function createManajemenmenuState() {
 					(m) => !menuIds.includes(m.id)
 				);
 				for (const menu of menusToRemoveFromOldKategori) {
-					await dataService.updateRows('produk', { kategori_id: null }, { id: String(menu.id) });
+					await menuCrud.updateCategory(menu.id, null);
 				}
 			}
 		} catch (error) {
