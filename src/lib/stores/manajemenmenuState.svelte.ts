@@ -847,7 +847,7 @@ export function createManajemenmenuState() {
 					bahan_id: String(existing.id),
 					delta_jumlah: item.purchase_qty,
 					source: 'purchase',
-					catatan: `Belanja ${formatCurrency(item.purchase_cost)}`
+					catatan: `Belanja Rp ${formatRupiah(Math.round(Number(item.purchase_cost || 0)))}`
 				});
 			} else {
 				await dataService.insertRows('bahan', {
@@ -920,10 +920,6 @@ export function createManajemenmenuState() {
 	function getProductMargin(menu: Product) {
 		const harga = Number(menu.harga || 0);
 		return harga - getProductHpp(menu);
-	}
-
-	function formatCurrency(value: number) {
-		return `Rp ${formatRupiah(Math.round(Number(value || 0)))}`;
 	}
 
 	// ── Image helpers ──────────────────────────────────────────────────────
@@ -1315,7 +1311,6 @@ export function createManajemenmenuState() {
 		formatRupiah,
 		parseRupiah,
 		handleRupiahInput,
-		formatCurrency,
 
 		// Menu CRUD
 		openMenuForm,

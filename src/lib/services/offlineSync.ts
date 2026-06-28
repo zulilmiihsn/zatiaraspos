@@ -14,6 +14,7 @@ import {
 } from '$lib/utils/offline';
 import { classifySyncFailure, getRetryDelayMs, isPendingReady } from '$lib/utils/offlineQueue';
 import { dbPost } from '$lib/services/dataApiClient';
+import { parseApiError } from '$lib/utils/errorHandling';
 
 class PendingSyncError extends Error {
 	constructor(
@@ -31,8 +32,7 @@ let pendingSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function assertSyncResponse(response: Response, label: string): Promise<void> {
 	if (response.ok) return;
-	const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-	const message = String(body?.message || body?.error || `${label}: HTTP ${response.status}`);
+	const message = await parseApiError(response, `${label}: HTTP ${response.status}`);
 	const retryAfterSeconds = Number(response.headers.get('retry-after'));
 	throw new PendingSyncError(
 		message,

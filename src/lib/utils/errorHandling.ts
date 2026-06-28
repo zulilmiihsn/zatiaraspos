@@ -200,6 +200,14 @@ export function normalizeApiErrorPayload(
 	};
 }
 
+export async function parseApiError(response: Response, fallbackMessage: string): Promise<string> {
+	const payload = (await response
+		.clone()
+		.json()
+		.catch(() => null)) as ApiErrorPayload | null;
+	return String(payload?.message || payload?.error || fallbackMessage);
+}
+
 export function getApiErrorMessage(
 	payload: ApiErrorPayload | null | undefined,
 	status: number,

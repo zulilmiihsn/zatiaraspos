@@ -9,7 +9,6 @@
 		searchBahan = $bindable(),
 		isLoadingBahan,
 		bahanList,
-		formatCurrency,
 		openBahanForm,
 		openMutasiBahanForm,
 		confirmDeleteBahan
@@ -17,7 +16,6 @@
 		searchBahan: string;
 		isLoadingBahan: boolean;
 		bahanList: Ingredient[];
-		formatCurrency: (value: number) => string;
 		openBahanForm: (bahan?: Ingredient | null) => void;
 		openMutasiBahanForm: (bahan: Ingredient) => void;
 		confirmDeleteBahan: (id: string | number) => void;
@@ -91,7 +89,7 @@
 										{/if}
 									</span>
 									<span class="block text-xs text-amber-700">
-										HPP {formatCurrency(Number(bahan.biaya_per_satuan || 0))} per {bahan.satuan}
+										HPP Rp {formatRupiah(Math.round(Number(bahan.biaya_per_satuan || 0)))} per {bahan.satuan}
 									</span>
 									{#if Number(bahan.ambang_stok || 0) > 0 && Number(bahan.stok_saat_ini || 0) <= Number(bahan.ambang_stok || 0)}
 										<span

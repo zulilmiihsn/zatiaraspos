@@ -10,8 +10,7 @@ import {
 } from '$lib/utils/dateTime';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { dbGet } from '$lib/services/dataApiClient';
-
-const REPORT_CACHE_VERSION = 'v4';
+import { REPORT_CACHE_VERSION } from '$lib/constants/cache';
 
 async function getCachedPosKas7Hari() {
 	const todayStr = getTodayWita();

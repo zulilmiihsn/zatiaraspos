@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
 	import { createManajemenmenuState } from '$lib/stores/manajemenmenuState.svelte';
+	import { formatRupiah } from '$lib/utils/currency';
 
 	// Komponen Icon
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -179,7 +180,6 @@
 				bind:searchBahan={s.searchBahan}
 				isLoadingBahan={s.isLoadingBahan}
 				bahanList={s.bahanList}
-				formatCurrency={s.formatCurrency}
 				openBahanForm={s.openBahanForm}
 				openMutasiBahanForm={s.openMutasiBahanForm}
 				confirmDeleteBahan={s.confirmDeleteBahan}
@@ -192,7 +192,6 @@
 				hppParsedItems={s.hppParsedItems}
 				isParsingHpp={s.isParsingHpp}
 				menus={s.menus}
-				formatCurrency={s.formatCurrency}
 				getOverheadMonthly={s.getOverheadMonthly}
 				getOverheadPerItem={s.getOverheadPerItem}
 				getProductRecipeCost={s.getProductRecipeCost}
@@ -861,9 +860,11 @@
 					</div>
 					{#if Number(String(s.bahanForm.jumlah_beli_terakhir).replace(/\./g, '') || 0) > 0}
 						<div class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-							HPP bahan {s.formatCurrency(
-								Number(String(s.bahanForm.biaya_beli_terakhir).replace(/\./g, '') || 0) /
-									Number(String(s.bahanForm.jumlah_beli_terakhir).replace(/\./g, '') || 1)
+							HPP bahan Rp {formatRupiah(
+								Math.round(
+									Number(String(s.bahanForm.biaya_beli_terakhir).replace(/\./g, '') || 0) /
+										Number(String(s.bahanForm.jumlah_beli_terakhir).replace(/\./g, '') || 1)
+								)
 							)}
 							per {s.bahanForm.satuan}
 						</div>

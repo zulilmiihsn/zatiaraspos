@@ -1,13 +1,14 @@
 import type { AiRecommendation, AutoApplyResult } from '$lib/types/ai';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { refreshBus } from '$lib/utils/refreshBus';
+import { parseApiError } from '$lib/utils/errorHandling';
 
 const apiFetch = (path: string, init?: RequestInit) => fetch(path, init);
 
 async function throwIfNotOk(res: Response, label: string): Promise<void> {
 	if (!res.ok) {
-		const err = await res.json().catch(() => ({}));
-		throw new Error(`${label}: ${err?.error ?? res.statusText}`);
+		const detail = await parseApiError(res, res.statusText || `HTTP ${res.status}`);
+		throw new Error(`${label}: ${detail}`);
 	}
 }
 

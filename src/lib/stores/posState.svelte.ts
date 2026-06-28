@@ -3,28 +3,11 @@ import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 import { throttle, measureAsyncPerformance } from '$lib/utils/performance';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { browser } from '$app/environment';
+import type { AddOn, Category, Product } from '$lib/types/product';
 
-export interface PosProduct {
-	id: string;
-	nama: string;
-	harga: number;
-	tipe: string;
-	image?: string;
-	gambar?: string;
-	ekstra_ids?: string[];
-	kategori_id?: string;
-}
-
-export interface PosCategory {
-	id: string;
-	nama: string;
-}
-
-export interface PosAddOn {
-	id: string;
-	nama: string;
-	harga: number;
-}
+export type PosProduct = Product;
+export type PosCategory = Category;
+export type PosAddOn = AddOn;
 
 export function createPosState() {
 	let produkData = $state<PosProduct[]>([]);
@@ -62,9 +45,9 @@ export function createPosState() {
 			}
 
 			lastPOSPayloadFingerprint = nextFingerprint;
-			produkData = (nextProducts as unknown as PosProduct[]) || [];
-			kategoriData = (nextCategories as unknown as PosCategory[]) || [];
-			tambahanData = (nextAddons as unknown as PosAddOn[]) || [];
+			produkData = nextProducts || [];
+			kategoriData = nextCategories || [];
+			tambahanData = nextAddons || [];
 			posLoadError = '';
 			await reportCacheMetrics('pos');
 		} catch (error) {

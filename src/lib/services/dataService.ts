@@ -4,12 +4,11 @@ import { smartCache, CacheUtils, CACHE_KEYS } from '$lib/utils/cache';
 import { subscribeToRealtimeTable } from '$lib/realtime/durableObjectClient';
 import type { Product, Category, AddOn } from '$lib/types/product';
 import type { DataPage, DataRecord } from '$lib/services/dataApiClient';
+import { REPORT_CACHE_VERSION } from '$lib/constants/cache';
 
 import { dashboardService } from './dashboardService';
 import { productService } from './productService';
 import { transactionService } from './transactionService';
-
-const REPORT_CACHE_VERSION = 'v4';
 
 export class DataService {
 	private static instance: DataService;

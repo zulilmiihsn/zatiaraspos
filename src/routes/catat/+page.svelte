@@ -4,6 +4,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
 	import DropdownSheet from '$lib/components/shared/dropdownSheet.svelte';
+	import NotifModal, { type NotifModalType } from '$lib/components/shared/NotifModal.svelte';
 	import {
 		validateNumber,
 		validateText,
@@ -99,7 +100,7 @@
 
 	let showNotifModal = $state(false);
 	let notifModalMsg = $state('');
-	let notifModalType = $state('warning'); // 'warning' | 'success' | 'error'
+	let notifModalType = $state<NotifModalType>('warning');
 
 	function closeNotifModal() {
 		showNotifModal = false;
@@ -377,96 +378,12 @@
 	</div>
 {/if}
 
-{#if showNotifModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-		<div
-			class="animate-slideUpModal flex w-full max-w-xs flex-col items-center rounded-2xl border-2 bg-white px-8 py-7 shadow-2xl"
-			style="border-color: {notifModalType === 'success'
-				? '#facc15'
-				: notifModalType === 'error'
-					? '#ef4444'
-					: '#facc15'};"
-		>
-			<div
-				class="mb-3 flex h-16 w-16 items-center justify-center rounded-full"
-				style="background: {notifModalType === 'success'
-					? '#fef9c3'
-					: notifModalType === 'error'
-						? '#fee2e2'
-						: '#fef9c3'};"
-			>
-				{#if notifModalType === 'success'}
-					<svg
-						class="h-10 w-10 text-yellow-400"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<circle cx="12" cy="12" r="10" fill="#fef9c3" />
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M9 12l2 2 4-4"
-							stroke="#facc15"
-							stroke-width="2"
-						/>
-					</svg>
-				{:else if notifModalType === 'error'}
-					<svg
-						class="h-10 w-10 text-red-500"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<circle cx="12" cy="12" r="10" fill="#fee2e2" />
-						<line
-							x1="9"
-							y1="9"
-							x2="15"
-							y2="15"
-							stroke="#ef4444"
-							stroke-width="2"
-							stroke-linecap="round"
-						/>
-						<line
-							x1="15"
-							y1="9"
-							x2="9"
-							y2="15"
-							stroke="#ef4444"
-							stroke-width="2"
-							stroke-linecap="round"
-						/>
-					</svg>
-				{:else}
-					<svg
-						class="h-10 w-10 text-yellow-400"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<circle cx="12" cy="12" r="10" fill="#fef9c3" />
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M12 8v4m0 4h.01"
-							stroke="#facc15"
-							stroke-width="2"
-						/>
-					</svg>
-				{/if}
-			</div>
-			<div class="mb-4 text-center text-base font-medium text-gray-700">{notifModalMsg}</div>
-			<button
-				class="mt-2 rounded-xl bg-pink-500 px-6 py-2 font-bold text-white shadow transition-colors hover:bg-pink-600"
-				onclick={closeNotifModal}>Tutup</button
-			>
-		</div>
-	</div>
-{/if}
+<NotifModal
+	show={showNotifModal}
+	message={notifModalMsg}
+	type={notifModalType}
+	onClose={closeNotifModal}
+/>
 
 <div
 	class="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-white"

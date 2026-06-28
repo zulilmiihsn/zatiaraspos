@@ -14,7 +14,6 @@
 		hppParsedItems,
 		isParsingHpp,
 		menus,
-		formatCurrency,
 		getOverheadMonthly,
 		getOverheadPerItem,
 		getProductRecipeCost,
@@ -43,7 +42,6 @@
 		}>;
 		isParsingHpp: boolean;
 		menus: Product[];
-		formatCurrency: (value: number) => string;
 		getOverheadMonthly: () => number;
 		getOverheadPerItem: () => number;
 		getProductRecipeCost: (productId: string | number) => number;
@@ -77,7 +75,7 @@
 				<div class="text-sm font-semibold text-gray-500">Total Biaya Tetap</div>
 			</div>
 			<div class="text-2xl font-bold tracking-tight text-gray-900">
-				{formatCurrency(getOverheadMonthly())}
+				Rp {formatRupiah(Math.round(Number(getOverheadMonthly() || 0)))}
 			</div>
 		</div>
 		<div
@@ -90,7 +88,7 @@
 				<div class="text-sm font-semibold text-gray-500">Beban per Item</div>
 			</div>
 			<div class="text-2xl font-bold tracking-tight text-gray-900">
-				{formatCurrency(getOverheadPerItem())}
+				Rp {formatRupiah(Math.round(Number(getOverheadPerItem() || 0)))}
 			</div>
 		</div>
 		<div
@@ -272,9 +270,9 @@
 										<span class="rounded-md bg-purple-50 px-1.5 py-0.5 text-purple-600"
 											>{formatRupiah(item.purchase_qty)} {item.satuan}</span
 										>
-										seharga {formatCurrency(item.purchase_cost)} =
+										seharga Rp {formatRupiah(Math.round(Number(item.purchase_cost || 0)))} =
 										<span class="font-semibold text-gray-900"
-											>{formatCurrency(item.biaya_per_satuan)}</span
+											>Rp {formatRupiah(Math.round(Number(item.biaya_per_satuan || 0)))}</span
 										>/{item.satuan}
 									</div>
 								</div>
@@ -303,24 +301,26 @@
 								<div class="truncate text-base font-bold text-gray-900">{menu.nama}</div>
 								<div class="mt-1 flex items-center gap-2 text-xs font-medium text-gray-500">
 									<span class="rounded bg-gray-200/50 px-1.5 py-0.5"
-										>Bahan {formatCurrency(getProductRecipeCost(menu.id))}</span
+										>Bahan Rp {formatRupiah(
+											Math.round(Number(getProductRecipeCost(menu.id) || 0))
+										)}</span
 									>
 									<span>+</span>
 									<span class="rounded bg-gray-200/50 px-1.5 py-0.5"
-										>Beban {formatCurrency(getOverheadPerItem())}</span
+										>Beban Rp {formatRupiah(Math.round(Number(getOverheadPerItem() || 0)))}</span
 									>
 								</div>
 							</div>
 							<div class="flex items-end justify-between gap-1 sm:flex-col sm:items-end">
 								<div class="text-sm font-bold text-gray-900">
-									HPP {formatCurrency(getProductHpp(menu))}
+									HPP Rp {formatRupiah(Math.round(Number(getProductHpp(menu) || 0)))}
 								</div>
 								<div
 									class="rounded-lg px-2 py-1 text-xs font-bold {getProductMargin(menu) >= 0
 										? 'bg-green-100 text-green-700'
 										: 'bg-red-100 text-red-700'}"
 								>
-									Margin {formatCurrency(getProductMargin(menu))}
+									Margin Rp {formatRupiah(Math.round(Number(getProductMargin(menu) || 0)))}
 								</div>
 							</div>
 						</div>

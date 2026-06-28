@@ -1,4 +1,5 @@
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
+import { parseApiError } from '$lib/utils/errorHandling';
 
 export type DataRecord = Record<string, unknown>;
 
@@ -22,11 +23,7 @@ function currentBranch(): string {
 }
 
 async function parseError(response: Response, operation: string): Promise<Error> {
-	const payload = (await response.json().catch(() => null)) as {
-		message?: unknown;
-		error?: unknown;
-	} | null;
-	const detail = String(payload?.message || payload?.error || `HTTP ${response.status}`);
+	const detail = await parseApiError(response, `HTTP ${response.status}`);
 	return new Error(`${operation} gagal: ${detail}`);
 }
 

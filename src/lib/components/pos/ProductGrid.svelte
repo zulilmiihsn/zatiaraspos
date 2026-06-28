@@ -141,10 +141,10 @@
 							role="button"
 							aria-label="Tambah {p.nama} ke keranjang"
 						>
-							{#if (p.gambar || p.image) && !imageError[String(p.id)]}
+							{#if p.gambar && !imageError[String(p.id)]}
 								<img
 									class="mb-2 aspect-square h-full min-h-[80px] w-full rounded-xl bg-stone-100 object-cover md:mb-3 md:rounded-2xl"
-									src={p.gambar || p.image}
+									src={p.gambar}
 									alt={p.nama}
 									loading="lazy"
 									onerror={() => onImgError(p.id)}

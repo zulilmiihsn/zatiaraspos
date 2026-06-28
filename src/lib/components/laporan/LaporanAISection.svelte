@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
+	import SendIcon from '$lib/components/shared/sendIcon.svelte';
 
 	let aiQuestion = $state('');
 	let showAiModal = $state(false);
@@ -188,19 +189,7 @@
 									></path>
 								</svg>
 							{:else}
-								<svg
-									class="h-5 w-5 text-white"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-									/>
-								</svg>
+								<SendIcon class="h-5 w-5 text-white" />
 							{/if}
 						</button>
 					</div>

@@ -83,7 +83,7 @@
 
 	let showModal = $state(false);
 	let selectedProduct = $state<PosProduct | null>(null);
-	let selectedAddOns = $state<string[]>([]);
+	let selectedAddOns = $state<Array<string | number>>([]);
 	let selectedSugar = $state('normal');
 	let selectedIce = $state('normal');
 	let jumlah = $state(1);
@@ -153,7 +153,7 @@
 		showModal = false;
 	}
 
-	function toggleAddOn(id: string): void {
+	function toggleAddOn(id: string | number): void {
 		if (selectedAddOns.includes(id)) {
 			selectedAddOns = selectedAddOns.filter((a) => a !== id);
 		} else {

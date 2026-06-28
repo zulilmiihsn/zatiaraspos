@@ -4,6 +4,7 @@
 	import { AiAnalysisService } from '$lib/services/aiAnalysisService';
 	import { AutoApplyService } from '$lib/services/autoApplyService';
 	import { refreshBus } from '$lib/utils/refreshBus';
+	import SendIcon from '$lib/components/shared/sendIcon.svelte';
 
 	let {
 		isOpen = $bindable(false),
@@ -345,14 +346,7 @@
 						class="rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 px-6 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-pink-600 hover:to-rose-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
 						aria-label="Kirim pesan"
 					>
-						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-							></path>
-						</svg>
+						<SendIcon class="h-4 w-4" />
 					</button>
 				</div>
 			</div>
