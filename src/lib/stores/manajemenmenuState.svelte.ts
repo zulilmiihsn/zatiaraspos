@@ -36,7 +36,7 @@ export interface HppParsedItem {
 export function createManajemenmenuState() {
 	// ── Data state ──────────────────────────────────────────────────────────
 	let menus = $state<Product[]>([]);
-	let imageError = $state<Record<string, boolean>>({});
+	const imageError = $state<Record<string, boolean>>({});
 	let kategoriList = $state<Category[]>([]);
 	let ekstraList = $state<(AddOn & { harga: number })[]>([]);
 	let bahanList = $state<Ingredient[]>([]);
@@ -131,14 +131,14 @@ export function createManajemenmenuState() {
 
 	// ── Derived ────────────────────────────────────────────────────────────
 
-	let kategoriWithCount = $derived(
+	const kategoriWithCount = $derived(
 		kategoriList.map((kat: Category) => ({
 			...kat,
 			count: menus.filter((m: Product) => m.kategori_id === kat.id).length
 		}))
 	);
 
-	let filteredMenus = $derived(
+	const filteredMenus = $derived(
 		(() => {
 			const keyword = searchKeyword.trim().toLowerCase();
 			return menus.filter((menu) => {
@@ -167,7 +167,7 @@ export function createManajemenmenuState() {
 	// ── Branch-reactive data loading ───────────────────────────────────────
 	let isInitialLoad = true;
 	$effect(() => {
-		let _branch = selectedBranch.value;
+		const _branch = selectedBranch.value;
 		if (typeof window !== 'undefined') {
 			(async () => {
 				await Promise.all([
@@ -1078,86 +1078,234 @@ export function createManajemenmenuState() {
 
 	return {
 		// Data (read-only getters)
-		get menus() { return menus; },
-		get imageError() { return imageError; },
-		get kategoriList() { return kategoriList; },
-		get ekstraList() { return ekstraList; },
-		get bahanList() { return bahanList; },
-		get allRecipes() { return allRecipes; },
-		get hppSettings() { return hppSettings; },
-		get filteredMenus() { return filteredMenus; },
-		get kategoriWithCount() { return kategoriWithCount; },
+		get menus() {
+			return menus;
+		},
+		get imageError() {
+			return imageError;
+		},
+		get kategoriList() {
+			return kategoriList;
+		},
+		get ekstraList() {
+			return ekstraList;
+		},
+		get bahanList() {
+			return bahanList;
+		},
+		get allRecipes() {
+			return allRecipes;
+		},
+		get hppSettings() {
+			return hppSettings;
+		},
+		get filteredMenus() {
+			return filteredMenus;
+		},
+		get kategoriWithCount() {
+			return kategoriWithCount;
+		},
 
 		// Form state (read/write for bindings)
-		get menuForm() { return menuForm; },
-		set menuForm(v) { menuForm = v; },
-		get ekstraForm() { return ekstraForm; },
-		set ekstraForm(v) { ekstraForm = v; },
-		get bahanForm() { return bahanForm; },
-		set bahanForm(v) { bahanForm = v; },
-		get hppForm() { return hppForm; },
-		set hppForm(v) { hppForm = v; },
-		get hppPurchaseText() { return hppPurchaseText; },
-		set hppPurchaseText(v) { hppPurchaseText = v; },
-		get hppParsedItems() { return hppParsedItems; },
-		get isParsingHpp() { return isParsingHpp; },
-		get mutasiBahanForm() { return mutasiBahanForm; },
-		set mutasiBahanForm(v) { mutasiBahanForm = v; },
-		get recipeItems() { return recipeItems; },
-		set recipeItems(v) { recipeItems = v; },
-		get recipeDraft() { return recipeDraft; },
-		set recipeDraft(v) { recipeDraft = v; },
+		get menuForm() {
+			return menuForm;
+		},
+		set menuForm(v) {
+			menuForm = v;
+		},
+		get ekstraForm() {
+			return ekstraForm;
+		},
+		set ekstraForm(v) {
+			ekstraForm = v;
+		},
+		get bahanForm() {
+			return bahanForm;
+		},
+		set bahanForm(v) {
+			bahanForm = v;
+		},
+		get hppForm() {
+			return hppForm;
+		},
+		set hppForm(v) {
+			hppForm = v;
+		},
+		get hppPurchaseText() {
+			return hppPurchaseText;
+		},
+		set hppPurchaseText(v) {
+			hppPurchaseText = v;
+		},
+		get hppParsedItems() {
+			return hppParsedItems;
+		},
+		get isParsingHpp() {
+			return isParsingHpp;
+		},
+		get mutasiBahanForm() {
+			return mutasiBahanForm;
+		},
+		set mutasiBahanForm(v) {
+			mutasiBahanForm = v;
+		},
+		get recipeItems() {
+			return recipeItems;
+		},
+		set recipeItems(v) {
+			recipeItems = v;
+		},
+		get recipeDraft() {
+			return recipeDraft;
+		},
+		set recipeDraft(v) {
+			recipeDraft = v;
+		},
 
 		// UI state (read/write for bindings)
-		get selectedKategori() { return selectedKategori; },
-		set selectedKategori(v) { selectedKategori = v; },
-		get searchKeyword() { return searchKeyword; },
-		set searchKeyword(v) { searchKeyword = v; },
-		get searchKategoriKeyword() { return searchKategoriKeyword; },
-		set searchKategoriKeyword(v) { searchKategoriKeyword = v; },
-		get searchEkstra() { return searchEkstra; },
-		set searchEkstra(v) { searchEkstra = v; },
-		get searchBahan() { return searchBahan; },
-		set searchBahan(v) { searchBahan = v; },
-		get isGridView() { return isGridView; },
-		set isGridView(v) { isGridView = v; },
-		get activeTab() { return activeTab; },
-		set activeTab(v) { activeTab = v; },
+		get selectedKategori() {
+			return selectedKategori;
+		},
+		set selectedKategori(v) {
+			selectedKategori = v;
+		},
+		get searchKeyword() {
+			return searchKeyword;
+		},
+		set searchKeyword(v) {
+			searchKeyword = v;
+		},
+		get searchKategoriKeyword() {
+			return searchKategoriKeyword;
+		},
+		set searchKategoriKeyword(v) {
+			searchKategoriKeyword = v;
+		},
+		get searchEkstra() {
+			return searchEkstra;
+		},
+		set searchEkstra(v) {
+			searchEkstra = v;
+		},
+		get searchBahan() {
+			return searchBahan;
+		},
+		set searchBahan(v) {
+			searchBahan = v;
+		},
+		get isGridView() {
+			return isGridView;
+		},
+		set isGridView(v) {
+			isGridView = v;
+		},
+		get activeTab() {
+			return activeTab;
+		},
+		set activeTab(v) {
+			activeTab = v;
+		},
 
 		// Visibility state
-		get showMenuForm() { return showMenuForm; },
-		get editMenuId() { return editMenuId; },
-		get showEkstraForm() { return showEkstraForm; },
-		get editEkstraId() { return editEkstraId; },
-		get showBahanForm() { return showBahanForm; },
-		get editBahanId() { return editBahanId; },
-		get showMutasiBahanForm() { return showMutasiBahanForm; },
-		get mutasiBahanId() { return mutasiBahanId; },
-		get showDeleteModal() { return showDeleteModal; },
-		get showDeleteKategoriModal() { return showDeleteKategoriModal; },
-		get showKategoriDetailModal() { return showKategoriDetailModal; },
-		get kategoriDetail() { return kategoriDetail; },
-		get selectedMenuIds() { return selectedMenuIds; },
-		set selectedMenuIds(v) { selectedMenuIds = v; },
-		get unselectedMenuIds() { return unselectedMenuIds; },
-		set unselectedMenuIds(v) { unselectedMenuIds = v; },
-		get kategoriDetailName() { return kategoriDetailName; },
-		set kategoriDetailName(v) { kategoriDetailName = v; },
-		get showDeleteEkstraModal() { return showDeleteEkstraModal; },
-		get showDeleteBahanModal() { return showDeleteBahanModal; },
-		get showNotifModal() { return showNotifModal; },
-		set showNotifModal(v) { showNotifModal = v; },
-		get notifModalMsg() { return notifModalMsg; },
-		get notifModalType() { return notifModalType; },
-		get showCropperDialog() { return showCropperDialog; },
-		get cropperDialogImage() { return cropperDialogImage; },
-		get isCropping() { return isCropping; },
-		get fileInputEl() { return fileInputEl; },
-		set fileInputEl(v) { fileInputEl = v; },
-		get isLoadingMenus() { return isLoadingMenus; },
-		get isLoadingKategori() { return isLoadingKategori; },
-		get isLoadingEkstra() { return isLoadingEkstra; },
-		get isLoadingBahan() { return isLoadingBahan; },
+		get showMenuForm() {
+			return showMenuForm;
+		},
+		get editMenuId() {
+			return editMenuId;
+		},
+		get showEkstraForm() {
+			return showEkstraForm;
+		},
+		get editEkstraId() {
+			return editEkstraId;
+		},
+		get showBahanForm() {
+			return showBahanForm;
+		},
+		get editBahanId() {
+			return editBahanId;
+		},
+		get showMutasiBahanForm() {
+			return showMutasiBahanForm;
+		},
+		get mutasiBahanId() {
+			return mutasiBahanId;
+		},
+		get showDeleteModal() {
+			return showDeleteModal;
+		},
+		get showDeleteKategoriModal() {
+			return showDeleteKategoriModal;
+		},
+		get showKategoriDetailModal() {
+			return showKategoriDetailModal;
+		},
+		get kategoriDetail() {
+			return kategoriDetail;
+		},
+		get selectedMenuIds() {
+			return selectedMenuIds;
+		},
+		set selectedMenuIds(v) {
+			selectedMenuIds = v;
+		},
+		get unselectedMenuIds() {
+			return unselectedMenuIds;
+		},
+		set unselectedMenuIds(v) {
+			unselectedMenuIds = v;
+		},
+		get kategoriDetailName() {
+			return kategoriDetailName;
+		},
+		set kategoriDetailName(v) {
+			kategoriDetailName = v;
+		},
+		get showDeleteEkstraModal() {
+			return showDeleteEkstraModal;
+		},
+		get showDeleteBahanModal() {
+			return showDeleteBahanModal;
+		},
+		get showNotifModal() {
+			return showNotifModal;
+		},
+		set showNotifModal(v) {
+			showNotifModal = v;
+		},
+		get notifModalMsg() {
+			return notifModalMsg;
+		},
+		get notifModalType() {
+			return notifModalType;
+		},
+		get showCropperDialog() {
+			return showCropperDialog;
+		},
+		get cropperDialogImage() {
+			return cropperDialogImage;
+		},
+		get isCropping() {
+			return isCropping;
+		},
+		get fileInputEl() {
+			return fileInputEl;
+		},
+		set fileInputEl(v) {
+			fileInputEl = v;
+		},
+		get isLoadingMenus() {
+			return isLoadingMenus;
+		},
+		get isLoadingKategori() {
+			return isLoadingKategori;
+		},
+		get isLoadingEkstra() {
+			return isLoadingEkstra;
+		},
+		get isLoadingBahan() {
+			return isLoadingBahan;
+		},
 
 		// Toast
 		toastManager,
@@ -1169,34 +1317,65 @@ export function createManajemenmenuState() {
 		formatCurrency,
 
 		// Menu CRUD
-		openMenuForm, closeMenuForm, saveMenu,
-		confirmDeleteMenu, doDeleteMenu, cancelDeleteMenu,
-		addRecipeItem, removeRecipeItem,
+		openMenuForm,
+		closeMenuForm,
+		saveMenu,
+		confirmDeleteMenu,
+		doDeleteMenu,
+		cancelDeleteMenu,
+		addRecipeItem,
+		removeRecipeItem,
 
 		// Kategori CRUD
-		openKategoriForm, closeKategoriDetailModal, saveKategoriDetail,
-		confirmDeleteKategori, doDeleteKategori, cancelDeleteKategori,
+		openKategoriForm,
+		closeKategoriDetailModal,
+		saveKategoriDetail,
+		confirmDeleteKategori,
+		doDeleteKategori,
+		cancelDeleteKategori,
 		toggleMenuInKategoriRealtime,
 
 		// Ekstra CRUD
-		openEkstraForm, closeEkstraForm, saveEkstra,
-		confirmDeleteEkstra, doDeleteEkstra, cancelDeleteEkstra,
+		openEkstraForm,
+		closeEkstraForm,
+		saveEkstra,
+		confirmDeleteEkstra,
+		doDeleteEkstra,
+		cancelDeleteEkstra,
 
 		// Bahan CRUD
-		openBahanForm, closeBahanForm, saveBahan,
-		openMutasiBahanForm, closeMutasiBahanForm, saveMutasiBahan,
-		confirmDeleteBahan, doDeleteBahan, cancelDeleteBahan,
+		openBahanForm,
+		closeBahanForm,
+		saveBahan,
+		openMutasiBahanForm,
+		closeMutasiBahanForm,
+		saveMutasiBahan,
+		confirmDeleteBahan,
+		doDeleteBahan,
+		cancelDeleteBahan,
 
 		// HPP
-		saveHppSettings, parseHppPurchaseText, saveParsedHppItem,
-		getOverheadMonthly, getOverheadPerItem,
-		getProductRecipeCost, getProductHpp, getProductMargin,
+		saveHppSettings,
+		parseHppPurchaseText,
+		saveParsedHppItem,
+		getOverheadMonthly,
+		getOverheadPerItem,
+		getProductRecipeCost,
+		getProductHpp,
+		getProductMargin,
 
 		// Helpers
-		getBahanName, getBahanUnit,
-		handleFileChange, handleCropperDone, handleCropperCancel,
-		removeImage, handleImgError,
-		setMenuType, setMenuKategori, toggleEkstra,
-		setTrackStock, setTrackIngredients
+		getBahanName,
+		getBahanUnit,
+		handleFileChange,
+		handleCropperDone,
+		handleCropperCancel,
+		removeImage,
+		handleImgError,
+		setMenuType,
+		setMenuKategori,
+		toggleEkstra,
+		setTrackStock,
+		setTrackIngredients
 	};
 }

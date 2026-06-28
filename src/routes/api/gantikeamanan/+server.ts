@@ -114,7 +114,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 		const VALID_ROLES = ['pemilik', 'kasir', 'admin'];
 		if (targetRole && !VALID_ROLES.includes(targetRole)) {
 			return new Response(
-				JSON.stringify({ success: false, code: 'INVALID_ROLE', message: 'Target role tidak valid.' }),
+				JSON.stringify({
+					success: false,
+					code: 'INVALID_ROLE',
+					message: 'Target role tidak valid.'
+				}),
 				{ status: 400 }
 			);
 		}

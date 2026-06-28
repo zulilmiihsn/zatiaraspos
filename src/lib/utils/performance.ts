@@ -32,7 +32,7 @@ export async function measureAsyncPerformance(_name: string, fn: () => Promise<v
 }
 
 // Cart calculations (without memoization)
-export const calculateCartTotal = <T extends any>(cart: T[]) => {
+export const calculateCartTotal = <T>(cart: T[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
@@ -50,11 +50,7 @@ export const calculateCartTotal = <T extends any>(cart: T[]) => {
 };
 
 // Fuzzy search dengan hasil lebih relevan
-export function fuzzySearch<T extends any>(
-	query: string,
-	items: T[],
-	key: string = 'nama'
-): T[] {
+export function fuzzySearch<T>(query: string, items: T[], key: string = 'nama'): T[] {
 	if (!query.trim()) return items;
 	const searchTerm = query.toLowerCase();
 	// Cari di name dan kategori (jika ada)

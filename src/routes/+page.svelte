@@ -31,7 +31,7 @@
 	let TrendingUp = $state<ComponentType | null>(null);
 
 	import { createDashboardState } from '$lib/stores/dashboardState.svelte';
-	
+
 	const dashboard = createDashboardState();
 
 	// Subscribe ke store
@@ -300,7 +300,12 @@
 		<div class="px-4 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8 lg:px-12 lg:pt-6 lg:pb-10">
 			<div class="flex flex-col space-y-3 md:space-y-10">
 				<!-- Metrik Utama -->
-				<DashboardMetrics itemTerjual={dashboard.itemTerjual} jumlahTransaksi={dashboard.jumlahTransaksi} omzet={dashboard.omzet} {modalAwal} />
+				<DashboardMetrics
+					itemTerjual={dashboard.itemTerjual}
+					jumlahTransaksi={dashboard.jumlahTransaksi}
+					omzet={dashboard.omzet}
+					{modalAwal}
+				/>
 				<!-- Menu Terlaris -->
 				<div class="mt-6 md:mt-12">
 					<div
@@ -323,7 +328,9 @@
 							{/each}
 						</div>
 					{:else if dashboard.errorBestSellers}
-						<div class="py-6 text-center text-base text-red-400 md:text-lg">{dashboard.errorBestSellers}</div>
+						<div class="py-6 text-center text-base text-red-400 md:text-lg">
+							{dashboard.errorBestSellers}
+						</div>
 					{:else if dashboard.bestSellers.length === 0}
 						<div class="py-6 text-center text-base text-gray-400 md:text-lg">
 							Belum ada data menu terlaris

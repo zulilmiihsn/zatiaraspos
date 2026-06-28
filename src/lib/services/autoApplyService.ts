@@ -97,7 +97,7 @@ export class AutoApplyService {
 								nama_kustom: product.id ? null : product.nama || data.deskripsi,
 								custom_price: product.id ? null : Number(product.harga || data.amount),
 								jumlah: product.quantity || product.jumlah || 1,
-								add_on_ids: (product.addOns as any[] || [])
+								add_on_ids: ((product.addOns as any[]) || [])
 									.map((addOn: any) => addOn.id)
 									.filter(Boolean)
 							}))

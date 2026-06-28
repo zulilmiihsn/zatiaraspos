@@ -45,8 +45,13 @@
 		}
 	});
 
-	import { createPosState, type PosProduct, type PosCategory, type PosAddOn } from '$lib/stores/posState.svelte';
-	
+	import {
+		createPosState,
+		type PosProduct,
+		type PosCategory,
+		type PosAddOn
+	} from '$lib/stores/posState.svelte';
+
 	interface PosCartItem {
 		product: PosProduct;
 		jumlah: number;

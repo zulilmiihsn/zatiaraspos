@@ -215,7 +215,12 @@ async function buildProductPromptData(
 			.from(kategori)
 			.where(eq(kategori.cabang_id, branch)),
 		db
-			.select({ id: tambahan.id, nama: tambahan.nama, harga: tambahan.harga, is_active: tambahan.is_active })
+			.select({
+				id: tambahan.id,
+				nama: tambahan.nama,
+				harga: tambahan.harga,
+				is_active: tambahan.is_active
+			})
 			.from(tambahan)
 			.where(eq(tambahan.cabang_id, branch))
 	]);

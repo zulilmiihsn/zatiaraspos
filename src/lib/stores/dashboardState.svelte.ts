@@ -12,7 +12,7 @@ export function createDashboardState() {
 	let totalItem = $state(0);
 	let avgTransaksi = $state(0);
 	let jamRamai = $state('');
-	
+
 	let weeklyIncome = $state<number[]>([]);
 	let weeklyMax = $state(1);
 	let bestSellers = $state<BestSeller[]>([]);
@@ -131,7 +131,7 @@ export function createDashboardState() {
 
 	$effect(() => {
 		let offDashboardRefreshBus: (() => void) | null = null;
-		
+
 		(async () => {
 			await loadDashboardData();
 			setupRealtimeSubscriptions();
@@ -184,19 +184,45 @@ export function createDashboardState() {
 	}
 
 	return {
-		get omzet() { return omzet; },
-		get jumlahTransaksi() { return jumlahTransaksi; },
-		get profit() { return profit; },
-		get itemTerjual() { return itemTerjual; },
-		get totalItem() { return totalItem; },
-		get avgTransaksi() { return avgTransaksi; },
-		get jamRamai() { return jamRamai; },
-		get weeklyIncome() { return weeklyIncome; },
-		get weeklyMax() { return weeklyMax; },
-		get bestSellers() { return bestSellers; },
-		get isLoadingDashboard() { return isLoadingDashboard; },
-		get isLoadingBestSellers() { return isLoadingBestSellers; },
-		get errorBestSellers() { return errorBestSellers; },
+		get omzet() {
+			return omzet;
+		},
+		get jumlahTransaksi() {
+			return jumlahTransaksi;
+		},
+		get profit() {
+			return profit;
+		},
+		get itemTerjual() {
+			return itemTerjual;
+		},
+		get totalItem() {
+			return totalItem;
+		},
+		get avgTransaksi() {
+			return avgTransaksi;
+		},
+		get jamRamai() {
+			return jamRamai;
+		},
+		get weeklyIncome() {
+			return weeklyIncome;
+		},
+		get weeklyMax() {
+			return weeklyMax;
+		},
+		get bestSellers() {
+			return bestSellers;
+		},
+		get isLoadingDashboard() {
+			return isLoadingDashboard;
+		},
+		get isLoadingBestSellers() {
+			return isLoadingBestSellers;
+		},
+		get errorBestSellers() {
+			return errorBestSellers;
+		},
 		refreshDashboardData
 	};
 }

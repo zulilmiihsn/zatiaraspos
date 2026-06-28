@@ -146,11 +146,21 @@ export function createPosState() {
 	});
 
 	return {
-		get produkData() { return produkData; },
-		get kategoriData() { return kategoriData; },
-		get tambahanData() { return tambahanData; },
-		get isLoadingProducts() { return isLoadingProducts; },
-		get posLoadError() { return posLoadError; },
+		get produkData() {
+			return produkData;
+		},
+		get kategoriData() {
+			return kategoriData;
+		},
+		get tambahanData() {
+			return tambahanData;
+		},
+		get isLoadingProducts() {
+			return isLoadingProducts;
+		},
+		get posLoadError() {
+			return posLoadError;
+		},
 		retryLoadPOSData
 	};
 }

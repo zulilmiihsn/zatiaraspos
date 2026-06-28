@@ -36,7 +36,11 @@ export class ProductService {
 	}
 
 	async getCategories(): Promise<Category[]> {
-		return this.getCachedTable('kategori', CACHE_KEYS.CATEGORIES, 'categories') as unknown as Category[];
+		return this.getCachedTable(
+			'kategori',
+			CACHE_KEYS.CATEGORIES,
+			'categories'
+		) as unknown as Category[];
 	}
 
 	async getAddOns(): Promise<AddOn[]> {

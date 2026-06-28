@@ -24,7 +24,6 @@
 	const s = createManajemenmenuState();
 </script>
 
-
 {#if s.toastManager.showToast}
 	<ToastNotification
 		show={s.toastManager.showToast}
@@ -147,7 +146,10 @@
 	<div class="relative min-h-screen">
 		{#if s.activeTab === 'menu'}
 			<MenuTab
-				bind:searchKeyword={s.searchKeyword}	bind:selectedKategori={s.selectedKategori}	bind:isGridView={s.isGridView}	isLoadingKategori={s.isLoadingKategori}
+				bind:searchKeyword={s.searchKeyword}
+				bind:selectedKategori={s.selectedKategori}
+				bind:isGridView={s.isGridView}
+				isLoadingKategori={s.isLoadingKategori}
 				isLoadingMenus={s.isLoadingMenus}
 				kategoriList={s.kategoriList}
 				filteredMenus={s.filteredMenus}
@@ -157,7 +159,8 @@
 			/>
 		{:else if s.activeTab === 'kategori'}
 			<KategoriTab
-				bind:searchKategoriKeyword={s.searchKategoriKeyword}	isLoadingKategori={s.isLoadingKategori}
+				bind:searchKategoriKeyword={s.searchKategoriKeyword}
+				isLoadingKategori={s.isLoadingKategori}
 				kategoriList={s.kategoriList}
 				menus={s.menus}
 				openKategoriForm={s.openKategoriForm}
@@ -165,14 +168,16 @@
 			/>
 		{:else if s.activeTab === 'ekstra'}
 			<EkstraTab
-				bind:searchEkstra={s.searchEkstra}	isLoadingEkstra={s.isLoadingEkstra}
+				bind:searchEkstra={s.searchEkstra}
+				isLoadingEkstra={s.isLoadingEkstra}
 				ekstraList={s.ekstraList}
 				openEkstraForm={s.openEkstraForm}
 				confirmDeleteEkstra={s.confirmDeleteEkstra}
 			/>
 		{:else if s.activeTab === 'bahan'}
 			<BahanTab
-				bind:searchBahan={s.searchBahan}	isLoadingBahan={s.isLoadingBahan}
+				bind:searchBahan={s.searchBahan}
+				isLoadingBahan={s.isLoadingBahan}
 				bahanList={s.bahanList}
 				formatCurrency={s.formatCurrency}
 				openBahanForm={s.openBahanForm}
@@ -181,7 +186,9 @@
 			/>
 		{:else if s.activeTab === 'hpp'}
 			<HppTab
-				bind:hppForm={s.hppForm}	bind:hppPurchaseText={s.hppPurchaseText}	hppSettings={s.hppSettings}
+				bind:hppForm={s.hppForm}
+				bind:hppPurchaseText={s.hppPurchaseText}
+				hppSettings={s.hppSettings}
 				hppParsedItems={s.hppParsedItems}
 				isParsingHpp={s.isParsingHpp}
 				menus={s.menus}
@@ -255,7 +262,8 @@
 												s.removeImage();
 											}}
 											onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), s.removeImage())}
-											onkeypress={(e) => e.key === 'Enter' && (e.stopPropagation(), s.removeImage())}
+											onkeypress={(e) =>
+												e.key === 'Enter' && (e.stopPropagation(), s.removeImage())}
 										>
 											<svg
 												class="h-4 w-4"
@@ -476,8 +484,8 @@
 						<div class="flex gap-3">
 							<button
 								type="button"
-								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {s.menuForm.tipe ===
-								'minuman'
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {s
+									.menuForm.tipe === 'minuman'
 									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
 								onclick={() => s.setMenuType('minuman')}
@@ -489,8 +497,8 @@
 							</button>
 							<button
 								type="button"
-								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {s.menuForm.tipe ===
-								'makanan'
+								class="flex-1 rounded-xl border-2 px-4 py-3 font-medium transition-all duration-200 {s
+									.menuForm.tipe === 'makanan'
 									? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 									: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
 								onclick={() => s.setMenuType('makanan')}
@@ -510,11 +518,12 @@
 							{#each s.kategoriList as kat}
 								<button
 									type="button"
-									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {s.menuForm.kategori_id ===
-									kat.id
+									class="flex-shrink-0 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 {s
+										.menuForm.kategori_id === kat.id
 										? 'border-pink-500 bg-pink-500 text-white shadow-lg shadow-pink-200'
 										: 'border-gray-200 bg-white text-gray-700 hover:border-pink-300 hover:bg-pink-50'}"
-									onclick={() => s.setMenuKategori(s.menuForm.kategori_id === kat.id ? null : kat.id)}
+									onclick={() =>
+										s.setMenuKategori(s.menuForm.kategori_id === kat.id ? null : kat.id)}
 								>
 									{kat.nama}
 								</button>
