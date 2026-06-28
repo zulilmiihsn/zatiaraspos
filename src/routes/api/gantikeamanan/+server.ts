@@ -2,8 +2,14 @@ import type { RequestHandler } from '@sveltejs/kit';
 import bcrypt from 'bcryptjs';
 import { and, eq } from 'drizzle-orm';
 import { profil } from '$lib/database/schema';
-import { getDrizzleDb, normalizeBranch, type BranchId } from '$lib/server/branchResolver';
+import {
+	getDrizzleDb,
+	getD1Database,
+	normalizeBranch,
+	type BranchId
+} from '$lib/server/branchResolver';
 import { publishBranchEvent } from '$lib/server/realtimePublisher';
+import { appendAuditLog } from '$lib/server/auditLog';
 
 const SECURITY_WINDOW_MS = 15 * 60 * 1000;
 const SECURITY_MAX_ATTEMPTS = 3;
@@ -89,6 +95,30 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 			);
 		}
 
+		// P0-2: branch WAJIB di-scope ke session. Tanpa ini, pemilik cabang A bisa
+		// mengubah kredensial user cabang B (cross-tenant credential takeover).
+		const sessionBranch = normalizeBranch(locals.authSession!.branch);
+		if (branchId !== sessionBranch && requesterRole !== 'admin') {
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'BRANCH_FORBIDDEN',
+					message: 'Tidak boleh mengubah kredensial cabang lain.'
+				}),
+				{ status: 403 }
+			);
+		}
+
+		// P1-4: targetRole (dari body) dipakai sebagai filter query auth-sensitif —
+		// validasi terhadap allow-list, tolak nilai tak dikenal.
+		const VALID_ROLES = ['pemilik', 'kasir', 'admin'];
+		if (targetRole && !VALID_ROLES.includes(targetRole)) {
+			return new Response(
+				JSON.stringify({ success: false, code: 'INVALID_ROLE', message: 'Target role tidak valid.' }),
+				{ status: 400 }
+			);
+		}
+
 		if (!isStrongPassword(passwordBaru)) {
 			return new Response(
 				JSON.stringify({
@@ -161,6 +191,23 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 		);
 
 		securityAttempts.delete(clientIp);
+
+		// Audit perubahan kredensial (best-effort, tak memblok UX bila tabel belum ada).
+		await appendAuditLog(
+			getD1Database(platform?.env as Record<string, unknown> | undefined, branchId),
+			branchId,
+			{
+				action: 'credential_change',
+				entityType: 'profil',
+				entityId: user.id,
+				metadata: { usernameLama, usernameBaru, targetRole: targetRole ?? null },
+				session: {
+					userId: locals.authSession?.userId,
+					username: locals.authSession?.username,
+					role: locals.authSession?.role
+				}
+			}
+		);
 
 		return new Response(
 			JSON.stringify({ success: true, message: 'Username dan password berhasil diubah.' }),
