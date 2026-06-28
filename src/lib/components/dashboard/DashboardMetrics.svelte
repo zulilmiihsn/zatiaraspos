@@ -70,10 +70,10 @@
 		</div>
 	</div>
 	<div
-		class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-green-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+		class="hidden flex-col items-start rounded-xl bg-gradient-to-br from-green-200 to-green-400 p-4 shadow-md md:flex md:items-center md:justify-center md:gap-2 md:border md:border-green-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if Wallet}
-			<TrendingUp class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
+			<Wallet class="mb-2 h-6 w-6 text-green-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />
 		{:else}
 			<div class="mb-2 flex h-6 w-6 items-center justify-center md:h-10 md:w-10 lg:mx-auto lg:mb-2">
 				<span
@@ -87,7 +87,7 @@
 		</div>
 	</div>
 	<div
-		class="flex hidden flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md md:block md:items-center md:justify-center md:gap-2 md:border md:border-cyan-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
+		class="hidden flex-col items-start rounded-xl bg-gradient-to-br from-cyan-100 to-pink-200 p-4 shadow-md md:flex md:items-center md:justify-center md:gap-2 md:border md:border-cyan-200 md:bg-transparent md:p-6 md:shadow-none lg:flex-col lg:items-center lg:justify-center"
 	>
 		{#if Wallet}
 			<Wallet class="mb-2 h-6 w-6 text-cyan-900 md:h-10 md:w-10 lg:mx-auto lg:mb-2" />

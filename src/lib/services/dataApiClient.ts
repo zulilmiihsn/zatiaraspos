@@ -81,7 +81,7 @@ export async function dbGet<T extends DataRecord = DataRecord>(
 	if (!url) throw new Error(`[dataApiClient] dbGet: unknown table "${table}"`);
 	const qs = new URLSearchParams({ branch: currentBranch(), ...params }).toString();
 	const response = await fetch(`${url}?${qs}`);
-	if (!response.ok) return [];
+	if (!response.ok) throw await parseError(response, `GET ${table}`);
 	return (await response.json()) as T[];
 }
 

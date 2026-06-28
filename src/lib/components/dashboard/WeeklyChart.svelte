@@ -27,6 +27,7 @@
 				{ threshold: 0.3 }
 			);
 			observer.observe(incomeChartRef);
+			return () => observer.disconnect();
 		}
 	});
 

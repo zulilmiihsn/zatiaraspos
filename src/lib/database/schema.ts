@@ -121,6 +121,9 @@ export const resepProduk = sqliteTable(
 	]
 );
 
+// Ledger append-only: tidak punya updated_at karena baris koreksi ditulis sebagai mutasi baru.
+// stok_setelah nullable dan tanpa FK dipertahankan untuk kompatibilitas data D1 lama; service
+// wajib menjaga bahan_id tetap dalam cabang yang sama sampai migrasi constraint terjadwal.
 export const bahanMutasi = sqliteTable(
 	'bahan_mutasi',
 	{
@@ -246,6 +249,8 @@ export const dailySalesSummary = sqliteTable(
 		updated_at: text('updated_at').default(now())
 	},
 	(table) => [
+		// Unique index melindungi satu summary per cabang/tanggal. Index range lama
+		// dipertahankan sampai migrasi produksi eksplisit dapat menghapusnya dengan aman.
 		uniqueIndex('idx_daily_sales_branch_date').on(table.cabang_id, table.tanggal_penjualan),
 		index('idx_daily_sales_branch_date_range').on(table.cabang_id, table.tanggal_penjualan)
 	]

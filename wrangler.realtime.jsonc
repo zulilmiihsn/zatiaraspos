@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "zatiaraspos-realtime",
 	"main": "src/lib/server/realtimeWorker.js",
-	"compatibility_date": "2024-05-18",
+	"compatibility_date": "2026-06-29",
 	"compatibility_flags": ["nodejs_compat"],
 
 	"durable_objects": {

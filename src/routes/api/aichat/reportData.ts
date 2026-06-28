@@ -61,7 +61,11 @@ async function fetchAllData(
 			} else {
 				hasMore = false;
 			}
-		} catch (timeoutError) {
+		} catch (error) {
+			console.error('[aichat/reportData] query page gagal', {
+				message: error instanceof Error ? error.message : 'Unknown query failure',
+				page
+			});
 			break;
 		}
 	}
@@ -104,7 +108,9 @@ export async function fetchReportData(
 						)
 					);
 			} catch (error) {
-				// Silent error handling
+				console.error('[aichat/reportData] query item transaksi gagal', {
+					message: error instanceof Error ? error.message : 'Unknown query failure'
+				});
 			}
 		}
 	}
