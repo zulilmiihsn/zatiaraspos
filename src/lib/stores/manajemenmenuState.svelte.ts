@@ -570,6 +570,12 @@ export function createManajemenmenuState() {
 		}
 	}
 
+	function closeEkstraForm() {
+		showEkstraForm = false;
+		editEkstraId = null;
+		ekstraForm = { nama: '', harga: '' };
+	}
+
 	async function saveEkstra() {
 		if (!ekstraForm.nama.trim()) {
 			notifModalMsg = 'Nama ekstra wajib diisi';
@@ -1173,7 +1179,7 @@ export function createManajemenmenuState() {
 		toggleMenuInKategoriRealtime,
 
 		// Ekstra CRUD
-		openEkstraForm, saveEkstra,
+		openEkstraForm, closeEkstraForm, saveEkstra,
 		confirmDeleteEkstra, doDeleteEkstra, cancelDeleteEkstra,
 
 		// Bahan CRUD

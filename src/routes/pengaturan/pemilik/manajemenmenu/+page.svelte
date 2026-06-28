@@ -147,53 +147,53 @@
 	<div class="relative min-h-screen">
 		{#if s.activeTab === 'menu'}
 			<MenuTab
-				bind:searchKeyword={s.searchKeyword}	bind:selectedKategori={s.selectedKategori}	bind:isGridView={s.isGridView}	s.isLoadingKategori={s.isLoadingKategori}
-				s.isLoadingMenus={s.isLoadingMenus}
-				s.kategoriList={s.kategoriList}
-				s.filteredMenus={s.filteredMenus}
-				s.openMenuForm={s.openMenuForm}
-				s.confirmDeleteMenu={s.confirmDeleteMenu}
-				s.handleImgError={s.handleImgError}
+				bind:searchKeyword={s.searchKeyword}	bind:selectedKategori={s.selectedKategori}	bind:isGridView={s.isGridView}	isLoadingKategori={s.isLoadingKategori}
+				isLoadingMenus={s.isLoadingMenus}
+				kategoriList={s.kategoriList}
+				filteredMenus={s.filteredMenus}
+				openMenuForm={s.openMenuForm}
+				confirmDeleteMenu={s.confirmDeleteMenu}
+				handleImgError={s.handleImgError}
 			/>
 		{:else if s.activeTab === 'kategori'}
 			<KategoriTab
-				bind:searchKategoriKeyword={s.searchKategoriKeyword}	s.isLoadingKategori={s.isLoadingKategori}
-				s.kategoriList={s.kategoriList}
-				s.menus={s.menus}
-				s.openKategoriForm={s.openKategoriForm}
-				s.confirmDeleteKategori={s.confirmDeleteKategori}
+				bind:searchKategoriKeyword={s.searchKategoriKeyword}	isLoadingKategori={s.isLoadingKategori}
+				kategoriList={s.kategoriList}
+				menus={s.menus}
+				openKategoriForm={s.openKategoriForm}
+				confirmDeleteKategori={s.confirmDeleteKategori}
 			/>
 		{:else if s.activeTab === 'ekstra'}
 			<EkstraTab
-				bind:searchEkstra={s.searchEkstra}	s.isLoadingEkstra={s.isLoadingEkstra}
-				s.ekstraList={s.ekstraList}
-				s.openEkstraForm={s.openEkstraForm}
-				s.confirmDeleteEkstra={s.confirmDeleteEkstra}
+				bind:searchEkstra={s.searchEkstra}	isLoadingEkstra={s.isLoadingEkstra}
+				ekstraList={s.ekstraList}
+				openEkstraForm={s.openEkstraForm}
+				confirmDeleteEkstra={s.confirmDeleteEkstra}
 			/>
 		{:else if s.activeTab === 'bahan'}
 			<BahanTab
-				bind:searchBahan={s.searchBahan}	s.isLoadingBahan={s.isLoadingBahan}
-				s.bahanList={s.bahanList}
-				s.formatCurrency={s.formatCurrency}
-				s.openBahanForm={s.openBahanForm}
-				s.openMutasiBahanForm={s.openMutasiBahanForm}
-				s.confirmDeleteBahan={s.confirmDeleteBahan}
+				bind:searchBahan={s.searchBahan}	isLoadingBahan={s.isLoadingBahan}
+				bahanList={s.bahanList}
+				formatCurrency={s.formatCurrency}
+				openBahanForm={s.openBahanForm}
+				openMutasiBahanForm={s.openMutasiBahanForm}
+				confirmDeleteBahan={s.confirmDeleteBahan}
 			/>
 		{:else if s.activeTab === 'hpp'}
 			<HppTab
-				bind:hppForm={s.hppForm}	bind:hppPurchaseText={s.hppPurchaseText}	s.hppSettings={s.hppSettings}
-				s.hppParsedItems={s.hppParsedItems}
-				s.isParsingHpp={s.isParsingHpp}
-				s.menus={s.menus}
-				s.formatCurrency={s.formatCurrency}
-				s.getOverheadMonthly={s.getOverheadMonthly}
-				s.getOverheadPerItem={s.getOverheadPerItem}
-				s.getProductRecipeCost={s.getProductRecipeCost}
-				s.getProductHpp={s.getProductHpp}
-				s.getProductMargin={s.getProductMargin}
-				s.saveHppSettings={s.saveHppSettings}
-				s.parseHppPurchaseText={s.parseHppPurchaseText}
-				s.saveParsedHppItem={s.saveParsedHppItem}
+				bind:hppForm={s.hppForm}	bind:hppPurchaseText={s.hppPurchaseText}	hppSettings={s.hppSettings}
+				hppParsedItems={s.hppParsedItems}
+				isParsingHpp={s.isParsingHpp}
+				menus={s.menus}
+				formatCurrency={s.formatCurrency}
+				getOverheadMonthly={s.getOverheadMonthly}
+				getOverheadPerItem={s.getOverheadPerItem}
+				getProductRecipeCost={s.getProductRecipeCost}
+				getProductHpp={s.getProductHpp}
+				getProductMargin={s.getProductMargin}
+				saveHppSettings={s.saveHppSettings}
+				parseHppPurchaseText={s.parseHppPurchaseText}
+				saveParsedHppItem={s.saveParsedHppItem}
 			/>
 		{/if}
 	</div>
@@ -695,15 +695,9 @@
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
 			role="dialog"
 			aria-modal="true"
-			onclick={(e) =>
-				e.target === e.currentTarget &&
-				((s.showEkstraForm = false), (s.ekstraForm = { nama: '', harga: '' }), (s.editEkstraId = null))}
-			onkeydown={(e) =>
-				e.key === 'Escape' &&
-				((s.showEkstraForm = false), (s.ekstraForm = { nama: '', harga: '' }), (s.editEkstraId = null))}
-			onkeypress={(e) =>
-				e.key === 'Enter' &&
-				((s.showEkstraForm = false), (s.ekstraForm = { nama: '', harga: '' }), (s.editEkstraId = null))}
+			onclick={(e) => e.target === e.currentTarget && s.closeEkstraForm()}
+			onkeydown={(e) => e.key === 'Escape' && s.closeEkstraForm()}
+			onkeypress={(e) => e.key === 'Enter' && s.closeEkstraForm()}
 			tabindex="-1"
 		>
 			<div
@@ -750,11 +744,7 @@
 						<button
 							type="button"
 							class="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-200 active:bg-gray-300"
-							onclick={() => {
-								s.showEkstraForm = false;
-								s.ekstraForm = { nama: '', harga: '' };
-								s.editEkstraId = null;
-							}}>Batal</button
+							onclick={() => s.closeEkstraForm()}>Batal</button
 						>
 					</div>
 				</form>
