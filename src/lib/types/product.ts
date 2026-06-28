@@ -80,25 +80,6 @@ export interface ProductRecipe {
 }
 
 // ============================================================================
-// 🛒 CART & TRANSACTION TYPES
-// ============================================================================
-
-export interface CartItem {
-	product: Product;
-	jumlah: number;
-	addOns: AddOn[];
-	gula?: string;
-	es?: string;
-	catatan?: string;
-	total: number;
-}
-
-export interface CartSummary {
-	totalQty: number;
-	totalHarga: number;
-}
-
-// ============================================================================
 // 📊 MENU MANAGEMENT TYPES
 // ============================================================================
 
