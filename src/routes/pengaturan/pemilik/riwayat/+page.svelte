@@ -76,11 +76,11 @@
 				// Untuk transaksi manual/catat, hapus dari buku_kas saja
 				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
 			} else if (transaksiToDelete.sumber === 'pos') {
-				// Transaksi POS: hapus pakai transaction_id secara konsisten.
-				// transaksi_kasir dulu (memicu reverse ringkasan di server), lalu buku_kas.
+				// Transaksi POS: satu call atomik. Server (DELETE /api/transaksi-kasir)
+				// reverse ringkasan + restore stok produk/bahan + hapus transaksi_kasir
+				// DAN buku_kas dalam satu batch. Jangan panggil buku_kas terpisah.
 				const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
 				await dataService.deleteRows('transaksi_kasir', { transaction_id: transactionId });
-				await dataService.deleteRows('buku_kas', { transaction_id: transactionId });
 			} else {
 				// Fallback: hapus berdasarkan ID langsung
 				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });

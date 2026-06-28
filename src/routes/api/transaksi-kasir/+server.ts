@@ -1,8 +1,6 @@
 import { json, error as kitError } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
-import { transaksiKasir } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
-import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
+import { getRawDb, publish, auditDataChange } from '$lib/server/dataApiHelpers';
 import { reverseDailySummaryForTransaction } from '$lib/server/dailySummary';
 import { hasDatabaseColumn } from '$lib/server/schemaCapabilities';
 import { decodeDataCursor, parseDataLimit, toCursorPage } from '$lib/server/dataPagination';
@@ -116,25 +114,116 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 	const transactionId = url.searchParams.get('transaction_id');
 	if (!transactionId) throw kitError(400, 'transaction_id diperlukan');
 
-	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
 
-	// Balikkan kontribusi transaksi ke ringkasan harian SEBELUM item dihapus
-	// (item + buku_kas masih ada di sini). Jangan blok penghapusan bila gagal.
+	// Balikkan kontribusi transaksi ke ringkasan harian SEBELUM item dihapus.
+	// Jangan blok penghapusan bila agregat gagal.
 	try {
 		await reverseDailySummaryForTransaction(rawDb, branch, transactionId);
 	} catch {
 		// Tabel ringkasan mungkin belum ada / gagal sebagian — abaikan.
 	}
 
-	await db
-		.delete(transaksiKasir)
-		.where(
-			and(eq(transaksiKasir.cabang_id, branch), eq(transaksiKasir.transaction_id, transactionId))
+	// P0-4: kumpulkan apa yang harus DIKEMBALIKAN sebelum baris dihapus.
+	// Stok produk: dari item POS (jumlah per produk, hanya yang lacak_stok).
+	const itemRows = ((
+		await rawDb
+			.prepare(
+				`SELECT produk_id, jumlah FROM transaksi_kasir WHERE cabang_id = ? AND transaction_id = ?`
+			)
+			.bind(branch, transactionId)
+			.all()
+	).results || []) as Array<{ produk_id: string | null; jumlah: number }>;
+
+	// Stok bahan: balikkan PERSIS mutasi yang ditulis checkout (bukan re-compute resep
+	// yang bisa sudah berubah). Tabel mungkin belum ada di DB lama → fallback kosong.
+	let mutasiRows: Array<{ bahan_id: string; delta_jumlah: number }> = [];
+	try {
+		mutasiRows = ((
+			await rawDb
+				.prepare(
+					`SELECT bahan_id, delta_jumlah FROM bahan_mutasi
+					 WHERE cabang_id = ? AND referensi_id = ? AND sumber = 'pos_transaction'`
+				)
+				.bind(branch, transactionId)
+				.all()
+		).results || []) as Array<{ bahan_id: string; delta_jumlah: number }>;
+	} catch {
+		mutasiRows = [];
+	}
+
+	const now = new Date().toISOString();
+	const actor = session.username || session.userId;
+	const statements = [];
+
+	for (const it of itemRows) {
+		if (!it.produk_id) continue;
+		statements.push(
+			rawDb
+				.prepare(
+					`UPDATE produk SET stok = COALESCE(stok, 0) + ?, updated_at = ?
+					 WHERE cabang_id = ? AND id = ? AND lacak_stok = 1`
+				)
+				.bind(it.jumlah, now, branch, it.produk_id)
 		);
+	}
+
+	for (const m of mutasiRows) {
+		const restore = -m.delta_jumlah; // delta checkout negatif → kembalikan positif
+		statements.push(
+			rawDb
+				.prepare(
+					`UPDATE bahan SET stok_saat_ini = COALESCE(stok_saat_ini, 0) + ?, updated_at = ?
+					 WHERE cabang_id = ? AND id = ?`
+				)
+				.bind(restore, now, branch, m.bahan_id)
+		);
+		statements.push(
+			rawDb
+				.prepare(
+					`INSERT INTO bahan_mutasi (
+						id, cabang_id, bahan_id, delta_jumlah, stok_setelah, sumber,
+						referensi_id, catatan, dibuat_oleh, created_at
+					)
+					VALUES (?, ?, ?, ?,
+						(SELECT stok_saat_ini FROM bahan WHERE cabang_id = ? AND id = ?),
+						'void', ?, ?, ?, ?)`
+				)
+				.bind(
+					crypto.randomUUID(),
+					branch,
+					m.bahan_id,
+					restore,
+					branch,
+					m.bahan_id,
+					transactionId,
+					`Void transaksi ${transactionId}`.slice(0, 160),
+					actor,
+					now
+				)
+		);
+	}
+
+	// P0-5: hapus item + kas dalam SATU batch (atomik) — bukan dua HTTP non-atomik.
+	statements.push(
+		rawDb
+			.prepare(`DELETE FROM transaksi_kasir WHERE cabang_id = ? AND transaction_id = ?`)
+			.bind(branch, transactionId)
+	);
+	statements.push(
+		rawDb
+			.prepare(`DELETE FROM buku_kas WHERE cabang_id = ? AND transaction_id = ?`)
+			.bind(branch, transactionId)
+	);
+
+	await rawDb.batch(statements);
+
 	await publish(platform, branch, 'transaksi_kasir', 'delete', { transaction_id: transactionId });
-	await auditDataChange(rawDb, branch, session, 'transaksi_kasir', 'delete_by_transaction', null, {
-		transaction_id: transactionId
+	await publish(platform, branch, 'buku_kas', 'delete', { transaction_id: transactionId });
+	await auditDataChange(rawDb, branch, session, 'transaksi_kasir', 'void', null, {
+		transaction_id: transactionId,
+		restored_products: itemRows.length,
+		restored_bahan: mutasiRows.length
 	});
 	return json({ ok: true });
 };
