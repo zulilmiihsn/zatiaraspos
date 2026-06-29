@@ -108,10 +108,7 @@
 		const silent = options.silent === true;
 		try {
 			if (!silent) {
-				// LOADING STATE: Mulai loading
 				isLoadingReport = true;
-				loadingProgress = 0;
-				loadingMessage = 'Memuat data...';
 			}
 
 			// Pastikan startDate dan endDate sudah ada
@@ -120,28 +117,12 @@
 				endDate = endDate || startDate;
 			}
 
-			if (!silent) {
-				// LOADING PROGRESS: 20% - Prepare data
-				loadingProgress = 20;
-				loadingMessage = 'Menyiapkan...';
-			}
 			// Tidak perlu clear cache untuk setiap load
 
 			// Gunakan startDate saja untuk daily report, atau range untuk multi-day
 			const dateRange = startDate === endDate ? startDate : `${startDate}_${endDate}`;
 
-			if (!silent) {
-				// LOADING PROGRESS: 40% - Fetch data
-				loadingProgress = 40;
-				loadingMessage = 'Mengambil data...';
-			}
 			const reportData = await dataService.getReportData(dateRange, 'daily');
-
-			if (!silent) {
-				// LOADING PROGRESS: 70% - Process data
-				loadingProgress = 70;
-				loadingMessage = 'Memproses...';
-			}
 
 			// Apply report data with null checks - data ada di reportData.data
 			const reportDataContent = (reportData as any)?.data || reportData;
@@ -149,10 +130,6 @@
 
 			if (nextFingerprint === lastAppliedReportFingerprint) {
 				await reportCacheMetrics('laporan');
-				if (!silent) {
-					loadingProgress = 100;
-					loadingMessage = 'Selesai!';
-				}
 				return;
 			}
 
@@ -171,12 +148,6 @@
 			bebanLain = reportDataContent?.bebanLain || [];
 			laporan = reportDataContent?.transactions || [];
 			await reportCacheMetrics('laporan');
-
-			if (!silent) {
-				// LOADING PROGRESS: 100% - Complete
-				loadingProgress = 100;
-				loadingMessage = 'Selesai!';
-			}
 		} catch (error) {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			if (!silent) {
@@ -184,11 +155,8 @@
 			}
 		} finally {
 			if (!silent) {
-				// LOADING STATE: Selesai loading
 				setTimeout(() => {
 					isLoadingReport = false;
-					loadingProgress = 0;
-					loadingMessage = 'Memuat data...';
 				}, 300); // Delay lebih pendek untuk smooth transition
 			}
 		}
@@ -353,8 +321,6 @@
 
 	// LOADING STATES: Untuk better UX
 	let isLoadingReport = $state(false);
-	let loadingProgress = $state(0);
-	let loadingMessage = $state('Memuat data...');
 	let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = $state('harian');
 
 	let filterDate = $state(getLocalDateStringWITA());

@@ -93,9 +93,11 @@
   pakai varian `...Detail`). Verify tak dibaca di template: `rtk grep "pemasukanUsaha" src/routes/laporan`.
   Aksi: hapus 4 deklarasi + assignment-nya. ⚠️ jalur laporan — pastikan benar-benar tak dibaca.
 
-- [ ] **H-KISS-2.** `src/routes/laporan/+page.svelte:~110-194` — `loadingProgress` teater
-  (20/40/70/100). Ganti jadi boolean `isLoading` sederhana. Aksi: ganti state + binding UI
-  (loading bar → spinner/boolean). ⚠️ Ubah UI loading — tes tampilan `pnpm dev` halaman laporan.
+- [x] **H-KISS-2. SELESAI.** `src/routes/laporan/+page.svelte` — `loadingProgress` + `loadingMessage`
+  ternyata **write-only (nol read, tak ada di markup)** → murni dead-write, BUKAN indikator nyata.
+  Aksi yang dilakukan: **hapus total** kedua var (state + semua assignment + blok `if(!silent)`
+  20/40/70/100 yang isinya cuma itu). `isLoadingReport` DIPERTAHANKAN (dibaca di markup 706/712/727).
+  Tidak perlu boolean baru. `pnpm check`: 0 error.
 
 **Hasil H-KISS-A:** KISS → **Bagus** (dua residu utama yang ditandai auditor hilang).
 
