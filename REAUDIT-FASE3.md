@@ -10,18 +10,19 @@ Tanggal: 2026-06-29 · Branch: dev
 
 ## 1. Skor Dimensi
 
-| Dimensi | Skor | Alasan (1 kalimat) |
-|---|---|---|
-| SOLID | **Bagus** | Factory `makeResourceRoute` nyata dipakai 3/6 route; abstraksi auth/tenant-scope/audit/publish konsisten di SEMUA 6 route; 3 route manual punya divergensi domain sah (dedup/cursor/dual-delete, coercion+FK-precheck). |
-| DRY | **Bagus** | Duplikasi besar sudah dikonsolidasi (struk, error-parse, orderDetails); sisa hanya 4 duplikasi kosmetik P3 (tipe cart, inline error-parse, scaffolding struk, label gula/es). |
-| YAGNI | **Cukup** | Tidak ada blocker, tapi masih ada residu dead code/over-export (createImageObserver, createSmoothScroll, measureAsyncPerformance no-op, type LazyIcon, dll) yang layak dipangkas. |
-| KISS | **Cukup** | Kode inti benar & shippable, tapi akumulasi verbositas (dead-write quartet laporan, ~20 $derived re-filter, teater loadingProgress) menahan dari "Bagus". |
-| CONSISTENCY | **Bagus** | Jalur tulis metode-bayar sudah kanonik (qris→non-tunai sebelum DB insert) di server & halaman bayar; cek-ganda di konsumen hanya normalisasi defensif baris legacy, bukan bug. |
-| READABILITY | **Bagus** | Interface bernama & rune jelas; sisa hanya komentar usang ("mock", scaffolding migrasi) dan satu param `any` — nit P3. |
-| MAINTAINABILITY | **Bagus** | READ/WRITE_ROUTES map menggantikan god endpoint; sisa kosmetik (`dbGetStrict` duplikat `dbGet`, gaya `$props` WeeklyChart, fallback offline parsial). |
+| Dimensi                  | Skor      | Alasan (1 kalimat)                                                                                                                                                                                                        |
+| ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SOLID                    | **Bagus** | Factory `makeResourceRoute` nyata dipakai 3/6 route; abstraksi auth/tenant-scope/audit/publish konsisten di SEMUA 6 route; 3 route manual punya divergensi domain sah (dedup/cursor/dual-delete, coercion+FK-precheck).   |
+| DRY                      | **Bagus** | Duplikasi besar sudah dikonsolidasi (struk, error-parse, orderDetails); sisa hanya 4 duplikasi kosmetik P3 (tipe cart, inline error-parse, scaffolding struk, label gula/es).                                             |
+| YAGNI                    | **Cukup** | Tidak ada blocker, tapi masih ada residu dead code/over-export (createImageObserver, createSmoothScroll, measureAsyncPerformance no-op, type LazyIcon, dll) yang layak dipangkas.                                         |
+| KISS                     | **Cukup** | Kode inti benar & shippable, tapi akumulasi verbositas (dead-write quartet laporan, ~20 $derived re-filter, teater loadingProgress) menahan dari "Bagus".                                                                 |
+| CONSISTENCY              | **Bagus** | Jalur tulis metode-bayar sudah kanonik (qris→non-tunai sebelum DB insert) di server & halaman bayar; cek-ganda di konsumen hanya normalisasi defensif baris legacy, bukan bug.                                            |
+| READABILITY              | **Bagus** | Interface bernama & rune jelas; sisa hanya komentar usang ("mock", scaffolding migrasi) dan satu param `any` — nit P3.                                                                                                    |
+| MAINTAINABILITY          | **Bagus** | READ/WRITE_ROUTES map menggantikan god endpoint; sisa kosmetik (`dbGetStrict` duplikat `dbGet`, gaya `$props` WeeklyChart, fallback offline parsial).                                                                     |
 | BEST-PRACTICE / SECURITY | **Bagus** | Cookie sesi httpOnly+sameSite=lax+secure, header keamanan lengkap (HSTS/CSP/XFO/nosniff), auth+role guard; sisa 4 hardening P3 defense-in-depth (CSRF token tak menyeluruh, CSP unsafe-inline, 2 rate-limiter in-memory). |
 
 Verifikasi langsung yang dikonfirmasi pada file sensitif (uang/data):
+
 - `resourceRouteHelpers.ts:99-171` — factory nyata: satu implementasi auth+scope+publish+audit.
 - `resourceRouteHelpers.ts:43-53` — `sanitizeUpdatePayload` buang `cabang_id`/`id` (guard mass-assignment) dipanggil di SEMUA PATCH.
 - `api/buku-kas/+server.ts` — RBAC (insert kasir/pemilik, update/delete pemilik), tenant-scope `cabang_id` di tiap query, dedup idempotent, sanitize PATCH.
@@ -53,12 +54,14 @@ Tidak ditemukan satupun masalah yang memenuhi kriteria blocker (bug nyata / luba
 ## 4. Post-Publish Backlog (boleh setelah publish)
 
 Hardening keamanan (defense-in-depth, prioritaskan):
+
 - [ ] `hooks.server.ts:25-28` — CSRF token eksplisit hanya di 3 route; route write uang/data lain (pos/transaction, buku-kas, resource routes) andalkan sameSite=lax saja. Pertimbangkan token menyeluruh.
 - [ ] `hooks.server.ts:82` — CSP `script-src 'unsafe-inline'` (+unpkg); pertimbangkan nonce/hash. (base-uri/form-action/frame-ancestors sudah ketat.)
 - [ ] `api/gantikeamanan/+server.ts:16` — rate-limiter Map in-memory per-isolate (3x/15m) bisa terlampaui di Workers multi-isolate; dilindungi role+verif password lama. Pindahkan ke DO/D1.
 - [ ] `api/aichat/+server.ts:27` — rate-limiter AI in-memory (30/15m); konsumsi token OpenRouter bisa > intended. Pindahkan ke DO/D1.
 
 Kebersihan kode / dead code (YAGNI):
+
 - [ ] `utils/performance.ts:28` — `measureAsyncPerformance` no-op (caller `posState:100` hanya passing `Promise.resolve()`); hapus fungsi + call site. `createImageObserver:74` 0 caller — hapus.
 - [ ] `utils/ui.ts:70` — `createSmoothScroll` 0 caller — hapus + global decl.
 - [ ] `services/autoApplyService.ts:205` — `validateRecommendations` 0 caller — hapus/pakai.
@@ -68,6 +71,7 @@ Kebersihan kode / dead code (YAGNI):
 - [ ] `services/riwayatService.ts:13` (`todayRange`) & `dataService.ts:194` (`class RealtimeManager`) over-export — turunkan ke non-export.
 
 Penyederhanaan (KISS / DRY):
+
 - [ ] `laporan/+page.svelte:168-171,377-380` — dead-write `pemasukanUsaha/pemasukanLain/bebanUsaha/bebanLain` (plain `let`, tak pernah dibaca; template pakai `...Detail`). Hapus.
 - [ ] `laporan/+page.svelte:402-480` — ~20 `$derived` re-filter/reduce array; bisa satu-pass grouping.
 - [ ] `laporan/+page.svelte:110-194` — teater `loadingProgress` 20/40/70/100; boolean `isLoading` lebih KISS.
@@ -76,6 +80,7 @@ Penyederhanaan (KISS / DRY):
 - [ ] `utils/receiptPrint.ts:93,146` — `buildReceiptHtml` & `buildSaleReceiptHtml` berbagi ~60 baris scaffolding; ekstrak header/footer.
 
 Konsistensi tipe & arsitektur:
+
 - [ ] Ekstrak tipe cart bersama ke `$lib/types` — `PosCartItem` (`pos/+page.svelte:47`) vs `BayarCartItem` (`bayar/+page.svelte:39`).
 - [ ] `bayar/+page.svelte:320` — pakai `parseApiError` alih-alih inline parse.
 - [ ] Satukan sumber label gula/es: `sugarOptions/iceOptions` vs `OPTION_LABELS` (`orderDetails.ts:7`).
