@@ -24,7 +24,7 @@ export interface DetectedTransaction {
 
 export interface AiRecommendation {
 	id: string;
-	action: 'create_transaction' | 'update_transaction' | 'create_category' | 'other';
+	action: 'create_transaction' | 'update_transaction' | 'create_category';
 	title: string;
 	deskripsi: string;
 	data: unknown;

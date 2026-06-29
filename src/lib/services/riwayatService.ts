@@ -10,7 +10,7 @@ import { dataService } from '$lib/services/dataService';
 import type { BukuKasRecord, HistoryItem } from '$lib/types/laporan';
 
 /** Rentang UTC untuk "hari ini" dalam zona WITA. */
-export function todayRange() {
+function todayRange() {
 	const todayWita = getTodayWita(); // format YYYY-MM-DD
 	return witaToUtcRange(todayWita);
 }

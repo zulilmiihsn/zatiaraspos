@@ -94,11 +94,6 @@ export class LoginSecurity {
 		}
 	}
 
-	/** Reset login attempts for successful login */
-	static resetLoginAttempts(identifier: string): void {
-		loginAttempts.delete(identifier);
-	}
-
 	/** Get remaining login attempts */
 	static getRemainingLoginAttempts(identifier: string): number {
 		const record = loginAttempts.get(identifier);

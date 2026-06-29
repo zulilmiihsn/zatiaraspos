@@ -202,23 +202,6 @@ export class AutoApplyService {
 		return map[type] || 'lainnya';
 	}
 
-	validateRecommendations(recommendations: AiRecommendation[]): {
-		valid: boolean;
-		errors: string[];
-	} {
-		const errors: string[] = [];
-		recommendations.forEach((rec, i) => {
-			if (!rec.id) errors.push(`Rekomendasi ${i + 1}: ID tidak valid`);
-			if (!rec.action) errors.push(`Rekomendasi ${i + 1}: Action tidak valid`);
-			if (!rec.data) errors.push(`Rekomendasi ${i + 1}: Data tidak valid`);
-			const data = rec.data as any;
-			if (rec.action === 'create_transaction' && (!data.type || !data.amount)) {
-				errors.push(`Rekomendasi ${i + 1}: Data transaksi tidak lengkap`);
-			}
-		});
-		return { valid: errors.length === 0, errors };
-	}
-
 	private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
 		const seen = new Set<string>();
 		return recommendations.filter((rec) => {

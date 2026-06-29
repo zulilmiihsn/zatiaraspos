@@ -24,13 +24,6 @@ export function throttle<T extends (...args: any[]) => any>(
 	};
 }
 
-// Performance measurement
-export async function measureAsyncPerformance(_name: string, fn: () => Promise<void>) {
-	const _start = performance.now();
-	await fn();
-	const _end = performance.now();
-}
-
 // Cart calculations (without memoization)
 export const calculateCartTotal = <T>(cart: T[]) => {
 	let items = 0;
@@ -68,17 +61,4 @@ export function fuzzySearch<T>(query: string, items: T[], key: string = 'nama'):
 		.filter((x) => x.score > 0)
 		.sort((a, b) => b.score - a.score)
 		.map((x) => x.item);
-}
-
-// Image optimization
-export function createImageObserver(callback: (entry: IntersectionObserverEntry) => void) {
-	return new IntersectionObserver(
-		(entries) => {
-			entries.forEach(callback);
-		},
-		{
-			rootMargin: '50px',
-			threshold: 0.1
-		}
-	);
 }

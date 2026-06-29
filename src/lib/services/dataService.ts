@@ -191,7 +191,7 @@ export const dataService = DataService.getInstance();
 
 // ─── RealtimeManager ─────────────────────────────────────────────────────────
 
-export class RealtimeManager {
+class RealtimeManager {
 	private unsubFns = new Map<string, (() => void) | null>();
 	private pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	private latestPayload = new Map<string, Record<string, unknown>>();

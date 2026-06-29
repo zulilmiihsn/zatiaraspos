@@ -32,16 +32,6 @@ export interface TutupTokoSummary {
 }
 
 // ============================================================================
-// 🎨 LAZY ICON TYPE
-// ============================================================================
-
-/**
- * Tipe untuk ikon Lucide yang di-lazy-load.
- * Gunakan ini menggantikan `any` untuk ikon yang di-import secara dinamis.
- */
-export type LazyIcon = typeof import('svelte').SvelteComponent | null;
-
-// ============================================================================
 // 🔐 SECURITY SETTINGS
 // ============================================================================
 

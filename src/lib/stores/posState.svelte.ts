@@ -1,6 +1,6 @@
 import { dataService, realtimeManager } from '$lib/services/dataService';
 import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
-import { throttle, measureAsyncPerformance } from '$lib/utils/performance';
+import { throttle } from '$lib/utils/performance';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { browser } from '$app/environment';
 import type { AddOn, Category, Product } from '$lib/types/product';
@@ -97,7 +97,6 @@ export function createPosState() {
 		(async () => {
 			await loadPOSData();
 			setupRealtimeSubscriptions();
-			await measureAsyncPerformance('data fetching', async () => Promise.resolve());
 			isLoadingProducts = false;
 
 			if (browser) {

@@ -153,14 +153,6 @@ export class AuthGuard {
 			LoginSecurity.recordFailedLogin(clientId);
 		}
 	}
-
-	/**
-	 * Reset failed authentication attempts
-	 */
-	resetFailedAttempts(clientId: string): void {
-		this.loginAttempts.delete(clientId);
-		LoginSecurity.resetLoginAttempts(clientId);
-	}
 }
 
 // Export singleton instance
