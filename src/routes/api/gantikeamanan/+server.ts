@@ -10,26 +10,17 @@ import {
 } from '$lib/server/branchResolver';
 import { publishBranchEvent } from '$lib/server/realtimePublisher';
 import { appendAuditLog } from '$lib/server/auditLog';
+import { consumeRateLimit } from '$lib/server/rateLimit';
 
 const SECURITY_WINDOW_MS = 15 * 60 * 1000;
 const SECURITY_MAX_ATTEMPTS = 3;
-const securityAttempts = new Map<string, { count: number; resetAt: number }>();
 
-function isRateLimited(identifier: string): boolean {
-	const now = Date.now();
-	const current = securityAttempts.get(identifier);
-
-	if (!current || now > current.resetAt) {
-		securityAttempts.set(identifier, { count: 1, resetAt: now + SECURITY_WINDOW_MS });
-		return false;
-	}
-
-	if (current.count >= SECURITY_MAX_ATTEMPTS) {
-		return true;
-	}
-
-	current.count += 1;
-	return false;
+async function hashIdentifier(value: string): Promise<string> {
+	const bytes = new TextEncoder().encode(value);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((byte) => byte.toString(16).padStart(2, '0'))
+		.join('');
 }
 
 function isStrongPassword(password: string): boolean {
@@ -52,19 +43,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 				{
 					status: 403
 				}
-			);
-		}
-
-		const clientIp = getClientAddress();
-		if (isRateLimited(clientIp)) {
-			return new Response(
-				JSON.stringify({
-					success: false,
-					code: 'RATE_LIMITED',
-					message: 'Terlalu banyak percobaan. Coba lagi nanti.',
-					retryAfterSeconds: Math.ceil(SECURITY_WINDOW_MS / 1000)
-				}),
-				{ status: 429 }
 			);
 		}
 
@@ -106,6 +84,48 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 					message: 'Tidak boleh mengubah kredensial cabang lain.'
 				}),
 				{ status: 403 }
+			);
+		}
+
+		const rawDb = getD1Database(platform?.env as Record<string, unknown> | undefined, branchId);
+		const ipHash = await hashIdentifier(getClientAddress());
+		const ipLimit = await consumeRateLimit(
+			rawDb,
+			branchId,
+			`security:ip:${ipHash}`,
+			SECURITY_MAX_ATTEMPTS,
+			SECURITY_WINDOW_MS,
+			platform
+		);
+		const userLimit = await consumeRateLimit(
+			rawDb,
+			branchId,
+			`security:user:${String(usernameLama).trim().toLowerCase()}`,
+			SECURITY_MAX_ATTEMPTS,
+			SECURITY_WINDOW_MS,
+			platform
+		);
+		if (!ipLimit.available || !userLimit.available) {
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'RATE_LIMITER_UNAVAILABLE',
+					message: 'Perubahan keamanan sementara tidak tersedia. Coba lagi beberapa saat.'
+				}),
+				{ status: 503, headers: { 'Retry-After': '5' } }
+			);
+		}
+
+		if (!ipLimit.allowed || !userLimit.allowed) {
+			const retryAfterSeconds = Math.max(ipLimit.retryAfterSeconds, userLimit.retryAfterSeconds);
+			return new Response(
+				JSON.stringify({
+					success: false,
+					code: 'RATE_LIMITED',
+					message: 'Terlalu banyak percobaan. Coba lagi nanti.',
+					retryAfterSeconds
+				}),
+				{ status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
 			);
 		}
 
@@ -194,24 +214,18 @@ export const POST: RequestHandler = async ({ request, getClientAddress, locals, 
 			{ id: user.id }
 		);
 
-		securityAttempts.delete(clientIp);
-
 		// Audit perubahan kredensial (best-effort, tak memblok UX bila tabel belum ada).
-		await appendAuditLog(
-			getD1Database(platform?.env as Record<string, unknown> | undefined, branchId),
-			branchId,
-			{
-				action: 'credential_change',
-				entityType: 'profil',
-				entityId: user.id,
-				metadata: { usernameLama, usernameBaru, targetRole: targetRole ?? null },
-				session: {
-					userId: locals.authSession?.userId,
-					username: locals.authSession?.username,
-					role: locals.authSession?.role
-				}
+		await appendAuditLog(rawDb, branchId, {
+			action: 'credential_change',
+			entityType: 'profil',
+			entityId: user.id,
+			metadata: { usernameLama, usernameBaru, targetRole: targetRole ?? null },
+			session: {
+				userId: locals.authSession?.userId,
+				username: locals.authSession?.username,
+				role: locals.authSession?.role
 			}
-		);
+		});
 
 		return new Response(
 			JSON.stringify({ success: true, message: 'Username dan password berhasil diubah.' }),

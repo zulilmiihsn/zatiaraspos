@@ -3,8 +3,9 @@ import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import { witaRangeToWitaQuery } from '$lib/utils/dateTime';
 import { formatRupiah } from '$lib/utils/currency';
-import { getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
+import { getD1Database, getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
 import { requireAuthSession, requireSessionBranch } from '$lib/server/apiAuth';
+import { consumeRateLimit } from '$lib/server/rateLimit';
 import { kategori, produk, tambahan } from '$lib/database/schema';
 import { eq } from 'drizzle-orm';
 import {
@@ -24,24 +25,6 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'deepseek/deepseek-chat';
 const AI_WINDOW_MS = 15 * 60 * 1000;
 const AI_MAX_REQUESTS = 30;
-const aiRequests = new Map<string, { count: number; resetAt: number }>();
-
-function isRateLimited(identifier: string): boolean {
-	const now = Date.now();
-	const current = aiRequests.get(identifier);
-
-	if (!current || now > current.resetAt) {
-		aiRequests.set(identifier, { count: 1, resetAt: now + AI_WINDOW_MS });
-		return false;
-	}
-
-	if (current.count >= AI_MAX_REQUESTS) {
-		return true;
-	}
-
-	current.count += 1;
-	return false;
-}
 
 interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
@@ -373,19 +356,41 @@ async function analyzeTransactionText(
 
 // Endpoint untuk analisis transaksi AI
 export const POST: RequestHandler = async (event) => {
-	const { url, getClientAddress } = event;
+	const { url } = event;
 	// P0-1: endpoint ini sebelumnya hanya rate-limit IP tanpa auth. Wajib login.
-	requireAuthSession(event.locals);
-	const clientIp = getClientAddress();
-	if (isRateLimited(clientIp)) {
+	const session = requireAuthSession(event.locals);
+	const branch = requireSessionBranch(event.locals);
+	const db = getD1Database(event.platform?.env as Record<string, unknown> | undefined, branch);
+	const rateLimit = await consumeRateLimit(
+		db,
+		branch,
+		`aichat:user:${session.userId}`,
+		AI_MAX_REQUESTS,
+		AI_WINDOW_MS,
+		event.platform
+	);
+	if (!rateLimit.available) {
+		return json(
+			{
+				success: false,
+				error: 'AI chat sementara tidak tersedia. Coba lagi beberapa saat.',
+				code: 'RATE_LIMITER_UNAVAILABLE'
+			},
+			{ status: 503, headers: { 'Retry-After': '5' } }
+		);
+	}
+	if (!rateLimit.allowed) {
 		return json(
 			{
 				success: false,
 				error: 'Terlalu banyak request. Coba lagi beberapa menit lagi.',
 				code: 'RATE_LIMITED',
-				retryAfterSeconds: Math.ceil(AI_WINDOW_MS / 1000)
+				retryAfterSeconds: rateLimit.retryAfterSeconds
 			},
-			{ status: 429 }
+			{
+				status: 429,
+				headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) }
+			}
 		);
 	}
 
