@@ -142,10 +142,6 @@
 				pajak: 0,
 				labaBersih: 0
 			};
-			pemasukanUsaha = reportDataContent?.pemasukanUsaha || [];
-			pemasukanLain = reportDataContent?.pemasukanLain || [];
-			bebanUsaha = reportDataContent?.bebanUsaha || [];
-			bebanLain = reportDataContent?.bebanLain || [];
 			laporan = reportDataContent?.transactions || [];
 			await reportCacheMetrics('laporan');
 		} catch (error) {
@@ -340,11 +336,6 @@
 		pajak: null,
 		labaBersih: null
 	});
-	let pemasukanUsaha: BukuKasRecord[] = [];
-	let pemasukanLain: BukuKasRecord[] = [];
-	let bebanUsaha: BukuKasRecord[] = [];
-	let bebanLain: BukuKasRecord[] = [];
-
 	let laporan: BukuKasRecord[] = $state([]);
 
 	function normalizeReportJenis(t: BukuKasRecord): 'pendapatan_usaha' | 'beban_usaha' | 'lainnya' {
