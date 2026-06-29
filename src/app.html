@@ -45,38 +45,9 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
-			rel="preload"
 			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-			as="style"
-			onload="this.onload=null;this.rel='stylesheet'"
+			rel="stylesheet"
 		/>
-
-		<!-- Suppress browser extension errors -->
-		<script>
-			// Filter third-party extension errors from console
-			window.addEventListener(
-				'error',
-				function (e) {
-					if (!e.filename) return;
-					const isExtensionError =
-						e.filename.includes('host-additional-hooks') ||
-						e.filename.includes('chrome-extension://') ||
-						e.filename.includes('moz-extension://') ||
-						e.filename.startsWith('chrome://') ||
-						(e.message &&
-							(e.message.includes('ownerDocument') ||
-								e.message.includes('Cannot read properties of undefined')) &&
-							e.filename.includes('.js:'));
-
-					if (isExtensionError) {
-						e.stopImmediatePropagation();
-						e.preventDefault();
-						return false;
-					}
-				},
-				true
-			);
-		</script>
 
 		%sveltekit.head%
 	</head>

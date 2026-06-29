@@ -21,6 +21,30 @@ const config = {
 	},
 
 	kit: {
+		csp: {
+			mode: 'auto',
+			directives: {
+				'default-src': ['self'],
+				'script-src': ['self', 'https://unpkg.com'],
+				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+				'img-src': ['self', 'data:', 'blob:', 'https:'],
+				'font-src': ['self', 'https://fonts.gstatic.com', 'data:'],
+				'connect-src': [
+					'self',
+					'ws:',
+					'wss:',
+					'https://openrouter.ai',
+					'https://unpkg.com',
+					'https://cdn.jsdelivr.net'
+				],
+				'worker-src': ['self', 'blob:', 'https://cdn.jsdelivr.net'],
+				'media-src': ['self', 'data:', 'blob:'],
+				'object-src': ['none'],
+				'frame-ancestors': ['none'],
+				'base-uri': ['self'],
+				'form-action': ['self']
+			}
+		},
 		csrf: {
 			trustedOrigins: ['self']
 		},
