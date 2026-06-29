@@ -19,6 +19,7 @@
 	import type { BukuKasRecord, LaporanSummary } from '$lib/types/laporan';
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { groupReportTransactions } from '$lib/utils/reportGrouping';
 
 	const swipeNav = createSwipeNavigation(3); // 3 = Laporan
 
@@ -338,103 +339,7 @@
 	});
 	let laporan: BukuKasRecord[] = $state([]);
 
-	function normalizeReportJenis(t: BukuKasRecord): 'pendapatan_usaha' | 'beban_usaha' | 'lainnya' {
-		const jenis = String(t?.jenis || '')
-			.trim()
-			.toLowerCase();
-		if (jenis === 'pendapatan_usaha' || jenis === 'beban_usaha' || jenis === 'lainnya') {
-			return jenis;
-		}
-		return t?.tipe === 'out' ? 'beban_usaha' : 'pendapatan_usaha';
-	}
-
-	function normalizePaymentMethod(t: BukuKasRecord): 'tunai' | 'non-tunai' {
-		const method = String(t?.metode_bayar || '')
-			.trim()
-			.toLowerCase();
-		return method === 'tunai' ? 'tunai' : 'non-tunai';
-	}
-
-	// Tambahan: Data transaksi kas terstruktur untuk accordion
-	let pemasukanUsahaDetail = $derived(
-		laporan.filter(
-			(t: BukuKasRecord) => t.tipe === 'in' && normalizeReportJenis(t) === 'pendapatan_usaha'
-		)
-	);
-	let pemasukanLainDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'in' && normalizeReportJenis(t) === 'lainnya')
-	);
-	let bebanUsahaDetail = $derived(
-		laporan.filter(
-			(t: BukuKasRecord) => t.tipe === 'out' && normalizeReportJenis(t) === 'beban_usaha'
-		)
-	);
-	let bebanLainDetail = $derived(
-		laporan.filter((t: BukuKasRecord) => t.tipe === 'out' && normalizeReportJenis(t) === 'lainnya')
-	);
-
-	let pemasukanUsahaQris = $derived(
-		pemasukanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-	);
-	let pemasukanUsahaTunai = $derived(
-		pemasukanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
-	);
-	let pemasukanLainQris = $derived(
-		pemasukanLainDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-	);
-	let pemasukanLainTunai = $derived(
-		pemasukanLainDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
-	);
-
-	let bebanUsahaQris = $derived(
-		bebanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-	);
-	let bebanUsahaTunai = $derived(
-		bebanUsahaDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
-	);
-	let bebanLainQris = $derived(
-		bebanLainDetail.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-	);
-	let bebanLainTunai = $derived(
-		bebanLainDetail.filter((t) => normalizePaymentMethod(t) === 'tunai')
-	);
-
-	// Reactive statements untuk total QRIS/Tunai
-	let totalQrisAll = $derived(
-		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiAll = $derived(
-		[...pemasukanUsahaDetail, ...pemasukanLainDetail, ...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalQrisPemasukan = $derived(
-		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiPemasukan = $derived(
-		[...pemasukanUsahaDetail, ...pemasukanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalQrisPengeluaran = $derived(
-		[...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'non-tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
-
-	let totalTunaiPengeluaran = $derived(
-		[...bebanUsahaDetail, ...bebanLainDetail]
-			.filter((t) => normalizePaymentMethod(t) === 'tunai')
-			.reduce((sum: number, t: BukuKasRecord) => sum + (t.nominal || 0), 0)
-	);
+	let reportGroups = $derived(groupReportTransactions(laporan));
 
 	// Fungsi untuk menghitung range tanggal berdasarkan filter type
 	function calculateDateRange(type: string, date?: string, month?: string, year?: string) {
@@ -660,25 +565,30 @@
 			</div>
 
 			<!-- Ringkasan Keuangan ala Beranda -->
-			<LaporanSummaryCards {isLoadingReport} {summary} {totalQrisAll} {totalTunaiAll} />
+			<LaporanSummaryCards
+				{isLoadingReport}
+				{summary}
+				totalQrisAll={reportGroups.totalQrisAll}
+				totalTunaiAll={reportGroups.totalTunaiAll}
+			/>
 
 			<!-- Section Laporan Detail -->
 			<div class="mt-4 flex flex-col gap-2 px-2 md:mt-8 md:gap-8 md:px-0 lg:flex-row lg:gap-6">
 				<!-- Accordion: Pemasukan dan Pengeluaran -->
 				<LaporanAccordions
 					{isLoadingReport}
-					{totalQrisPemasukan}
-					{totalTunaiPemasukan}
-					{totalQrisPengeluaran}
-					{totalTunaiPengeluaran}
-					{pemasukanUsahaQris}
-					{pemasukanUsahaTunai}
-					{pemasukanLainQris}
-					{pemasukanLainTunai}
-					{bebanUsahaQris}
-					{bebanUsahaTunai}
-					{bebanLainQris}
-					{bebanLainTunai}
+					totalQrisPemasukan={reportGroups.totalQrisPemasukan}
+					totalTunaiPemasukan={reportGroups.totalTunaiPemasukan}
+					totalQrisPengeluaran={reportGroups.totalQrisPengeluaran}
+					totalTunaiPengeluaran={reportGroups.totalTunaiPengeluaran}
+					pemasukanUsahaQris={reportGroups.pemasukanUsahaQris}
+					pemasukanUsahaTunai={reportGroups.pemasukanUsahaTunai}
+					pemasukanLainQris={reportGroups.pemasukanLainQris}
+					pemasukanLainTunai={reportGroups.pemasukanLainTunai}
+					bebanUsahaQris={reportGroups.bebanUsahaQris}
+					bebanUsahaTunai={reportGroups.bebanUsahaTunai}
+					bebanLainQris={reportGroups.bebanLainQris}
+					bebanLainTunai={reportGroups.bebanLainTunai}
 				/>
 				<!-- Section Laba/Rugi - Desktop Layout -->
 				<LaporanLabaRugiCard {isLoadingReport} {summary} />
