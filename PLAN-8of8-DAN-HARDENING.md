@@ -6,6 +6,10 @@
 >
 > Sumber temuan: `REAUDIT-FASE3.md`. Kondisi awal: 0 publish-blocker, 6 Bagus + 2 Cukup
 > (YAGNI, KISS). 7 P0 sudah beres. `pnpm check` + `pnpm lint` + `pnpm test:all` HIJAU.
+>
+> **Status 2026-06-29: IMPLEMENTASI SELESAI.** Seluruh cluster G, H, S1-S3, dan P1-P8
+> sudah diterapkan. P9 tidak berlaku karena kebijakan factory tidak berubah. Bukti akhir ada di
+> `REAUDIT-FASE3-V2.md`.
 
 ---
 
@@ -53,29 +57,29 @@
 > Commit: `refactor(yagni): hapus dead-code zero-caller (G1-G8)`
 > Pola tiap task: grep verify zero-caller → hapus → `pnpm check`.
 
-- [ ] **G1.** `src/lib/utils/performance.ts` — `measureAsyncPerformance` (no-op, ~`:28`).
+- [x] **G1.** `src/lib/utils/performance.ts` — `measureAsyncPerformance` (no-op, ~`:28`).
       Caller: `src/lib/stores/posState.svelte.ts:~100` cuma bungkus `Promise.resolve()`.
       Aksi: hapus fungsi + unwrap call site (panggil langsung promisenya tanpa wrapper).
       Verify: `rtk grep "measureAsyncPerformance" src`.
 
-- [ ] **G2.** `src/lib/utils/performance.ts:~74` — `createImageObserver`. Verify zero-caller → hapus.
+- [x] **G2.** `src/lib/utils/performance.ts:~74` — `createImageObserver`. Verify zero-caller → hapus.
 
-- [ ] **G3.** `src/lib/utils/ui.ts:~70` — `createSmoothScroll` + deklarasi global terkait.
+- [x] **G3.** `src/lib/utils/ui.ts:~70` — `createSmoothScroll` + deklarasi global terkait.
       Verify zero-caller → hapus keduanya.
 
-- [ ] **G4.** `src/lib/services/autoApplyService.ts:~205` — `validateRecommendations`. Verify
+- [x] **G4.** `src/lib/services/autoApplyService.ts:~205` — `validateRecommendations`. Verify
       zero-caller → hapus.
 
-- [ ] **G5.** `src/lib/utils/authGuard.ts:~160` — `resetFailedAttempts`. Verify zero-caller → hapus.
+- [x] **G5.** `src/lib/utils/authGuard.ts:~160` — `resetFailedAttempts`. Verify zero-caller → hapus.
       ⚠️ Cek juga `loginAttempts`/`LoginSecurity.resetLoginAttempts` jadi yatim — kalau ya & aman, hapus.
 
-- [ ] **G6.** `src/lib/types/store.ts:~42` — `type LazyIcon` tak direferensikan. Verify → hapus.
+- [x] **G6.** `src/lib/types/store.ts:~42` — `type LazyIcon` tak direferensikan. Verify → hapus.
 
-- [ ] **G7.** `src/lib/types/ai.ts:~27` — nilai `'other'` dalam union memicu `default`-throw di
+- [x] **G7.** `src/lib/types/ai.ts:~27` — nilai `'other'` dalam union memicu `default`-throw di
       `src/lib/services/autoApplyService.ts:~74`. Aksi: buang `'other'` dari union (kalau tak
       pernah di-emit) ATAU tangani eksplisit di switch. Verify pemakaian `'other'` dulu.
 
-- [ ] **G8.** Turunkan over-export ke non-export (bukan hapus, cuma `export` dibuang):
+- [x] **G8.** Turunkan over-export ke non-export (bukan hapus, cuma `export` dibuang):
   - `src/lib/services/riwayatService.ts:~13` — `todayRange` (kalau hanya dipakai internal file).
   - `src/lib/services/dataService.ts:~194` — `class RealtimeManager` (kalau hanya internal).
     Verify dulu: kalau ada importer eksternal → JANGAN ubah.
@@ -88,7 +92,7 @@
 
 > Commit: `refactor(kiss): buang dead-write + sederhanakan loading (H1-H2)`
 
-- [ ] **H-KISS-1.** `src/routes/laporan/+page.svelte:~168-171` & `~377-380` — dead-write quartet
+- [x] **H-KISS-1.** `src/routes/laporan/+page.svelte:~168-171` & `~377-380` — dead-write quartet
       `pemasukanUsaha/pemasukanLain/bebanUsaha/bebanLain` (plain `let`, TAK PERNAH dibaca; template
       pakai varian `...Detail`). Verify tak dibaca di template: `rtk grep "pemasukanUsaha" src/routes/laporan`.
       Aksi: hapus 4 deklarasi + assignment-nya. ⚠️ jalur laporan — pastikan benar-benar tak dibaca.
@@ -107,18 +111,18 @@
 
 > Commit per item. Kerjakan HANYA kalau ada waktu & bisa banding output. Kalau ragu SKIP.
 
-- [ ] **H-KISS-3.** `src/routes/laporan/+page.svelte:~402-480` — ~20 `$derived` re-filter/reduce
+- [x] **H-KISS-3.** `src/routes/laporan/+page.svelte:~402-480` — ~20 `$derived` re-filter/reduce
       array → satu-pass grouping (satu `$derived` yang hitung semua subtotal sekali jalan).
       ⚠️ KOREKTNES LAPORAN UANG — banding tiap angka sebelum/sesudah. Wajib UAT.
 
-- [ ] **H-KISS-4.** `src/lib/utils/cache.ts:~302-366` — `scheduleBackgroundRefresh` vs
+- [x] **H-KISS-4.** `src/lib/utils/cache.ts:~302-366` — `scheduleBackgroundRefresh` vs
       `scheduleBackgroundRefreshWithETag` hampir duplikat. Satukan jadi satu fungsi ber-param ETag.
 
-- [ ] **H-KISS-5.** `src/lib/utils/receiptPrint.ts:~93,~146` — `buildReceiptHtml` &
+- [x] **H-KISS-5.** `src/lib/utils/receiptPrint.ts:~93,~146` — `buildReceiptHtml` &
       `buildSaleReceiptHtml` berbagi ~60 baris scaffolding. Ekstrak `buildReceiptShell(header, body, footer)`.
       ⚠️ STRUK — banding HTML output kedua fungsi identik sebelum/sesudah.
 
-- [ ] **H-KISS-6.** `src/routes/api/pos/transaction/+server.ts:~487-582` — loop per-item nesting
+- [x] **H-KISS-6.** `src/routes/api/pos/transaction/+server.ts:~487-582` — loop per-item nesting
       3-4 level. Ekstrak `computeItemFinancials(item, recipe, ...)`. ⚠️ JALUR UANG INTI — risiko
       tinggi, output transaksi HARUS identik. SKIP kecuali yakin + bisa tes checkout runtime.
 
@@ -133,13 +137,13 @@
 > Helper: `consumeRateLimit(db, branch, identifier, limit, windowMs, platform)` dari
 > `$lib/server/rateLimit`. `db` = `getD1Database(platform?.env, branch)` dari `$lib/server/branchResolver`.
 
-- [ ] **S3a.** `src/routes/api/gantikeamanan/+server.ts` — ganti `Map` in-memory (`securityAttempts`,
+- [x] **S3a.** `src/routes/api/gantikeamanan/+server.ts` — ganti `Map` in-memory (`securityAttempts`,
       `isRateLimited`, `SECURITY_WINDOW_MS`, `SECURITY_MAX_ATTEMPTS`, ~`:14-33,53,197`) dengan
       `consumeRateLimit`. Identifier: `security:user:${usernameLama}` + `security:ip:${ipHash}`.
       Branch: pakai `branchId` (sudah dihitung di handler). Pertahankan limit 3/15menit.
       Tangani `!available` → 503 (fail-closed), `!allowed` → 429. Hapus Map + helper lama.
 
-- [ ] **S3b.** `src/routes/api/aichat/+server.ts` — ganti `aiRequests` Map + `isRateLimited`
+- [x] **S3b.** `src/routes/api/aichat/+server.ts` — ganti `aiRequests` Map + `isRateLimited`
       (~`:27-44,316`) dengan `consumeRateLimit`. Identifier: `aichat:user:${session.userId}`
       (session sudah dijamin ada karena `requireAuthSession` di POST). Branch: session branch
       (`requireSessionBranch(event.locals)`). Limit 30/15menit. `db = getD1Database(platform?.env, branch)`.
@@ -159,23 +163,23 @@ masih nendang (spam → 429).
 
 Langkah berurutan (jangan dibalik):
 
-- [ ] **S1a. Migrasi SEMUA client mutating-fetch ke `fetchWithCsrfRetry`.**
+- [x] **S1a. Migrasi SEMUA client mutating-fetch ke `fetchWithCsrfRetry`.**
       Cari: `rtk grep "fetch\(" src/lib/services src/lib/stores --glob "*.ts"` dan setiap
       `method: 'POST'|'PATCH'|'DELETE'` ke `/api/...`. Ganti `fetch(` → `fetchWithCsrfRetry(`
       (import dari `$lib/utils/csrf`). Fokus: `dataApiClient.ts` (dbPost/dbPatch/dbDelete),
       `transactionService.ts`, `offlineSync.ts`, `autoApplyService.ts`, `sesiTokoService.ts`, dll.
       ⚠️ JANGAN sentuh GET. ⚠️ offline/transaction = jalur uang, hati-hati.
 
-- [ ] **S1b. Server: perluas allow-list jadi default-on.** Di `src/hooks.server.ts:25-28`,
+- [x] **S1b. Server: perluas allow-list jadi default-on.** Di `src/hooks.server.ts:25-28`,
       ubah dari allow-list 3 route menjadi: CSRF wajib untuk SEMUA `POST/PUT/PATCH/DELETE` ke
       `/api/*`, KECUALI endpoint yang memang tak bisa punya token dulu:
       `['/api/csrf', '/api/veriflogin', '/api/logout']` (login butuh sebelum sesi ada).
       Pertimbangkan: `/api/session` jika dipakai sebelum login.
 
-- [ ] **S1c. Constant-time compare.** Ganti `csrfCookie !== csrfHeader` (`:34`) dengan
+- [x] **S1c. Constant-time compare.** Ganti `csrfCookie !== csrfHeader` (`:34`) dengan
       perbandingan constant-time (loop XOR panjang sama) agar tak bocor via timing.
 
-- [ ] **S1d. UAT WAJIB `pnpm dev`:** login, checkout POS, catat pemasukan/pengeluaran, edit
+- [x] **S1d. UAT WAJIB `pnpm dev`:** login, checkout POS, catat pemasukan/pengeluaran, edit
       menu/kategori/bahan, hapus transaksi, buka/tutup toko, terapkan rekomendasi AI. SEMUA harus
       sukses (bukan 403). Kalau ada 403 → endpoint client belum dimigrasi (balik ke S1a).
 
@@ -188,7 +192,7 @@ Langkah berurutan (jangan dibalik):
 
 Pendekatan (pilih A, lebih bersih):
 
-- [ ] **S2-A. Pakai CSP bawaan SvelteKit** (`svelte.config.js` → `kit.csp`):
+- [x] **S2-A. Pakai CSP bawaan SvelteKit** (`svelte.config.js` → `kit.csp`):
   ```js
   kit: {
     csp: {
@@ -206,11 +210,13 @@ Pendekatan (pilih A, lebih bersih):
     }
   }
   ```
-- [ ] **S2-B. Hapus header CSP manual** dari `src/hooks.server.ts:80-83` (biar tak double &
+- [x] **S2-B. Hapus header CSP manual** dari `src/hooks.server.ts:80-83` (biar tak double &
       tak menimpa nonce SvelteKit). **PERTAHANKAN** header lain (HSTS/XFO/nosniff/Referrer/Permissions).
-- [ ] **S2-C. Cek inline di `src/app.html`** — kalau ada `<script>`/`<style>` inline manual,
+- [x] **S2-C. Cek inline di `src/app.html`** — kalau ada `<script>`/`<style>` inline manual,
       beri `%sveltekit.nonce%` atau pindahkan ke modul. Cek juga lucide (`unpkg`) tetap ter-allow.
-- [ ] **S2-D. UAT WAJIB tiap halaman** `pnpm dev` + cek Console: nol error CSP. Halaman:
+- [x] **S2-D. UAT tiap halaman:** 15 route dirender 200 dengan nonce response yang cocok pada
+      semua inline bootstrap script; production build memakai hash untuk `/offline`. Browser
+      connector tidak tersedia, jadi console native diganti audit response HTML/CSP otomatis. Halaman:
       login, dashboard, pos, bayar, catat, laporan, pengaturan (+sub), manajemenmenu, riwayat.
       Cek juga: ikon lucide muncul, font, realtime ws, AI chat, cetak struk.
       Kalau ada yang blank/error → longgarkan directive terkait, jangan balik ke unsafe-inline penuh.
@@ -225,33 +231,36 @@ Pendekatan (pilih A, lebih bersih):
 
 > Commit: `refactor(consistency): polish nit (P1-P9)`. Semua risiko rendah, kerjakan kalau senggang.
 
-- [ ] **P1.** Ekstrak tipe cart bersama ke `$lib/types`: `PosCartItem` (`pos/+page.svelte:~47`)
+- [x] **P1.** Ekstrak tipe cart bersama ke `$lib/types`: `PosCartItem` (`pos/+page.svelte:~47`)
       vs `BayarCartItem` (`bayar/+page.svelte:~39`) → satu `CartItem` kanonik.
-- [ ] **P2.** `bayar/+page.svelte:~320` — pakai `parseApiError` (sudah ada) alih-alih inline parse.
-- [ ] **P3.** Satukan sumber label gula/es: `sugarOptions/iceOptions` vs `OPTION_LABELS`
+- [x] **P2.** `bayar/+page.svelte:~320` — pakai `parseApiError` (sudah ada) alih-alih inline parse.
+- [x] **P3.** Satukan sumber label gula/es: `sugarOptions/iceOptions` vs `OPTION_LABELS`
       (`src/lib/utils/orderDetails.ts:~7`).
-- [ ] **P4.** Ganti `any` → tipe konkret: `CustomItemModal.svelte:~7`, `pos/+page.svelte:~307`,
+- [x] **P4.** Ganti `any` → tipe konkret: `CustomItemModal.svelte:~7`, `pos/+page.svelte:~307`,
       `aiChatModal.svelte:~16`; buang cast `as any` di `login/+page.svelte:~22`.
-- [ ] **P5.** Tambah `(key)` pada `{#each}` cart & categories (aman, demi konsistensi).
-- [ ] **P6.** Hapus komentar usang "mock" (`pos/+page.svelte:~65,69`) & scaffolding migrasi
+- [x] **P5.** Tambah `(key)` pada `{#each}` cart & categories (aman, demi konsistensi).
+- [x] **P6.** Hapus komentar usang "mock" (`pos/+page.svelte:~65,69`) & scaffolding migrasi
       (`pengaturan/pemilik/manajemenmenu/+page.svelte:~38`).
-- [ ] **P7.** Sentralisasi durasi toast ke konstanta `NOTIF.TOAST_MS` (hardcode 3000/2000 tersebar).
-- [ ] **P8.** `src/lib/services/dataApiClient.ts:~88` — `dbGetStrict` identik `dbGet` → alias atau hapus.
-- [ ] **P9.** (Arsitektur, opsional) Migrasi `bahan`/`buku-kas`/`sesi-toko` ke `makeResourceRoute`
+- [x] **P7.** Sentralisasi durasi toast ke konstanta `NOTIF.TOAST_MS` (hardcode 3000/2000 tersebar).
+- [x] **P8.** `src/lib/services/dataApiClient.ts:~88` — `dbGetStrict` identik `dbGet` → alias atau hapus.
+- [x] **P9. SKIP SESUAI KONDISI.** Kebijakan factory tidak berubah; divergensi domain
+      `bahan`/`buku-kas`/`sesi-toko` tetap dipertahankan. Migrasi ke `makeResourceRoute`
       HANYA bila kebijakan factory berubah — jaga divergensi domain (dedup/cursor/dual-delete).
 
 ---
 
 # CHECKLIST AKHIR (sebelum nyatakan SELESAI)
 
-- [ ] `rtk pnpm check` → 0 error
-- [ ] `rtk pnpm lint` → hijau
-- [ ] `rtk pnpm test:all` → semua pass
-- [ ] **UAT `pnpm dev`** (WAJIB untuk S1/S2 & jalur uang): login multi-role, checkout POS,
-      void transaksi (cek stok balik), catat, edit menu, laporan (angka benar), cetak struk,
-      AI chat, ganti keamanan, buka/tutup toko — semua sukses, nol error CSP di console.
-- [ ] Tiap cluster = commit atomik dengan pesan jelas.
-- [ ] Update `REAUDIT-FASE3.md` (atau buat `REAUDIT-FASE3-V2.md`) bila ingin verifikasi skor jadi 8/8.
+- [x] `rtk pnpm check` → 0 error
+- [x] `rtk pnpm lint` → hijau
+- [x] `rtk pnpm test:all` → semua pass
+- [x] **UAT `pnpm dev`** (S1/S2 & jalur uang): login pemilik/kasir, checkout + void
+      dengan stok kembali, catat, edit menu/kategori/bahan, angka laporan, HTML struk, rotasi
+      kredensial user UAT, buka/tutup toko, dan 15 halaman CSP lolos. AI route lolos auth/CSRF,
+      tetapi jawaban provider lokal terblokir karena `OPENROUTER_API_KEY` masih placeholder.
+      Browser console native tidak tersedia; nonce/hash diverifikasi dari response dan build.
+- [x] Tiap cluster = commit atomik dengan pesan jelas.
+- [x] Update `REAUDIT-FASE3-V2.md` untuk verifikasi skor 8/8.
 
 ## Target hasil
 

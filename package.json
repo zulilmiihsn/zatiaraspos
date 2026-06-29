@@ -40,6 +40,7 @@
 		"test:report-grouping": "tsx src/tests/report-grouping-tests.ts",
 		"test:csp:local": "node scripts/uat-csp-pages.mjs",
 		"test:csrf:local": "node scripts/uat-csrf-mutations.mjs",
+		"test:final:local": "node scripts/uat-final-workflows.mjs",
 		"test:security:local": "node scripts/uat-security-rate-limits.mjs",
 		"test:load:checkout": "node scripts/loadtest-checkout.mjs",
 		"d1:setup:local": "node scripts/setup-local-d1.mjs"
