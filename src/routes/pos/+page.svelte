@@ -17,7 +17,9 @@
 	import { userRole } from '$lib/stores/userRole.svelte';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import { formatRupiah } from '$lib/utils/currency';
-	import { POS_SKELETON } from '$lib/constants/ui';
+	import { NOTIF, POS_SKELETON } from '$lib/constants/ui';
+	import type { CartItem } from '$lib/types/cart';
+	import { ICE_OPTIONS, SUGAR_OPTIONS } from '$lib/utils/orderDetails';
 	import { Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
 	$effect(() => {
@@ -44,15 +46,6 @@
 		type PosAddOn
 	} from '$lib/stores/posState.svelte';
 
-	interface PosCartItem {
-		product: PosProduct;
-		jumlah: number;
-		addOns: PosAddOn[];
-		gula: string;
-		es: string;
-		catatan: string;
-	}
-
 	const pos = createPosState();
 
 	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
@@ -62,24 +55,14 @@
 	// Kategori produk
 	let selectedCategory = $state('all');
 
-	// Produk mock dengan kategori
 	let categories = $derived(pos.kategoriData);
 	let products = $derived(pos.produkData);
 
-	// Topping mock tanpa emoji/icon
 	let addOns = $derived(pos.tambahanData);
 
 	// Jenis gula dan es
-	const sugarOptions = [
-		{ id: 'no', label: 'Tanpa Gula' },
-		{ id: 'less', label: 'Sedikit Gula' },
-		{ id: 'normal', label: 'Normal' }
-	];
-	const iceOptions = [
-		{ id: 'no', label: 'Tanpa Es' },
-		{ id: 'less', label: 'Sedikit Es' },
-		{ id: 'normal', label: 'Normal' }
-	];
+	const sugarOptions = SUGAR_OPTIONS;
+	const iceOptions = ICE_OPTIONS;
 
 	let showModal = $state(false);
 	let selectedProduct = $state<PosProduct | null>(null);
@@ -90,7 +73,7 @@
 	let selectedNote = $state('');
 
 	// Keranjang sementara
-	let cart = $state<PosCartItem[]>([]);
+	let cart = $state<CartItem[]>([]);
 
 	// Untuk track error gambar per produk (pakai string key)
 	let imageError = $state<Record<string, boolean>>({});
@@ -206,9 +189,9 @@
 			.join(',');
 		const itemKey = `${selectedProduct?.id}-${addOnsKey}-${sanitizedSugar}-${sanitizedIce}-${selectedNote.trim()}`;
 
-		const existingIdx = cart.findIndex((item: PosCartItem) => {
+		const existingIdx = cart.findIndex((item: CartItem) => {
 			const itemAddOnsKey = (item.addOns || [])
-				.map((a: PosAddOn) => a.id)
+				.map((a) => a.id)
 				.sort()
 				.join(',');
 			const currentItemKey = `${item.product.id}-${itemAddOnsKey}-${item.gula}-${item.es}-${item.catatan}`;
@@ -299,13 +282,26 @@
 		if (errorNotificationTimeout) clearTimeout(errorNotificationTimeout);
 		errorNotificationTimeout = setTimeout(() => {
 			showErrorNotification = false;
-		}, 3000);
+		}, NOTIF.TOAST_MS);
 	}
 
 	let showCustomItemModal = $state(false);
 
-	function addCustomItemToCart(item: any) {
+	function addCustomItemToCart(item: CartItem) {
 		cart = [...cart, item];
+	}
+
+	function cartItemKey(item: CartItem): string {
+		return [
+			item.product.id,
+			item.addOns
+				.map((addOn) => addOn.id)
+				.sort()
+				.join(','),
+			item.gula,
+			item.es,
+			item.catatan
+		].join('|');
 	}
 
 	// Helper untuk ambil nama kategori dari kategori_id
@@ -427,7 +423,7 @@
 					<span>Belum ada kategori</span>
 				</div>
 			{:else}
-				{#each categories ?? [] as c}
+				{#each categories ?? [] as c (c.id)}
 					<button
 						class="mb-1 min-w-[96px] flex-shrink-0 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {selectedCategory ===
 						String(c.id)
@@ -482,7 +478,7 @@
 					role="button"
 					tabindex="0"
 				>
-					{#each cart as item, idx}
+					{#each cart as item, idx (cartItemKey(item))}
 						<div
 							class="mb-3 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 shadow-sm"
 						>
@@ -493,7 +489,7 @@
 								<div class="text-xs font-medium text-gray-500">
 									{[
 										item.addOns && item.addOns.length > 0
-											? item.addOns.map((a: PosAddOn) => a.nama).join(', ')
+											? item.addOns.map((a) => a.nama).join(', ')
 											: '',
 										item.catatan ? `${item.catatan}` : '',
 										item.product.tipe === 'minuman' && item.gula !== 'normal'
@@ -594,7 +590,7 @@
 					<div class="mt-4 mb-2 text-base font-semibold text-gray-800">Ekstra</div>
 					{#if selectedProduct && selectedProduct.ekstra_ids && selectedProduct.ekstra_ids.length > 0 && addOns.filter( (a) => selectedProduct?.ekstra_ids?.includes(a.id) ).length > 0}
 						<div class="mb-6 grid grid-cols-2 gap-3">
-							{#each addOns.filter((a) => selectedProduct?.ekstra_ids?.includes(a.id)) as a}
+							{#each addOns.filter((a) => selectedProduct?.ekstra_ids?.includes(a.id)) as a (a.id)}
 								<button
 									class="flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border py-1.5 text-center text-base font-medium whitespace-normal transition-all duration-150 active:scale-[0.98] {selectedAddOns.includes(
 										a.id

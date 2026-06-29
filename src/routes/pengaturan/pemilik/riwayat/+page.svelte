@@ -88,10 +88,6 @@
 
 			showDeleteModal = false;
 			toastManager.showToastNotification('Transaksi berhasil dihapus.', 'success');
-			// Auto hide notification after 3 seconds
-			setTimeout(() => {
-				toastManager.hideToast();
-			}, 3000);
 		} catch (error) {
 			const err = error as Error;
 			ErrorHandler.logError(err, 'deleteTransaksi');
@@ -126,9 +122,6 @@
 			);
 			selectedTransaksi = { ...selectedTransaksi, metode_bayar: dbMethod };
 			toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
-			setTimeout(() => {
-				toastManager.hideToast();
-			}, 2000);
 			await fetchTransaksiHariIni();
 		} catch (e) {
 			ErrorHandler.logError(e, 'updatePaymentMethod');
@@ -493,7 +486,6 @@
 			show={toastManager.showToast}
 			message={toastManager.toastMessage}
 			type={toastManager.toastType}
-			duration={3000}
 			position="top"
 		/>
 	{/if}

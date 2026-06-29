@@ -1,6 +1,7 @@
 /**
  * UI utilities untuk komponen Svelte
  */
+import { NOTIF } from '$lib/constants/ui';
 
 // Toast management utility to reduce code duplication
 export function createToastManager() {
@@ -15,7 +16,7 @@ export function createToastManager() {
 	function showToastNotification(
 		message: string,
 		type: 'success' | 'error' | 'warning' | 'info' = 'success',
-		duration: number = 3000
+		duration: number = NOTIF.TOAST_MS
 	) {
 		toastState.message = message;
 		toastState.type = type;

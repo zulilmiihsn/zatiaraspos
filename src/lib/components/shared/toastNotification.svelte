@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NOTIF } from '$lib/constants/ui';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { onDestroy } from 'svelte';
@@ -7,7 +8,7 @@
 		show = $bindable(false),
 		message = '',
 		type = 'success',
-		duration = 2000,
+		duration = NOTIF.TOAST_MS,
 		position = 'top',
 		autoDismiss = true,
 		onDismiss

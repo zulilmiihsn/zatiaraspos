@@ -19,7 +19,7 @@
 	let usernameError = $state('');
 	let passwordError = $state('');
 
-	let branch: BranchType = $state('samarinda') as any;
+	let branch: BranchType = $state('samarinda');
 	$effect(() => {
 		selectedBranch.value = branch as BranchType;
 	});
@@ -74,8 +74,8 @@
 			showLottieSuccess = true;
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			goto('/');
-		} catch (e: any) {
-			errorMessage = e.message;
+		} catch (e: unknown) {
+			errorMessage = e instanceof Error ? e.message : 'Login gagal';
 			securityUtils.logSecurityEvent('login_failed', {
 				username: sanitizedUsername,
 				reason: 'invalid_credentials'

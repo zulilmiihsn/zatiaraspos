@@ -85,17 +85,7 @@ export async function dbGet<T extends DataRecord = DataRecord>(
 	return (await response.json()) as T[];
 }
 
-export async function dbGetStrict<T extends DataRecord = DataRecord>(
-	table: string,
-	params: Record<string, string> = {}
-): Promise<T[]> {
-	const url = READ_ROUTES[table];
-	if (!url) throw new Error(`[dataApiClient] dbGetStrict: unknown table "${table}"`);
-	const qs = new URLSearchParams({ branch: currentBranch(), ...params }).toString();
-	const response = await fetch(`${url}?${qs}`);
-	if (!response.ok) throw await parseError(response, `GET ${table}`);
-	return (await response.json()) as T[];
-}
+export const dbGetStrict = dbGet;
 
 /**
  * Ambil satu halaman cursor-paginated dari per-resource GET route.

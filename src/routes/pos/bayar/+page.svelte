@@ -12,15 +12,16 @@
 	import { buildSaleReceiptHtml, printViaIntent } from '$lib/utils/receiptPrint';
 
 	import { addPendingTransaction } from '$lib/utils/offline';
-	import { ErrorHandler } from '$lib/utils/errorHandling';
+	import { ErrorHandler, parseApiError } from '$lib/utils/errorHandling';
 	import { formatRupiah } from '$lib/utils/currency';
-	import { PAYMENT } from '$lib/constants/ui';
+	import { NOTIF, PAYMENT } from '$lib/constants/ui';
 	import { formatOrderDetails } from '$lib/utils/orderDetails';
 	import { dataService } from '$lib/services/dataService';
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
 	import type { ReceiptSettings } from '$lib/types/laporan';
 	import type { TokoSession } from '$lib/types/store';
+	import type { CartItem } from '$lib/types/cart';
 	import {
 		ArrowLeft,
 		Banknote,
@@ -31,21 +32,19 @@
 		WifiOff
 	} from 'lucide-svelte';
 
-	interface BayarAddOn {
-		id: string;
-		nama: string;
-		harga: number;
+	let cart: CartItem[] = $state([]);
+	function cartItemKey(item: CartItem): string {
+		return [
+			item.product.id,
+			item.addOns
+				.map((addOn) => addOn.id)
+				.sort()
+				.join(','),
+			item.gula,
+			item.es,
+			item.catatan
+		].join('|');
 	}
-	interface BayarCartItem {
-		product: { id: string; nama: string; harga: number; tipe: string };
-		jumlah: number;
-		addOns: BayarAddOn[];
-		gula: string;
-		es: string;
-		catatan: string;
-	}
-
-	let cart: BayarCartItem[] = $state([]);
 	let customerName = $state('');
 	let paymentMethod = $state('');
 	let isOffline = $state(false);
@@ -87,7 +86,7 @@
 		if (errorNotificationTimeout !== null) clearTimeout(errorNotificationTimeout);
 		errorNotificationTimeout = window.setTimeout(() => {
 			showErrorNotification = false;
-		}, 3000);
+		}, NOTIF.TOAST_MS);
 	}
 
 	function generateTransactionCode() {
@@ -155,7 +154,7 @@
 				totalHarga += item.jumlah * (item.product.harga ?? 0);
 				if (item.addOns) {
 					totalHarga += item.addOns.reduce(
-						(a: number, b: BayarAddOn) => a + (b.harga ?? 0) * item.jumlah,
+						(total, addOn) => total + (addOn.harga ?? 0) * item.jumlah,
 						0
 					);
 				}
@@ -295,7 +294,7 @@
 			nama_pelanggan: customerName || null,
 			metode_bayar: payment,
 			cash_received: cashReceived ? Number(cashReceived) : null,
-			items: cart.map((item: BayarCartItem) => {
+			items: cart.map((item) => {
 				const isCustom = item.product.id.toString().startsWith('custom-');
 				return {
 					product_id: isCustom ? null : item.product.id,
@@ -318,8 +317,7 @@
 					body: JSON.stringify(requestPayload)
 				});
 				if (!response.ok) {
-					const errorBody = await response.json().catch(() => ({}));
-					throw new Error(errorBody?.message || errorBody?.error || `HTTP ${response.status}`);
+					throw new Error(await parseApiError(response, `HTTP ${response.status}`));
 				}
 			} catch (error) {
 				if (error instanceof TypeError || !navigator.onLine) {
@@ -484,7 +482,7 @@
 						</div>
 					</div>
 					<ul class="divide-y divide-stone-100">
-						{#each cart as item}
+						{#each cart as item (cartItemKey(item))}
 							<li class="flex flex-col gap-1 py-3">
 								<div class="flex items-start justify-between gap-3">
 									<div class="min-w-0">

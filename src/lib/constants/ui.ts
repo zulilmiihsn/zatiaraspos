@@ -3,7 +3,8 @@ export const PAYMENT = {
 } as const;
 
 export const NOTIF = {
-	AUTO_DISMISS_MS: 2_000
+	AUTO_DISMISS_MS: 2_000,
+	TOAST_MS: 3_000
 } as const;
 
 export const POS_SKELETON = {

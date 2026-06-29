@@ -30,13 +30,9 @@
 		show={s.toastManager.showToast}
 		message={s.toastManager.toastMessage}
 		type={s.toastManager.toastType}
-		duration={3000}
 		position="top"
 	/>
 {/if}
-
-<!-- Seluruh markup manajemen menu, kategori, ekstra, dan modal dari file src/routes/pengaturan/pemilik/+page.svelte -->
-<!-- Tambahkan seluruh markup (HTML/Svelte) untuk list/tabel menu, kategori, ekstra, form/modal tambah/edit/hapus, modal/modal sheet, komponen upload/crop gambar, dan semua tampilan serta interaksi CRUD menu, kategori, ekstra dari file /pemilik ke sini. Pastikan semua event handler, binding, dan logic tetap berjalan. Jangan sertakan bagian keamanan, riwayat, atau navigasi utama. -->
 
 <div transition:fly={{ y: 32, duration: 320, easing: cubicOut }}>
 	<!-- Custom Top Bar -->
@@ -1046,7 +1042,6 @@
 			show={s.showNotifModal}
 			message={s.notifModalMsg}
 			type={s.notifModalType === 'error' ? 'error' : 'success'}
-			duration={2000}
 			position="top"
 		/>
 	{/if}

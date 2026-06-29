@@ -18,6 +18,7 @@
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import { browser } from '$app/environment';
 	import { dataService } from '$lib/services/dataService';
+	import { NOTIF } from '$lib/constants/ui';
 
 	// PWA Installation - Web Component
 	let pwaElement: any = null;
@@ -54,7 +55,7 @@
 		clearTimeout(notificationTimeout);
 		notificationTimeout = setTimeout(() => {
 			showNotification = false;
-		}, 3000);
+		}, NOTIF.TOAST_MS);
 	}
 
 	onMount(async () => {

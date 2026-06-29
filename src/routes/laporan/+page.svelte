@@ -474,7 +474,6 @@
 		show={toastManager.showToast}
 		message={toastManager.toastMessage}
 		type={toastManager.toastType}
-		duration={2000}
 		position="top"
 	/>
 {/if}

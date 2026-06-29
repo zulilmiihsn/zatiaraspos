@@ -4,20 +4,32 @@ type OrderCustomization = {
 	catatan?: string | null;
 };
 
-const OPTION_LABELS: Record<string, Record<string, string>> = {
+export const ORDER_OPTION_LABELS: Record<'gula' | 'es', Record<string, string>> = {
 	gula: {
 		no: 'Tanpa Gula',
-		less: 'Sedikit Gula'
+		less: 'Sedikit Gula',
+		normal: 'Normal'
 	},
 	es: {
 		no: 'Tanpa Es',
-		less: 'Sedikit Es'
+		less: 'Sedikit Es',
+		normal: 'Normal'
 	}
 };
 
+export const SUGAR_OPTIONS = Object.entries(ORDER_OPTION_LABELS.gula).map(([id, label]) => ({
+	id,
+	label
+}));
+
+export const ICE_OPTIONS = Object.entries(ORDER_OPTION_LABELS.es).map(([id, label]) => ({
+	id,
+	label
+}));
+
 function formatOption(kind: 'gula' | 'es', value?: string | null): string | null {
 	if (!value || value === 'normal') return null;
-	return OPTION_LABELS[kind][value] || value;
+	return ORDER_OPTION_LABELS[kind][value] || value;
 }
 
 export function formatOrderDetails(item: OrderCustomization): string {

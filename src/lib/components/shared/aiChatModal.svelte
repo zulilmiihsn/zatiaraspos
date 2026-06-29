@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { AiChatMessage, TransactionAnalysis } from '$lib/types/ai';
+	import type { AiChatMessage, AutoApplyResult, TransactionAnalysis } from '$lib/types/ai';
 	import { AiAnalysisService } from '$lib/services/aiAnalysisService';
 	import { AutoApplyService } from '$lib/services/autoApplyService';
 	import { refreshBus } from '$lib/utils/refreshBus';
@@ -13,7 +13,7 @@
 	}: {
 		isOpen?: boolean;
 		onClose?: () => void;
-		onRecommendationsApplied?: (detail: any) => void;
+		onRecommendationsApplied?: (detail: { result: AutoApplyResult }) => void;
 	} = $props();
 
 	let messages: AiChatMessage[] = $state([]);

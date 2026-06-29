@@ -1,10 +1,11 @@
 <script lang="ts">
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
 	import { formatRupiah } from '$lib/utils/currency';
+	import type { CartItem } from '$lib/types/cart';
 
 	let { show = $bindable(false), onAdd } = $props<{
 		show: boolean;
-		onAdd: (item: any) => void;
+		onAdd: (item: CartItem) => void;
 	}>();
 
 	let customItemName = $state('');
