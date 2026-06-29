@@ -211,7 +211,7 @@ export class SmartCache {
 				this.stats.memoryHits += 1;
 				// Trigger background refresh if enabled
 				if (backgroundRefresh) {
-					this.scheduleBackgroundRefresh(key, fetcher, ttl);
+					this.scheduleBackgroundRefresh(key, async () => ({ data: await fetcher() }), ttl);
 				}
 				return memoryData;
 			}
@@ -227,7 +227,7 @@ export class SmartCache {
 
 				// Trigger background refresh if enabled
 				if (backgroundRefresh) {
-					this.scheduleBackgroundRefresh(key, fetcher, ttl);
+					this.scheduleBackgroundRefresh(key, async () => ({ data: await fetcher() }), ttl);
 				}
 
 				return indexedDBData;
@@ -276,7 +276,7 @@ export class SmartCache {
 				}
 				// Trigger background refresh with ETag
 				if (backgroundRefresh) {
-					this.scheduleBackgroundRefreshWithETag(key, fetcher, ttl, currentETag);
+					this.scheduleBackgroundRefresh(key, fetcher, ttl, currentETag);
 				}
 				return cachedData;
 			}
@@ -299,7 +299,12 @@ export class SmartCache {
 	}
 
 	// Background refresh scheduling
-	private scheduleBackgroundRefresh<T>(key: string, fetcher: () => Promise<T>, ttl?: number): void {
+	private scheduleBackgroundRefresh<T>(
+		key: string,
+		fetcher: (etag?: string) => Promise<{ data: T; etag?: string }>,
+		ttl?: number,
+		etag?: string
+	): void {
 		// Already scheduled, skip to avoid refresh storms
 		if (this.backgroundRefreshMap.has(key)) {
 			return;
@@ -313,48 +318,14 @@ export class SmartCache {
 			try {
 				// Jangan fetch jika offline
 				if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-				const freshData = await fetcher();
-				this.memoryCache.set(key, freshData, ttl);
-				await this.indexedDBCache.set(key, freshData, ttl);
-				this.keyRegistry.add(key);
-			} catch (error) {
-				// Silent error handling
-			} finally {
-				this.backgroundRefreshMap.delete(key);
-			}
-		}, CACHE_CONFIG.BACKGROUND_REFRESH);
-		this.backgroundRefreshMap.set(key, Number(refreshId));
-	}
-
-	// Background refresh with ETag
-	private scheduleBackgroundRefreshWithETag<T>(
-		key: string,
-		fetcher: (etag?: string) => Promise<{ data: T; etag?: string }>,
-		ttl?: number,
-		etag?: string
-	): void {
-		if (this.backgroundRefreshMap.has(key)) {
-			return;
-		}
-
-		// Jangan schedule refresh jika offline
-		if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-
-		const refreshId = setTimeout(async () => {
-			try {
-				// Jangan fetch jika offline
-				if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 				const result = await fetcher(etag);
+				if (etag && result.etag === etag) return;
 
-				// Only update if we got new data (ETag changed or no ETag)
-				if (result.etag !== etag) {
-					this.memoryCache.set(key, result.data, ttl);
-					await this.indexedDBCache.set(key, result.data, ttl);
-					this.keyRegistry.add(key);
-
-					if (result.etag) {
-						this.etagMap.set(key, result.etag);
-					}
+				this.memoryCache.set(key, result.data, ttl);
+				await this.indexedDBCache.set(key, result.data, ttl);
+				this.keyRegistry.add(key);
+				if (result.etag) {
+					this.etagMap.set(key, result.etag);
 				}
 			} catch (error) {
 				// Silent error handling
