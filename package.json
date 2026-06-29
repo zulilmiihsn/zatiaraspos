@@ -35,6 +35,7 @@
 		"test:quality:dependencies": "tsx src/tests/code-quality-tests.ts dependencies",
 		"test:all": "pnpm test:quality && pnpm test:features",
 		"test:offline": "tsx src/tests/offline-pos-tests.ts",
+		"test:checkout:local": "node scripts/uat-checkout-financials.mjs",
 		"test:receipt-output": "tsx src/tests/receipt-output-tests.ts",
 		"test:report-grouping": "tsx src/tests/report-grouping-tests.ts",
 		"test:security:local": "node scripts/uat-security-rate-limits.mjs",
