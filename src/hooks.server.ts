@@ -7,6 +7,20 @@ import {
 	recordRequestMetric
 } from '$lib/server/observability';
 
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_EXEMPT_ROUTES = new Set(['/api/csrf', '/api/veriflogin', '/api/logout']);
+
+function constantTimeEqual(left: string, right: string): boolean {
+	let mismatch = left.length ^ right.length;
+	const length = Math.max(left.length, right.length);
+
+	for (let index = 0; index < length; index++) {
+		mismatch |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+	}
+
+	return mismatch === 0;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	if (building) {
 		const response = await resolve(event);
@@ -22,16 +36,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.url.searchParams.get('branch')
 	);
 
-	const csrfProtectedRoutes = ['/api/veriflogin', '/api/gantikeamanan', '/api/logout'];
 	const isCsrfProtected =
-		csrfProtectedRoutes.some((route) => event.url.pathname.startsWith(route)) &&
-		['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.request.method);
+		event.url.pathname.startsWith('/api/') &&
+		MUTATING_METHODS.has(event.request.method) &&
+		!CSRF_EXEMPT_ROUTES.has(event.url.pathname);
 
 	if (isCsrfProtected) {
 		const csrfCookie = event.cookies.get('zatiaras_csrf');
 		const csrfHeader = event.request.headers.get('x-csrf-token');
 
-		if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+		if (!csrfCookie || !csrfHeader || !constantTimeEqual(csrfCookie, csrfHeader)) {
 			return new Response(
 				JSON.stringify({ success: false, code: 'CSRF_INVALID', message: 'CSRF token invalid' }),
 				{

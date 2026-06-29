@@ -2,8 +2,9 @@ import type { AiRecommendation, AutoApplyResult } from '$lib/types/ai';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { refreshBus } from '$lib/utils/refreshBus';
 import { parseApiError } from '$lib/utils/errorHandling';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
-const apiFetch = (path: string, init?: RequestInit) => fetch(path, init);
+const apiFetch = (path: string, init?: RequestInit) => fetchWithCsrfRetry(path, init);
 
 async function throwIfNotOk(res: Response, label: string): Promise<void> {
 	if (!res.ok) {

@@ -4,6 +4,7 @@
  *
  * CSRF and session management are handled server-side (hooks.server.ts / sessionStore.ts).
  */
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 // Security configuration
 const SECURITY_CONFIG = {
@@ -138,13 +139,7 @@ export const securityUtils = {
 		});
 
 		try {
-			if (navigator.sendBeacon) {
-				const blob = new Blob([payload], { type: 'application/json' });
-				navigator.sendBeacon('/api/security-events', blob);
-				return;
-			}
-
-			void fetch('/api/security-events', {
+			void fetchWithCsrfRetry('/api/security-events', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -152,7 +147,7 @@ export const securityUtils = {
 				body: payload,
 				keepalive: true,
 				credentials: 'include'
-			});
+			}).catch(() => undefined);
 		} catch {
 			// best-effort telemetry — failure is non-critical
 		}

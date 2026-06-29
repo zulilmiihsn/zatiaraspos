@@ -6,6 +6,7 @@ import {
 	reportApiFailureFromResponse
 } from '$lib/utils/errorHandling';
 import { formatRupiah } from '$lib/utils/currency';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 export class AiAnalysisService {
 	private static instance: AiAnalysisService;
@@ -26,7 +27,7 @@ export class AiAnalysisService {
 			const currentBranch = selectedBranch.value || 'default';
 
 			// Kirim ke backend AI untuk analisis
-			const response = await fetch('/api/aichat?action=analyze', {
+			const response = await fetchWithCsrfRetry('/api/aichat?action=analyze', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

@@ -5,6 +5,7 @@
 
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import type { TokoSession } from '$lib/types/store';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 const branch = () => selectedBranch.value || 'default';
 const ACTIVE_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -71,7 +72,7 @@ export async function getSesiAktif(): Promise<TokoSession | null> {
 }
 
 export async function bukaToko(openingCash: number, openingTime: string): Promise<void> {
-	const response = await fetch('/api/sesi-toko', {
+	const response = await fetchWithCsrfRetry('/api/sesi-toko', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
@@ -89,7 +90,7 @@ export async function bukaToko(openingCash: number, openingTime: string): Promis
 }
 
 export async function tutupToko(sesiId: string, closingTime: string): Promise<void> {
-	const response = await fetch('/api/sesi-toko', {
+	const response = await fetchWithCsrfRetry('/api/sesi-toko', {
 		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({

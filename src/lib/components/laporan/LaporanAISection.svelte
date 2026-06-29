@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
+	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 	import SendIcon from '$lib/components/shared/sendIcon.svelte';
 
 	let aiQuestion = $state('');
@@ -72,7 +73,7 @@
 		aiAnswer = '';
 
 		try {
-			const response = await fetch('/api/aichat', {
+			const response = await fetchWithCsrfRetry('/api/aichat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

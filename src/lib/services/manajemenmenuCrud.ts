@@ -7,6 +7,7 @@ import type {
 	Product,
 	ProductRecipe
 } from '$lib/types/product';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 export interface HppParsedItem {
 	nama: string;
@@ -100,7 +101,7 @@ export function createHppState() {
 		saveSettings: (payload: Record<string, unknown>) =>
 			dataService.insertRows('hpp_settings', payload),
 		async parsePurchase(text: string): Promise<HppParsedItem[]> {
-			const response = await fetch('/api/hpp/parse', {
+			const response = await fetchWithCsrfRetry('/api/hpp/parse', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ text })

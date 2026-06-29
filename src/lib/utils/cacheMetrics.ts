@@ -1,4 +1,5 @@
 import { smartCache } from '$lib/utils/cache';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 const MIN_REPORT_INTERVAL_MS = 15000;
 const lastSentAtByPage = new Map<string, number>();
@@ -19,7 +20,7 @@ export async function reportCacheMetrics(
 	const stats = smartCache.getStats();
 
 	try {
-		await fetch('/api/cache-metrics', {
+		await fetchWithCsrfRetry('/api/cache-metrics', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'

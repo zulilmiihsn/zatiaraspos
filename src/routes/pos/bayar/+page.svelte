@@ -19,6 +19,7 @@
 	import { dataService } from '$lib/services/dataService';
 	import { refreshBus } from '$lib/utils/refreshBus';
 	import { getSesiAktif } from '$lib/services/sesiTokoService';
+	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 	import type { ReceiptSettings } from '$lib/types/laporan';
 	import type { TokoSession } from '$lib/types/store';
 	import type { CartItem } from '$lib/types/cart';
@@ -311,7 +312,7 @@
 
 		if (navigator.onLine) {
 			try {
-				const response = await fetch('/api/pos/transaction', {
+				const response = await fetchWithCsrfRetry('/api/pos/transaction', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(requestPayload)

@@ -38,6 +38,7 @@
 		"test:checkout:local": "node scripts/uat-checkout-financials.mjs",
 		"test:receipt-output": "tsx src/tests/receipt-output-tests.ts",
 		"test:report-grouping": "tsx src/tests/report-grouping-tests.ts",
+		"test:csrf:local": "node scripts/uat-csrf-mutations.mjs",
 		"test:security:local": "node scripts/uat-security-rate-limits.mjs",
 		"test:load:checkout": "node scripts/loadtest-checkout.mjs",
 		"d1:setup:local": "node scripts/setup-local-d1.mjs"

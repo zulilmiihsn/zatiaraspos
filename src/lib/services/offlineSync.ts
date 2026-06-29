@@ -15,6 +15,7 @@ import {
 import { classifySyncFailure, getRetryDelayMs, isPendingReady } from '$lib/utils/offlineQueue';
 import { dbPost } from '$lib/services/dataApiClient';
 import { parseApiError } from '$lib/utils/errorHandling';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 class PendingSyncError extends Error {
 	constructor(
@@ -45,7 +46,7 @@ async function assertSyncResponse(response: Response, label: string): Promise<vo
 
 async function replayPendingTransaction(payload: Record<string, unknown>): Promise<void> {
 	if (payload.type === 'pos_transaction' && payload.request) {
-		const response = await fetch('/api/pos/transaction', {
+		const response = await fetchWithCsrfRetry('/api/pos/transaction', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(payload.request)
@@ -61,7 +62,7 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 		Array.isArray(payload.transaksiKasir)
 	) {
 		const bukuKas = payload.bukuKas as Record<string, any>;
-		const response = await fetch('/api/pos/transaction', {
+		const response = await fetchWithCsrfRetry('/api/pos/transaction', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({

@@ -1,5 +1,6 @@
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { parseApiError } from '$lib/utils/errorHandling';
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 export type DataRecord = Record<string, unknown>;
 
@@ -148,7 +149,7 @@ export async function dbPost<T extends DataRecord = DataRecord>(
 	if (!url) throw new Error(`[dataApiClient] dbPost: unknown table "${table}"`);
 
 	if (action === 'insert') {
-		const response = await fetch(url, {
+		const response = await fetchWithCsrfRetry(url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ payload, branch: currentBranch() })
@@ -158,7 +159,7 @@ export async function dbPost<T extends DataRecord = DataRecord>(
 	}
 
 	if (action === 'update') {
-		const response = await fetch(url, {
+		const response = await fetchWithCsrfRetry(url, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ payload, branch: currentBranch(), where })
@@ -169,7 +170,7 @@ export async function dbPost<T extends DataRecord = DataRecord>(
 
 	// action === 'delete' — where clause lewat query param (seperti di route DELETE handler).
 	const qs = new URLSearchParams({ branch: currentBranch(), ...where }).toString();
-	const response = await fetch(`${url}?${qs}`, { method: 'DELETE' });
+	const response = await fetchWithCsrfRetry(`${url}?${qs}`, { method: 'DELETE' });
 	if (!response.ok) throw await parseError(response, `DELETE ${table}`);
 	return (await response.json()) as DataMutationResult<T>;
 }

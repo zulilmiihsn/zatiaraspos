@@ -7,6 +7,7 @@
 	import Download from 'lucide-svelte/icons/download';
 	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
 	import { userRole } from '$lib/stores/userRole.svelte';
+	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
 	const currentYear = new Date().getFullYear();
 	const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -30,7 +31,7 @@
 		loading = true;
 		result = null;
 		try {
-			const res = await fetch('/api/archive', {
+			const res = await fetchWithCsrfRetry('/api/archive', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ before_year: beforeYear })

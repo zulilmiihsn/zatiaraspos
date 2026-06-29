@@ -1,3 +1,5 @@
+import { fetchWithCsrfRetry } from '$lib/utils/csrf';
+
 export async function readImageFile(file: File): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -15,7 +17,7 @@ export async function uploadMenuImageFromDataUrl(
 	const file = new File([blob], `menu-${menuId}-${Date.now()}.jpg`, { type: 'image/jpeg' });
 	const formData = new FormData();
 	formData.append('file', file);
-	const response = await fetch('/api/upload', { method: 'POST', body: formData });
+	const response = await fetchWithCsrfRetry('/api/upload', { method: 'POST', body: formData });
 	if (!response.ok) {
 		const error = await response.json().catch(() => ({}));
 		throw new Error(error.error || 'Gagal mengunggah gambar');
@@ -30,7 +32,7 @@ export async function deleteMenuImage(imageUrl?: string): Promise<void> {
 		? imageUrl.split('/produk/').pop()
 		: imageUrl.split('/').pop();
 	if (!filename) return;
-	await fetch('/api/upload', {
+	await fetchWithCsrfRetry('/api/upload', {
 		method: 'DELETE',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ key: `produk/${filename}` })
