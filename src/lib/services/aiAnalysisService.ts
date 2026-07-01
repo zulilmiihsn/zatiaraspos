@@ -62,20 +62,20 @@ export class AiAnalysisService {
 
 		// Parse detected transactions
 		if (data.transactions && Array.isArray(data.transactions)) {
-			data.transactions.forEach((tx: any, index: number) => {
+			data.transactions.forEach((tx: Record<string, unknown>) => {
 				detectedTransactions.push({
-					type: this.mapTransactionType(tx.type),
+					type: this.mapTransactionType(String(tx.type ?? '')),
 					amount: Number(tx.amount) || 0,
 					deskripsi: String(tx.deskripsi || ''),
-					category: tx.category,
+					category: tx.category as string | undefined,
 					confidence: Number(tx.confidence) || 0.8,
-					products: tx.products || [] // Include products data
+					products: (tx.products as unknown[]) || []
 				});
 			});
 		}
 
 		// Generate recommendations - hanya jika AI tidak mengirim rekomendasi langsung
-		const aiRecs = data.recommendations as any[];
+		const aiRecs = data.recommendations as Array<Record<string, unknown>>;
 		if (!aiRecs || aiRecs.length === 0) {
 			detectedTransactions.forEach((tx, index) => {
 				if (tx.type !== 'unknown' && tx.amount > 0) {
@@ -99,9 +99,9 @@ export class AiAnalysisService {
 			});
 		} else {
 			// Gunakan rekomendasi dari AI langsung
-			aiRecs.forEach((rec: any, index: number) => {
+			aiRecs.forEach((rec: Record<string, unknown>, index: number) => {
 				// Jika AI tidak mengirim data, gunakan detected transactions
-				let recommendationData = rec.data || {};
+				let recommendationData = (rec.data as Record<string, unknown>) || {};
 
 				// Jika data kosong, coba ambil dari detected transactions
 				if (!recommendationData.type && detectedTransactions.length > 0) {
@@ -117,11 +117,11 @@ export class AiAnalysisService {
 
 				recommendations.push({
 					id: `rec_${Date.now()}_${index}`,
-					action: rec.action || 'create_transaction',
-					title: rec.title || `Rekomendasi ${index + 1}`,
-					deskripsi: rec.deskripsi || '',
+					action: (((rec.action as unknown) as string) || 'create_transaction') as 'create_transaction' | 'update_transaction' | 'create_category',
+					title: ((rec.title as unknown) as string) || `Rekomendasi ${index + 1}`,
+					deskripsi: ((rec.deskripsi as unknown) as string) || '',
 					data: recommendationData,
-					priority: rec.priority || 'medium'
+					priority: (((rec.priority as unknown) as string) || 'medium') as 'low' | 'medium' | 'high'
 				});
 			});
 		}

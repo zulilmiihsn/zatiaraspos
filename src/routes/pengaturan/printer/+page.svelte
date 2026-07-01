@@ -9,7 +9,7 @@
 	import MessageSquareHeart from 'lucide-svelte/icons/message-square-heart';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { createToastManager } from '$lib/utils/ui';
-	import { dataService } from '$lib/services/dataService';
+	import { transactionService } from '$lib/services/transactionService';
 	import { LOGO_BASE64 } from '$lib/utils/logoBase64';
 	let namaToko = $state('');
 	let alamat = $state('');
@@ -38,7 +38,7 @@
 
 	async function loadPengaturan() {
 		try {
-			const data = (await dataService.getOne('pengaturan')) as Record<string, string> | null;
+			const data = (await transactionService.getOne('pengaturan')) as Record<string, string> | null;
 			if (data) {
 				namaToko = data.nama_toko || defaultData.namaToko;
 				alamat = data.alamat || defaultData.alamat;
@@ -71,11 +71,11 @@
 			ucapan
 		};
 		try {
-			const existing = await dataService.getOne('pengaturan');
+			const existing = await transactionService.getOne('pengaturan');
 			if (existing) {
-				await dataService.updateRows('pengaturan', data, { id: '1' });
+				await transactionService.updateRows('pengaturan', data, { id: '1' });
 			} else {
-				await dataService.insertRows('pengaturan', data);
+				await transactionService.insertRows('pengaturan', data);
 			}
 			toastManager.showToastNotification('Pengaturan berhasil disimpan!', 'success');
 		} catch (e) {

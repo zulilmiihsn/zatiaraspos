@@ -2,422 +2,47 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import ModalSheet from '$lib/components/shared/modalSheet.svelte';
-	import NotifModal, { type NotifModalType } from '$lib/components/shared/NotifModal.svelte';
-	import { validateNumber, sanitizeInput } from '$lib/utils/validation';
-	import { securityUtils } from '$lib/utils/security';
-	import { v4 as uuidv4 } from 'uuid';
+	import NotifModal from '$lib/components/shared/NotifModal.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { userRole } from '$lib/stores/userRole.svelte';
-	import { buildSaleReceiptHtml, printViaIntent } from '$lib/utils/receiptPrint';
-
-	import { addPendingTransaction } from '$lib/utils/offline';
-	import { ErrorHandler, parseApiError } from '$lib/utils/errorHandling';
 	import { formatRupiah } from '$lib/utils/currency';
-	import { NOTIF, PAYMENT } from '$lib/constants/ui';
+	import { PAYMENT } from '$lib/constants/ui';
 	import { formatOrderDetails } from '$lib/utils/orderDetails';
-	import { dataService } from '$lib/services/dataService';
-	import { refreshBus } from '$lib/utils/refreshBus';
-	import { getSesiAktif } from '$lib/services/sesiTokoService';
-	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
-	import type { ReceiptSettings } from '$lib/types/laporan';
-	import type { TokoSession } from '$lib/types/store';
-	import type { CartItem } from '$lib/types/cart';
-	import {
-		ArrowLeft,
-		Banknote,
-		CreditCard,
-		ReceiptText,
-		ShoppingBag,
-		UserRound,
-		WifiOff
-	} from 'lucide-svelte';
+	import { Banknote, CreditCard, ReceiptText, ShoppingBag, UserRound, WifiOff } from 'lucide-svelte';
+	import { createBayarState } from '$lib/stores/bayarState.svelte';
 
-	let cart: CartItem[] = $state([]);
-	function cartItemKey(item: CartItem): string {
-		return [
-			item.product.id,
-			item.addOns
-				.map((addOn) => addOn.id)
-				.sort()
-				.join(','),
-			item.gula,
-			item.es,
-			item.catatan
-		].join('|');
-	}
-	let customerName = $state('');
-	let paymentMethod = $state('');
-	let isOffline = $state(false);
+	const s = createBayarState();
+
 	const paymentOptions = [
 		{ id: 'tunai', label: 'Tunai' },
 		{ id: 'qris', label: 'QRIS' }
 	];
-	let showCancelModal = $state(false);
-	let showCashModal = $state(false);
-	let cashReceived = $state('');
 	const cashTemplates = PAYMENT.QUICK_AMOUNTS;
-	let keypad = [
+	const keypad = [
 		[1, 2, 3],
 		[4, 5, 6],
 		[7, 8, 9],
 		['⌫', 0, 'C']
 	];
-	let showSuccessModal = $state(false);
-	let showQrisWarning = $state(false);
-	let transactionId = $state('');
-	let transactionCode = $state('');
-	let transactionQueuedOffline = $state(false);
-
-	let showErrorNotification = $state(false);
-	let errorNotificationMessage = $state('');
-	let errorNotificationTimeout: number | null = null;
-
-	let currentUserRole = $derived(userRole.value || '');
-
-	let showNotifModal = $state(false);
-	let notifModalMsg = $state('');
-	let notifModalType = $state<NotifModalType>('warning');
-
-	let pengaturanStruk: ReceiptSettings | null = null;
-
-	function showErrorNotif(message: string) {
-		errorNotificationMessage = message;
-		showErrorNotification = true;
-		if (errorNotificationTimeout !== null) clearTimeout(errorNotificationTimeout);
-		errorNotificationTimeout = window.setTimeout(() => {
-			showErrorNotification = false;
-		}, NOTIF.TOAST_MS);
-	}
-
-	function generateTransactionCode() {
-		// Ambil nomor urut terakhir dari localStorage
-		let lastNum = parseInt(localStorage.getItem('last_jus_id') || '0', 10);
-		lastNum++;
-		localStorage.setItem('last_jus_id', lastNum.toString());
-		return `JUS${lastNum.toString().padStart(5, '0')}`;
-	}
-
-	let sesiAktif: TokoSession | null = null;
-	async function cekSesiTokoAktif() {
-		sesiAktif = await getSesiAktif();
-	}
-
-	async function fetchPengaturanStruk() {
-		try {
-			const data = (await dataService.getOne('pengaturan')) as unknown as ReceiptSettings | null;
-			if (data) {
-				pengaturanStruk = data;
-				localStorage.setItem('pengaturan_struk', JSON.stringify(data));
-			} else {
-				// fallback ke localStorage
-				const local = localStorage.getItem('pengaturan_struk');
-				if (local) pengaturanStruk = JSON.parse(local);
-			}
-		} catch {
-			const local = localStorage.getItem('pengaturan_struk');
-			if (local) pengaturanStruk = JSON.parse(local);
-		}
-	}
 
 	onMount(() => {
 		const updateConnectionState = () => {
-			isOffline = !navigator.onLine;
-			if (isOffline && paymentMethod && paymentMethod !== 'tunai') paymentMethod = 'tunai';
+			s.setOffline(!navigator.onLine);
 		};
 		updateConnectionState();
 		window.addEventListener('online', updateConnectionState);
 		window.addEventListener('offline', updateConnectionState);
-		cekSesiTokoAktif();
-		fetchPengaturanStruk();
-		const saved = localStorage.getItem('pos_cart');
-		if (saved) {
-			try {
-				cart = JSON.parse(saved);
-			} catch {
-				/* cart localStorage korup → biarkan keranjang kosong */
-			}
-		}
-		transactionId = uuidv4(); // UUID untuk database
-		transactionCode = generateTransactionCode(); // Untuk tampilan/struk
+		s.init();
 		return () => {
 			window.removeEventListener('online', updateConnectionState);
 			window.removeEventListener('offline', updateConnectionState);
 		};
 	});
-
-	let { totalQty, totalHarga } = $derived(
-		(() => {
-			let totalQty = 0;
-			let totalHarga = 0;
-			for (const item of cart) {
-				totalQty += item.jumlah;
-				totalHarga += item.jumlah * (item.product.harga ?? 0);
-				if (item.addOns) {
-					totalHarga += item.addOns.reduce(
-						(total, addOn) => total + (addOn.harga ?? 0) * item.jumlah,
-						0
-					);
-				}
-			}
-			return { totalQty, totalHarga };
-		})()
-	);
-	let kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
-	let formattedCashReceived = $derived(cashReceived ? formatRupiah(parseInt(cashReceived)) : '');
-	let canPay = $derived(
-		Boolean(
-			paymentMethod &&
-				customerName.trim() &&
-				cart.length > 0 &&
-				(!isOffline || paymentMethod === 'tunai')
-		)
-	);
-
-	function handleCancel() {
-		showCancelModal = true;
-	}
-	function confirmCancel() {
-		showCancelModal = false;
-		goto('/pos');
-	}
-	function closeModal() {
-		showCancelModal = false;
-	}
-	function handleBayar() {
-		if (isOffline && paymentMethod !== 'tunai') {
-			showErrorNotif('Saat offline, pembayaran hanya tersedia untuk tunai.');
-			return;
-		}
-		if (paymentMethod === 'tunai') {
-			showCashModal = true;
-			cashReceived = '';
-		} else {
-			// Non-tunai: tampilkan modal warning dulu
-			showQrisWarning = true;
-		}
-	}
-	async function confirmQrisChecked() {
-		showQrisWarning = false;
-		cashReceived = totalHarga.toString(); // QRIS = dibayar pas → kembalian otomatis 0 via $derived
-		showSuccessModal = await catatTransaksiKeLaporan();
-	}
-	function addCashTemplate(nom: number) {
-		cashReceived = ((parseInt(cashReceived) || 0) + nom).toString();
-	}
-	function closeCashModal() {
-		showCashModal = false;
-	}
-	async function finishCash() {
-		// Validate cash received
-		const cashValidation = validateNumber(cashReceived, { required: true, min: totalHarga });
-		if (!cashValidation.isValid) {
-			showErrorNotif(`Error: ${cashValidation.errors.join(', ')}`);
-			return;
-		}
-
-		// Check rate limiting
-		if (!securityUtils.checkFormRateLimit('payment_completion')) {
-			showErrorNotif('Terlalu banyak transaksi. Silakan tunggu sebentar.');
-			return;
-		}
-
-		// Sanitize inputs
-		const sanitizedCashReceived = sanitizeInput(cashReceived);
-		const sanitizedPaymentMethod = sanitizeInput(paymentMethod);
-
-		// Check for suspicious activity
-		const allInputs = `${sanitizedCashReceived}${sanitizedPaymentMethod}${totalHarga}`;
-		if (securityUtils.detectSuspiciousActivity('payment_completion', allInputs)) {
-			showErrorNotif('Aktivitas pembayaran mencurigakan terdeteksi. Silakan coba lagi.');
-			securityUtils.logSecurityEvent('suspicious_payment_activity', {
-				cashReceived: sanitizedCashReceived,
-				paymentMethod: sanitizedPaymentMethod,
-				totalHarga
-			});
-			return;
-		}
-
-		// Proses pembayaran tunai selesai
-		if (await catatTransaksiKeLaporan()) {
-			securityUtils.logSecurityEvent('payment_completed', {
-				paymentMethod: sanitizedPaymentMethod,
-				totalAmount: totalHarga,
-				cashReceived: parseInt(sanitizedCashReceived),
-				change: kembalian,
-				itemsCount: cart.length,
-				queuedOffline: transactionQueuedOffline
-			});
-			showCashModal = false;
-			showSuccessModal = true;
-		}
-	}
-	function handleKeypad(val: string | number) {
-		if (val === '⌫') {
-			cashReceived = cashReceived.slice(0, -1);
-		} else {
-			cashReceived = (cashReceived + val).replace(/^0+(?!$)/, '');
-		}
-	}
-
-	async function catatTransaksiKeLaporan(): Promise<boolean> {
-		transactionQueuedOffline = false;
-		await cekSesiTokoAktif();
-		if (!cart || cart.length === 0 || totalHarga <= 0) {
-			notifModalMsg = 'Transaksi tidak valid: keranjang kosong atau total harga 0.';
-			notifModalType = 'error';
-			showNotifModal = true;
-			return false;
-		}
-		const id_sesi_toko = sesiAktif?.id || null;
-		if (!id_sesi_toko && currentUserRole === 'kasir') {
-			notifModalMsg = 'Kasir tidak boleh melakukan transaksi saat toko tutup!';
-			notifModalType = 'error';
-			showNotifModal = true;
-			return false;
-		}
-		if (!id_sesi_toko && currentUserRole === 'pemilik') {
-			notifModalMsg =
-				'PERINGATAN: Tidak ada sesi toko aktif! Transaksi akan dianggap di luar sesi dan tidak masuk ringkasan tutup toko.';
-			notifModalType = 'warning';
-			showNotifModal = true;
-		}
-		const payment = paymentMethod === 'qris' ? 'non-tunai' : paymentMethod;
-		if (!payment) {
-			notifModalMsg = 'Metode pembayaran tidak valid!';
-			notifModalType = 'error';
-			showNotifModal = true;
-			return false;
-		}
-
-		const requestPayload = {
-			idempotency_key: transactionId || uuidv4(),
-			nama_pelanggan: customerName || null,
-			metode_bayar: payment,
-			cash_received: cashReceived ? Number(cashReceived) : null,
-			items: cart.map((item) => {
-				const isCustom = item.product.id.toString().startsWith('custom-');
-				return {
-					product_id: isCustom ? null : item.product.id,
-					nama_kustom: isCustom ? item.product.nama : null,
-					custom_price: isCustom ? (item.product.harga ?? 0) : null,
-					jumlah: item.jumlah,
-					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
-					gula: item.gula || null,
-					es: item.es || null,
-					catatan: item.catatan || null
-				};
-			})
-		};
-
-		if (navigator.onLine) {
-			try {
-				const response = await fetchWithCsrfRetry('/api/pos/transaction', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(requestPayload)
-				});
-				if (!response.ok) {
-					throw new Error(await parseApiError(response, `HTTP ${response.status}`));
-				}
-			} catch (error) {
-				if (error instanceof TypeError || !navigator.onLine) {
-					try {
-						await queueCurrentPosTransaction(requestPayload);
-					} catch (queueError) {
-						notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
-						notifModalType = 'error';
-						showNotifModal = true;
-						return false;
-					}
-					notifModalMsg = 'Transaksi tersimpan lokal. Status: menunggu sinkronisasi.';
-					notifModalType = 'success';
-					showNotifModal = true;
-					transactionQueuedOffline = true;
-					return true;
-				}
-				notifModalMsg = 'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
-				notifModalType = 'error';
-				showNotifModal = true;
-				return false;
-			}
-			// Setelah transaksi berhasil, invalidate cache dashboard/laporan dan fetch ulang data
-			await dataService.invalidateCacheOnChange('buku_kas');
-			await dataService.invalidateCacheOnChange('transaksi_kasir');
-			refreshBus.emit('dashboard');
-		} else {
-			// Offline mode: simpan request POS mentah, server tetap menghitung harga saat sync.
-			try {
-				await queueCurrentPosTransaction(requestPayload);
-			} catch (queueError) {
-				notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
-				notifModalType = 'error';
-				showNotifModal = true;
-				return false;
-			}
-			notifModalMsg = 'Transaksi tersimpan lokal. Status: menunggu sinkronisasi.';
-			notifModalType = 'success';
-			showNotifModal = true;
-			transactionQueuedOffline = true;
-		}
-		return true;
-	}
-
-	async function queueCurrentPosTransaction(request: Record<string, unknown>): Promise<void> {
-		await addPendingTransaction({
-			type: 'pos_transaction',
-			request,
-			summary: {
-				transaction_code: transactionCode,
-				total_amount: totalHarga,
-				jumlah_item: totalQty,
-				created_at: new Date().toISOString()
-			}
-		});
-	}
-
-	function closeNotifModal() {
-		showNotifModal = false;
-	}
-
-	function printStrukViaEscPosService() {
-		printViaIntent(
-			buildSaleReceiptHtml({
-				settings: pengaturanStruk,
-				items: cart,
-				customerName,
-				total: totalHarga,
-				paymentMethod,
-				cashReceived: parseInt(cashReceived) || 0,
-				change: kembalian,
-				queuedOffline: transactionQueuedOffline
-			})
-		);
-	}
-
-	function handleAddCashTemplate(t: number) {
-		addCashTemplate(t);
-	}
-	function handleKeypadButton(key: string | number) {
-		if (key === 'C') cashReceived = '';
-		else handleKeypad(key);
-	}
-	function handleSetPaymentMethod(id: string) {
-		if (isOffline && id !== 'tunai') {
-			showErrorNotif('QRIS membutuhkan koneksi internet.');
-			return;
-		}
-		paymentMethod = id;
-	}
-	function handleBackToKasir() {
-		showSuccessModal = false;
-		goto('/pos');
-	}
 </script>
 
 <main class="page-content min-h-[100dvh] flex-1 overflow-y-auto bg-white px-4 pt-4 pb-28">
 	<div class="mx-auto max-w-4xl">
-		{#if cart.length === 0}
+		{#if s.cart.length === 0}
 			<div
 				class="flex min-h-[62dvh] flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white px-6 py-12 text-center shadow-sm"
 			>
@@ -434,7 +59,7 @@
 			</div>
 		{:else}
 			<div class="mx-auto flex max-w-lg flex-col gap-4 pb-8">
-				{#if isOffline}
+				{#if s.isOffline}
 					<div
 						class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
 					>
@@ -464,7 +89,7 @@
 						type="text"
 						class="w-full rounded-xl border-[1.5px] border-pink-100 bg-pink-50/30 px-3 py-3 text-base text-stone-900 transition-all duration-200 outline-none placeholder:text-stone-400 focus:border-pink-400 focus:bg-white focus:ring-4 focus:ring-pink-500/10"
 						placeholder="Masukkan nama pelanggan..."
-						bind:value={customerName}
+						bind:value={s.customerName}
 						maxlength="50"
 					/>
 				</div>
@@ -479,11 +104,11 @@
 							Pesanan
 						</div>
 						<div class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
-							{totalQty} item
+							{s.totalQty} item
 						</div>
 					</div>
 					<ul class="divide-y divide-stone-100">
-						{#each cart as item (cartItemKey(item))}
+						{#each s.cart as item (s.cartItemKey(item))}
 							<li class="flex flex-col gap-1 py-3">
 								<div class="flex items-start justify-between gap-3">
 									<div class="min-w-0">
@@ -520,7 +145,7 @@
 					>
 						<div class="text-sm font-semibold text-stone-500">Total Tagihan</div>
 						<div class="text-2xl font-bold tracking-tight text-stone-900">
-							Rp {formatRupiah(totalHarga)}
+							Rp {formatRupiah(s.totalHarga)}
 						</div>
 					</div>
 				</div>
@@ -534,21 +159,21 @@
 						{#each paymentOptions as opt}
 							<button
 								type="button"
-								class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98] {paymentMethod ===
+								class="flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 text-base font-semibold transition-all duration-200 active:scale-[0.98] {s.paymentMethod ===
 								opt.id
 									? 'border-pink-500 bg-pink-50 text-pink-500 shadow-sm'
-									: 'border-pink-100 bg-white text-stone-700'} {isOffline && opt.id !== 'tunai'
+									: 'border-pink-100 bg-white text-stone-700'} {s.isOffline && opt.id !== 'tunai'
 									? 'cursor-not-allowed opacity-45'
 									: ''}"
-								onclick={() => handleSetPaymentMethod(opt.id)}
-								disabled={isOffline && opt.id !== 'tunai'}
+								onclick={() => s.handleSetPaymentMethod(opt.id)}
+								disabled={s.isOffline && opt.id !== 'tunai'}
 							>
 								{#if opt.id === 'tunai'}
 									<Banknote class="h-5 w-5" />
 								{:else}
 									<CreditCard class="h-5 w-5" />
 								{/if}
-								{opt.label}{isOffline && opt.id !== 'tunai' ? ' (online)' : ''}
+								{opt.label}{s.isOffline && opt.id !== 'tunai' ? ' (online)' : ''}
 							</button>
 						{/each}
 					</div>
@@ -558,16 +183,16 @@
 				<div class="mt-2 flex flex-col gap-3">
 					<button
 						class="w-full rounded-xl bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-500/20 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-[1.5px] disabled:border-pink-100 disabled:bg-pink-50 disabled:text-pink-300 disabled:shadow-none"
-						onclick={handleBayar}
-						disabled={!canPay}
+						onclick={s.handleBayar}
+						disabled={!s.canPay}
 					>
 						Konfirmasi & Bayar
 					</button>
-					{#if !canPay}
+					{#if !s.canPay}
 						<div class="text-center text-xs text-red-500">
-							{#if !paymentMethod && !customerName.trim()}
+							{#if !s.paymentMethod && !s.customerName.trim()}
 								Isi nama pelanggan dan pilih metode pembayaran dulu
-							{:else if !paymentMethod}
+							{:else if !s.paymentMethod}
 								Pilih metode pembayaran dulu
 							{:else}
 								Isi nama pelanggan dulu
@@ -577,7 +202,7 @@
 					<button
 						class="mx-auto block w-full rounded-xl border-[1.5px] border-stone-200 bg-white py-3 text-sm font-bold text-stone-500 shadow-sm transition-all duration-200 hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600 active:scale-[0.98]"
 						type="button"
-						onclick={handleCancel}
+						onclick={s.handleCancel}
 					>
 						Batalkan pembayaran
 					</button>
@@ -587,7 +212,7 @@
 	</div>
 </main>
 
-{#if showCancelModal}
+{#if s.showCancelModal}
 	<div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
 		<div
 			class="animate-slideUpModal mx-auto w-full max-w-sm rounded-t-2xl bg-white p-6 pb-4 shadow-lg"
@@ -599,19 +224,19 @@
 			<div class="flex flex-col gap-2">
 				<button
 					class="w-full rounded-lg bg-red-500 py-3 text-base font-bold text-white active:bg-red-600"
-					onclick={confirmCancel}>Ya, batalkan</button
+					onclick={s.confirmCancel}>Ya, batalkan</button
 				>
 				<button
 					class="w-full rounded-lg bg-gray-100 py-3 text-base font-semibold text-gray-500"
-					onclick={closeModal}>Tutup</button
+					onclick={s.closeModal}>Tutup</button
 				>
 			</div>
 		</div>
 	</div>
 {/if}
 
-{#if showCashModal}
-	<ModalSheet open={showCashModal} title="Pembayaran Tunai" onClose={closeCashModal}>
+{#if s.showCashModal}
+	<ModalSheet open={s.showCashModal} title="Pembayaran Tunai" onClose={s.closeCashModal}>
 		<div class="pb-24 md:min-h-[60vh]">
 			<div class="mb-4 text-center text-gray-500 md:mb-6 md:text-lg">
 				Masukkan jumlah uang diterima
@@ -621,11 +246,11 @@
 				inputmode="numeric"
 				pattern="[0-9]*"
 				class="mb-3 w-full rounded-lg border-2 border-pink-200 px-2 py-3 text-center text-xl font-bold outline-none focus:border-pink-400 md:mb-5 md:py-5 md:text-2xl"
-				bind:value={formattedCashReceived}
+				bind:value={s.formattedCashReceived}
 				oninput={(e) => {
 					const target = e.target as HTMLInputElement;
 					const raw = target.value.replace(/\D/g, '');
-					cashReceived = raw;
+					s.cashReceived = raw;
 				}}
 				placeholder="0"
 			/>
@@ -634,7 +259,7 @@
 					<button
 						type="button"
 						class="rounded-lg bg-pink-100 px-4 py-2 text-base font-bold text-pink-500 md:px-8 md:py-3 md:text-lg"
-						onclick={() => handleAddCashTemplate(t)}
+						onclick={() => s.handleAddCashTemplate(t)}
 					>
 						Rp {formatRupiah(t)}
 					</button>
@@ -649,7 +274,7 @@
 							'⌫'
 								? 'col-span-1 text-pink-500'
 								: ''} {key === 'C' ? 'text-red-500' : ''}"
-							onclick={() => handleKeypadButton(key)}>{key}</button
+							onclick={() => s.handleKeypadButton(key)}>{key}</button
 						>
 					{/each}
 				{/each}
@@ -659,14 +284,14 @@
 			<div class="flex flex-col gap-2 md:gap-4">
 				<div class="mb-2 text-center text-gray-700 md:mb-4 md:text-lg">
 					Kembalian:
-					<span class="font-bold {kembalian < 0 ? 'text-red-500' : 'text-green-500'}"
-						>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
+					<span class="font-bold {s.kembalian < 0 ? 'text-red-500' : 'text-green-500'}"
+						>Rp {s.kembalian >= 0 ? formatRupiah(s.kembalian) : '0'}</span
 					>
 				</div>
 				<button
 					class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white active:bg-pink-600 disabled:opacity-50 md:py-5 md:text-xl"
-					onclick={finishCash}
-					disabled={kembalian < 0 || !cashReceived}
+					onclick={s.finishCash}
+					disabled={s.kembalian < 0 || !s.cashReceived}
 				>
 					Selesai
 				</button>
@@ -675,7 +300,7 @@
 	</ModalSheet>
 {/if}
 
-{#if showQrisWarning}
+{#if s.showQrisWarning}
 	<div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
 		<div
 			class="animate-slideUpModal qris-warning-modal mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-t-2xl bg-white p-8 pb-6 shadow-lg"
@@ -704,13 +329,13 @@
 			</div>
 			<button
 				class="warning-btn mt-2 w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white transition-all active:bg-pink-600"
-				onclick={confirmQrisChecked}>Sudah Diperiksa</button
+				onclick={s.confirmQrisChecked}>Sudah Diperiksa</button
 			>
 		</div>
 	</div>
 {/if}
 
-{#if showSuccessModal}
+{#if s.showSuccessModal}
 	<div class="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
 		<div
 			class="animate-slideUpModal mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-t-2xl bg-white p-8 pb-6 shadow-lg"
@@ -729,70 +354,70 @@
 				>
 			</div>
 			<div class="mb-1 text-center text-2xl font-bold text-green-600">
-				{transactionQueuedOffline ? 'Transaksi Tersimpan' : 'Transaksi Berhasil!'}
+				{s.transactionQueuedOffline ? 'Transaksi Tersimpan' : 'Transaksi Berhasil!'}
 			</div>
 			<div class="mb-2 text-center text-gray-700">
-				{#if transactionQueuedOffline}
+				{#if s.transactionQueuedOffline}
 					Tersimpan di perangkat dan menunggu sinkronisasi.<br />
 				{:else}
-					Pembayaran {paymentMethod === 'tunai' ? 'tunai' : paymentMethod.toUpperCase()} telah diterima.<br
+					Pembayaran {s.paymentMethod === 'tunai' ? 'tunai' : s.paymentMethod.toUpperCase()} telah diterima.<br
 					/>
 				{/if}
-				{#if customerName.trim()}
-					<span class="font-semibold text-pink-500">{customerName.trim()}</span><br />
+				{#if s.customerName.trim()}
+					<span class="font-semibold text-pink-500">{s.customerName.trim()}</span><br />
 				{/if}
 				Kembalian:
 				<span class="font-bold text-pink-500"
-					>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
+					>Rp {s.kembalian >= 0 ? formatRupiah(s.kembalian) : '0'}</span
 				>
 			</div>
 			<div class="mb-2 flex w-full flex-col gap-1 rounded-lg bg-pink-50 p-3">
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Total</span><span class="font-bold text-pink-500"
-						>Rp {formatRupiah(totalHarga)}</span
+						>Rp {formatRupiah(s.totalHarga)}</span
 					>
 				</div>
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Dibayar</span><span class="font-bold text-green-600"
-						>Rp {cashReceived ? formatRupiah(parseInt(cashReceived)) : '0'}</span
+						>Rp {s.cashReceived ? formatRupiah(parseInt(s.cashReceived)) : '0'}</span
 					>
 				</div>
 				<div class="flex justify-between text-sm text-gray-500">
 					<span>Kembalian</span><span class="font-bold text-green-600"
-						>Rp {kembalian >= 0 ? formatRupiah(kembalian) : '0'}</span
+						>Rp {s.kembalian >= 0 ? formatRupiah(s.kembalian) : '0'}</span
 					>
 				</div>
 			</div>
 			<div class="flex w-full flex-col gap-2">
 				<button
 					class="w-full rounded-lg bg-green-500 py-3 text-base font-bold text-white transition-all active:bg-green-600"
-					onclick={printStrukViaEscPosService}>Cetak Struk</button
+					onclick={s.printStrukViaEscPosService}>Cetak Struk</button
 				>
 				<button
 					class="w-full rounded-lg bg-pink-500 py-3 text-base font-bold text-white transition-all active:bg-pink-600"
-					onclick={handleBackToKasir}>Kembali ke Kasir</button
+					onclick={s.handleBackToKasir}>Kembali ke Kasir</button
 				>
 			</div>
 		</div>
 	</div>
 {/if}
 
-{#if showErrorNotification}
+{#if s.showErrorNotification}
 	<div
 		class="fixed top-20 left-1/2 z-50 rounded-xl bg-red-500 px-6 py-3 text-white shadow-lg transition-all duration-300 ease-out"
 		style="transform: translateX(-50%);"
 		in:fly={{ y: -32, duration: 300, easing: cubicOut }}
 		out:fade={{ duration: 200 }}
 	>
-		{errorNotificationMessage}
+		{s.errorNotificationMessage}
 	</div>
 {/if}
 
 <NotifModal
-	show={showNotifModal}
-	message={notifModalMsg}
-	type={notifModalType}
-	onClose={closeNotifModal}
+	show={s.showNotifModal}
+	message={s.notifModalMsg}
+	type={s.notifModalType}
+	onClose={s.closeNotifModal}
 />
 
 <style>
@@ -825,7 +450,6 @@
 	.animate-bounceIn {
 		animation: bounceIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 	}
-	/* Tambahan untuk modal warning QRIS di tablet */
 	@media (min-width: 768px) {
 		.qris-warning-modal {
 			padding: 3rem 2.5rem 2.5rem 2.5rem !important;

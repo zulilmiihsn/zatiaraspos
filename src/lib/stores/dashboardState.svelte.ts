@@ -1,4 +1,6 @@
-import { dataService, realtimeManager } from '$lib/services/dataService';
+import { dashboardService } from '$lib/services/dashboardService';
+import { realtimeManager } from '$lib/realtime/realtimeManager';
+import { cacheOrchestrator } from '$lib/utils/cacheOrchestrator';
 import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { refreshBus } from '$lib/utils/refreshBus';
@@ -84,14 +86,16 @@ export function createDashboardState() {
 
 	async function loadDashboardData() {
 		try {
-			isLoadingDashboard = true;
-			const dashboardStats = await dataService.getDashboardStats();
+			// Load dashboard stats dengan cache
+			const dashboardStats = await dashboardService.getDashboardStats();
 
+			// Load best sellers dengan cache
 			isLoadingBestSellers = true;
-			const nextBestSellers = await dataService.getBestSellers();
+			const nextBestSellers = await dashboardService.getBestSellers();
 			isLoadingBestSellers = false;
 
-			const weeklyData = await dataService.getWeeklyIncome();
+			// Load weekly income dengan cache
+			const weeklyData = await dashboardService.getWeeklyIncome();
 			applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
 			await reportCacheMetrics('dashboard');
 		} catch (error) {
@@ -113,9 +117,9 @@ export function createDashboardState() {
 
 			dashboardRefreshInFlight = true;
 			try {
-				const dashboardStats = await dataService.getDashboardStats();
-				const nextBestSellers = await dataService.getBestSellers();
-				const weeklyData = await dataService.getWeeklyIncome();
+				const dashboardStats = await dashboardService.getDashboardStats();
+				const nextBestSellers = await dashboardService.getBestSellers();
+				const weeklyData = await dashboardService.getWeeklyIncome();
 				applyDashboardPayload(dashboardStats, nextBestSellers, weeklyData);
 				await reportCacheMetrics('dashboard');
 			} finally {
@@ -171,10 +175,9 @@ export function createDashboardState() {
 		weeklyMax = 1;
 		bestSellers = [];
 		isLoadingDashboard = true;
-		isLoadingBestSellers = true;
-
+		// Async dalam effect: jalankan via fire-and-forget
 		(async () => {
-			await dataService.invalidateDashboardCaches();
+			await cacheOrchestrator.invalidateDashboardCaches();
 			await loadDashboardData();
 		})();
 	});

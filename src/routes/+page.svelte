@@ -6,7 +6,7 @@
 	import { createSwipeNavigation } from '$lib/utils/touchNavigation';
 	import { userRole, userProfile, setUserRole } from '$lib/stores/userRole.svelte';
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-	import { dataService, realtimeManager } from '$lib/services/dataService';
+	import { realtimeManager } from '$lib/realtime/realtimeManager';
 	import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { getNowWita } from '$lib/utils/dateTime';

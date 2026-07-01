@@ -8,7 +8,7 @@ import * as pako from 'pako';
 import { Base64 } from 'js-base64';
 import { LOGO_BASE64 } from '$lib/utils/logoBase64';
 import { formatRupiah } from '$lib/utils/currency';
-import { dataService } from '$lib/services/dataService';
+import { transactionService } from '$lib/services/transactionService';
 import type { ReceiptSettings, HistoryItem } from '$lib/types/laporan';
 import { formatOrderDetails } from '$lib/utils/orderDetails';
 
@@ -92,7 +92,9 @@ function buildReceiptShell(header: ReceiptShellHeader, body: string, footer: str
  */
 export async function loadReceiptSettings(): Promise<ReceiptSettings | null> {
 	try {
-		const data = (await dataService.getOne('pengaturan')) as unknown as ReceiptSettings | null;
+		const data = (await transactionService.getOne(
+			'pengaturan'
+		)) as unknown as ReceiptSettings | null;
 		if (data) return data;
 	} catch {
 		// abaikan, jatuh ke localStorage

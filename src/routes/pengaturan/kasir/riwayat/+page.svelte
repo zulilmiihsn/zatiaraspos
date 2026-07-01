@@ -11,7 +11,7 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { dataService } from '$lib/services/dataService';
+	import { transactionService } from '$lib/services/transactionService';
 	import { formatRupiah } from '$lib/utils/currency';
 	import type { HistoryItem } from '$lib/types/laporan';
 	import { fetchTransaksiHariIni as fetchRiwayatHarian } from '$lib/services/riwayatService';
@@ -74,7 +74,7 @@
 		try {
 			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				items = await dataService.getRows('transaksi_kasir', {
+				items = await transactionService.getRows('transaksi_kasir', {
 					transaction_id: selectedTransaksi.transaction_id || selectedTransaksi.id
 				});
 			}

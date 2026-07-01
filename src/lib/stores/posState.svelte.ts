@@ -1,4 +1,5 @@
-import { dataService, realtimeManager } from '$lib/services/dataService';
+import { productService } from '$lib/services/productService';
+import { realtimeManager } from '$lib/realtime/realtimeManager';
 import { reportCacheMetrics } from '$lib/utils/cacheMetrics';
 import { throttle } from '$lib/utils/performance';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
@@ -24,9 +25,9 @@ export function createPosState() {
 	async function loadPOSData() {
 		try {
 			const [nextProducts, nextCategories, nextAddons] = await Promise.all([
-				dataService.getProducts(),
-				dataService.getCategories(),
-				dataService.getAddOns()
+				productService.getProducts(),
+				productService.getCategories(),
+				productService.getAddOns()
 			]);
 
 			const nextFingerprint = [

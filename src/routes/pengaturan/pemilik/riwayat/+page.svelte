@@ -11,7 +11,7 @@
 	import { createToastManager } from '$lib/utils/ui';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	import { dataService } from '$lib/services/dataService';
+	import { transactionService } from '$lib/services/transactionService';
 	import { formatRupiah } from '$lib/utils/currency';
 
 	import type { HistoryItem, ReceiptSettings } from '$lib/types/laporan';
@@ -74,16 +74,16 @@
 		try {
 			if (transaksiToDelete.sumber === 'catat') {
 				// Untuk transaksi manual/catat, hapus dari buku_kas saja
-				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
+				await transactionService.deleteRows('buku_kas', { id: transaksiToDelete.id });
 			} else if (transaksiToDelete.sumber === 'pos') {
 				// Transaksi POS: satu call atomik. Server (DELETE /api/transaksi-kasir)
 				// reverse ringkasan + restore stok produk/bahan + hapus transaksi_kasir
 				// DAN buku_kas dalam satu batch. Jangan panggil buku_kas terpisah.
 				const transactionId = transaksiToDelete.transaction_id || transaksiToDelete.id;
-				await dataService.deleteRows('transaksi_kasir', { transaction_id: transactionId });
+				await transactionService.deleteRows('transaksi_kasir', { transaction_id: transactionId });
 			} else {
 				// Fallback: hapus berdasarkan ID langsung
-				await dataService.deleteRows('buku_kas', { id: transaksiToDelete.id });
+				await transactionService.deleteRows('buku_kas', { id: transaksiToDelete.id });
 			}
 
 			showDeleteModal = false;
@@ -115,7 +115,7 @@
 		if (currentMethod === dbMethod) return;
 		loading = true;
 		try {
-			await dataService.updateRows(
+			await transactionService.updateRows(
 				'buku_kas',
 				{ metode_bayar: dbMethod },
 				{ id: selectedTransaksi.id }
@@ -148,7 +148,7 @@
 		try {
 			let items: Record<string, unknown>[] = [];
 			if (selectedTransaksi.sumber === 'pos') {
-				items = await dataService.getRows('transaksi_kasir', {
+				items = await transactionService.getRows('transaksi_kasir', {
 					transaction_id: selectedTransaksi.transaction_id || selectedTransaksi.id
 				});
 			}

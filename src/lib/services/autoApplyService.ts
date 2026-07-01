@@ -4,6 +4,29 @@ import { refreshBus } from '$lib/utils/refreshBus';
 import { parseApiError } from '$lib/utils/errorHandling';
 import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 
+interface TransactionData {
+	type: string;
+	amount: number;
+	deskripsi: string;
+	customerName?: string;
+	metode_bayar?: string;
+	products?: Array<Record<string, unknown>>;
+	category?: string;
+}
+
+interface UpdateTransactionData {
+	id: string;
+	type: string;
+	amount: number;
+	deskripsi: string;
+	category?: string;
+}
+
+interface CategoryData {
+	nama: string;
+	deskripsi?: string;
+}
+
 const apiFetch = (path: string, init?: RequestInit) => fetchWithCsrfRetry(path, init);
 
 async function throwIfNotOk(res: Response, label: string): Promise<void> {
@@ -63,20 +86,20 @@ export class AutoApplyService {
 	private async applySingleRecommendation(recommendation: AiRecommendation): Promise<void> {
 		switch (recommendation.action) {
 			case 'create_transaction':
-				await this.createTransaction(recommendation.data as any);
+				await this.createTransaction(recommendation.data as TransactionData);
 				break;
 			case 'update_transaction':
-				await this.updateTransaction(recommendation.data as any);
+				await this.updateTransaction(recommendation.data as UpdateTransactionData);
 				break;
 			case 'create_category':
-				await this.createCategory(recommendation.data as any);
+				await this.createCategory(recommendation.data as CategoryData);
 				break;
 			default:
 				throw new Error(`Action tidak didukung: ${recommendation.action}`);
 		}
 	}
 
-	private async createTransaction(data: any): Promise<void> {
+	private async createTransaction(data: TransactionData): Promise<void> {
 		if (!data.type) throw new Error('Type transaksi tidak valid');
 		if (!data.amount || data.amount <= 0)
 			throw new Error('Amount transaksi tidak valid atau kosong');
@@ -99,8 +122,8 @@ export class AutoApplyService {
 								nama_kustom: product.id ? null : product.nama || data.deskripsi,
 								custom_price: product.id ? null : Number(product.harga || data.amount),
 								jumlah: product.quantity || product.jumlah || 1,
-								add_on_ids: ((product.addOns as any[]) || [])
-									.map((addOn: any) => addOn.id)
+								add_on_ids: ((product.addOns as Array<{ id?: unknown }>) || [])
+									.map((addOn) => addOn.id)
 									.filter(Boolean)
 							}))
 						: [
@@ -157,7 +180,7 @@ export class AutoApplyService {
 		}
 	}
 
-	private async updateTransaction(data: any): Promise<void> {
+	private async updateTransaction(data: UpdateTransactionData): Promise<void> {
 		if (!data.id) throw new Error('ID transaksi diperlukan untuk update');
 		const branch = selectedBranch.value;
 		const payload = {
@@ -180,7 +203,7 @@ export class AutoApplyService {
 		await throwIfNotOk(res, 'Gagal mengupdate transaksi');
 	}
 
-	private async createCategory(data: any): Promise<void> {
+	private async createCategory(data: CategoryData): Promise<void> {
 		const branch = selectedBranch.value;
 		const res = await apiFetch('/api/kategori', {
 			method: 'POST',
@@ -206,7 +229,7 @@ export class AutoApplyService {
 	private deduplicateRecommendations(recommendations: AiRecommendation[]): AiRecommendation[] {
 		const seen = new Set<string>();
 		return recommendations.filter((rec) => {
-			const data = rec.data as any;
+			const data = rec.data as Record<string, unknown>;
 			const key = `${rec.action}_${data?.amount}_${data?.type}_${data?.deskripsi}`;
 			if (seen.has(key)) return false;
 			seen.add(key);

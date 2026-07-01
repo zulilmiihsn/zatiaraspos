@@ -1,4 +1,5 @@
-import { dataService } from '$lib/services/dataService';
+import { productService } from '$lib/services/productService';
+import { transactionService } from '$lib/services/transactionService';
 import type {
 	AddOn,
 	Category,
@@ -19,21 +20,21 @@ export interface HppParsedItem {
 
 export function createMenuCrud() {
 	return {
-		load: () => dataService.getProducts(),
+		load: () => productService.getProducts(),
 		loadRecipes: async (productId?: string | number): Promise<ProductRecipe[]> =>
-			(await dataService.getProductRecipes(productId)) as unknown as ProductRecipe[],
+			(await productService.getProductRecipes(productId)) as unknown as ProductRecipe[],
 		save: (payload: Record<string, unknown>, id?: string | number | null) =>
 			id
-				? dataService.updateRows('produk', payload, { id: String(id) })
-				: dataService.insertRows('produk', payload),
+				? transactionService.updateRows('produk', payload, { id: String(id) })
+				: transactionService.insertRows('produk', payload),
 		async saveRecipes(
 			productId: string | number,
 			items: Array<{ bahan_id: string | number; jumlah_per_item: string }>,
 			enabled: boolean
 		) {
-			await dataService.deleteRows('resep_produk', { produk_id: String(productId) });
+			await transactionService.deleteRows('resep_produk', { produk_id: String(productId) });
 			if (!enabled || items.length === 0) return;
-			await dataService.insertRows(
+			await transactionService.insertRows(
 				'resep_produk',
 				items.map((item) => ({
 					produk_id: String(productId),
@@ -42,64 +43,66 @@ export function createMenuCrud() {
 				}))
 			);
 		},
-		remove: (id: string | number) => dataService.deleteRows('produk', { id: String(id) }),
+		remove: (id: string | number) => transactionService.deleteRows('produk', { id: String(id) }),
 		updateCategory: (id: string | number, kategoriId: string | number | null) =>
-			dataService.updateRows('produk', { kategori_id: kategoriId }, { id: String(id) })
+			transactionService.updateRows('produk', { kategori_id: kategoriId }, { id: String(id) })
 	};
 }
 
 export function createKategoriCrud() {
 	return {
-		load: () => dataService.getCategories(),
+		load: () => productService.getCategories(),
 		save: (name: string, id?: string | number | null) =>
 			id
-				? dataService.updateRows('kategori', { nama: name }, { id: String(id) })
-				: dataService.insertRows('kategori', { nama: name }),
+				? transactionService.updateRows('kategori', { nama: name }, { id: String(id) })
+				: transactionService.insertRows('kategori', { nama: name }),
 		clearProducts: (id: string | number) =>
-			dataService.updateRows('produk', { kategori_id: null }, { kategori_id: String(id) }),
-		remove: (id: string | number) => dataService.deleteRows('kategori', { id: String(id) })
+			transactionService.updateRows('produk', { kategori_id: null }, { kategori_id: String(id) }),
+		remove: (id: string | number) => transactionService.deleteRows('kategori', { id: String(id) })
 	};
 }
 
 export function createEkstraCrud() {
 	return {
 		load: async (): Promise<Array<AddOn & { harga: number }>> =>
-			(await dataService.getAddOns()).map((item) => ({ ...item, harga: item.harga })),
+			(await productService.getAddOns()).map((item) => ({ ...item, harga: item.harga })),
 		save: (payload: { nama: string; harga: number }, id?: string | number | null) =>
 			id
-				? dataService.updateRows('tambahan', payload, { id: String(id) })
-				: dataService.insertRows('tambahan', payload),
-		remove: (id: string | number) => dataService.deleteRows('tambahan', { id: String(id) })
+				? transactionService.updateRows('tambahan', payload, { id: String(id) })
+				: transactionService.insertRows('tambahan', payload),
+		remove: (id: string | number) => transactionService.deleteRows('tambahan', { id: String(id) })
 	};
 }
 
 export function createBahanCrud() {
 	return {
 		load: async (): Promise<Ingredient[]> =>
-			(await dataService.getIngredients()) as unknown as Ingredient[],
+			(await productService.getIngredients()) as unknown as Ingredient[],
 		save: (payload: Record<string, unknown>, id?: string | number | null) =>
 			id
-				? dataService.updateRows('bahan', payload, { id: String(id) })
-				: dataService.insertRows('bahan', payload),
+				? transactionService.updateRows('bahan', payload, { id: String(id) })
+				: transactionService.insertRows('bahan', payload),
 		mutate: (id: string | number, delta: number, catatan: string) =>
-			dataService.insertRows('bahan_mutasi', {
+			transactionService.insertRows('bahan_mutasi', {
 				bahan_id: String(id),
 				delta_jumlah: delta,
 				source: 'manual',
 				catatan
 			}),
-		remove: (id: string | number) => dataService.deleteRows('bahan', { id: String(id) })
+		remove: (id: string | number) => transactionService.deleteRows('bahan', { id: String(id) })
 	};
 }
 
 export function createHppState() {
 	return {
 		loadSettings: async (): Promise<HppSettings | null> =>
-			(await dataService.getHppSettings()) as unknown as HppSettings | null,
+			(await productService.getHppSettings()) as unknown as HppSettings | null,
 		loadRecipes: async (): Promise<ProductRecipe[]> =>
-			(await dataService.getProductRecipes()) as unknown as ProductRecipe[],
-		saveSettings: (payload: Record<string, unknown>) =>
-			dataService.insertRows('hpp_settings', payload),
+			(await productService.getProductRecipes()) as unknown as ProductRecipe[],
+		saveSettings: (payload: Record<string, unknown>, id?: string | number | null) =>
+			id
+				? transactionService.updateRows('hpp_settings', payload, { id: '1' })
+				: transactionService.insertRows('hpp_settings', payload),
 		async parsePurchase(text: string): Promise<HppParsedItem[]> {
 			const response = await fetchWithCsrfRetry('/api/hpp/parse', {
 				method: 'POST',
@@ -112,7 +115,7 @@ export function createHppState() {
 		},
 		async savePurchasedItem(item: HppParsedItem, existing?: Ingredient) {
 			if (existing) {
-				await dataService.updateRows(
+				await transactionService.updateRows(
 					'bahan',
 					{
 						satuan: item.satuan,
@@ -122,7 +125,7 @@ export function createHppState() {
 					},
 					{ id: String(existing.id) }
 				);
-				await dataService.insertRows('bahan_mutasi', {
+				await transactionService.insertRows('bahan_mutasi', {
 					bahan_id: String(existing.id),
 					delta_jumlah: item.purchase_qty,
 					source: 'purchase',
@@ -130,7 +133,7 @@ export function createHppState() {
 				});
 				return;
 			}
-			await dataService.insertRows('bahan', {
+			await transactionService.insertRows('hpp_purchases', {
 				nama: item.nama,
 				satuan: item.satuan,
 				stok_saat_ini: item.purchase_qty,

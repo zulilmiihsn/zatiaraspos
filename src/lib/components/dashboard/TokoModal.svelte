@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { dataService } from '$lib/services/dataService';
+	import { transactionService } from '$lib/services/transactionService';
 	import { bukaToko, tutupToko } from '$lib/services/sesiTokoService';
 	import { getNowWita, getTodayWita, witaToUtcISO } from '$lib/utils/dateTime';
 	import { formatRupiah } from '$lib/utils/currency';
@@ -41,7 +41,7 @@
 
 	async function hitungRingkasanTutup() {
 		if (!sesiAktif) return;
-		const kasRaw = (await dataService.getRows('buku_kas', {
+		const kasRaw = (await transactionService.getRows('buku_kas', {
 			id_sesi_toko: sesiAktif.id
 		})) as unknown as BukuKasRecord[];
 

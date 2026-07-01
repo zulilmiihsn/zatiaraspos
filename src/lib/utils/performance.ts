@@ -29,15 +29,16 @@ export const calculateCartTotal = <T>(cart: T[]) => {
 	let items = 0;
 	let total = 0;
 	for (const item of cart) {
-		const record = item as Record<string, any>;
-		const itemTotal = (record.product?.harga ?? 0) * (record.jumlah ?? 1);
+		const record = item as Record<string, unknown>;
+		const product = record.product as Record<string, unknown> | undefined;
+		const itemTotal = ((product?.harga as number) ?? 0) * ((record.jumlah as number) ?? 1);
 		const addOnsTotal =
-			(record.addOns || []).reduce(
-				(sum: number, addon: Record<string, any>) => sum + (addon.harga ?? 0),
+			((record.addOns as Array<Record<string, unknown>>) || []).reduce(
+				(sum: number, addon: Record<string, unknown>) => sum + ((addon.harga as number) ?? 0),
 				0
-			) * (record.jumlah ?? 1);
+			) * ((record.jumlah as number) ?? 1);
 		total += itemTotal + addOnsTotal;
-		items += record.jumlah ?? 1;
+		items += (record.jumlah as number | null | undefined) ?? 1;
 	}
 	return { items, total };
 };
@@ -49,7 +50,7 @@ export function fuzzySearch<T>(query: string, items: T[], key: string = 'nama'):
 	// Cari di name dan kategori (jika ada)
 	return items
 		.map((item) => {
-			const record = item as Record<string, any>;
+			const record = item as Record<string, unknown>;
 			const name = String(record[key] ?? '').toLowerCase();
 			const kategori = String(record.kategori ?? '').toLowerCase();
 			let score = 0;

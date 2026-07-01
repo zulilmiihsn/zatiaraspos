@@ -6,7 +6,7 @@
  * loading + try/catch + notifikasi. Lihat CONVENTIONS.md §3.
  */
 import { witaToUtcRange, getTodayWita } from '$lib/utils/dateTime';
-import { dataService } from '$lib/services/dataService';
+import { transactionService } from '$lib/services/transactionService';
 import type { BukuKasRecord, HistoryItem } from '$lib/types/laporan';
 
 /** Rentang UTC untuk "hari ini" dalam zona WITA. */
@@ -30,7 +30,7 @@ export async function fetchTransaksiHariIni(filter: RiwayatFilter = {}): Promise
 	const { searchKeyword = '', filterPayment = 'all' } = filter;
 	const { startUtc: start, endUtc: end } = todayRange();
 
-	const data = (await dataService.getRows('buku_kas', {
+	const data = (await transactionService.getRows('buku_kas', {
 		start,
 		end
 	})) as unknown as BukuKasRecord[];

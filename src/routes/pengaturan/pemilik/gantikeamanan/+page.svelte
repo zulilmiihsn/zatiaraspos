@@ -10,7 +10,7 @@
 	import User from 'lucide-svelte/icons/user';
 	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
-	import { dataService } from '$lib/services/dataService';
+	import { transactionService } from '$lib/services/transactionService';
 
 	let oldUsername = $state('');
 	let newUsername = $state('');
@@ -44,7 +44,7 @@
 			goto('/unauthorized');
 		}
 
-		const data = (await dataService.getOne('pengaturan')) as {
+		const data = (await transactionService.getOne('pengaturan')) as {
 			pin?: string;
 			halaman_terkunci?: string[];
 			id?: string;
@@ -182,7 +182,11 @@
 			return;
 		}
 		try {
-			await dataService.updateRows('pengaturan', { pin: newPin }, { id: pengaturanKeamananId });
+			await transactionService.updateRows(
+				'pengaturan',
+				{ pin: newPin },
+				{ id: pengaturanKeamananId }
+			);
 			notifModalMsg = 'Perubahan PIN berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;
@@ -213,7 +217,7 @@
 
 	async function saveLockedPages() {
 		try {
-			await dataService.updateRows(
+			await transactionService.updateRows(
 				'pengaturan',
 				{ halaman_terkunci: lockedPages },
 				{ id: pengaturanKeamananId }
@@ -221,8 +225,8 @@
 			notifModalMsg = 'Pengaturan halaman terkunci berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;
-		} catch (error: any) {
-			notifModalMsg = 'Gagal menyimpan pengaturan: ' + error.message;
+		} catch (error) {
+			notifModalMsg = 'Gagal menyimpan pengaturan: ' + (error instanceof Error ? error.message : String(error));
 			notifModalType = 'error';
 			showNotifModal = true;
 		}

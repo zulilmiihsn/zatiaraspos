@@ -1,168 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { loadRouteIcons } from '$lib/utils/iconLoader';
-	import { auth } from '$lib/auth/auth';
-	import { securityUtils } from '$lib/utils/security';
-	import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
+	import { browser } from '$app/environment';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Crown from 'lucide-svelte/icons/crown';
 	import CreditCard from 'lucide-svelte/icons/credit-card';
 	import User from 'lucide-svelte/icons/user';
-	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
-	// Web component will be loaded dynamically in onMount
-	import { createToastManager } from '$lib/utils/ui';
-	import { ErrorHandler } from '$lib/utils/errorHandling';
-	import { browser } from '$app/environment';
-	import { dataService } from '$lib/services/dataService';
-	import { NOTIF } from '$lib/constants/ui';
+	import { createPengaturanState } from '$lib/stores/pengaturanState.svelte';
 
-	// PWA Installation - Web Component
-	let pwaElement: any = null;
-	let isPwaLibraryLoaded = $state(false);
-
-	// State untuk loading
-	let isLoading = $state(true);
-	let isProfileLoaded = $state(false);
-
-	let currentUserRole = $derived(userRole.value || '');
-	let showLogoutModal = $state(false);
-
-	// Removed showPinModal, pin, errorTimeout, isClosing
-	let showPwaInstalledToast = $state(false);
-
-	let showNotification = $state(false);
-	let notificationMessage = $state('');
-	let notificationTimeout: any = null;
-
-	let LogOut: any = $state(null),
-		Shield: any = $state(null),
-		Palette: any = $state(null),
-		Database: any = $state(null),
-		HelpCircle: any = $state(null),
-		Settings: any = $state(null),
-		Bell: any = $state(null),
-		Download: any = $state(null),
-		Printer: any = $state(null),
-		History: any = $state(null);
-
-	function showNotif(message: string) {
-		notificationMessage = message;
-		showNotification = true;
-		clearTimeout(notificationTimeout);
-		notificationTimeout = setTimeout(() => {
-			showNotification = false;
-		}, NOTIF.TOAST_MS);
-	}
+	const s = createPengaturanState();
 
 	onMount(async () => {
-		// Mulai preload ikon untuk seluruh route pengaturan (non-blocking)
-		loadRouteIcons('pengaturan');
-		try {
-			// Jika role belum ada di store, validasi dari session backend.
-			if (!currentUserRole) {
-				const res = await fetch('/api/session');
-				if (res.ok) {
-					const session = await res.json();
-					if (session?.user) setUserRole(session.user.role, session.user);
-				}
-			}
-
-			isProfileLoaded = true;
-
-			// PWA installed event
-			if (typeof window !== 'undefined') {
-				window.addEventListener('appinstalled', () => {
-					showPwaInstalledToast = true;
-					setTimeout(() => (showPwaInstalledToast = false), 4000);
-				});
-			}
-
-			// Load PWA Install Web Component (SSR-safe)
-			if (browser) {
-				try {
-					await import('@khmyznikov/pwa-install');
-					isPwaLibraryLoaded = true;
-
-					// Force custom styling after library loads
-					setTimeout(() => {
-						const pwaInstall = document.querySelector('pwa-install');
-						if (pwaInstall && pwaInstall.shadowRoot) {
-							const style = document.createElement('style');
-							style.textContent = `
-								.header, [part="header"], div[class*="header"] {
-									background-color: #FFB6C1 !important;
-								}
-							`;
-							pwaInstall.shadowRoot.appendChild(style);
-						}
-					}, 500);
-				} catch (error) {
-					console.error('Failed to load PWA install library:', error);
-				}
-			}
-
-			// Removed halaman_terkunci check for kasir role
-
-			// Set loading selesai
-			isLoading = false;
-
-			// Load icons
-			LogOut = (await import('lucide-svelte/icons/log-out')).default;
-			Shield = (await import('lucide-svelte/icons/shield')).default;
-			Palette = (await import('lucide-svelte/icons/palette')).default;
-			Database = (await import('lucide-svelte/icons/database')).default;
-			HelpCircle = (await import('lucide-svelte/icons/help-circle')).default;
-			Settings = (await import('lucide-svelte/icons/settings')).default;
-			Bell = (await import('lucide-svelte/icons/bell')).default;
-			Download = (await import('lucide-svelte/icons/download')).default;
-			Printer = (await import('lucide-svelte/icons/printer')).default;
-			History = (await import('lucide-svelte/icons/history')).default;
-		} catch (error) {
-			ErrorHandler.logError(error, 'loadPengaturanPage');
-			// toastManager.showToastNotification('Gagal memuat halaman pengaturan', 'error');
-		}
+		await s.init();
 	});
-
-	function handleLogout() {
-		showLogoutModal = true;
-	}
-
-	function confirmLogout() {
-		// SecurityMiddleware.logSecurityEvent('user_logout', {
-		//   user: currentUserRole,
-		//   from: 'settings_page'
-		// });
-		auth.logout();
-		goto('/login');
-	}
-
-	function cancelLogout() {
-		showLogoutModal = false;
-	}
-
-	function getRoleIcon() {
-		if (currentUserRole === 'admin' || currentUserRole === 'pemilik') return Crown;
-		if (currentUserRole === 'kasir') return CreditCard;
-		return User;
-	}
-
-	function handleInstallPWA() {
-		if (browser && isPwaLibraryLoaded) {
-			// Get the web component element
-			const pwaInstall = document.querySelector('pwa-install') as any;
-			if (pwaInstall) {
-				// Show the install dialog
-				pwaInstall.showDialog(true);
-			}
-		}
-	}
-
-	// Get role icon once and store it
-	let roleIcon = $derived(getRoleIcon());
 </script>
 
 <div class="page-content flex min-h-screen flex-col bg-gray-50">
@@ -189,7 +41,7 @@
 	<!-- Grid Menu Pengaturan -->
 	<div class="mt-0 flex flex-1 flex-col items-center justify-center px-4 md:justify-start md:px-0">
 		<!-- Box Informasi Role -->
-		{#if isLoading || !isProfileLoaded}
+		{#if s.isLoading || !s.isProfileLoaded}
 			<div
 				class="mb-2 flex w-full max-w-4xl animate-pulse flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:mx-auto"
 			>
@@ -209,8 +61,8 @@
 				<div
 					class="mb-2 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-400 to-purple-500 shadow-lg"
 				>
-					{#if roleIcon}
-						{@const RoleIcon = roleIcon}
+					{#if s.roleIcon}
+						{@const RoleIcon = s.roleIcon}
 						<RoleIcon class="h-8 w-8 text-white" />
 					{:else}
 						<div class="flex h-8 w-8 items-center justify-center">
@@ -220,7 +72,7 @@
 						</div>
 					{/if}
 				</div>
-				{#if currentUserRole === 'admin' || currentUserRole === 'pemilik'}
+				{#if s.currentUserRole === 'admin' || s.currentUserRole === 'pemilik'}
 					<div class="mb-1 text-2xl font-extrabold text-purple-700">Pemilik</div>
 					<div class="mb-2 text-sm text-gray-600">Akses penuh ke seluruh sistem</div>
 					<div class="mt-2 flex w-full items-center justify-between text-xs text-gray-500">
@@ -229,7 +81,7 @@
 							><span class="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>Session aktif</span
 						>
 					</div>
-				{:else if currentUserRole === 'kasir'}
+				{:else if s.currentUserRole === 'kasir'}
 					<div class="mb-1 text-2xl font-extrabold text-green-700">Kasir</div>
 					<div class="mb-2 text-sm text-gray-600">Akses standar</div>
 					<div class="mt-2 flex w-full items-center justify-between text-xs text-gray-500">
@@ -245,7 +97,7 @@
 		<div
 			class="mt-2 grid w-full max-w-md grid-cols-2 gap-4 md:mx-auto md:mt-4 md:max-w-4xl md:grid-cols-3 md:gap-8 md:py-8"
 		>
-			{#if isLoading || !isProfileLoaded}
+			{#if s.isLoading || !s.isProfileLoaded}
 				{#each Array(4) as _, i}
 					<div
 						class="flex aspect-square min-h-[110px] animate-pulse flex-col items-center justify-center rounded-xl border-2 border-gray-100 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-4 shadow-lg"
@@ -258,18 +110,19 @@
 					</div>
 				{/each}
 			{:else}
-				<!-- Box Pemilik (selalu tampil, disable jika bukan admin/pemilik) -->
+				<!-- Box Pemilik -->
 				<button
-					class="relative flex aspect-square min-h-[110px] flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-purple-400 bg-gradient-to-br from-purple-500 to-pink-400 p-4 text-white shadow-lg transition-opacity duration-200 focus:outline-none {currentUserRole ===
-						'admin' || currentUserRole === 'pemilik'
+					class="relative flex aspect-square min-h-[110px] flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-purple-400 bg-gradient-to-br from-purple-500 to-pink-400 p-4 text-white shadow-lg transition-opacity duration-200 focus:outline-none {s.currentUserRole ===
+						'admin' || s.currentUserRole === 'pemilik'
 						? 'shimmer-highlight hover:scale-105'
 						: ''} md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
 					onclick={() =>
-						(currentUserRole === 'admin' || currentUserRole === 'pemilik') &&
+						(s.currentUserRole === 'admin' || s.currentUserRole === 'pemilik') &&
 						goto('/pengaturan/pemilik')}
-					disabled={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
-					class:opacity-60={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
-					class:pointer-events-none={currentUserRole !== 'admin' && currentUserRole !== 'pemilik'}
+					disabled={s.currentUserRole !== 'admin' && s.currentUserRole !== 'pemilik'}
+					class:opacity-60={s.currentUserRole !== 'admin' && s.currentUserRole !== 'pemilik'}
+					class:pointer-events-none={s.currentUserRole !== 'admin' &&
+						s.currentUserRole !== 'pemilik'}
 				>
 					{#if Crown}
 						<Crown class="mb-2 h-8 w-8" />
@@ -292,10 +145,11 @@
 				<!-- Box Install PWA -->
 				<button
 					class="flex aspect-square min-h-[110px] flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-4 shadow focus:outline-none md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
-					onclick={handleInstallPWA}
+					onclick={s.handleInstallPWA}
 				>
-					{#if Download}
-						<Download class="mb-2 h-8 w-8 text-pink-500" />
+					{#if s.Download}
+						{@const DownloadIcon = s.Download}
+						<DownloadIcon class="mb-2 h-8 w-8 text-pink-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -317,8 +171,9 @@
 					class="flex aspect-square min-h-[110px] flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-4 shadow focus:outline-none md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
 					onclick={() => goto('/pengaturan/printer')}
 				>
-					{#if Printer}
-						<Printer class="mb-2 h-8 w-8 text-blue-500" />
+					{#if s.Printer}
+						{@const PrinterIcon = s.Printer}
+						<PrinterIcon class="mb-2 h-8 w-8 text-blue-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -340,8 +195,9 @@
 					class="flex aspect-square min-h-[110px] flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-4 shadow focus:outline-none md:flex md:h-56 md:h-full md:w-full md:items-center md:justify-center md:gap-1 md:rounded-3xl md:p-8 md:shadow-xl md:transition-transform md:duration-200 md:hover:scale-105"
 					onclick={() => goto('/pengaturan/riwayat')}
 				>
-					{#if History}
-						<History class="mb-2 h-8 w-8 text-emerald-500" />
+					{#if s.History}
+						{@const HistoryIcon = s.History}
+						<HistoryIcon class="mb-2 h-8 w-8 text-emerald-500" />
 					{:else}
 						<div class="mb-2 flex h-8 w-8 items-center justify-center">
 							<span
@@ -367,8 +223,9 @@
 		>
 			<div class="border-b border-red-200 bg-red-50 px-6 py-4">
 				<div class="flex items-center gap-3">
-					{#if LogOut}
-						<LogOut class="h-5 w-5 text-red-600" />
+					{#if s.LogOut}
+						{@const LogOutIcon = s.LogOut}
+						<LogOutIcon class="h-5 w-5 text-red-600" />
 					{:else}
 						<div class="flex h-5 w-5 items-center justify-center">
 							<span
@@ -384,11 +241,12 @@
 					Anda akan keluar dari sistem dan harus login kembali untuk mengakses aplikasi.
 				</p>
 				<button
-					onclick={handleLogout}
+					onclick={s.handleLogout}
 					class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-3 font-medium text-white transition-colors hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 				>
-					{#if LogOut}
-						<LogOut class="h-4 w-4" />
+					{#if s.LogOut}
+						{@const LogOutIcon = s.LogOut}
+						<LogOutIcon class="h-4 w-4" />
 					{:else}
 						<div class="flex h-4 w-4 items-center justify-center">
 							<span
@@ -403,13 +261,14 @@
 	</div>
 
 	<!-- Logout Confirmation Modal -->
-	{#if showLogoutModal}
+	{#if s.showLogoutModal}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 			<div class="animate-slideUpModal w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
 				<div class="mb-4 flex items-center gap-3">
 					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-						{#if LogOut}
-							<LogOut class="h-5 w-5 text-red-600" />
+						{#if s.LogOut}
+							{@const LogOutIcon = s.LogOut}
+							<LogOutIcon class="h-5 w-5 text-red-600" />
 						{:else}
 							<div class="flex h-5 w-5 items-center justify-center">
 								<span
@@ -425,13 +284,13 @@
 				</div>
 				<div class="flex gap-3">
 					<button
-						onclick={cancelLogout}
+						onclick={s.cancelLogout}
 						class="flex-1 rounded-xl border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
 					>
 						Batal
 					</button>
 					<button
-						onclick={confirmLogout}
+						onclick={s.confirmLogout}
 						class="flex-1 rounded-xl bg-red-500 px-4 py-2 font-medium text-white transition-colors hover:bg-red-600"
 					>
 						Keluar
@@ -442,7 +301,7 @@
 	{/if}
 
 	<!-- PWA Installed Toast -->
-	{#if showPwaInstalledToast}
+	{#if s.showPwaInstalledToast}
 		<div
 			class="animate-fadeIn fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-green-500 px-6 py-3 text-sm font-semibold text-white shadow-lg"
 		>
@@ -451,7 +310,7 @@
 	{/if}
 
 	<!-- PWA Install Web Component (SSR-safe) -->
-	{#if browser && isPwaLibraryLoaded}
+	{#if browser && s.isPwaLibraryLoaded}
 		<pwa-install
 			manifest-url="/manifest.webmanifest"
 			name="Zatiaras POS"
@@ -474,14 +333,14 @@
 		}
 	</style>
 
-	{#if showNotification}
+	{#if s.showNotification}
 		<div
 			class="fixed top-20 left-1/2 z-50 rounded-xl bg-yellow-500 px-6 py-3 text-center text-white shadow-lg transition-all duration-300 ease-out"
 			style="transform: translateX(-50%);"
 			in:fly={{ y: -32, duration: 300, easing: cubicOut }}
 			out:fade={{ duration: 200 }}
 		>
-			{notificationMessage}
+			{s.notificationMessage}
 		</div>
 	{/if}
 </div>
@@ -547,7 +406,7 @@
 		background: linear-gradient(
 			90deg,
 			rgba(255, 255, 255, 0) 0%,
-			rgba(255, 255, 255, 0.28) 50%,
+			rgba(255, 255, 255, 0.18) 50%,
 			rgba(255, 255, 255, 0) 100%
 		);
 	}
