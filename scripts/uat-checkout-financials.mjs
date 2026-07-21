@@ -66,6 +66,30 @@ async function request(path, auth, init = {}) {
 }
 
 const auth = await login();
+const items = [
+	{
+		product_id: productId,
+		jumlah: 2,
+		add_on_ids: [],
+		gula: 'normal',
+		es: 'sedikit',
+		catatan: 'UAT H-KISS-6'
+	},
+	{
+		product_id: null,
+		nama_kustom: 'Item Custom UAT',
+		custom_price: 5_000,
+		jumlah: 1,
+		add_on_ids: []
+	}
+];
+const quoteResponse = await request('/api/pos/quote', auth, {
+	method: 'POST',
+	headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify({ items })
+});
+const quotePayload = await quoteResponse.json().catch(() => null);
+assert(quoteResponse.ok && quotePayload?.quote_token, `Quote gagal: ${quoteResponse.status}`);
 const checkoutResponse = await request('/api/pos/transaction', auth, {
 	method: 'POST',
 	headers: { 'Content-Type': 'application/json' },
@@ -74,23 +98,9 @@ const checkoutResponse = await request('/api/pos/transaction', auth, {
 		nama_pelanggan: 'UAT H-KISS-6',
 		metode_bayar: 'tunai',
 		cash_received: 30_000,
-		items: [
-			{
-				product_id: productId,
-				jumlah: 2,
-				add_on_ids: [],
-				gula: 'normal',
-				es: 'sedikit',
-				catatan: 'UAT H-KISS-6'
-			},
-			{
-				product_id: null,
-				nama_kustom: 'Item Custom UAT',
-				custom_price: 5_000,
-				jumlah: 1,
-				add_on_ids: []
-			}
-		]
+		items,
+		mode: 'online',
+		quote_token: quotePayload.quote_token
 	})
 });
 const checkoutPayload = await checkoutResponse.json().catch(() => null);

@@ -123,7 +123,8 @@ export function createPengaturanState() {
 			Shield = (await import('lucide-svelte/icons/shield')).default as unknown as IconComponent;
 			Palette = (await import('lucide-svelte/icons/palette')).default as unknown as IconComponent;
 			Database = (await import('lucide-svelte/icons/database')).default as unknown as IconComponent;
-			HelpCircle = (await import('lucide-svelte/icons/help-circle')).default as unknown as IconComponent;
+			HelpCircle = (await import('lucide-svelte/icons/help-circle'))
+				.default as unknown as IconComponent;
 			Settings = (await import('lucide-svelte/icons/settings')).default as unknown as IconComponent;
 			Bell = (await import('lucide-svelte/icons/bell')).default as unknown as IconComponent;
 			Download = (await import('lucide-svelte/icons/download')).default as unknown as IconComponent;

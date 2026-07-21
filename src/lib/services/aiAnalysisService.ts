@@ -1,5 +1,4 @@
 import type { TransactionAnalysis, DetectedTransaction, AiRecommendation } from '$lib/types/ai';
-import { get } from 'svelte/store';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import {
 	getApiErrorMessageFromResponse,
@@ -117,11 +116,14 @@ export class AiAnalysisService {
 
 				recommendations.push({
 					id: `rec_${Date.now()}_${index}`,
-					action: (((rec.action as unknown) as string) || 'create_transaction') as 'create_transaction' | 'update_transaction' | 'create_category',
-					title: ((rec.title as unknown) as string) || `Rekomendasi ${index + 1}`,
-					deskripsi: ((rec.deskripsi as unknown) as string) || '',
+					action: ((rec.action as unknown as string) || 'create_transaction') as
+						| 'create_transaction'
+						| 'update_transaction'
+						| 'create_category',
+					title: (rec.title as unknown as string) || `Rekomendasi ${index + 1}`,
+					deskripsi: (rec.deskripsi as unknown as string) || '',
 					data: recommendationData,
-					priority: (((rec.priority as unknown) as string) || 'medium') as 'low' | 'medium' | 'high'
+					priority: ((rec.priority as unknown as string) || 'medium') as 'low' | 'medium' | 'high'
 				});
 			});
 		}

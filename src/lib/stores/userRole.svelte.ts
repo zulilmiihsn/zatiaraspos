@@ -1,5 +1,3 @@
-import { selectedBranch } from './selectedBranch.svelte';
-
 export type UserRole = 'pemilik' | 'kasir' | 'admin';
 
 function isUserRole(role: unknown): role is UserRole {

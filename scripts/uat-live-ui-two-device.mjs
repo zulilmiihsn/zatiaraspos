@@ -164,7 +164,19 @@ function jsString(value) {
 async function loginByUi(cdp, sessionId, username) {
 	await cdp.send('Page.navigate', { url: `${baseUrl}/login` }, sessionId);
 	await waitForLoad(cdp, sessionId);
-	await waitUntil(() => evaluate(cdp, sessionId, "Boolean(document.querySelector('#username'))"));
+	await waitUntil(
+		() =>
+			evaluate(
+				cdp,
+				sessionId,
+				`Boolean(
+					document.querySelector('form[data-hydrated="true"]') &&
+					document.querySelector('#username') &&
+					!document.querySelector('button[type="submit"]')?.disabled
+				)`
+			),
+		60000
+	);
 
 	await evaluate(
 		cdp,
@@ -226,6 +238,30 @@ async function readDashboardMetrics(cdp, sessionId) {
 async function runCashierUiTransaction(cdp, sessionId) {
 	await cdp.send('Page.navigate', { url: `${baseUrl}/pos` }, sessionId);
 	await waitForLoad(cdp, sessionId);
+	await evaluate(
+		cdp,
+		sessionId,
+		`(() => {
+			window.__uatTransactionId = null;
+			const originalFetch = window.fetch.bind(window);
+			window.fetch = async (...args) => {
+				const response = await originalFetch(...args);
+				const request = args[0];
+				const init = args[1] || {};
+				const url = typeof request === 'string' ? request : request?.url || '';
+				const method = String(init.method || request?.method || 'GET').toUpperCase();
+				if (method === 'POST' && url.includes('/api/pos/transaction') && response.ok) {
+					response.clone().json()
+						.then((payload) => {
+							window.__uatTransactionId = payload?.data?.transaction_id || null;
+						})
+						.catch(() => undefined);
+				}
+				return response;
+			};
+			return true;
+		})()`
+	);
 	try {
 		await waitUntil(
 			() =>
@@ -246,7 +282,7 @@ async function runCashierUiTransaction(cdp, sessionId) {
 				online: navigator.onLine,
 				selectedBranch: localStorage.getItem('selectedBranch'),
 				session: await fetch('/api/session', { credentials: 'include' }).then((r) => r.json()),
-				products: await fetch('/api/data?table=produk&branch=${encodeURIComponent(branch)}&limit=5').then((r) => r.json()),
+				products: await fetch('/api/produk?branch=${encodeURIComponent(branch)}').then((r) => r.json()),
 				body: document.body.innerText.slice(0, 1200)
 			}))()`
 		);
@@ -343,15 +379,42 @@ async function runCashierUiTransaction(cdp, sessionId) {
 		() => evaluate(cdp, sessionId, "document.body.innerText.includes('Transaksi Berhasil')"),
 		20000
 	);
+	return waitUntil(() => evaluate(cdp, sessionId, 'window.__uatTransactionId || null'), 10000);
+}
+
+async function cleanupTransaction(cdp, sessionId, transactionId) {
+	return evaluate(
+		cdp,
+		sessionId,
+		`(async () => {
+			const csrfResponse = await fetch('/api/csrf', { credentials: 'include' });
+			const csrf = await csrfResponse.json();
+			if (!csrfResponse.ok || !csrf.token) {
+				return { ok: false, status: csrfResponse.status };
+			}
+			const response = await fetch(
+				'/api/transaksi-kasir?transaction_id=' + encodeURIComponent(${jsString(transactionId)}),
+				{
+					method: 'DELETE',
+					credentials: 'include',
+					headers: { 'X-CSRF-Token': csrf.token }
+				}
+			);
+			return { ok: response.ok, status: response.status };
+		})()`
+	);
 }
 
 let chrome;
 let cdp;
+let owner;
+let transactionId;
+let transactionCleaned = false;
 try {
 	chrome = await launchChrome();
 	cdp = await connectBrowser();
 
-	const owner = await newPage(cdp, `${baseUrl}/login`);
+	owner = await newPage(cdp, `${baseUrl}/login`);
 	const cashier = await newPage(cdp, `${baseUrl}/login`);
 
 	await loginByUi(cdp, owner.sessionId, 'pemilik');
@@ -364,7 +427,8 @@ try {
 	);
 	const before = await readDashboardMetrics(cdp, owner.sessionId);
 
-	await runCashierUiTransaction(cdp, cashier.sessionId);
+	transactionId = await runCashierUiTransaction(cdp, cashier.sessionId);
+	assert(transactionId, 'Checkout UI tidak mengembalikan transaction_id');
 
 	const after = await waitUntil(async () => {
 		const metrics = await readDashboardMetrics(cdp, owner.sessionId);
@@ -377,6 +441,9 @@ try {
 		}
 		return null;
 	}, 20000);
+	const cleanup = await cleanupTransaction(cdp, owner.sessionId, transactionId);
+	assert(cleanup.ok, `Cleanup transaksi live gagal: HTTP ${cleanup.status}`);
+	transactionCleaned = true;
 
 	console.log(
 		JSON.stringify({
@@ -394,10 +461,15 @@ try {
 				pendapatan: after.pendapatan
 			},
 			cashierTransactionUi: true,
-			ownerRealtimeDashboardUpdated: true
+			ownerRealtimeDashboardUpdated: true,
+			transactionId,
+			transactionCleanup: cleanup.status
 		})
 	);
 } finally {
+	if (cdp && owner && transactionId && !transactionCleaned) {
+		await cleanupTransaction(cdp, owner.sessionId, transactionId).catch(() => undefined);
+	}
 	cdp?.close();
 	await chrome?.cleanup();
 }

@@ -243,8 +243,7 @@ export function createBahanHppState(config: BahanHppConfig) {
 		};
 		try {
 			const result = await hppState.saveSettings(payload);
-			hppSettings =
-				(result.data?.[0] as unknown as HppSettings) || ({ ...payload } as HppSettings);
+			hppSettings = (result.data?.[0] as unknown as HppSettings) || ({ ...payload } as HppSettings);
 			await cacheOrchestrator.invalidateCacheOnChange('hpp_settings');
 			await fetchHppSettings();
 			config.showNotif('Pengaturan HPP tersimpan', 'success');

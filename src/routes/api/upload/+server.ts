@@ -1,15 +1,19 @@
 import { json } from '@sveltejs/kit';
 import { uploadToR2, deleteFromR2 } from '$lib/server/s3Client';
 import { requireAuthSession, requireAnyRole } from '$lib/server/apiAuth';
+import {
+	isAllowedProductImageMime,
+	isPublicProductImageKey,
+	productImageExtension
+} from '$lib/server/r2ObjectPolicy';
 import { v4 as uuidv4 } from 'uuid';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function GET({ url, platform }) {
 	const key = url.searchParams.get('key');
 	const bucket = platform?.env?.STORAGE;
-	if (!key || !bucket) {
+	if (!isPublicProductImageKey(key) || !bucket) {
 		return json({ error: 'Not found' }, { status: 404 });
 	}
 
@@ -39,7 +43,7 @@ export async function POST({ request, platform, locals }) {
 			return json({ error: 'No file provided' }, { status: 400 });
 		}
 
-		if (!ALLOWED_TYPES.includes(file.type)) {
+		if (!isAllowedProductImageMime(file.type)) {
 			return json({ error: 'Invalid file type. Allowed: jpg, png, webp' }, { status: 400 });
 		}
 
@@ -52,7 +56,7 @@ export async function POST({ request, platform, locals }) {
 			return json({ error: 'Storage unavailable' }, { status: 503 });
 		}
 
-		const ext = file.name.split('.').pop() ?? 'webp';
+		const ext = productImageExtension(file.type);
 		const key = `produk/${uuidv4()}.${ext}`;
 		const buffer = await file.arrayBuffer();
 
@@ -73,8 +77,8 @@ export async function DELETE({ request, platform, locals }) {
 	try {
 		const { key } = (await request.json()) as { key: string };
 
-		if (!key) {
-			return json({ error: 'No key provided' }, { status: 400 });
+		if (!isPublicProductImageKey(key)) {
+			return json({ error: 'Invalid product image key' }, { status: 400 });
 		}
 
 		const bucket = platform?.env?.STORAGE;

@@ -196,10 +196,7 @@ export function createMenuState(deps: MenuDeps) {
 				await menuCrud.remove(menuIdToDelete);
 				deps.showNotif('Menu berhasil dihapus!', 'success');
 			} catch (error) {
-				deps.showNotif(
-					'Gagal menghapus menu: ' + ErrorHandler.extractErrorMessage(error),
-					'error'
-				);
+				deps.showNotif('Gagal menghapus menu: ' + ErrorHandler.extractErrorMessage(error), 'error');
 				return;
 			}
 			showDeleteModal = false;

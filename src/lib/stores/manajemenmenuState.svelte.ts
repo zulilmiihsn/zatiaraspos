@@ -1,5 +1,4 @@
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
-import { set as setCache } from 'idb-keyval';
 import { cacheOrchestrator } from '$lib/utils/cacheOrchestrator';
 import { createToastManager } from '$lib/utils/ui';
 import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -52,11 +51,6 @@ export function createManajemenmenuState() {
 
 	// ── Wire deps after all sub-stores created ────────────────────────────────
 	deps.afterUpdate = async () => {
-		await setCache('pos-data', {
-			produkData: JSON.parse(JSON.stringify(menuSt.menus)),
-			kategoriData: JSON.parse(JSON.stringify(kategoriSt.kategoriList)),
-			tambahanData: JSON.parse(JSON.stringify(ekstraSt.ekstraList))
-		});
 		try {
 			await cacheOrchestrator.clearAllCaches();
 			await cacheOrchestrator.invalidateCacheOnChange('produk');
@@ -80,10 +74,8 @@ export function createManajemenmenuState() {
 						? true
 						: menu.kategori_id === menuSt.selectedKategori;
 				const kategoriNama =
-					kategoriSt.kategoriList.find((k) => k.id === menu.kategori_id)?.nama?.toLowerCase() ||
-					'';
-				const match =
-					menu.nama.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
+					kategoriSt.kategoriList.find((k) => k.id === menu.kategori_id)?.nama?.toLowerCase() || '';
+				const match = menu.nama.toLowerCase().includes(keyword) || kategoriNama.includes(keyword);
 				return (
 					(menuSt.selectedKategori === 'Semua'
 						? true
@@ -111,7 +103,6 @@ export function createManajemenmenuState() {
 	});
 
 	// ── Branch-reactive loading ───────────────────────────────────────────────
-	let isInitialLoad = true;
 	$effect(() => {
 		const _branch = selectedBranch.value;
 		if (typeof window !== 'undefined') {
@@ -124,15 +115,8 @@ export function createManajemenmenuState() {
 					bahanHppSt.fetchRecipes(),
 					bahanHppSt.fetchHppSettings()
 				]);
-
-				await setCache('pos-data', {
-					produkData: JSON.parse(JSON.stringify(menuSt.menus)),
-					kategoriData: JSON.parse(JSON.stringify(kategoriSt.kategoriList)),
-					tambahanData: JSON.parse(JSON.stringify(ekstraSt.ekstraList))
-				});
 			})();
 		}
-		isInitialLoad = false;
 	});
 
 	// ── Public API (identical surface to original) ────────────────────────────

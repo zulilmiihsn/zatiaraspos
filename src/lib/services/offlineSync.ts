@@ -55,49 +55,6 @@ async function replayPendingTransaction(payload: Record<string, unknown>): Promi
 		return;
 	}
 
-	if (
-		payload.bukuKas &&
-		typeof payload.bukuKas === 'object' &&
-		(payload.bukuKas as Record<string, unknown>).sumber === 'pos' &&
-		Array.isArray(payload.transaksiKasir)
-	) {
-		const bukuKas = payload.bukuKas as Record<string, any>;
-		const response = await fetchWithCsrfRetry('/api/pos/transaction', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				idempotency_key: bukuKas.transaction_id || bukuKas.id,
-				nama_pelanggan: bukuKas.nama_pelanggan || null,
-				metode_bayar: bukuKas.metode_bayar,
-				items: payload.transaksiKasir.map((item: Record<string, unknown>) => ({
-					product_id: item.produk_id || null,
-					nama_kustom: item.nama_kustom || null,
-					custom_price: item.produk_id ? null : item.harga || item.nominal,
-					jumlah: item.jumlah || 1,
-					add_on_ids: []
-				}))
-			})
-		});
-		await assertSyncResponse(response, 'Sinkronisasi transaksi POS lama gagal');
-		return;
-	}
-
-	if (payload.bukuKas && typeof payload.bukuKas === 'object') {
-		const bukuKas = payload.bukuKas as Record<string, any>;
-		await dbPost('buku_kas', 'insert', bukuKas);
-		if (Array.isArray(payload.transaksiKasir) && payload.transaksiKasir.length) {
-			await dbPost(
-				'transaksi_kasir',
-				'insert',
-				payload.transaksiKasir.map((item: Record<string, unknown>) => ({
-					...item,
-					buku_kas_id: bukuKas.id
-				}))
-			);
-		}
-		return;
-	}
-
 	await dbPost('buku_kas', 'insert', payload);
 }
 
@@ -122,9 +79,16 @@ async function scheduleNextPendingSync(): Promise<void> {
 	schedulePendingSync(Math.max(250, nextAttemptAt - Date.now()));
 }
 
-async function runPendingTransactionSync(force = false): Promise<void> {
+async function runPendingTransactionSync(
+	force = false,
+	queueIds?: ReadonlySet<string>
+): Promise<void> {
 	if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-	const pendings = (await getPendingTransactions()).filter((item) => force || isPendingReady(item));
+	const pendings = (await getPendingTransactions()).filter((item) => {
+		if (queueIds?.has(item.queue_id)) return true;
+		if (item.failure_kind === 'auth' || item.failure_kind === 'conflict') return false;
+		return force || isPendingReady(item);
+	});
 	if (!pendings.length) return;
 	let synced = 0;
 	let failed = 0;
@@ -164,9 +128,12 @@ async function runPendingTransactionSync(force = false): Promise<void> {
 	await scheduleNextPendingSync();
 }
 
-export function syncPendingTransactions(options: { force?: boolean } = {}): Promise<void> {
+export function syncPendingTransactions(
+	options: { force?: boolean; queueIds?: string[] } = {}
+): Promise<void> {
 	if (pendingSync) return pendingSync;
-	pendingSync = runPendingTransactionSync(Boolean(options.force)).finally(() => {
+	const queueIds = options.queueIds?.length ? new Set(options.queueIds) : undefined;
+	pendingSync = runPendingTransactionSync(Boolean(options.force), queueIds).finally(() => {
 		pendingSync = null;
 	});
 	return pendingSync;

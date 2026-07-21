@@ -89,11 +89,13 @@
 			<div class="sheet-content min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">
 				{@render children?.()}
 			</div>
-			<div
-				class="sheet-footer absolute right-0 bottom-0 left-0 z-20 w-full max-w-[100vw] bg-white px-4 pt-3 pb-4 shadow-[0_-2px_16px_rgba(0,0,0,0.08)] sm:px-6"
-			>
-				{@render footer?.()}
-			</div>
+			{#if footer}
+				<div
+					class="sheet-footer z-20 w-full max-w-[100vw] shrink-0 bg-white px-4 pt-3 pb-4 shadow-[0_-2px_16px_rgba(0,0,0,0.08)] sm:px-6"
+				>
+					{@render footer()}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -165,7 +167,8 @@
 		flex-direction: column;
 		height: 100%;
 		min-height: 0;
-		overflow: hidden;
+		overflow-x: hidden;
+		overflow-y: auto;
 		padding-bottom: 1rem;
 		scrollbar-width: none !important;
 		-ms-overflow-style: none !important;

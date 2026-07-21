@@ -39,7 +39,6 @@ WHERE NOT EXISTS (
 INSERT INTO pengaturan (
 	id,
 	cabang_id,
-	pin,
 	halaman_terkunci,
 	nama_toko,
 	alamat,
@@ -50,7 +49,6 @@ INSERT INTO pengaturan (
 SELECT
 	910001,
 	'samarinda',
-	'1234',
 	'["laporan","beranda","pengaturan","catat"]',
 	'Zatiaras UAT Samarinda',
 	'Samarinda',

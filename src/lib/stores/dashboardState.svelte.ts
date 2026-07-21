@@ -158,7 +158,7 @@ export function createDashboardState() {
 	});
 
 	$effect(() => {
-		const branch = selectedBranch.value;
+		const _branch = selectedBranch.value;
 		if (isInitialLoad) {
 			isInitialLoad = false;
 			return;

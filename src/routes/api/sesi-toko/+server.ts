@@ -4,6 +4,7 @@ import { sesiToko } from '$lib/database/schema';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
 import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { requirePageAccess } from '$lib/server/pageAccess';
 import type { RequestHandler } from './$types';
 
 /**
@@ -43,6 +44,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
+	await requirePageAccess(rawDb, session, 'beranda');
 	const rows = payloadRows(body.payload, branch);
 	await db.insert(sesiToko).values(rows as (typeof sesiToko.$inferInsert)[]);
 	await publish(platform, branch, 'sesi_toko', 'insert', { id: rows[0]?.id });
@@ -62,6 +64,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
+	await requirePageAccess(rawDb, session, 'beranda');
 	await db
 		.update(sesiToko)
 		.set(sanitizeUpdatePayload(body.payload as Partial<typeof sesiToko.$inferInsert>))

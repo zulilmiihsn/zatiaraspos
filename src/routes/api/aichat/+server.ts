@@ -6,6 +6,7 @@ import { formatRupiah } from '$lib/utils/currency';
 import { getD1Database, getDrizzleDb, normalizeBranch } from '$lib/server/branchResolver';
 import { requireAuthSession, requireSessionBranch } from '$lib/server/apiAuth';
 import { consumeRateLimit } from '$lib/server/rateLimit';
+import { requirePageAccess } from '$lib/server/pageAccess';
 import { kategori, produk, tambahan } from '$lib/database/schema';
 import { eq } from 'drizzle-orm';
 import {
@@ -400,6 +401,8 @@ export const POST: RequestHandler = async (event) => {
 	if (action === 'analyze') {
 		return await handleTransactionAnalysis(event);
 	}
+
+	await requirePageAccess(db, session, 'laporan');
 
 	// Default: handle regular AI chat
 	return await handleRegularChat(event);

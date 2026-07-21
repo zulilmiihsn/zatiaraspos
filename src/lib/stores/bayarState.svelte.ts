@@ -18,6 +18,55 @@ import type { TokoSession } from '$lib/types/store';
 import type { CartItem } from '$lib/types/cart';
 import type { NotifModalType } from '$lib/components/shared/NotifModal.svelte';
 
+interface QuoteLine {
+	source: Record<string, unknown>;
+	product_name: string;
+	product_price: number;
+	add_ons: Array<{ id: string; nama: string; harga: number }>;
+	line_total: number;
+}
+
+interface QuoteResponse {
+	ok: boolean;
+	quote_token: string;
+	expires_at: string;
+	items: QuoteLine[];
+	total_amount: number;
+	total_qty: number;
+}
+
+interface CommittedReceipt {
+	items: Array<{
+		product_id: string | null;
+		nama: string;
+		jumlah: number;
+		harga: number;
+		nominal: number;
+		tambahan: Array<{ id: string; nama: string; harga: number }>;
+		gula: string | null;
+		es: string | null;
+		catatan: string | null;
+	}>;
+	total_amount: number;
+	total_qty: number;
+	cash_received: number;
+	change: number;
+	metode_bayar: string;
+	committed_at: string;
+}
+
+interface CheckoutResponse {
+	ok: boolean;
+	data?: {
+		buku_kas_id: string;
+		transaction_id: string;
+		total_amount: number;
+		total_qty: number;
+		change: number;
+		receipt: CommittedReceipt;
+	};
+}
+
 export function createBayarState() {
 	let cart = $state<CartItem[]>([]);
 	let customerName = $state('');
@@ -36,6 +85,10 @@ export function createBayarState() {
 	let showNotifModal = $state(false);
 	let notifModalMsg = $state('');
 	let notifModalType = $state<NotifModalType>('warning');
+	let activeQuoteToken = $state('');
+	let quoteExpiresAt = $state('');
+	let quotedTotal = $state<number | null>(null);
+	let committedReceipt = $state<CommittedReceipt | null>(null);
 
 	let pengaturanStruk: ReceiptSettings | null = null;
 	let sesiAktif: TokoSession | null = null;
@@ -44,7 +97,7 @@ export function createBayarState() {
 	const currentUserRole = $derived(userRole.value || '');
 
 	const totalQty = $derived(cart.reduce((sum, item) => sum + item.jumlah, 0));
-	const totalHarga = $derived(
+	const cartTotalHarga = $derived(
 		cart.reduce((sum, item) => {
 			let itemTotal = item.jumlah * (item.product.harga ?? 0);
 			if (item.addOns) {
@@ -56,7 +109,10 @@ export function createBayarState() {
 			return sum + itemTotal;
 		}, 0)
 	);
-	const kembalian = $derived((parseInt(cashReceived) || 0) - totalHarga);
+	const totalHarga = $derived(quotedTotal ?? cartTotalHarga);
+	const kembalian = $derived(
+		committedReceipt?.change ?? (parseInt(cashReceived) || 0) - totalHarga
+	);
 	const formattedCashReceived = $derived(cashReceived ? formatRupiah(parseInt(cashReceived)) : '');
 	const canPay = $derived(
 		Boolean(
@@ -143,10 +199,111 @@ export function createBayarState() {
 	function closeModal() {
 		showCancelModal = false;
 	}
-	function handleBayar() {
+
+	function buildItemInputs() {
+		return cart.map((item) => {
+			const isCustom = item.product.id.toString().startsWith('custom-');
+			return {
+				product_id: isCustom ? null : item.product.id,
+				nama_kustom: isCustom ? item.product.nama : null,
+				custom_price: isCustom ? (item.product.harga ?? 0) : null,
+				jumlah: item.jumlah,
+				add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
+				gula: item.gula || null,
+				es: item.es || null,
+				catatan: item.catatan || null,
+				product_price_token: isCustom ? null : item.product.price_token || null,
+				add_on_price_tokens: (item.addOns || [])
+					.map((addOn) => addOn.price_token)
+					.filter((token): token is string => Boolean(token))
+			};
+		});
+	}
+
+	function hasValidOfflinePricing(): boolean {
+		const expiresAt = Date.parse(localStorage.getItem('pos_catalog_expires_at') || '');
+		if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false;
+		return cart.every((item) => {
+			const isCustom = item.product.id.toString().startsWith('custom-');
+			return (
+				(isCustom || Boolean(item.product.price_token)) &&
+				(item.addOns || []).every((addOn) => Boolean(addOn.price_token))
+			);
+		});
+	}
+
+	async function prepareOnlineQuote(): Promise<'ready' | 'changed' | 'failed'> {
+		const previousTotal = cartTotalHarga;
+		try {
+			const response = await fetchWithCsrfRetry('/api/pos/quote', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ items: buildItemInputs() })
+			});
+			if (!response.ok) {
+				throw new Error(await parseApiError(response, `Quote gagal: HTTP ${response.status}`));
+			}
+			const quote = (await response.json()) as QuoteResponse;
+			if (
+				!quote.ok ||
+				!quote.quote_token ||
+				!Array.isArray(quote.items) ||
+				!Number.isFinite(quote.total_amount) ||
+				quote.items.length !== cart.length
+			) {
+				throw new Error('Respons quote POS tidak valid');
+			}
+
+			cart = cart.map((item, index) => {
+				const quoted = quote.items[index];
+				return {
+					...item,
+					product: {
+						...item.product,
+						nama: quoted.product_name,
+						harga: quoted.product_price
+					},
+					addOns: quoted.add_ons.map((addOn) => ({
+						...item.addOns.find((existing) => String(existing.id) === String(addOn.id)),
+						...addOn,
+						is_active: true
+					}))
+				};
+			});
+			localStorage.setItem('pos_cart', JSON.stringify(cart));
+			activeQuoteToken = quote.quote_token;
+			quoteExpiresAt = quote.expires_at;
+			quotedTotal = quote.total_amount;
+			committedReceipt = null;
+
+			if (previousTotal !== quote.total_amount) {
+				notifModalMsg = `Harga berubah menjadi Rp ${formatRupiah(quote.total_amount)}. Periksa ulang pesanan lalu konfirmasi kembali.`;
+				notifModalType = 'warning';
+				showNotifModal = true;
+				return 'changed';
+			}
+			return 'ready';
+		} catch (error) {
+			activeQuoteToken = '';
+			quoteExpiresAt = '';
+			quotedTotal = null;
+			showErrorNotif(ErrorHandler.extractErrorMessage(error));
+			return 'failed';
+		}
+	}
+
+	async function handleBayar() {
 		if (isOffline && paymentMethod !== 'tunai') {
 			showErrorNotif('Saat offline, pembayaran hanya tersedia untuk tunai.');
 			return;
+		}
+		if (isOffline && !hasValidOfflinePricing()) {
+			showErrorNotif('Katalog harga offline tidak valid atau kedaluwarsa. Hubungkan perangkat.');
+			return;
+		}
+		if (!isOffline) {
+			const quoteStatus = await prepareOnlineQuote();
+			if (quoteStatus !== 'ready') return;
 		}
 		if (paymentMethod === 'tunai') {
 			showCashModal = true;
@@ -156,6 +313,11 @@ export function createBayarState() {
 		}
 	}
 	async function confirmQrisChecked() {
+		if (!activeQuoteToken || Date.parse(quoteExpiresAt) <= Date.now()) {
+			showQrisWarning = false;
+			showErrorNotif('Quote harga kedaluwarsa. Konfirmasi pembayaran ulang.');
+			return;
+		}
 		showQrisWarning = false;
 		cashReceived = totalHarga.toString();
 		showSuccessModal = await catatTransaksiKeLaporan();
@@ -243,19 +405,10 @@ export function createBayarState() {
 			nama_pelanggan: customerName || null,
 			metode_bayar: payment,
 			cash_received: cashReceived ? Number(cashReceived) : null,
-			items: cart.map((item) => {
-				const isCustom = item.product.id.toString().startsWith('custom-');
-				return {
-					product_id: isCustom ? null : item.product.id,
-					nama_kustom: isCustom ? item.product.nama : null,
-					custom_price: isCustom ? (item.product.harga ?? 0) : null,
-					jumlah: item.jumlah,
-					add_on_ids: (item.addOns || []).map((addOn) => addOn.id),
-					gula: item.gula || null,
-					es: item.es || null,
-					catatan: item.catatan || null
-				};
-			})
+			items: buildItemInputs(),
+			mode: 'online' as const,
+			quote_token: activeQuoteToken,
+			store_session_id: id_sesi_toko
 		};
 		if (navigator.onLine) {
 			try {
@@ -267,10 +420,25 @@ export function createBayarState() {
 				if (!response.ok) {
 					throw new Error(await parseApiError(response, `HTTP ${response.status}`));
 				}
+				const result = (await response.json()) as CheckoutResponse;
+				if (
+					!result.ok ||
+					!result.data ||
+					!Number.isFinite(result.data.total_amount) ||
+					!result.data.receipt
+				) {
+					throw new Error('Respons transaksi POS tidak valid');
+				}
+				committedReceipt = result.data.receipt;
+				quotedTotal = result.data.total_amount;
 			} catch (error) {
 				if (error instanceof TypeError || !navigator.onLine) {
 					try {
-						await queueCurrentPosTransaction(requestPayload);
+						await queueCurrentPosTransaction({
+							...requestPayload,
+							mode: 'offline_replay',
+							queued_at: Date.now()
+						});
 					} catch (queueError) {
 						notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
 						notifModalType = 'error';
@@ -283,8 +451,7 @@ export function createBayarState() {
 					transactionQueuedOffline = true;
 					return true;
 				}
-				notifModalMsg =
-					'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
+				notifModalMsg = 'Gagal mencatat transaksi: ' + ErrorHandler.extractErrorMessage(error);
 				notifModalType = 'error';
 				showNotifModal = true;
 				return false;
@@ -294,7 +461,12 @@ export function createBayarState() {
 			refreshBus.emit('dashboard');
 		} else {
 			try {
-				await queueCurrentPosTransaction(requestPayload);
+				await queueCurrentPosTransaction({
+					...requestPayload,
+					mode: 'offline_replay',
+					quote_token: undefined,
+					queued_at: Date.now()
+				});
 			} catch (queueError) {
 				notifModalMsg = ErrorHandler.extractErrorMessage(queueError);
 				notifModalType = 'error';
@@ -327,16 +499,29 @@ export function createBayarState() {
 	}
 
 	function printStrukViaEscPosService() {
+		const receiptItems = committedReceipt
+			? committedReceipt.items.map((item) => ({
+					product: { nama: item.nama, harga: item.harga },
+					jumlah: item.jumlah,
+					addOns: item.tambahan,
+					gula: item.gula,
+					es: item.es,
+					catatan: item.catatan
+				}))
+			: cart;
 		printViaIntent(
 			buildSaleReceiptHtml({
 				settings: pengaturanStruk,
-				items: cart,
+				items: receiptItems,
 				customerName,
-				total: totalHarga,
-				paymentMethod,
-				cashReceived: parseInt(cashReceived) || 0,
-				change: kembalian,
-				queuedOffline: transactionQueuedOffline
+				total: committedReceipt?.total_amount ?? totalHarga,
+				paymentMethod: committedReceipt?.metode_bayar ?? paymentMethod,
+				cashReceived: committedReceipt?.cash_received ?? (parseInt(cashReceived) || 0),
+				change: committedReceipt?.change ?? kembalian,
+				queuedOffline: transactionQueuedOffline,
+				printedAt: committedReceipt?.committed_at
+					? new Date(committedReceipt.committed_at)
+					: undefined
 			})
 		);
 	}
@@ -361,42 +546,108 @@ export function createBayarState() {
 	}
 	function setOffline(value: boolean) {
 		isOffline = value;
-		if (isOffline && paymentMethod && paymentMethod !== 'tunai') paymentMethod = 'tunai';
+		if (isOffline) {
+			activeQuoteToken = '';
+			quoteExpiresAt = '';
+			quotedTotal = null;
+			if (paymentMethod && paymentMethod !== 'tunai') paymentMethod = 'tunai';
+		}
 	}
 
 	return {
-		get cart() { return cart; },
-		set cart(v) { cart = v; },
-		get customerName() { return customerName; },
-		set customerName(v) { customerName = v; },
-		get paymentMethod() { return paymentMethod; },
-		set paymentMethod(v) { paymentMethod = v; },
-		get isOffline() { return isOffline; },
-		set isOffline(v) { isOffline = v; },
-		get showCancelModal() { return showCancelModal; },
-		get showCashModal() { return showCashModal; },
-		get cashReceived() { return cashReceived; },
-		set cashReceived(v) { cashReceived = v; },
-		get showSuccessModal() { return showSuccessModal; },
-		get showQrisWarning() { return showQrisWarning; },
-		get transactionId() { return transactionId; },
-		set transactionId(v) { transactionId = v; },
-		get transactionCode() { return transactionCode; },
-		set transactionCode(v) { transactionCode = v; },
-		get transactionQueuedOffline() { return transactionQueuedOffline; },
-		get showErrorNotification() { return showErrorNotification; },
-		get errorNotificationMessage() { return errorNotificationMessage; },
-		get showNotifModal() { return showNotifModal; },
-		set showNotifModal(v) { showNotifModal = v; },
-		get notifModalMsg() { return notifModalMsg; },
-		get notifModalType() { return notifModalType; },
-		get currentUserRole() { return currentUserRole; },
-		get totalQty() { return totalQty; },
-		get totalHarga() { return totalHarga; },
-		get kembalian() { return kembalian; },
-		get formattedCashReceived() { return formattedCashReceived; },
-		set formattedCashReceived(_v) { /* oninput handles cashReceived directly */ },
-		get canPay() { return canPay; },
+		get cart() {
+			return cart;
+		},
+		set cart(v) {
+			cart = v;
+		},
+		get customerName() {
+			return customerName;
+		},
+		set customerName(v) {
+			customerName = v;
+		},
+		get paymentMethod() {
+			return paymentMethod;
+		},
+		set paymentMethod(v) {
+			paymentMethod = v;
+		},
+		get isOffline() {
+			return isOffline;
+		},
+		set isOffline(v) {
+			isOffline = v;
+		},
+		get showCancelModal() {
+			return showCancelModal;
+		},
+		get showCashModal() {
+			return showCashModal;
+		},
+		get cashReceived() {
+			return cashReceived;
+		},
+		set cashReceived(v) {
+			cashReceived = v;
+		},
+		get showSuccessModal() {
+			return showSuccessModal;
+		},
+		get showQrisWarning() {
+			return showQrisWarning;
+		},
+		get transactionId() {
+			return transactionId;
+		},
+		set transactionId(v) {
+			transactionId = v;
+		},
+		get transactionCode() {
+			return transactionCode;
+		},
+		set transactionCode(v) {
+			transactionCode = v;
+		},
+		get transactionQueuedOffline() {
+			return transactionQueuedOffline;
+		},
+		get showErrorNotification() {
+			return showErrorNotification;
+		},
+		get errorNotificationMessage() {
+			return errorNotificationMessage;
+		},
+		get showNotifModal() {
+			return showNotifModal;
+		},
+		set showNotifModal(v) {
+			showNotifModal = v;
+		},
+		get notifModalMsg() {
+			return notifModalMsg;
+		},
+		get notifModalType() {
+			return notifModalType;
+		},
+		get currentUserRole() {
+			return currentUserRole;
+		},
+		get totalQty() {
+			return totalQty;
+		},
+		get totalHarga() {
+			return totalHarga;
+		},
+		get kembalian() {
+			return kembalian;
+		},
+		get formattedCashReceived() {
+			return formattedCashReceived;
+		},
+		get canPay() {
+			return canPay;
+		},
 		cartItemKey,
 		init,
 		setOffline,

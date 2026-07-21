@@ -102,8 +102,7 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						/></svg
 					>
-					<span class="truncate select-none"
-						>{s.endDate ? s.formatDate(s.endDate, true) : '-'}</span
+					<span class="truncate select-none">{s.endDate ? s.formatDate(s.endDate, true) : '-'}</span
 					>
 				</button>
 			</div>
@@ -189,7 +188,10 @@
 							</button>
 							<button
 								class="flex-1 rounded-xl bg-pink-500 px-4 py-3 font-semibold text-white transition-colors hover:bg-pink-600 active:bg-pink-700"
-								onclick={() => { s.showDatePicker = false; s.applyFilter(); }}
+								onclick={() => {
+									s.showDatePicker = false;
+									s.applyFilter();
+								}}
 							>
 								Pilih
 							</button>
@@ -243,7 +245,10 @@
 							</button>
 							<button
 								class="flex-1 rounded-xl bg-pink-500 px-4 py-3 font-semibold text-white transition-colors hover:bg-pink-600 active:bg-pink-700"
-								onclick={() => { s.showEndDatePicker = false; s.applyFilter(); }}
+								onclick={() => {
+									s.showEndDatePicker = false;
+									s.applyFilter();
+								}}
 							>
 								Pilih
 							</button>

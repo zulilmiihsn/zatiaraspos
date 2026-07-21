@@ -6,6 +6,11 @@ import { getDb, getRawDb, publish, auditDataChange } from '$lib/server/dataApiHe
 import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
 import type { RequestHandler } from './$types';
 
+function containsPinFields(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	return Object.hasOwn(value, 'pin') || Object.hasOwn(value, 'pin_hash');
+}
+
 /**
  * /api/pengaturan — Resource route untuk tabel `pengaturan` (1 row per cabang).
  * Menggantikan dispatch dari /api/data?table=pengaturan.
@@ -17,7 +22,12 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const db = getDb(platform, branch);
 
 	const rows = await db.select().from(pengaturan).where(eq(pengaturan.cabang_id, branch)).limit(1);
-	return json(rows);
+	return json(
+		rows.map(({ pin, pin_hash, ...row }) => ({
+			...row,
+			pinConfigured: Boolean(pin_hash || (pin && pin !== '1234'))
+		}))
+	);
 };
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
@@ -27,10 +37,14 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const body = await parseBody<WriteBody>(request);
 	if (!body?.payload) throw kitError(400, 'Payload tidak valid');
+	const requestedRows = Array.isArray(body.payload) ? body.payload : [body.payload];
+	if (requestedRows.some(containsPinFields)) {
+		throw kitError(400, 'PIN hanya dapat diubah melalui endpoint keamanan');
+	}
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
-	const row = Array.isArray(body.payload) ? body.payload : [body.payload];
+	const row = requestedRows;
 	await db
 		.insert(pengaturan)
 		.values(row.map((r) => ({ ...r, cabang_id: branch }) as typeof pengaturan.$inferInsert));
@@ -55,6 +69,9 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	const body = await parseBody<WriteBody>(request);
 	if (!body?.payload || body.where?.id == null) throw kitError(400, 'Payload / id tidak valid');
+	if (containsPinFields(body.payload)) {
+		throw kitError(400, 'PIN hanya dapat diubah melalui endpoint keamanan');
+	}
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);

@@ -196,7 +196,7 @@ export default defineConfig({
 		postcss: './postcss.config.cjs'
 	},
 	optimizeDeps: {
-		include: ['svelte'],
+		include: ['svelte', 'idb-keyval', 'js-base64', 'pako', 'uuid', 'workbox-window'],
 		exclude: ['bcryptjs', 'bcrypt', 'crypto', 'fs', 'path', 'os', 'lucide-svelte']
 	},
 	server: {

@@ -1,7 +1,6 @@
 import { browser } from '$app/environment';
 
 interface SecuritySettings {
-	pin: string | null;
 	lockedPages: string[] | null;
 }
 
@@ -14,7 +13,6 @@ const initialValue = browser
 
 				const parsed = JSON.parse(saved);
 				return {
-					pin: null,
 					lockedPages: Array.isArray(parsed?.lockedPages) ? parsed.lockedPages : null
 				} as SecuritySettings;
 			} catch (e) {

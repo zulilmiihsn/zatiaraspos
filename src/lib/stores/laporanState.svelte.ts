@@ -27,9 +27,7 @@ export function createLaporanState() {
 	let isLoadingReport = $state(false);
 	let filterType: 'harian' | 'mingguan' | 'bulanan' | 'tahunan' = $state('harian');
 	let filterDate = $state(getLocalDateStringWITA());
-	let filterMonth = $state(
-		(new Date(getNowWita()).getMonth() + 1).toString().padStart(2, '0')
-	);
+	let filterMonth = $state((new Date(getNowWita()).getMonth() + 1).toString().padStart(2, '0'));
 	let filterYear = $state(new Date(getNowWita()).getFullYear().toString());
 	let startDate = $state(getLocalDateStringWITA());
 	let endDate = $state(getLocalDateStringWITA());
@@ -143,14 +141,21 @@ export function createLaporanState() {
 			ErrorHandler.logError(error, 'loadLaporanData');
 			if (!silent) toastManager.showToastNotification('Gagal memuat data laporan', 'error');
 		} finally {
-			if (!silent) setTimeout(() => { isLoadingReport = false; }, 300);
+			if (!silent)
+				setTimeout(() => {
+					isLoadingReport = false;
+				}, 300);
 		}
 	}
 
 	function setupRealtimeSubscriptions() {
 		realtimeManager.unsubscribeAll();
-		realtimeManager.subscribe('buku_kas', async () => { await scheduleLaporanRefresh(220); });
-		realtimeManager.subscribe('transaksi_kasir', async () => { await scheduleLaporanRefresh(220); });
+		realtimeManager.subscribe('buku_kas', async () => {
+			await scheduleLaporanRefresh(220);
+		});
+		realtimeManager.subscribe('transaksi_kasir', async () => {
+			await scheduleLaporanRefresh(220);
+		});
 	}
 
 	async function initializePageData() {
@@ -183,8 +188,7 @@ export function createLaporanState() {
 					if (month && year) {
 						const y = parseInt(year),
 							m = parseInt(month) - 1;
-						if (isNaN(y) || isNaN(m) || m < 0 || m > 11)
-							return { startDate: '', endDate: '' };
+						if (isNaN(y) || isNaN(m) || m < 0 || m > 11) return { startDate: '', endDate: '' };
 						const first = new Date(y, m, 1),
 							last = new Date(y, m + 1, 0);
 						const fmt = (d: Date) =>
@@ -208,7 +212,7 @@ export function createLaporanState() {
 		return item?.deskripsi?.trim() || item?.catatan?.trim() || '-';
 	}
 
-	function formatDate(dateString: string, isEndDate = false): string {
+	function formatDate(dateString: string, _isEndDate = false): string {
 		if (!dateString) return '';
 		const date = new Date(dateString + 'T00:00:00+08:00');
 		return date.toLocaleDateString('id-ID', {
@@ -263,17 +267,25 @@ export function createLaporanState() {
 		const handleVisibilityChange = () => {
 			if (!document.hidden) void scheduleLaporanRefresh(100, true);
 		};
-		const handleFocus = () => { void scheduleLaporanRefresh(100, true); };
-		const handleNavigation = () => { void scheduleLaporanRefresh(100, true); };
+		const handleFocus = () => {
+			void scheduleLaporanRefresh(100, true);
+		};
+		const handleNavigation = () => {
+			void scheduleLaporanRefresh(100, true);
+		};
 		const handleAiRecommendationsApplied = async () => {
-			try { await cacheOrchestrator.invalidateCacheOnChange('buku_kas'); } catch {}
+			try {
+				await cacheOrchestrator.invalidateCacheOnChange('buku_kas');
+			} catch {}
 			await scheduleLaporanRefresh(80, true);
 		};
 
 		let offLaporan: () => void;
 		if (typeof window !== 'undefined') {
 			offLaporan = refreshBus.on('laporan', async () => {
-				try { await cacheOrchestrator.invalidateCacheOnChange('buku_kas'); } catch {}
+				try {
+					await cacheOrchestrator.invalidateCacheOnChange('buku_kas');
+				} catch {}
 				await scheduleLaporanRefresh(80, true);
 			});
 		}
@@ -287,7 +299,10 @@ export function createLaporanState() {
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('focus', handleFocus);
 			window.removeEventListener('popstate', handleNavigation);
-			window.removeEventListener('ai-recommendations-applied', handleAiRecommendationsApplied as any);
+			window.removeEventListener(
+				'ai-recommendations-applied',
+				handleAiRecommendationsApplied as any
+			);
 			if (typeof window !== 'undefined' && offLaporan) offLaporan();
 		};
 	});
@@ -312,30 +327,78 @@ export function createLaporanState() {
 	});
 
 	return {
-		get FilterIcon() { return FilterIcon; },
-		get showFilter() { return showFilter; },
-		set showFilter(v) { showFilter = v; },
-		get showDatePicker() { return showDatePicker; },
-		set showDatePicker(v) { showDatePicker = v; },
-		get showEndDatePicker() { return showEndDatePicker; },
-		set showEndDatePicker(v) { showEndDatePicker = v; },
-		get isLoadingReport() { return isLoadingReport; },
-		get filterType() { return filterType; },
-		set filterType(v) { filterType = v; },
-		get filterDate() { return filterDate; },
-		set filterDate(v) { filterDate = v; },
-		get filterMonth() { return filterMonth; },
-		set filterMonth(v) { filterMonth = v; },
-		get filterYear() { return filterYear; },
-		set filterYear(v) { filterYear = v; },
-		get startDate() { return startDate; },
-		set startDate(v) { startDate = v; },
-		get endDate() { return endDate; },
-		set endDate(v) { endDate = v; },
-		get summary() { return summary; },
-		get laporan() { return laporan; },
-		get currentUserRole() { return currentUserRole; },
-		get reportGroups() { return reportGroups; },
+		get FilterIcon() {
+			return FilterIcon;
+		},
+		get showFilter() {
+			return showFilter;
+		},
+		set showFilter(v) {
+			showFilter = v;
+		},
+		get showDatePicker() {
+			return showDatePicker;
+		},
+		set showDatePicker(v) {
+			showDatePicker = v;
+		},
+		get showEndDatePicker() {
+			return showEndDatePicker;
+		},
+		set showEndDatePicker(v) {
+			showEndDatePicker = v;
+		},
+		get isLoadingReport() {
+			return isLoadingReport;
+		},
+		get filterType() {
+			return filterType;
+		},
+		set filterType(v) {
+			filterType = v;
+		},
+		get filterDate() {
+			return filterDate;
+		},
+		set filterDate(v) {
+			filterDate = v;
+		},
+		get filterMonth() {
+			return filterMonth;
+		},
+		set filterMonth(v) {
+			filterMonth = v;
+		},
+		get filterYear() {
+			return filterYear;
+		},
+		set filterYear(v) {
+			filterYear = v;
+		},
+		get startDate() {
+			return startDate;
+		},
+		set startDate(v) {
+			startDate = v;
+		},
+		get endDate() {
+			return endDate;
+		},
+		set endDate(v) {
+			endDate = v;
+		},
+		get summary() {
+			return summary;
+		},
+		get laporan() {
+			return laporan;
+		},
+		get currentUserRole() {
+			return currentUserRole;
+		},
+		get reportGroups() {
+			return reportGroups;
+		},
 		toastManager,
 		formatDate,
 		getDeskripsiLaporan,

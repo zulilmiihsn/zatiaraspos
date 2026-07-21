@@ -3,53 +3,64 @@
 
 	let {
 		show = $bindable(false),
-		pin = '1234',
 		title = 'Masukkan PIN',
 		subtitle = 'Masukkan PIN untuk melanjutkan',
+		onVerify,
 		onSuccess,
 		onError,
 		onClose
 	}: {
 		show?: boolean;
-		pin?: string;
 		title?: string;
 		subtitle?: string;
-		onSuccess?: (detail: { pin: string }) => void;
+		onVerify: (pin: string) => Promise<{ ok: boolean; message?: string }>;
+		onSuccess?: () => void;
 		onError?: (detail: { message: string }) => void;
 		onClose?: () => void;
 	} = $props();
 
 	let pinInput = $state('');
 	let pinError = $state('');
-	let errorTimeout: number;
+	let errorTimeout: ReturnType<typeof setTimeout> | undefined;
 	let isShaking = $state(false);
+	let isVerifying = $state(false);
 
 	function handlePinInput(num: number) {
-		if (pinInput.length < 4) {
+		if (!isVerifying && pinInput.length < 6) {
 			pinInput += num.toString();
+		}
+	}
 
-			if (pinInput.length === 4) {
-				// Tunda verifikasi sebentar agar dot ke-4 sempat ter-render
-				const entered = pinInput;
-				setTimeout(() => {
-					if (entered === pin) {
-						if (onSuccess) onSuccess({ pin: entered });
-						show = false;
-						pinInput = '';
-						pinError = '';
-					} else {
-						pinError = 'PIN salah!';
-						isShaking = true;
-						pinInput = '';
-						if (errorTimeout) clearTimeout(errorTimeout);
-						errorTimeout = setTimeout(() => {
-							pinError = '';
-							isShaking = false;
-						}, 2000) as any;
-						if (onError) onError({ message: 'PIN salah!' });
-					}
-				}, 120);
-			}
+	function handleDelete() {
+		if (!isVerifying) pinInput = pinInput.slice(0, -1);
+	}
+
+	async function handleVerify() {
+		if (isVerifying || pinInput.length < 4) return;
+		const entered = pinInput;
+		isVerifying = true;
+		let result: { ok: boolean; message?: string };
+		try {
+			result = await onVerify(entered);
+		} catch {
+			result = { ok: false, message: 'Verifikasi PIN gagal' };
+		}
+		isVerifying = false;
+		if (result.ok) {
+			if (onSuccess) onSuccess();
+			show = false;
+			pinInput = '';
+			pinError = '';
+		} else {
+			pinError = result.message || 'PIN salah';
+			isShaking = true;
+			pinInput = '';
+			if (errorTimeout) clearTimeout(errorTimeout);
+			errorTimeout = setTimeout(() => {
+				pinError = '';
+				isShaking = false;
+			}, 2000);
+			if (onError) onError({ message: pinError });
 		}
 	}
 
@@ -87,7 +98,7 @@
 
 				<!-- PIN Display -->
 				<div class="mb-2 flex justify-center gap-2 {isShaking ? 'animate-shake' : ''}">
-					{#each Array(4) as _, i}
+					{#each Array(6) as _, i}
 						<div
 							class="h-4 w-4 rounded-full {pinInput.length > i
 								? 'bg-white'
@@ -116,7 +127,14 @@
 							{num}
 						</button>
 					{/each}
-					<div class="h-16 w-16"></div>
+					<button
+						type="button"
+						class="h-16 w-16 rounded-2xl border border-white/30 bg-white/20 text-sm font-bold text-white shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white/30 active:scale-[0.98]"
+						onclick={handleDelete}
+						disabled={isVerifying || pinInput.length === 0}
+					>
+						Hapus
+					</button>
 					<button
 						type="button"
 						class="h-16 w-16 rounded-2xl border border-white/30 bg-white/20 text-2xl font-bold text-white shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white/30 active:bg-white/40 active:shadow-[0_0_20px_rgba(255,255,255,0.5)]"
@@ -124,7 +142,14 @@
 					>
 						0
 					</button>
-					<div class="h-16 w-16"></div>
+					<button
+						type="button"
+						class="h-16 w-16 rounded-2xl border border-white/30 bg-white text-sm font-bold text-pink-600 shadow-lg transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+						onclick={handleVerify}
+						disabled={isVerifying || pinInput.length < 4}
+					>
+						{isVerifying ? 'Proses' : 'Buka'}
+					</button>
 				</div>
 			</div>
 		</div>

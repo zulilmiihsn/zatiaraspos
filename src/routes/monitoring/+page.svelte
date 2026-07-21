@@ -78,25 +78,40 @@
 		{/if}
 
 		{#if monitoringSummary}
+			{#if monitoringSummary.degraded}
+				<div
+					class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+				>
+					Sebagian sumber monitoring tidak tersedia. Angka dari sumber tersebut tidak ditampilkan.
+				</div>
+			{/if}
 			<section class="grid gap-3 md:grid-cols-4">
 				<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 					<Activity class="h-5 w-5 text-pink-500" />
 					<div class="mt-3 text-sm text-gray-500">API Avg</div>
 					<div class="mt-1 text-2xl font-bold">
-						{monitoringSummary.requests?.avgLatencyMs || 0} ms
+						{monitoringSummary.sources?.requestMetrics?.available
+							? `${monitoringSummary.requests?.avgLatencyMs || 0} ms`
+							: 'Tidak tersedia'}
 					</div>
 				</div>
 				<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 					<Activity class="h-5 w-5 text-pink-500" />
 					<div class="mt-3 text-sm text-gray-500">API P95</div>
 					<div class="mt-1 text-2xl font-bold">
-						{monitoringSummary.requests?.p95LatencyMs || 0} ms
+						{monitoringSummary.sources?.requestMetrics?.available
+							? `${monitoringSummary.requests?.p95LatencyMs || 0} ms`
+							: 'Tidak tersedia'}
 					</div>
 				</div>
 				<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 					<AlertTriangle class="h-5 w-5 text-pink-500" />
 					<div class="mt-3 text-sm text-gray-500">Error</div>
-					<div class="mt-1 text-2xl font-bold">{monitoringSummary.errors?.total || 0}</div>
+					<div class="mt-1 text-2xl font-bold">
+						{monitoringSummary.sources?.errorEvents?.available
+							? monitoringSummary.errors?.total || 0
+							: 'Tidak tersedia'}
+					</div>
 				</div>
 				<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 					<Wifi class="h-5 w-5 text-pink-500" />
@@ -132,7 +147,11 @@
 						<Database class="h-5 w-5 text-pink-500" />
 						<span>Backup D1</span>
 					</div>
-					{#if monitoringSummary.backups?.recent?.length}
+					{#if !monitoringSummary.sources?.backupRuns?.available}
+						<div class="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+							Data backup tidak tersedia.
+						</div>
+					{:else if monitoringSummary.backups?.recent?.length}
 						<div class="space-y-3">
 							{#each monitoringSummary.backups.recent.slice(0, 5) as backup}
 								<div class="rounded-lg bg-gray-50 p-3 text-sm">

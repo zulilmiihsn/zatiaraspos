@@ -8,19 +8,68 @@
  * Pakai:
  *   node scripts/setup-local-d1.mjs
  *
- * Idempoten: migration pakai "IF NOT EXISTS", seed pakai "WHERE NOT EXISTS",
- * aman dijalankan ulang. Migration yang sudah ada di-skip otomatis.
+ * Database yang sudah mencapai skema kanonik 0014 tidak menjalankan ulang
+ * migration historis/destruktif. Migration baru tetap diterapkan berurutan.
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const BINDING = 'DB_SAMARINDA_GROUP';
 const CONFIG = 'wrangler.pages.jsonc';
 
-const migrations = readdirSync('drizzle')
+const allMigrations = readdirSync('drizzle')
 	.filter((f) => f.endsWith('.sql'))
 	.sort()
-	.map((f) => ({ file: `drizzle/${f}`, tolerant: true, label: `migration ${f}` }));
+	.map((f) => ({
+		file: `drizzle/${f}`,
+		number: Number(f.slice(0, 4)),
+		tolerant: true,
+		label: `migration ${f}`
+	}));
+
+function runWrangler(extraArgs) {
+	return spawnSync(
+		'npx',
+		['wrangler', 'd1', 'execute', BINDING, '--local', `--config=${CONFIG}`, ...extraArgs, '--yes'],
+		{
+			stdio: 'pipe',
+			encoding: 'utf8',
+			shell: process.platform === 'win32'
+		}
+	);
+}
+
+function hasCanonicalBaseSchema() {
+	const queryFile = join(tmpdir(), `zatiaras-schema-check-${randomUUID()}.sql`);
+	writeFileSync(
+		queryFile,
+		`SELECT
+			(SELECT COUNT(*) FROM pragma_table_info('auth_sessions') WHERE name = 'cabang_id') AS auth_ready,
+			(SELECT COUNT(*) FROM pragma_table_info('pengaturan') WHERE name = 'halaman_terkunci') AS settings_ready,
+			(SELECT COUNT(*) FROM pragma_table_info('buku_kas') WHERE name = 'nominal') AS ledger_ready;`,
+		'utf8'
+	);
+	try {
+		const result = runWrangler([`--file=${queryFile}`]);
+		const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+		return (
+			result.status === 0 &&
+			/"auth_ready"\s*:\s*1/.test(output) &&
+			/"settings_ready"\s*:\s*1/.test(output) &&
+			/"ledger_ready"\s*:\s*1/.test(output)
+		);
+	} finally {
+		rmSync(queryFile, { force: true });
+	}
+}
+
+const canonicalBaseReady = hasCanonicalBaseSchema();
+const migrations = canonicalBaseReady
+	? allMigrations.filter((migration) => migration.number > 14)
+	: allMigrations;
 
 const steps = [
 	...migrations,
@@ -28,25 +77,13 @@ const steps = [
 ];
 
 function run(file) {
-	const args = [
-		'wrangler',
-		'd1',
-		'execute',
-		BINDING,
-		'--local',
-		`--config=${CONFIG}`,
-		`--file=${file}`,
-		'--yes'
-	];
-	const result = spawnSync('npx', args, {
-		stdio: 'pipe',
-		encoding: 'utf8',
-		shell: process.platform === 'win32'
-	});
-	return result;
+	return runWrangler([`--file=${file}`]);
 }
 
 let failed = false;
+if (canonicalBaseReady) {
+	console.log('-> baseline 0000-0014 ... SKIP (skema kanonik sudah ada)');
+}
 for (const step of steps) {
 	process.stdout.write(`-> ${step.label} (${step.file}) ... `);
 	const res = run(step.file);

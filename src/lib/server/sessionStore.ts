@@ -8,6 +8,8 @@ export interface AuthSession {
 	branch?: string;
 	createdAt: number;
 	expiresAt: number;
+	unlockedPages: string[];
+	unlockExpiresAt: number;
 }
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -49,7 +51,9 @@ export async function createAuthSession(
 		role: payload.role,
 		branch: payload.branch,
 		createdAt: now,
-		expiresAt: now + SESSION_TTL_MS
+		expiresAt: now + SESSION_TTL_MS,
+		unlockedPages: [],
+		unlockExpiresAt: 0
 	};
 
 	const db = getSessionDb(platform, payload.branch);
@@ -62,8 +66,10 @@ export async function createAuthSession(
 				username,
 				role,
 				created_at,
-				expires_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?)`
+				expires_at,
+				unlocked_pages,
+				unlock_expires_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			session.id,
@@ -72,7 +78,9 @@ export async function createAuthSession(
 			payload.username,
 			payload.role,
 			session.createdAt,
-			session.expiresAt
+			session.expiresAt,
+			JSON.stringify(session.unlockedPages),
+			session.unlockExpiresAt
 		)
 		.run();
 	await db.prepare('DELETE FROM auth_sessions WHERE expires_at <= ?').bind(now).run();
@@ -98,7 +106,9 @@ export async function getAuthSession(
 				username,
 				role,
 				created_at,
-				expires_at
+				expires_at,
+				unlocked_pages,
+				unlock_expires_at
 			FROM auth_sessions
 			WHERE id = ? AND expires_at > ?
 			LIMIT 1`
@@ -112,10 +122,22 @@ export async function getAuthSession(
 		role: string;
 		created_at: number;
 		expires_at: number;
+		unlocked_pages: string;
+		unlock_expires_at: number;
 	} | null;
 
 	if (!row) {
 		return null;
+	}
+
+	let unlockedPages: string[] = [];
+	try {
+		const parsed = JSON.parse(row.unlocked_pages || '[]') as unknown;
+		if (Array.isArray(parsed)) {
+			unlockedPages = parsed.filter((item): item is string => typeof item === 'string');
+		}
+	} catch {
+		unlockedPages = [];
 	}
 
 	return {
@@ -125,8 +147,45 @@ export async function getAuthSession(
 		username: row.username,
 		role: row.role,
 		createdAt: row.created_at,
-		expiresAt: row.expires_at
+		expiresAt: row.expires_at,
+		unlockedPages,
+		unlockExpiresAt: Number(row.unlock_expires_at || 0)
 	};
+}
+
+export async function grantSessionPageUnlock(
+	platform: App.Platform | undefined,
+	session: AuthSession,
+	page: string,
+	expiresAt: number
+): Promise<void> {
+	const branch = normalizeBranch(session.branch);
+	const pages =
+		session.unlockExpiresAt > Date.now() ? new Set(session.unlockedPages || []) : new Set<string>();
+	pages.add(page);
+	await getSessionDb(platform, branch)
+		.prepare(
+			`UPDATE auth_sessions
+			 SET unlocked_pages = ?, unlock_expires_at = ?
+			 WHERE id = ? AND cabang_id = ? AND expires_at > ?`
+		)
+		.bind(JSON.stringify([...pages]), expiresAt, session.id, branch, Date.now())
+		.run();
+}
+
+export async function revokeBranchPageUnlocks(
+	platform: App.Platform | undefined,
+	branchValue: string
+): Promise<void> {
+	const branch = normalizeBranch(branchValue);
+	await getSessionDb(platform, branch)
+		.prepare(
+			`UPDATE auth_sessions
+			 SET unlocked_pages = '[]', unlock_expires_at = 0
+			 WHERE cabang_id = ?`
+		)
+		.bind(branch)
+		.run();
 }
 
 export async function deleteAuthSession(

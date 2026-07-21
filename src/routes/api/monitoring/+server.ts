@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { getD1Database, type BranchId } from '$lib/server/branchResolver';
 import { requireAnyRole, requireAuthSession, requireSessionBranch } from '$lib/server/apiAuth';
+import { buildMonitoringSourceStatus } from '$lib/server/monitoringStatus';
 import type { RequestHandler } from './$types';
 
 function getDb(platform: App.Platform | undefined, branch: string) {
@@ -35,7 +36,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const windowMinutes = clampWindowMinutes(url.searchParams.get('windowMinutes'));
 	const cutoff = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
 
-	const [metricsResult, errorsResult, auditResult, backupResult] = await Promise.all([
+	const [metricsSettled, errorsSettled, auditSettled, backupSettled] = await Promise.allSettled([
 		db
 			.prepare(
 				`SELECT path, method, status, duration_ms, created_at
@@ -45,8 +46,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				 LIMIT 1000`
 			)
 			.bind(branch, cutoff)
-			.all()
-			.catch(() => ({ results: [] })),
+			.all(),
 		db
 			.prepare(
 				`SELECT source, message, status, created_at
@@ -56,8 +56,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				 LIMIT 100`
 			)
 			.bind(branch, cutoff)
-			.all()
-			.catch(() => ({ results: [] })),
+			.all(),
 		db
 			.prepare(
 				`SELECT action, entity_type, transaction_id, amount, created_at
@@ -67,8 +66,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 				 LIMIT 50`
 			)
 			.bind(branch, cutoff)
-			.all()
-			.catch(() => ({ results: [] })),
+			.all(),
 		db
 			.prepare(
 				`SELECT database_name, operation, status, file_path, file_size_bytes, message, started_at, finished_at
@@ -79,8 +77,20 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 			)
 			.bind(branch)
 			.all()
-			.catch(() => ({ results: [] }))
 	]);
+
+	const sourceStatus = buildMonitoringSourceStatus([
+		metricsSettled,
+		errorsSettled,
+		auditSettled,
+		backupSettled
+	]);
+	const degraded = Object.values(sourceStatus).some((source) => !source.available);
+	const metricsResult =
+		metricsSettled.status === 'fulfilled' ? metricsSettled.value : { results: [] };
+	const errorsResult = errorsSettled.status === 'fulfilled' ? errorsSettled.value : { results: [] };
+	const auditResult = auditSettled.status === 'fulfilled' ? auditSettled.value : { results: [] };
+	const backupResult = backupSettled.status === 'fulfilled' ? backupSettled.value : { results: [] };
 
 	const metrics = (metricsResult.results || []) as Array<{
 		path: string;
@@ -102,6 +112,8 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	return json({
 		success: true,
+		degraded,
+		sources: sourceStatus,
 		branch,
 		windowMinutes,
 		requests: {

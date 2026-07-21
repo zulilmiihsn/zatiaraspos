@@ -105,18 +105,12 @@ export async function loginWithUsername(username: string, password: string, bran
 			const settingsData = settingsRes.ok ? await settingsRes.json() : null;
 			const row = Array.isArray(settingsData) ? settingsData[0] : null;
 			if (row) {
-				setSecuritySettings({ pin: row.pin, lockedPages: row.halaman_terkunci });
+				setSecuritySettings({ lockedPages: row.halaman_terkunci || [] });
 			} else {
-				setSecuritySettings({
-					pin: '1234',
-					lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
-				});
+				setSecuritySettings({ lockedPages: [] });
 			}
 		} catch {
-			setSecuritySettings({
-				pin: '1234',
-				lockedPages: ['laporan', 'beranda', 'pengaturan', 'catat']
-			});
+			setSecuritySettings({ lockedPages: [] });
 		}
 	} else {
 		clearSecuritySettings();
@@ -144,25 +138,4 @@ export async function loginWithUsername(username: string, password: string, bran
 	}
 
 	return result.user;
-}
-
-export async function logout() {
-	if (browser) {
-		try {
-			await fetchWithCsrfRetry('/api/logout', {
-				method: 'POST',
-				headers: {}
-			});
-		} catch {
-			// no-op
-		}
-	}
-
-	// Clear user role dari store saat logout
-	clearUserRole();
-	session.set({ isAuthenticated: false, user: null, token: null });
-	clearOfflineSessionSnapshot();
-	localStorage.removeItem('selectedBranch');
-	clearSecuritySettings(); // Clear security settings on logout
-	clearCsrfTokenCache();
 }

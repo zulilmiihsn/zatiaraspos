@@ -1,12 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const baseUrl = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const branch = process.argv[3] || 'samarinda';
+const localTarget =
+	baseUrl.startsWith('http://127.0.0.1') || baseUrl.startsWith('http://localhost');
 const username = process.env.UAT_USERNAME || 'pemilik';
 const localEnvPassword =
-	!process.env.UAT_PASSWORD &&
-	(baseUrl.startsWith('http://127.0.0.1') || baseUrl.startsWith('http://localhost')) &&
-	existsSync('.env')
+	!process.env.UAT_PASSWORD && localTarget && existsSync('.env')
 		? readFileSync('.env', 'utf8')
 				.split(/\r?\n/)
 				.find((line) => line.startsWith('UAT_PASSWORD='))
@@ -15,6 +19,9 @@ const localEnvPassword =
 		: undefined;
 const password = process.env.UAT_PASSWORD || localEnvPassword;
 
+if (!localTarget && process.env.ALLOW_REMOTE_UAT !== '1') {
+	throw new Error('UAT rate-limit hanya boleh ke localhost kecuali ALLOW_REMOTE_UAT=1');
+}
 if (!password) {
 	throw new Error('UAT_PASSWORD wajib diisi melalui environment');
 }
@@ -32,6 +39,58 @@ function getSetCookies(headers) {
 function cookiePair(cookies, name) {
 	const cookie = cookies.find((item) => item.startsWith(`${name}=`));
 	return cookie ? cookie.split(';')[0] : '';
+}
+
+function sqlValue(value) {
+	return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function resetLocalSecurityRateLimits() {
+	const sqlFile = join(tmpdir(), `zatiaras-rate-limit-reset-${randomUUID()}.sql`);
+	writeFileSync(
+		sqlFile,
+		`DELETE FROM rate_limits
+		 WHERE cabang_id = ${sqlValue(branch)}
+		   AND (identifier LIKE 'security:%' OR identifier LIKE 'aichat:user:%');\n`,
+		'utf8'
+	);
+	try {
+		const result = spawnSync(
+			'npx',
+			[
+				'wrangler',
+				'd1',
+				'execute',
+				'DB_SAMARINDA_GROUP',
+				'--local',
+				'--config=wrangler.pages.jsonc',
+				`--file=${sqlFile}`,
+				'--yes'
+			],
+			{ encoding: 'utf8', stdio: 'pipe', shell: process.platform === 'win32' }
+		);
+		assert(
+			result.status === 0,
+			`Reset rate limit D1 lokal gagal: ${String(
+				result.error?.message || result.stderr || result.stdout || ''
+			).trim()}`
+		);
+	} finally {
+		rmSync(sqlFile, { force: true });
+	}
+}
+
+async function waitForServer() {
+	for (let attempt = 0; attempt < 20; attempt += 1) {
+		try {
+			const response = await fetch(`${baseUrl}/login`);
+			if (response.ok) return;
+		} catch {
+			// Miniflare dapat restart setelah D1 lokal ditulis langsung.
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error('Server lokal tidak pulih setelah reset rate limit');
 }
 
 async function login() {
@@ -114,6 +173,11 @@ async function verifyAiLimit(auth) {
 	);
 	assert(statuses[30] === 429, `AI chat request ke-31 harus 429, dapat ${statuses[30]}`);
 	return statuses;
+}
+
+if (localTarget) {
+	resetLocalSecurityRateLimits();
+	await waitForServer();
 }
 
 const auth = await login();

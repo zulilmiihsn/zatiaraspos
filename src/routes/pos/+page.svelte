@@ -20,7 +20,7 @@
 	import { NOTIF, POS_SKELETON } from '$lib/constants/ui';
 	import type { CartItem } from '$lib/types/cart';
 	import { ICE_OPTIONS, SUGAR_OPTIONS } from '$lib/utils/orderDetails';
-	import { Plus, Search } from 'lucide-svelte';
+	import { CloudAlert, Database, Plus, Search } from 'lucide-svelte';
 	let currentUserRole = $state('');
 	$effect(() => {
 		currentUserRole = userRole.value || '';
@@ -146,6 +146,10 @@
 
 	// Optimized cart operations
 	function addToCart() {
+		if (pos.isCatalogExpired) {
+			showErrorNotif('Katalog POS kedaluwarsa. Hubungkan perangkat lalu muat ulang menu.');
+			return;
+		}
 		// Blokir kasir jika sesi toko belum dibuka
 		if (currentUserRole === 'kasir' && !sesiAktif) {
 			showErrorNotif('Toko belum dibuka. Silakan buka toko terlebih dahulu!');
@@ -336,6 +340,10 @@
 	}
 	function handleGoToBayar(e: Event): void {
 		e.stopPropagation();
+		if (pos.isCatalogExpired) {
+			showErrorNotif('Katalog POS kedaluwarsa. Muat ulang sebelum melanjutkan pembayaran.');
+			return;
+		}
 		goToBayar();
 	}
 	function handleStopPropagation(e: Event): void {
@@ -378,6 +386,37 @@
 				/>
 			</div>
 		</div>
+		{#if pos.catalogSource === 'cache'}
+			<div
+				class="mx-4 mb-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 md:mx-8 lg:mx-10"
+			>
+				<Database class="mt-0.5 h-5 w-5 shrink-0" />
+				<div>
+					<div class="text-sm font-bold">
+						{pos.isCatalogExpired ? 'Katalog kedaluwarsa' : 'Memakai katalog tersimpan'}
+					</div>
+					<div class="mt-0.5 text-xs leading-5 text-amber-800">
+						Sinkron terakhir:
+						{pos.catalogFetchedAt
+							? new Date(pos.catalogFetchedAt).toLocaleString('id-ID')
+							: 'belum diketahui'}.
+						{pos.isCatalogExpired
+							? ' Pembayaran baru diblokir sampai katalog diperbarui.'
+							: ' Harga akan diverifikasi sebelum pembayaran.'}
+					</div>
+				</div>
+			</div>
+		{:else if pos.catalogSource === 'unavailable' && !pos.isLoadingProducts}
+			<div
+				class="mx-4 mb-2 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-950 md:mx-8 lg:mx-10"
+			>
+				<CloudAlert class="mt-0.5 h-5 w-5 shrink-0" />
+				<div>
+					<div class="text-sm font-bold">Katalog tidak tersedia</div>
+					<div class="mt-0.5 text-xs leading-5 text-red-800">{pos.catalogStatusMessage}</div>
+				</div>
+			</div>
+		{/if}
 		<div
 			class="flex gap-2 overflow-x-auto bg-white px-4 py-2 md:px-8 lg:px-10"
 			style="scrollbar-width:none;-ms-overflow-style:none;"

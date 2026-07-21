@@ -1,7 +1,8 @@
 import { json, error as kitError } from '@sveltejs/kit';
 import { requireSessionBranch } from '$lib/server/apiAuth';
-import { getDb } from '$lib/server/dataApiHelpers';
+import { getDb, getRawDb } from '$lib/server/dataApiHelpers';
 import { getPosKas7Hari } from '$lib/server/dashboardQueries';
+import { requirePageAccess } from '$lib/server/pageAccess';
 import type { RequestHandler } from './$types';
 
 /**
@@ -10,6 +11,7 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const branch = requireSessionBranch(locals, url.searchParams.get('branch'));
+	await requirePageAccess(getRawDb(platform, branch), locals.authSession!, 'beranda');
 	const db = getDb(platform, branch);
 	const start = url.searchParams.get('start');
 	const end = url.searchParams.get('end');

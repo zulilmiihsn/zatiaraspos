@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -18,6 +18,15 @@ const localEnvPassword =
 				.trim()
 		: undefined;
 const password = process.env.UAT_PASSWORD || localEnvPassword;
+const pin =
+	process.env.UAT_PIN ||
+	(() => {
+		let generated = '';
+		do {
+			generated = String(randomInt(1000, 10_000));
+		} while (['0000', '1111', '1234', '4321'].includes(generated));
+		return generated;
+	})();
 
 if (!localTarget && process.env.ALLOW_REMOTE_UAT !== '1') {
 	throw new Error('UAT mutasi hanya boleh ke localhost kecuali ALLOW_REMOTE_UAT=1');
@@ -120,10 +129,107 @@ function executeLocalD1(sql) {
 	}
 }
 
+async function waitForServer() {
+	for (let attempt = 0; attempt < 20; attempt += 1) {
+		try {
+			const response = await fetch(`${baseUrl}/login`);
+			if (response.ok) return;
+		} catch {
+			// Wrangler lokal dapat me-restart Miniflare setelah D1 ditulis langsung.
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error('Server lokal tidak pulih setelah perubahan D1');
+}
+
+if (localTarget) {
+	executeLocalD1(
+		`UPDATE pengaturan SET pin = NULL, pin_hash = NULL WHERE cabang_id = ${sqlValue(branch)}`
+	);
+	await waitForServer();
+}
+
 const verified = [];
 const ownerAuth = await login('pemilik');
-await login('kasir');
+const cashierAuth = await login('kasir');
 verified.push('login-pemilik-kasir');
+
+await assertOk(
+	await writeJson('/api/pin', ownerAuth, 'PATCH', {
+		currentPin: process.env.UAT_CURRENT_PIN || '',
+		newPin: pin
+	}),
+	'Konfigurasi PIN server'
+);
+
+const cashierSettings = await assertOk(
+	await request(`/api/pengaturan?branch=${encodeURIComponent(branch)}`, cashierAuth),
+	'Pengaturan kasir'
+);
+const ownerSettings = await assertOk(
+	await request(`/api/pengaturan?branch=${encodeURIComponent(branch)}`, ownerAuth),
+	'Pengaturan pemilik'
+);
+assert(!Object.hasOwn(cashierSettings[0] || {}, 'pin'), 'PIN masih bocor ke response kasir');
+assert(!Object.hasOwn(cashierSettings[0] || {}, 'pin_hash'), 'Hash PIN bocor ke response kasir');
+assert(!Object.hasOwn(ownerSettings[0] || {}, 'pin'), 'PIN masih bocor ke response pemilik');
+assert(!Object.hasOwn(ownerSettings[0] || {}, 'pin_hash'), 'Hash PIN bocor ke response pemilik');
+assert(cashierSettings[0]?.pinConfigured === true, 'Status konfigurasi PIN tidak tersedia');
+
+const reportPath = `/api/reports/aggregate?branch=${encodeURIComponent(branch)}&start_date=2026-01-01&end_date=2026-12-31`;
+const lockedReport = await request(reportPath, cashierAuth);
+assert(lockedReport.status === 403, `Laporan tanpa PIN harus 403, dapat ${lockedReport.status}`);
+const dashboardPath = `/api/dashboard/stats?branch=${encodeURIComponent(branch)}&start=2026-01-01T00%3A00%3A00.000Z&end=2026-12-31T23%3A59%3A59.999Z`;
+const lockedDashboard = await request(dashboardPath, cashierAuth);
+assert(
+	lockedDashboard.status === 403,
+	`Dashboard tanpa PIN harus 403, dapat ${lockedDashboard.status}`
+);
+const ledgerPath = `/api/buku-kas?branch=${encodeURIComponent(branch)}&limit=1`;
+const lockedLedger = await request(ledgerPath, cashierAuth);
+assert(lockedLedger.status === 403, `Buku kas tanpa PIN harus 403, dapat ${lockedLedger.status}`);
+
+const wrongPin = await writeJson('/api/pin/verify', cashierAuth, 'POST', {
+	pin: pin === '0000' ? '9999' : '0000',
+	page: 'laporan'
+});
+assert(wrongPin.status === 403, `PIN salah harus 403, dapat ${wrongPin.status}`);
+await assertOk(
+	await writeJson('/api/pin/verify', cashierAuth, 'POST', { pin, page: 'laporan' }),
+	'Verifikasi PIN laporan'
+);
+await assertOk(await request(reportPath, cashierAuth), 'Laporan setelah PIN');
+await assertOk(
+	await writeJson('/api/pin/verify', cashierAuth, 'POST', { pin, page: 'beranda' }),
+	'Verifikasi PIN beranda'
+);
+await assertOk(await request(dashboardPath, cashierAuth), 'Dashboard setelah PIN');
+await assertOk(
+	await writeJson('/api/pin/verify', cashierAuth, 'POST', { pin, page: 'catat' }),
+	'Verifikasi PIN catat'
+);
+await assertOk(await request(ledgerPath, cashierAuth), 'Buku kas setelah PIN');
+
+const oversizedCheckout = await writeJson('/api/pos/quote', ownerAuth, 'POST', {
+	items: Array.from({ length: 101 }, (_, index) => ({
+		nama_kustom: `Item UAT ${index + 1}`,
+		custom_price: 1000,
+		jumlah: 1
+	}))
+});
+assert(
+	oversizedCheckout.status === 400,
+	`Checkout 101 item harus 400, dapat ${oversizedCheckout.status}`
+);
+
+const privateArchive = await fetch(
+	`${baseUrl}/api/upload?key=${encodeURIComponent('arsip/samarinda/arsip-rahasia.json')}`
+);
+assert(
+	privateArchive.status === 404,
+	`Arsip via proxy upload harus 404, dapat ${privateArchive.status}`
+);
+verified.push('server-pin-report-lock-r2-boundary');
 
 const securityUserId = `uat-final-security-${randomUUID()}`;
 const securityUsername = `uatsec${randomUUID().replaceAll('-', '').slice(0, 12)}`;
@@ -137,30 +243,46 @@ executeLocalD1(
 			.join(', ') +
 		')'
 );
+await waitForServer();
 try {
-	await assertOk(
-		await writeJson('/api/gantikeamanan', ownerAuth, 'POST', {
-			usernameLama: securityUsername,
-			usernameBaru: securityUsername,
-			passwordLama: securityPassword,
-			passwordBaru: securityNewPassword,
-			branch,
-			targetRole: 'kasir'
-		}),
-		'Ganti keamanan'
-	);
-	await login(securityUsername, securityNewPassword);
-	verified.push('credential-change');
+	const securityChangeResponse = await writeJson('/api/gantikeamanan', ownerAuth, 'POST', {
+		usernameLama: securityUsername,
+		usernameBaru: securityUsername,
+		passwordLama: securityPassword,
+		passwordBaru: securityNewPassword,
+		branch,
+		targetRole: 'kasir'
+	});
+	const securityChangePayload = await payload(securityChangeResponse);
+	if (securityChangeResponse.status === 429) {
+		assert(
+			securityChangePayload?.code === 'RATE_LIMITED',
+			`Ganti keamanan 429 tanpa kode RATE_LIMITED: ${JSON.stringify(securityChangePayload)}`
+		);
+		verified.push('credential-change-rate-limit-enforced');
+	} else {
+		assert(
+			securityChangeResponse.ok,
+			`Ganti keamanan: ${securityChangeResponse.status} ${JSON.stringify(securityChangePayload)}`
+		);
+		await login(securityUsername, securityNewPassword);
+		verified.push('credential-change');
+	}
 } finally {
 	executeLocalD1(
 		`DELETE FROM auth_sessions WHERE cabang_id = ${sqlValue(branch)} AND user_id = ${sqlValue(securityUserId)}; ` +
 			`DELETE FROM profil WHERE cabang_id = ${sqlValue(branch)} AND id = ${sqlValue(securityUserId)}`
 	);
+	await waitForServer();
 }
 
 const productId = `uat-final-stock-${randomUUID()}`;
 let transactionId = null;
 try {
+	const reportBeforeCheckout = await assertOk(
+		await request(reportPath, ownerAuth),
+		'Laporan sebelum checkout'
+	);
 	await assertOk(
 		await writeJson('/api/produk', ownerAuth, 'POST', {
 			payload: {
@@ -174,18 +296,45 @@ try {
 		}),
 		'Buat produk stok'
 	);
+	const checkoutItems = [{ product_id: productId, jumlah: 2, add_on_ids: [] }];
+	const checkoutQuote = await assertOk(
+		await writeJson('/api/pos/quote', ownerAuth, 'POST', { items: checkoutItems }),
+		'Quote stok'
+	);
 	const checkout = await assertOk(
 		await writeJson('/api/pos/transaction', ownerAuth, 'POST', {
 			idempotency_key: `uat-final-${randomUUID()}`,
 			nama_pelanggan: 'UAT Final',
 			metode_bayar: 'tunai',
 			cash_received: 20_000,
-			items: [{ product_id: productId, jumlah: 2, add_on_ids: [] }]
+			items: checkoutItems,
+			mode: 'online',
+			quote_token: checkoutQuote.quote_token
 		}),
 		'Checkout stok'
 	);
 	transactionId = checkout?.data?.transaction_id;
 	assert(transactionId, 'Checkout stok tidak mengembalikan transaction_id');
+
+	const reportAfterCheckout = await assertOk(
+		await request(reportPath, ownerAuth),
+		'Laporan setelah checkout'
+	);
+	assert(
+		reportAfterCheckout.summary?.pendapatan ===
+			Number(reportBeforeCheckout.summary?.pendapatan || 0) + 20_000,
+		'Ringkasan pendapatan tidak bertambah setelah checkout'
+	);
+
+	const directLedgerDelete = await request(
+		`/api/buku-kas?transaction_id=${encodeURIComponent(transactionId)}`,
+		ownerAuth,
+		{ method: 'DELETE' }
+	);
+	assert(
+		directLedgerDelete.status === 409,
+		`Hapus ledger POS langsung harus 409, dapat ${directLedgerDelete.status}`
+	);
 
 	const afterCheckout = await assertOk(
 		await request(`/api/produk?branch=${encodeURIComponent(branch)}`, ownerAuth),
@@ -216,7 +365,15 @@ try {
 		afterVoid.find((item) => item.id === productId)?.stok === 10,
 		'Stok tidak kembali setelah void'
 	);
-	verified.push('checkout-void-stock-restore');
+	const reportAfterVoid = await assertOk(
+		await request(reportPath, ownerAuth),
+		'Laporan setelah void'
+	);
+	assert(
+		reportAfterVoid.summary?.pendapatan === reportBeforeCheckout.summary?.pendapatan,
+		'Ringkasan pendapatan tidak kembali setelah void'
+	);
+	verified.push('checkout-void-stock-restore-pos-ledger-guard');
 } finally {
 	if (transactionId) {
 		await request(

@@ -12,6 +12,12 @@ export interface PendingTransaction extends Record<string, unknown> {
 	failure_kind: PendingFailureKind;
 }
 
+export interface PendingTransactionExport {
+	version: 1;
+	exported_at: string;
+	transactions: PendingTransaction[];
+}
+
 const VALID_STATUSES = new Set<PendingStatus>(['pending', 'syncing', 'failed']);
 const VALID_FAILURE_KINDS = new Set<Exclude<PendingFailureKind, null>>([
 	'auth',
@@ -19,6 +25,18 @@ const VALID_FAILURE_KINDS = new Set<Exclude<PendingFailureKind, null>>([
 	'network',
 	'rate_limit',
 	'server'
+]);
+const EXPORT_SECRET_KEYS = new Set([
+	'authorization',
+	'cookie',
+	'csrf',
+	'csrftoken',
+	'xcsrftoken',
+	'password',
+	'proxyauthorization',
+	'setcookie',
+	'zatiarascsrf',
+	'zatiarassid'
 ]);
 
 function finiteNonNegative(value: unknown, fallback = 0): number {
@@ -102,4 +120,29 @@ export function classifySyncFailure(status?: number): Exclude<PendingFailureKind
 	if (status === 429) return 'rate_limit';
 	if (status && status >= 500) return 'server';
 	return 'network';
+}
+
+function sanitizeExportValue(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(sanitizeExportValue);
+	if (!value || typeof value !== 'object') return value;
+	const sanitized: Record<string, unknown> = {};
+	for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+		const normalizedKey = key.trim().toLowerCase().replaceAll('-', '').replaceAll('_', '');
+		if (EXPORT_SECRET_KEYS.has(normalizedKey)) continue;
+		sanitized[key] = sanitizeExportValue(nested);
+	}
+	return sanitized;
+}
+
+export function buildPendingTransactionExport(
+	transactions: PendingTransaction[],
+	now = Date.now()
+): PendingTransactionExport {
+	return {
+		version: 1,
+		exported_at: new Date(now).toISOString(),
+		transactions: transactions.map(
+			(transaction) => sanitizeExportValue(transaction) as PendingTransaction
+		)
+	};
 }

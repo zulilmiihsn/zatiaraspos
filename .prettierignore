@@ -10,3 +10,6 @@ static/
 .tmp-quality/
 .tmp-pwa/
 .tmp-chrome-offline/
+
+# Generated Playwright evidence
+.planning/quick/**/playwright-production/

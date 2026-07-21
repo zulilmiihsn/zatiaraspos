@@ -27,34 +27,18 @@ function cookiePair(cookies, name) {
 	return cookie ? cookie.split(';')[0] : '';
 }
 
-async function postData(body, cookie) {
-	const response = await fetch(`${baseUrl}/api/data`, {
+async function postJson(path, body, auth) {
+	const response = await fetch(`${baseUrl}${path}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Cookie: cookie
+			'X-CSRF-Token': auth.csrfToken,
+			Cookie: auth.cookie
 		},
 		body: JSON.stringify(body)
 	});
 	const json = await response.json().catch(() => null);
-	assert(response.ok, `POST /api/data failed: ${response.status} ${JSON.stringify(json)}`);
-	return json;
-}
-
-async function postPosTransaction(body, cookie) {
-	const response = await fetch(`${baseUrl}/api/pos/transaction`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Cookie: cookie
-		},
-		body: JSON.stringify(body)
-	});
-	const json = await response.json().catch(() => null);
-	assert(
-		response.ok,
-		`POST /api/pos/transaction failed: ${response.status} ${JSON.stringify(json)}`
-	);
+	assert(response.ok, `POST ${path} failed: ${response.status} ${JSON.stringify(json)}`);
 	return json;
 }
 
@@ -218,6 +202,7 @@ async function login(username) {
 	const sidCookie = cookiePair(getSetCookies(loginResponse.headers), 'zatiaras_sid');
 	return {
 		json: loginJson,
+		csrfToken: csrfJson.token,
 		cookie: [csrfCookie, sidCookie].filter(Boolean).join('; ')
 	};
 }
@@ -227,10 +212,9 @@ const ownerLogin = await login('pemilik');
 const cookie = cashierLogin.cookie;
 const ownerCookie = ownerLogin.cookie;
 
-const productResponse = await fetch(
-	`${baseUrl}/api/data?table=produk&branch=${encodeURIComponent(branch)}&limit=5`,
-	{ headers: { Cookie: cookie } }
-);
+const productResponse = await fetch(`${baseUrl}/api/produk?branch=${encodeURIComponent(branch)}`, {
+	headers: { Cookie: cookie }
+});
 const products = await productResponse.json();
 assert(
 	Array.isArray(products) && products.some((item) => item.id === 'uat-produk-es-teh'),
@@ -248,38 +232,33 @@ const waits = sockets.map((socket, index) =>
 );
 
 try {
-	const posResult = await postPosTransaction(
+	const items = [{ product_id: 'uat-produk-es-teh', jumlah: 1, add_on_ids: [] }];
+	const quote = await postJson('/api/pos/quote', { items }, cashierLogin);
+	const posResult = await postJson(
+		'/api/pos/transaction',
 		{
 			idempotency_key: idempotencyKey,
-			customer_name: 'UAT',
-			payment_method: 'tunai',
+			nama_pelanggan: 'UAT',
+			metode_bayar: 'tunai',
 			cash_received: 10000,
-			items: [{ product_id: 'uat-produk-es-teh', qty: 1, add_on_ids: [] }]
+			items,
+			mode: 'online',
+			quote_token: quote.quote_token
 		},
-		cookie
+		cashierLogin
 	);
 	transactionId = posResult?.data?.transaction_id || idempotencyKey;
 	await Promise.all(waits);
 } finally {
-	await postData(
+	await fetch(
+		`${baseUrl}/api/transaksi-kasir?transaction_id=${encodeURIComponent(transactionId)}`,
 		{
-			table: 'transaksi_kasir',
-			action: 'delete',
-			branch,
-			payload: {},
-			where: { transaction_id: transactionId }
-		},
-		ownerCookie
-	).catch(() => null);
-	await postData(
-		{
-			table: 'buku_kas',
-			action: 'delete',
-			branch,
-			payload: {},
-			where: { transaction_id: transactionId }
-		},
-		ownerCookie
+			method: 'DELETE',
+			headers: {
+				'X-CSRF-Token': ownerLogin.csrfToken,
+				Cookie: ownerCookie
+			}
+		}
 	).catch(() => null);
 	for (const socket of sockets) socket.close(1000, 'done');
 }

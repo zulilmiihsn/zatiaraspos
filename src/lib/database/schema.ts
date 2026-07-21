@@ -27,7 +27,12 @@ export const authSessions = sqliteTable(
 		username: text('username').notNull(),
 		role: text('role').notNull(),
 		created_at: integer('created_at').notNull(),
-		expires_at: integer('expires_at').notNull()
+		expires_at: integer('expires_at').notNull(),
+		unlocked_pages: text('unlocked_pages', { mode: 'json' })
+			.$type<string[]>()
+			.notNull()
+			.default([]),
+		unlock_expires_at: integer('unlock_expires_at').notNull().default(0)
 	},
 	(table) => [
 		index('idx_auth_sessions_expires').on(table.expires_at),
@@ -288,7 +293,8 @@ export const pengaturan = sqliteTable(
 	{
 		id: integer('id').primaryKey(),
 		cabang_id: text('cabang_id').notNull(),
-		pin: text('pin').default('1234'),
+		pin: text('pin'),
+		pin_hash: text('pin_hash'),
 		halaman_terkunci: text('halaman_terkunci', { mode: 'json' }).$type<string[]>().default([]),
 		nama_toko: text('nama_toko'),
 		alamat: text('alamat'),

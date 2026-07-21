@@ -8,7 +8,14 @@
 	import { formatRupiah } from '$lib/utils/currency';
 	import { PAYMENT } from '$lib/constants/ui';
 	import { formatOrderDetails } from '$lib/utils/orderDetails';
-	import { Banknote, CreditCard, ReceiptText, ShoppingBag, UserRound, WifiOff } from 'lucide-svelte';
+	import {
+		Banknote,
+		CreditCard,
+		ReceiptText,
+		ShoppingBag,
+		UserRound,
+		WifiOff
+	} from 'lucide-svelte';
 	import { createBayarState } from '$lib/stores/bayarState.svelte';
 
 	const s = createBayarState();
@@ -237,7 +244,7 @@
 
 {#if s.showCashModal}
 	<ModalSheet open={s.showCashModal} title="Pembayaran Tunai" onClose={s.closeCashModal}>
-		<div class="pb-24 md:min-h-[60vh]">
+		<div class="pb-6 md:min-h-[60vh] md:pb-8">
 			<div class="mb-4 text-center text-gray-500 md:mb-6 md:text-lg">
 				Masukkan jumlah uang diterima
 			</div>
@@ -246,7 +253,7 @@
 				inputmode="numeric"
 				pattern="[0-9]*"
 				class="mb-3 w-full rounded-lg border-2 border-pink-200 px-2 py-3 text-center text-xl font-bold outline-none focus:border-pink-400 md:mb-5 md:py-5 md:text-2xl"
-				bind:value={s.formattedCashReceived}
+				value={s.formattedCashReceived}
 				oninput={(e) => {
 					const target = e.target as HTMLInputElement;
 					const raw = target.value.replace(/\D/g, '');

@@ -11,7 +11,7 @@
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import { getNowWita } from '$lib/utils/dateTime';
 	import PinModal from '$lib/components/shared/pinModal.svelte';
-	import { securitySettings } from '$lib/stores/securitySettings.svelte';
+	import { verifyPagePin } from '$lib/services/pinAccessService';
 	import DashboardMetrics from '$lib/components/dashboard/DashboardMetrics.svelte';
 	import WeeklyChart from '$lib/components/dashboard/WeeklyChart.svelte';
 	import TokoModal from '$lib/components/dashboard/TokoModal.svelte';
@@ -117,7 +117,6 @@
 	let isBukaToko = $state(true); // true: buka toko, false: tutup toko
 	// Verifikasi PIN untuk aksi kasir (buka/tutup)
 	let showActionPinModal = $state(false);
-	let actionPin = $state('1234');
 	let modalAwalInput = $state('');
 	let pinInputToko = $state('');
 	let pinErrorToko = $state('');
@@ -155,10 +154,8 @@
 	});
 
 	function handleOpenTokoModal() {
-		// Jika kasir, wajib verifikasi PIN dahulu (PIN dari pengaturan/securitySettings)
+		// Jika kasir, wajib verifikasi PIN di server dahulu.
 		if (currentUserRole === 'kasir') {
-			const settingsVal = securitySettings.value;
-			actionPin = (settingsVal && settingsVal.pin) || '1234';
 			pendingAction = () => {
 				cekSesiToko().then(() => {
 					isBukaToko = !tokoAktifLocal;
@@ -233,9 +230,9 @@
 {#if showActionPinModal}
 	<PinModal
 		show={showActionPinModal}
-		pin={actionPin}
 		title="Verifikasi Aksi"
 		subtitle="Masukkan PIN untuk melanjutkan"
+		onVerify={(pin) => verifyPagePin(pin, 'beranda')}
 		onSuccess={handleActionPinSuccess}
 		onClose={handleActionPinClose}
 	/>

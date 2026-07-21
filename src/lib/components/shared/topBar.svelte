@@ -8,12 +8,20 @@
 		actions,
 		download,
 		showSettings = true,
+		pendingCount = 0,
+		pendingFailedCount = 0,
+		isOffline = false,
+		onOpenPending,
 		onAiRecommendationsApplied
 	}: {
 		children?: Snippet;
 		actions?: Snippet;
 		download?: Snippet;
 		showSettings?: boolean;
+		pendingCount?: number;
+		pendingFailedCount?: number;
+		isOffline?: boolean;
+		onOpenPending?: () => void;
 		onAiRecommendationsApplied?: (detail: unknown) => void;
 	} = $props();
 </script>
@@ -21,7 +29,7 @@
 <div class="nav-transition z-10 flex items-center justify-between bg-white px-4 pt-4 pb-3">
 	<div class="flex items-center gap-3">
 		<TopBarAiAssistant onRecommendationsApplied={onAiRecommendationsApplied} />
-		<TopBarStatus />
+		<TopBarStatus {pendingCount} {pendingFailedCount} {isOffline} {onOpenPending} />
 	</div>
 	<div class="flex-1 text-center text-lg font-medium tracking-wide text-gray-800">
 		{@render children?.()}

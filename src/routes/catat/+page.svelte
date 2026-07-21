@@ -195,7 +195,8 @@
 					<div>
 						<label
 							class="mb-1 block text-sm font-medium text-pink-500 md:text-base"
-							for="jenis-dropdown">Jenis {s.mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label
+							for="jenis-dropdown"
+							>Jenis {s.mode === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</label
 						>
 						<button
 							type="button"

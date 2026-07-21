@@ -3,6 +3,15 @@ import { error as kitError } from '@sveltejs/kit';
 export const IN_QUERY_CHUNK_SIZE = 80;
 export const CHECKOUT_WINDOW_MS = 60 * 1000;
 export const CHECKOUT_MAX_PER_WINDOW = 30;
+export const CHECKOUT_MAX_LINE_ITEMS = 100;
+
+export function checkoutItemCountError(items: unknown): string | null {
+	if (!Array.isArray(items) || items.length === 0) return 'Item transaksi kosong';
+	if (items.length > CHECKOUT_MAX_LINE_ITEMS) {
+		return `Maksimal ${CHECKOUT_MAX_LINE_ITEMS} jenis item dalam satu transaksi`;
+	}
+	return null;
+}
 
 export function normalizeMoney(value: unknown): number {
 	const amount = Number(value);

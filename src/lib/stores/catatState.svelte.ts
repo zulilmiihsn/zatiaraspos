@@ -1,6 +1,11 @@
-import { validateNumber, validateText, validateTime, sanitizeInput, validateIncomeExpense } from '$lib/utils/validation';
+import {
+	validateNumber,
+	validateText,
+	validateTime,
+	sanitizeInput,
+	validateIncomeExpense
+} from '$lib/utils/validation';
 import { securityUtils } from '$lib/utils/security';
-import { auth } from '$lib/auth/auth';
 import { witaToUtcISO } from '$lib/utils/dateTime';
 import { formatRupiah } from '$lib/utils/currency';
 import { userRole, setUserRole } from '$lib/stores/userRole.svelte';
@@ -188,7 +193,11 @@ export function createCatatState() {
 		const timeValidation = validateTime(sanitizedTime);
 		const nominalValidation = validateNumber(sanitizedNominal, { required: true, min: 0 });
 		const jenisValidation = validateText(sanitizedJenis, { required: true });
-		const namaValidation = validateText(sanitizedNama, { required: true, minLength: 2, maxLength: 100 });
+		const namaValidation = validateText(sanitizedNama, {
+			required: true,
+			minLength: 2,
+			maxLength: 100
+		});
 		const paymentMethodValidation = validateText(sanitizedPaymentMethod, { required: true });
 		const allInputs = `${sanitizedDate}${sanitizedTime}${sanitizedNominal}${sanitizedJenis}${sanitizedNamaJenis}${sanitizedNama}${sanitizedPaymentMethod}`;
 		if (securityUtils.detectSuspiciousActivity('catat_form', allInputs)) {
@@ -207,7 +216,11 @@ export function createCatatState() {
 		if (!paymentMethodValidation.isValid)
 			errors.push(`Metode Pembayaran: ${paymentMethodValidation.errors.join(', ')}`);
 		if (sanitizedJenis === 'lainnya') {
-			const namaJenisValidation = validateText(sanitizedNamaJenis, { required: true, minLength: 2, maxLength: 50 });
+			const namaJenisValidation = validateText(sanitizedNamaJenis, {
+				required: true,
+				minLength: 2,
+				maxLength: 50
+			});
 			if (!namaJenisValidation.isValid) {
 				errors.push(`Nama Jenis: ${namaJenisValidation.errors.join(', ')}`);
 			}
@@ -277,30 +290,78 @@ export function createCatatState() {
 	}
 
 	return {
-		get mode() { return mode; },
-		get paymentMethod() { return paymentMethod; },
-		set paymentMethod(v) { paymentMethod = v; },
-		get date() { return date; },
-		set date(v) { date = v; },
-		get time() { return time; },
-		set time(v) { time = v; },
-		get rawNominal() { return rawNominal; },
-		get nominal() { return nominal; },
-		get jenis() { return jenis; },
-		set jenis(v) { jenis = v; },
-		get namaJenis() { return namaJenis; },
-		set namaJenis(v) { namaJenis = v; },
-		get nama() { return nama; },
-		set nama(v) { nama = v; },
-		get error() { return error; },
-		get showDropdown() { return showDropdown; },
-		set showDropdown(v) { showDropdown = v; },
-		get showSnackbar() { return showSnackbar; },
-		get snackbarMsg() { return snackbarMsg; },
-		get showNotifModal() { return showNotifModal; },
-		get notifModalMsg() { return notifModalMsg; },
-		get notifModalType() { return notifModalType; },
-		get currentUserRole() { return currentUserRole; },
+		get mode() {
+			return mode;
+		},
+		get paymentMethod() {
+			return paymentMethod;
+		},
+		set paymentMethod(v) {
+			paymentMethod = v;
+		},
+		get date() {
+			return date;
+		},
+		set date(v) {
+			date = v;
+		},
+		get time() {
+			return time;
+		},
+		set time(v) {
+			time = v;
+		},
+		get rawNominal() {
+			return rawNominal;
+		},
+		get nominal() {
+			return nominal;
+		},
+		get jenis() {
+			return jenis;
+		},
+		set jenis(v) {
+			jenis = v;
+		},
+		get namaJenis() {
+			return namaJenis;
+		},
+		set namaJenis(v) {
+			namaJenis = v;
+		},
+		get nama() {
+			return nama;
+		},
+		set nama(v) {
+			nama = v;
+		},
+		get error() {
+			return error;
+		},
+		get showDropdown() {
+			return showDropdown;
+		},
+		set showDropdown(v) {
+			showDropdown = v;
+		},
+		get showSnackbar() {
+			return showSnackbar;
+		},
+		get snackbarMsg() {
+			return snackbarMsg;
+		},
+		get showNotifModal() {
+			return showNotifModal;
+		},
+		get notifModalMsg() {
+			return notifModalMsg;
+		},
+		get notifModalType() {
+			return notifModalType;
+		},
+		get currentUserRole() {
+			return currentUserRole;
+		},
 		toastManager,
 		jenisPemasukan,
 		jenisPengeluaran,

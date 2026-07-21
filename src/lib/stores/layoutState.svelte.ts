@@ -3,14 +3,19 @@ import { userRole } from '$lib/stores/userRole.svelte';
 import { productService } from '$lib/services/productService';
 import { dashboardService } from '$lib/services/dashboardService';
 import { syncPendingTransactions } from '$lib/services/offlineSync';
-import { getPendingTransactions, retryFailedPendingTransactions } from '$lib/utils/offline';
+import {
+	getPendingTransactions,
+	removePendingTransaction,
+	retryFailedPendingTransactions,
+	retryPendingTransaction
+} from '$lib/utils/offline';
+import type { PendingTransaction } from '$lib/utils/offlineQueue';
 import { createToastManager } from '$lib/utils/ui';
 import type { Workbox as WorkboxInstance } from 'workbox-window';
 
 export function createLayoutState() {
 	// ── PWA ──────────────────────────────────────────────────────────────────
 	let showUpdateNotification = $state(false);
-	let updateAvailable = false;
 	let pwaWorkbox: WorkboxInstance | null = null;
 
 	// ── Offline / pending sync ────────────────────────────────────────────────
@@ -19,11 +24,13 @@ export function createLayoutState() {
 	let isOffline = $state(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 	let pendingCount = $state(0);
 	let pendingFailedCount = $state(0);
+	let pendingTransactions = $state<PendingTransaction[]>([]);
 	let isPendingSyncing = $state(false);
 	const toastManager = createToastManager();
 
 	async function updatePending() {
 		const pending = await getPendingTransactions();
+		pendingTransactions = pending;
 		pendingCount = pending.length;
 		pendingFailedCount = pending.filter((item) => item.status === 'failed').length;
 	}
@@ -32,12 +39,29 @@ export function createLayoutState() {
 		if (isOffline || isPendingSyncing) return;
 		isPendingSyncing = true;
 		try {
-			await retryFailedPendingTransactions();
+			await retryFailedPendingTransactions(['network', 'rate_limit', 'server']);
 			await syncPendingTransactions({ force: true });
 			await updatePending();
 		} finally {
 			isPendingSyncing = false;
 		}
+	}
+
+	async function retryOnePendingTransaction(queueId: string) {
+		if (isOffline || isPendingSyncing) return;
+		isPendingSyncing = true;
+		try {
+			await retryPendingTransaction(queueId);
+			await syncPendingTransactions({ force: true, queueIds: [queueId] });
+			await updatePending();
+		} finally {
+			isPendingSyncing = false;
+		}
+	}
+
+	async function removeOnePendingTransaction(queueId: string) {
+		await removePendingTransaction(queueId);
+		await updatePending();
 	}
 
 	function scheduleIdleTask(task: () => void, timeout = 1200) {
@@ -88,7 +112,6 @@ export function createLayoutState() {
 			const wb = new Workbox('/sw.js');
 			pwaWorkbox = wb;
 			wb.addEventListener('waiting', () => {
-				updateAvailable = true;
 				showUpdateNotification = true;
 			});
 			wb.addEventListener('controlling', () => {
@@ -107,7 +130,9 @@ export function createLayoutState() {
 			void prefetchMenuData();
 			void prefetchOwnerInsights();
 		});
-		window.addEventListener('offline', () => { isOffline = true; });
+		window.addEventListener('offline', () => {
+			isOffline = true;
+		});
 		window.addEventListener('online', () => {
 			isOffline = false;
 			updatePending();
@@ -116,12 +141,19 @@ export function createLayoutState() {
 				void prefetchOwnerInsights();
 			});
 		});
-		window.addEventListener('storage', () => { updatePending(); });
-		window.addEventListener('pending-synced', () => {
-			toastManager.showToastNotification('Transaksi offline berhasil dikirim ke server!', 'success');
+		window.addEventListener('storage', () => {
 			updatePending();
 		});
-		window.addEventListener('pending-sync-start', () => { isPendingSyncing = true; });
+		window.addEventListener('pending-synced', () => {
+			toastManager.showToastNotification(
+				'Transaksi offline berhasil dikirim ke server!',
+				'success'
+			);
+			updatePending();
+		});
+		window.addEventListener('pending-sync-start', () => {
+			isPendingSyncing = true;
+		});
 		window.addEventListener('pending-sync-result', () => {
 			isPendingSyncing = false;
 			void updatePending();
@@ -131,7 +163,9 @@ export function createLayoutState() {
 
 	async function applyUpdate() {
 		if (pwaWorkbox && import.meta.env.PROD) {
-			try { pwaWorkbox.messageSkipWaiting(); } catch (error) {
+			try {
+				pwaWorkbox.messageSkipWaiting();
+			} catch (error) {
 				console.log('Failed to apply update:', error);
 			}
 		}
@@ -142,16 +176,31 @@ export function createLayoutState() {
 	}
 
 	return {
-		get showUpdateNotification() { return showUpdateNotification; },
-		get isOffline() { return isOffline; },
-		get pendingCount() { return pendingCount; },
-		get pendingFailedCount() { return pendingFailedCount; },
-		get isPendingSyncing() { return isPendingSyncing; },
+		get showUpdateNotification() {
+			return showUpdateNotification;
+		},
+		get isOffline() {
+			return isOffline;
+		},
+		get pendingCount() {
+			return pendingCount;
+		},
+		get pendingFailedCount() {
+			return pendingFailedCount;
+		},
+		get pendingTransactions() {
+			return pendingTransactions;
+		},
+		get isPendingSyncing() {
+			return isPendingSyncing;
+		},
 		toastManager,
 		setupPwa,
 		setupWindowListeners,
 		updatePending,
 		retryPendingTransactions,
+		retryOnePendingTransaction,
+		removeOnePendingTransaction,
 		scheduleIdleTask,
 		prefetchMenuData,
 		prefetchOwnerInsights,

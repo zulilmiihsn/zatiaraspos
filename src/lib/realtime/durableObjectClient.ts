@@ -2,11 +2,6 @@ import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 
 type RealtimeCallback = (message: Record<string, unknown>) => void;
 
-interface TableSubscription {
-	table: string;
-	callback: RealtimeCallback;
-}
-
 let socket: WebSocket | null = null;
 let socketBranch = '';
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;

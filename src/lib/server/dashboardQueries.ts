@@ -48,23 +48,19 @@ export async function getWeeklyIncomeSummary(
 	startTime: string,
 	endTime: string
 ): Promise<unknown[]> {
-	try {
-		const startDate = witaDate(startTime);
-		const endDate = witaDate(endTime);
-		return await db
-			.select()
-			.from(dailySalesSummary)
-			.where(
-				and(
-					eq(dailySalesSummary.cabang_id, branch),
-					gte(dailySalesSummary.tanggal_penjualan, startDate),
-					lte(dailySalesSummary.tanggal_penjualan, endDate)
-				)
+	const startDate = witaDate(startTime);
+	const endDate = witaDate(endTime);
+	return db
+		.select()
+		.from(dailySalesSummary)
+		.where(
+			and(
+				eq(dailySalesSummary.cabang_id, branch),
+				gte(dailySalesSummary.tanggal_penjualan, startDate),
+				lte(dailySalesSummary.tanggal_penjualan, endDate)
 			)
-			.orderBy(asc(dailySalesSummary.tanggal_penjualan));
-	} catch {
-		return [];
-	}
+		)
+		.orderBy(asc(dailySalesSummary.tanggal_penjualan));
 }
 
 /** Top 3 produk terlaris untuk rentang, dari daily_product_sales. */
@@ -74,25 +70,21 @@ export async function getBestSellersSummary(
 	startTime: string,
 	endTime: string
 ): Promise<unknown[]> {
-	try {
-		const startDate = witaDate(startTime);
-		const endDate = witaDate(endTime);
-		const rows = await rawDb
-			.prepare(
-				`SELECT produk_id, nama_produk, SUM(jumlah) AS total_qty, SUM(penjualan_kotor) AS penjualan_kotor
+	const startDate = witaDate(startTime);
+	const endDate = witaDate(endTime);
+	const rows = await rawDb
+		.prepare(
+			`SELECT produk_id, nama_produk, SUM(jumlah) AS total_qty, SUM(penjualan_kotor) AS penjualan_kotor
 				 FROM penjualan_produk_harian
 				 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?
 					AND (produk_id NOT LIKE 'custom:%' AND produk_id != '__custom__')
 				 GROUP BY produk_id, nama_produk
 				 ORDER BY total_qty DESC
 				 LIMIT 3`
-			)
-			.bind(branch, startDate, endDate)
-			.all();
-		return rows.results || [];
-	} catch {
-		return [];
-	}
+		)
+		.bind(branch, startDate, endDate)
+		.all();
+	return rows.results || [];
 }
 
 /** Header transaksi POS dalam rentang (untuk agregasi kas 7 hari di klien). */

@@ -4,6 +4,18 @@ import { and, asc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
 
 type Db = ReturnType<typeof import('$lib/server/branchResolver').getDrizzleDb>;
 type Row = Record<string, unknown>;
+export const D1_REPORT_ID_CHUNK_SIZE = 99;
+
+export function chunkReportIds(ids: string[], size = D1_REPORT_ID_CHUNK_SIZE): string[][] {
+	if (!Number.isInteger(size) || size <= 0 || size > D1_REPORT_ID_CHUNK_SIZE) {
+		throw new Error(`Ukuran chunk ID laporan harus 1-${D1_REPORT_ID_CHUNK_SIZE}`);
+	}
+	const chunks: string[][] = [];
+	for (let index = 0; index < ids.length; index += size) {
+		chunks.push(ids.slice(index, index + size));
+	}
+	return chunks;
+}
 
 // ── fetchReportData ────────────────────────────────────────────────────────
 // Query buku_kas berpaginasi untuk rentang waktu, plus transaksi_kasir terkait POS.
@@ -22,52 +34,53 @@ async function fetchAllData(
 	const maxPages = 20; // Limit maksimal halaman untuk menghindari infinite loop
 
 	while (hasMore && page < maxPages) {
-		try {
-			const conditions = [
-				eq(bukuKas.cabang_id, requestedBranch),
-				gte(bukuKas.waktu, startDate),
-				lte(bukuKas.waktu, endDate)
-			];
-			if (filters.sumber) {
-				conditions.push(eq(bukuKas.sumber, String(filters.sumber)));
-			}
-			if (filters.excludeSumber) {
-				conditions.push(ne(bukuKas.sumber, String(filters.excludeSumber)));
-			}
-
-			const queryPromise = db
-				.select()
-				.from(bukuKas)
-				.where(and(...conditions))
-				.orderBy(asc(bukuKas.waktu))
-				.limit(pageSize)
-				.offset(page * pageSize);
-
-			const timeoutPromise = new Promise((_, reject) =>
-				setTimeout(() => reject(new Error('Query timeout')), 30000)
-			);
-
-			const data = (await Promise.race([queryPromise, timeoutPromise])) as Row[] | null;
-
-			if (data && data.length > 0) {
-				allData = [...allData, ...data];
-
-				// Jika data kurang dari pageSize, berarti sudah habis
-				if (data.length < pageSize) {
-					hasMore = false;
-				} else {
-					page++;
-				}
-			} else {
-				hasMore = false;
-			}
-		} catch (error) {
-			console.error('[aichat/reportData] query page gagal', {
-				message: error instanceof Error ? error.message : 'Unknown query failure',
-				page
-			});
-			break;
+		const conditions = [
+			eq(bukuKas.cabang_id, requestedBranch),
+			gte(bukuKas.waktu, startDate),
+			lte(bukuKas.waktu, endDate)
+		];
+		if (filters.sumber) {
+			conditions.push(eq(bukuKas.sumber, String(filters.sumber)));
 		}
+		if (filters.excludeSumber) {
+			conditions.push(ne(bukuKas.sumber, String(filters.excludeSumber)));
+		}
+
+		const queryPromise = db
+			.select()
+			.from(bukuKas)
+			.where(and(...conditions))
+			.orderBy(asc(bukuKas.waktu))
+			.limit(pageSize)
+			.offset(page * pageSize);
+
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
+		const timeoutPromise = new Promise<never>((_, reject) => {
+			timeoutId = setTimeout(() => reject(new Error('Query timeout')), 30000);
+		});
+
+		let data: Row[];
+		try {
+			data = (await Promise.race([queryPromise, timeoutPromise])) as Row[];
+		} finally {
+			if (timeoutId) clearTimeout(timeoutId);
+		}
+
+		if (data.length > 0) {
+			allData = [...allData, ...data];
+
+			// Jika data kurang dari pageSize, berarti sudah habis
+			if (data.length < pageSize) {
+				hasMore = false;
+			} else {
+				page++;
+			}
+		} else {
+			hasMore = false;
+		}
+	}
+	if (hasMore) {
+		throw new Error(`Batas laporan ${maxPages * pageSize} baris terlampaui`);
 	}
 	return allData;
 }
@@ -91,26 +104,26 @@ export async function fetchReportData(
 	]);
 
 	// Ambil data transaksi_kasir dengan relasi produk untuk data POS
-	let transaksiKasirData: Row[] = [];
+	const transaksiKasirData: Row[] = [];
 	if (bukuKasPos && bukuKasPos.length > 0) {
 		// Ambil buku_kas_id dari data POS
-		const bukuKasIds = bukuKasPos.map((item: Row) => item.id).filter(Boolean);
+		const bukuKasIds = bukuKasPos
+			.map((item: Row) => item.id)
+			.filter((id): id is string | number => typeof id === 'string' || typeof id === 'number')
+			.map(String);
 
 		if (bukuKasIds.length > 0) {
-			try {
-				transaksiKasirData = await db
+			for (const idChunk of chunkReportIds(bukuKasIds)) {
+				const rows = await db
 					.select()
 					.from(transaksiKasir)
 					.where(
 						and(
 							eq(transaksiKasir.cabang_id, requestedBranch),
-							inArray(transaksiKasir.buku_kas_id, bukuKasIds.map(String))
+							inArray(transaksiKasir.buku_kas_id, idChunk)
 						)
 					);
-			} catch (error) {
-				console.error('[aichat/reportData] query item transaksi gagal', {
-					message: error instanceof Error ? error.message : 'Unknown query failure'
-				});
+				transaksiKasirData.push(...rows);
 			}
 		}
 	}

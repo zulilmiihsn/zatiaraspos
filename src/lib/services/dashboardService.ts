@@ -111,8 +111,18 @@ export class DashboardService {
 					end: endUTC
 				}).toString();
 				const res = await fetch(`/api/dashboard/stats?${qs}`);
-				const payload = res.ok ? await res.json() : {};
-				const { kasir = [], kas = [], summary = [] } = payload;
+				const payload = await res.json().catch(() => null);
+				if (!res.ok) {
+					throw new Error(
+						typeof payload?.message === 'string'
+							? payload.message
+							: `Gagal memuat statistik dashboard (${res.status})`
+					);
+				}
+				if (!payload || !Array.isArray(payload.summary)) {
+					throw new Error('Respons statistik dashboard tidak valid');
+				}
+				const { kasir = [], kas = [], summary } = payload;
 
 				if (Array.isArray(summary) && summary.length) {
 					const itemTerjual = summary.reduce(
@@ -321,7 +331,10 @@ export class DashboardService {
 					end_date: endDate
 				}).toString();
 				const aggRes = await fetch(`/api/reports/aggregate?${aggParams}`);
-				const aggData = aggRes.ok ? await aggRes.json() : null;
+				if (!aggRes.ok) {
+					throw new Error(`Gagal memuat laporan (${aggRes.status})`);
+				}
+				const aggData = await aggRes.json();
 				const laporan: Record<string, unknown>[] = Array.isArray(aggData?.transactions)
 					? aggData.transactions
 					: [];

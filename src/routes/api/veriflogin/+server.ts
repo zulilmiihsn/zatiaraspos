@@ -15,7 +15,8 @@ import { consumeRateLimit } from '$lib/server/rateLimit';
 import { recordErrorEvent } from '$lib/server/observability';
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_MAX_IP_ATTEMPTS = 60;
+const LOGIN_MAX_USER_ATTEMPTS = 15;
 
 async function hashIdentifier(value: string): Promise<string> {
 	const bytes = new TextEncoder().encode(value);
@@ -62,7 +63,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies,
 			rawDb,
 			branchId,
 			`login:ip:${ipHash}`,
-			LOGIN_MAX_ATTEMPTS,
+			LOGIN_MAX_IP_ATTEMPTS,
 			LOGIN_WINDOW_MS,
 			platform
 		);
@@ -70,7 +71,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies,
 			rawDb,
 			branchId,
 			`login:user:${username.toLowerCase()}`,
-			LOGIN_MAX_ATTEMPTS,
+			LOGIN_MAX_USER_ATTEMPTS,
 			LOGIN_WINDOW_MS,
 			platform
 		);

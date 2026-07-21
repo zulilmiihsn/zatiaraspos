@@ -1,29 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { getPendingTransactions } from '$lib/utils/offline';
 	import WifiOff from 'lucide-svelte/icons/wifi-off';
+	import AlertTriangle from 'lucide-svelte/icons/alert-triangle';
 
-	let pendingCount = $state(0);
-	let isOffline = $state(typeof navigator !== 'undefined' ? !navigator.onLine : false);
-
-	onMount(() => {
-		const updatePendingCount = async () => {
-			pendingCount = (await getPendingTransactions()).length;
-		};
-		const markOffline = () => (isOffline = true);
-		const markOnline = () => (isOffline = false);
-
-		void updatePendingCount();
-		window.addEventListener('storage', updatePendingCount);
-		window.addEventListener('offline', markOffline);
-		window.addEventListener('online', markOnline);
-
-		return () => {
-			window.removeEventListener('storage', updatePendingCount);
-			window.removeEventListener('offline', markOffline);
-			window.removeEventListener('online', markOnline);
-		};
-	});
+	let {
+		pendingCount = 0,
+		pendingFailedCount = 0,
+		isOffline = false,
+		onOpenPending
+	}: {
+		pendingCount?: number;
+		pendingFailedCount?: number;
+		isOffline?: boolean;
+		onOpenPending?: () => void;
+	} = $props();
 </script>
 
 {#if isOffline}
@@ -36,13 +25,21 @@
 {/if}
 
 {#if pendingCount > 0}
-	<div class="flex items-center gap-3">
-		<div
-			class="flex h-6 w-6 animate-pulse items-center justify-center rounded-full border-2 border-white bg-yellow-400 text-xs font-semibold text-white shadow transition-transform duration-300"
-		>
-			<span class="mb-px">{pendingCount}</span>
-		</div>
-	</div>
+	<button
+		type="button"
+		class="flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border-2 border-white px-1.5 text-xs font-bold text-white shadow transition-transform duration-200 active:scale-[0.98] {pendingFailedCount >
+		0
+			? 'bg-red-500'
+			: 'bg-amber-500'}"
+		onclick={onOpenPending}
+		aria-label="Buka {pendingCount} transaksi belum tersinkron"
+		data-testid="topbar-pending-count"
+	>
+		{#if pendingFailedCount > 0}
+			<AlertTriangle class="h-3.5 w-3.5" />
+		{/if}
+		<span>{pendingCount}</span>
+	</button>
 {/if}
 
 <style>

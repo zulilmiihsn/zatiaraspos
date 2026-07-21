@@ -11,6 +11,8 @@ declare global {
 				branch?: string;
 				createdAt: number;
 				expiresAt: number;
+				unlockedPages: string[];
+				unlockExpiresAt: number;
 			} | null;
 		}
 
@@ -28,6 +30,10 @@ declare global {
 					get(id: unknown): { fetch(request: Request): Promise<Response> };
 				};
 				R2_PUBLIC_URL?: string;
+				POS_PRICE_SIGNING_KEY?: string;
+				POS_PRICE_SIGNING_KEY_ID?: string;
+				POS_PRICE_SIGNING_KEY_PREVIOUS?: string;
+				POS_PRICE_SIGNING_KEY_PREVIOUS_ID?: string;
 			};
 		}
 	}

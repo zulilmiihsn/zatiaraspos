@@ -68,10 +68,7 @@ export function createEkstraState(deps: EkstraDeps) {
 			ekstraForm.harga = '';
 			editEkstraId = null;
 		} catch (error) {
-			deps.showNotif(
-				'Gagal menyimpan ekstra: ' + ErrorHandler.extractErrorMessage(error),
-				'error'
-			);
+			deps.showNotif('Gagal menyimpan ekstra: ' + ErrorHandler.extractErrorMessage(error), 'error');
 		}
 		await deps.afterUpdate();
 	}

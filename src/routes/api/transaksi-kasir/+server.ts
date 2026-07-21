@@ -1,7 +1,7 @@
 import { json, error as kitError } from '@sveltejs/kit';
 import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getRawDb, publish, auditDataChange } from '$lib/server/dataApiHelpers';
-import { reverseDailySummaryForTransaction } from '$lib/server/dailySummary';
+import { buildDailySummaryReversalStatements } from '$lib/server/dailySummary';
 import { hasDatabaseColumn } from '$lib/server/schemaCapabilities';
 import { decodeDataCursor, parseDataLimit, toCursorPage } from '$lib/server/dataPagination';
 import { parseBody, type WriteBody } from '$lib/server/resourceRouteHelpers';
@@ -15,9 +15,8 @@ import type { RequestHandler } from './$types';
  *      Cursor pagination pada (created_at, id).
  *   2. POST menolak insert POS (sumber='pos' atau insert apa pun ke tabel ini) → 409,
  *      arahkan ke /api/pos/transaction (yang juga maintain tabel agregat harian).
- *   3. DELETE by transaction_id: REVERSE kontribusi ke daily_sales_summary +
- *      daily_product_sales SEBELUM hapus item. Bungkus try/catch yang swallow —
- *      penghapusan tidak boleh gagal hanya karena agregat gagal.
+ *   3. DELETE by transaction_id: reverse ringkasan, restore stok, dan hapus
+ *      transaksi dalam satu batch atomik. Semua kegagalan membatalkan void.
  * RBAC: insert → kasir/pemilik (tapi POS diblokir lihat di atas); delete → pemilik.
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
@@ -89,7 +88,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const branch = requireSessionBranch(locals);
+	requireSessionBranch(locals);
 	const session = locals.authSession!;
 	requireAnyRole(session.role, ['kasir', 'pemilik']);
 
@@ -110,14 +109,6 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	const rawDb = getRawDb(platform, branch);
 
-	// Balikkan kontribusi transaksi ke ringkasan harian SEBELUM item dihapus.
-	// Jangan blok penghapusan bila agregat gagal.
-	try {
-		await reverseDailySummaryForTransaction(rawDb, branch, transactionId);
-	} catch {
-		// Tabel ringkasan mungkin belum ada / gagal sebagian — abaikan.
-	}
-
 	// P0-4: kumpulkan apa yang harus DIKEMBALIKAN sebelum baris dihapus.
 	// Stok produk: dari item POS (jumlah per produk, hanya yang lacak_stok).
 	const itemRows = ((
@@ -128,27 +119,28 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 			.bind(branch, transactionId)
 			.all()
 	).results || []) as Array<{ produk_id: string | null; jumlah: number }>;
+	if (itemRows.length === 0) throw kitError(404, 'Transaksi POS tidak ditemukan');
+
+	const summaryReversal = await buildDailySummaryReversalStatements(rawDb, branch, transactionId);
+	if (!summaryReversal.found) {
+		throw kitError(409, 'Transaksi POS tidak konsisten dengan buku kas');
+	}
 
 	// Stok bahan: balikkan PERSIS mutasi yang ditulis checkout (bukan re-compute resep
-	// yang bisa sudah berubah). Tabel mungkin belum ada di DB lama → fallback kosong.
-	let mutasiRows: Array<{ bahan_id: string; delta_jumlah: number }> = [];
-	try {
-		mutasiRows = ((
-			await rawDb
-				.prepare(
-					`SELECT bahan_id, delta_jumlah FROM bahan_mutasi
-					 WHERE cabang_id = ? AND referensi_id = ? AND sumber = 'pos_transaction'`
-				)
-				.bind(branch, transactionId)
-				.all()
-		).results || []) as Array<{ bahan_id: string; delta_jumlah: number }>;
-	} catch {
-		mutasiRows = [];
-	}
+	// yang bisa sudah berubah). Kegagalan query harus membatalkan seluruh void.
+	const mutasiRows = ((
+		await rawDb
+			.prepare(
+				`SELECT bahan_id, delta_jumlah FROM bahan_mutasi
+				 WHERE cabang_id = ? AND referensi_id = ? AND sumber = 'pos_transaction'`
+			)
+			.bind(branch, transactionId)
+			.all()
+	).results || []) as Array<{ bahan_id: string; delta_jumlah: number }>;
 
 	const now = new Date().toISOString();
 	const actor = session.username || session.userId;
-	const statements = [];
+	const statements = [...summaryReversal.statements];
 
 	for (const it of itemRows) {
 		if (!it.produk_id) continue;

@@ -89,10 +89,7 @@ export async function getCheckoutCapabilities(
 
 // ── Session lookup ──────────────────────────────────────────────────────────
 
-export async function getActiveSessionId(
-	db: D1Database,
-	branch: BranchId
-): Promise<string | null> {
+export async function getActiveSessionId(db: D1Database, branch: BranchId): Promise<string | null> {
 	const row = (await db
 		.prepare(
 			`SELECT id
@@ -102,6 +99,24 @@ export async function getActiveSessionId(
 			 LIMIT 1`
 		)
 		.bind(branch)
+		.first()) as { id: string } | null;
+	return row?.id ?? null;
+}
+
+export async function getSessionIdById(
+	db: D1Database,
+	branch: BranchId,
+	sessionId: unknown
+): Promise<string | null> {
+	if (typeof sessionId !== 'string' || !sessionId.trim()) return null;
+	const row = (await db
+		.prepare(
+			`SELECT id
+			 FROM sesi_toko
+			 WHERE cabang_id = ? AND id = ?
+			 LIMIT 1`
+		)
+		.bind(branch, sessionId.trim())
 		.first()) as { id: string } | null;
 	return row?.id ?? null;
 }
@@ -134,7 +149,11 @@ export async function loadProducts(
 	branch: BranchId,
 	productIds: string[],
 	stockTrackingAvailable: boolean,
-	ingredientTrackingAvailable: boolean
+	ingredientTrackingAvailable: boolean,
+	options: {
+		allowInactive?: boolean;
+		fallbackProducts?: Map<string, ProductRow>;
+	} = {}
 ): Promise<Map<string, ProductRow>> {
 	const rows: ProductRow[] = [];
 	for (const part of chunks(productIds, IN_QUERY_CHUNK_SIZE)) {
@@ -156,9 +175,10 @@ export async function loadProducts(
 
 	const products = new Map(rows.map((product) => [String(product.id), product]));
 	for (const productId of productIds) {
-		const product = products.get(productId);
+		const product = products.get(productId) ?? options.fallbackProducts?.get(productId);
 		if (!product) throw kitError(404, `Produk tidak ditemukan: ${productId}`);
-		assertActive(product, product.nama);
+		products.set(productId, product);
+		if (!options.allowInactive) assertActive(product, product.nama);
 	}
 	return products;
 }
@@ -200,7 +220,11 @@ export async function loadRecipesByProduct(
 export async function loadAddOns(
 	db: D1Database,
 	branch: BranchId,
-	ids: string[]
+	ids: string[],
+	options: {
+		allowInactive?: boolean;
+		fallbackAddOns?: Map<string, AddOnRow>;
+	} = {}
 ): Promise<Map<string, AddOnRow>> {
 	if (!ids.length) return new Map();
 	const rows: AddOnRow[] = [];
@@ -220,9 +244,10 @@ export async function loadAddOns(
 
 	const addOns = new Map(rows.map((addOn) => [String(addOn.id), addOn]));
 	for (const id of ids) {
-		const addOn = addOns.get(id);
+		const addOn = addOns.get(id) ?? options.fallbackAddOns?.get(id);
 		if (!addOn) throw kitError(404, 'Tambahan tidak ditemukan');
-		assertActive(addOn, addOn.nama);
+		addOns.set(id, addOn);
+		if (!options.allowInactive) assertActive(addOn, addOn.nama);
 	}
 	return addOns;
 }

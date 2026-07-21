@@ -41,8 +41,7 @@ export async function buildLaporanAggregate(
 			 WHERE cabang_id = ? AND tanggal_penjualan >= ? AND tanggal_penjualan <= ?`
 		)
 		.bind(branch, startDate, endDate)
-		.first()
-		.catch(() => null)) as { gross?: number } | null;
+		.first()) as { gross?: number } | null;
 
 	const productRows =
 		(
@@ -56,8 +55,7 @@ export async function buildLaporanAggregate(
 				 GROUP BY nama_produk`
 				)
 				.bind(branch, startDate, endDate)
-				.all()
-				.catch(() => ({ results: [] }))) as {
+				.all()) as {
 				results?: Array<{ nama_produk?: string; cash?: number; non_cash?: number }>;
 			}
 		).results || [];
@@ -76,8 +74,7 @@ export async function buildLaporanAggregate(
 				 ORDER BY waktu DESC`
 				)
 				.bind(branch, startDate, endDate)
-				.all()
-				.catch(() => ({ results: [] }))) as {
+				.all()) as {
 				results?: Array<Record<string, any>>;
 			}
 		).results || [];

@@ -32,7 +32,7 @@
 	let confirmPin = $state('');
 	let lockedPages = $state<string[]>([]);
 	let pinError = $state('');
-	let pin = $state('');
+	let pinConfigured = $state(false);
 	let pengaturanKeamananId = $state('');
 	let activeSecurityTab = $state('pemilik'); // 'pemilik' atau 'kasir'
 	let showNotifModal = $state(false);
@@ -45,12 +45,12 @@
 		}
 
 		const data = (await transactionService.getOne('pengaturan')) as {
-			pin?: string;
+			pinConfigured?: boolean;
 			halaman_terkunci?: string[];
 			id?: string;
 		} | null;
 		if (data) {
-			pin = data.pin || '';
+			pinConfigured = data.pinConfigured === true;
 			lockedPages = data.halaman_terkunci || [];
 			pengaturanKeamananId = data.id ?? '';
 		}
@@ -165,7 +165,7 @@
 
 	async function savePinSettings(event: Event) {
 		event.preventDefault();
-		if (!oldPin.trim() || !newPin.trim() || !confirmPin.trim()) {
+		if ((pinConfigured && !oldPin.trim()) || !newPin.trim() || !confirmPin.trim()) {
 			pinError = 'Semua field wajib diisi.';
 			return;
 		}
@@ -177,16 +177,18 @@
 			pinError = 'PIN harus 4-6 digit angka.';
 			return;
 		}
-		if (oldPin !== pin) {
-			pinError = 'PIN lama salah.';
-			return;
-		}
 		try {
-			await transactionService.updateRows(
-				'pengaturan',
-				{ pin: newPin },
-				{ id: pengaturanKeamananId }
-			);
+			const response = await fetchWithCsrfRetry('/api/pin', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ currentPin: oldPin, newPin })
+			});
+			const payload = await response.json().catch(() => null);
+			if (!response.ok || payload?.ok !== true) {
+				reportApiFailure(payload, response.status, '/api/pin');
+				pinError = getApiErrorMessage(payload, response.status, 'Gagal menyimpan PIN.');
+				return;
+			}
 			notifModalMsg = 'Perubahan PIN berhasil disimpan.';
 			notifModalType = 'success';
 			showNotifModal = true;
@@ -194,7 +196,7 @@
 			newPin = '';
 			confirmPin = '';
 			pinError = '';
-			pin = newPin;
+			pinConfigured = true;
 		} catch (error) {
 			console.error('[gantikeamanan] update PIN gagal:', error);
 			pinError = 'Gagal menyimpan perubahan. Coba lagi.';
@@ -226,7 +228,8 @@
 			notifModalType = 'success';
 			showNotifModal = true;
 		} catch (error) {
-			notifModalMsg = 'Gagal menyimpan pengaturan: ' + (error instanceof Error ? error.message : String(error));
+			notifModalMsg =
+				'Gagal menyimpan pengaturan: ' + (error instanceof Error ? error.message : String(error));
 			notifModalType = 'error';
 			showNotifModal = true;
 		}
@@ -466,19 +469,28 @@
 					autocomplete="off"
 				>
 					<div class="lg:flex lg:flex-1 lg:flex-col lg:justify-start">
-						<div>
-							<label for="old-pin" class="mb-1 block text-sm font-medium text-gray-700"
-								>PIN Lama</label
+						{#if pinConfigured}
+							<div>
+								<label for="old-pin" class="mb-1 block text-sm font-medium text-gray-700"
+									>PIN Lama</label
+								>
+								<input
+									id="old-pin"
+									type="password"
+									inputmode="numeric"
+									class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+									placeholder="PIN Lama"
+									bind:value={oldPin}
+									required
+								/>
+							</div>
+						{:else}
+							<div
+								class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
 							>
-							<input
-								id="old-pin"
-								type="password"
-								class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
-								placeholder="PIN Lama"
-								bind:value={oldPin}
-								required
-							/>
-						</div>
+								PIN belum dibuat. Tetapkan PIN baru sebelum mengaktifkan halaman terkunci.
+							</div>
+						{/if}
 						<div>
 							<label for="new-pin" class="mb-1 block text-sm font-medium text-gray-700"
 								>PIN Baru</label
@@ -486,6 +498,7 @@
 							<input
 								id="new-pin"
 								type="password"
+								inputmode="numeric"
 								class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
 								placeholder="PIN Baru"
 								bind:value={newPin}
@@ -499,6 +512,7 @@
 							<input
 								id="confirm-pin"
 								type="password"
+								inputmode="numeric"
 								class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
 								placeholder="Konfirmasi PIN Baru"
 								bind:value={confirmPin}

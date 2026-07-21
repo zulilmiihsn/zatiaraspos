@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
+	buildPendingTransactionExport,
 	classifySyncFailure,
 	getPendingDedupeKey,
 	getRetryDelayMs,
@@ -43,13 +45,13 @@ assert.equal(normalized.attempt_count, 0);
 assert.equal(normalized.next_attempt_at, 0);
 assert.equal(getPendingDedupeKey(normalized), 'pos:checkout-12345678');
 
-const legacy = normalizePendingTransaction(
-	{ queue_id: 'legacy-1', bukuKas: { id: 'kas-1' } },
+const manualTransaction = normalizePendingTransaction(
+	{ queue_id: 'manual-1', id: 'kas-1', sumber: 'catat' },
 	{ now }
 );
-assert.equal(legacy.queue_id, 'legacy-1');
-assert.equal(legacy.status, 'pending');
-assert.equal(legacy.created_at, '2026-06-19T00:00:00.000Z');
+assert.equal(manualTransaction.queue_id, 'manual-1');
+assert.equal(manualTransaction.status, 'pending');
+assert.equal(manualTransaction.created_at, '2026-06-19T00:00:00.000Z');
 
 assert.equal(getRetryDelayMs(1), 1_000);
 assert.equal(getRetryDelayMs(2), 2_000);
@@ -89,4 +91,48 @@ assert.equal(isOfflinePosPath('/pos'), true);
 assert.equal(isOfflinePosPath('/pos/bayar'), true);
 assert.equal(isOfflinePosPath('/laporan'), false);
 
-console.log('offline-pos-tests: 20 assertions passed');
+const exportPayload = buildPendingTransactionExport(
+	[
+		{
+			...normalized,
+			request: {
+				idempotency_key: 'checkout-12345678',
+				quote_token: 'signed-price-token',
+				password: 'must-not-export',
+				csrfToken: 'must-not-export',
+				headers: {
+					Accept: 'application/json',
+					Authorization: 'Bearer must-not-export',
+					Cookie: 'zatiaras_sid=must-not-export',
+					'X-CSRF-Token': 'must-not-export'
+				}
+			}
+		}
+	],
+	now
+);
+assert.equal(exportPayload.version, 1);
+assert.equal(exportPayload.exported_at, '2026-06-19T00:00:00.000Z');
+const exportedRequest = exportPayload.transactions[0].request as Record<string, unknown>;
+assert.equal(exportedRequest.quote_token, 'signed-price-token');
+assert.equal('password' in exportedRequest, false);
+assert.equal('csrfToken' in exportedRequest, false);
+const exportedHeaders = exportedRequest.headers as Record<string, unknown>;
+assert.equal(exportedHeaders.Accept, 'application/json');
+assert.equal('Authorization' in exportedHeaders, false);
+assert.equal('Cookie' in exportedHeaders, false);
+assert.equal('X-CSRF-Token' in exportedHeaders, false);
+
+const syncSource = readFileSync(new URL('../lib/services/offlineSync.ts', import.meta.url), 'utf8');
+const topbarSource = readFileSync(
+	new URL('../lib/components/shared/topBarStatus.svelte', import.meta.url),
+	'utf8'
+);
+const idbStoresSource = readFileSync(new URL('../lib/utils/idbStores.ts', import.meta.url), 'utf8');
+assert.match(syncSource, /queueIds\?\.has\(item\.queue_id\)/);
+assert.match(syncSource, /item\.failure_kind === 'auth' \|\| item\.failure_kind === 'conflict'/);
+assert.doesNotMatch(topbarSource, /getPendingTransactions|addEventListener/);
+assert.match(idbStoresSource, /zatiaras-catalog-v2[\s\S]+zatiaras-pending-transactions-v2/);
+assert.doesNotMatch(idbStoresSource, /zatiaras-offline-v2/);
+
+console.log('offline-pos-tests: 34 assertions passed');

@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { clear as clearCache, get as getCache, set as setCache, del as delCache } from 'idb-keyval';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
+import { cacheStore } from '$lib/utils/idbStores';
 
 // Cache configuration
 const CACHE_CONFIG = {
@@ -125,11 +126,15 @@ class IndexedDBCache {
 	async set<T>(key: string, data: T, ttl: number = CACHE_CONFIG.INDEXEDDB_TTL): Promise<void> {
 		if (!browser) return;
 		try {
-			await setCache(key, {
-				data,
-				timestamp: Date.now(),
-				ttl
-			});
+			await setCache(
+				key,
+				{
+					data,
+					timestamp: Date.now(),
+					ttl
+				},
+				cacheStore
+			);
 		} catch (error) {
 			// Silent error handling
 		}
@@ -138,11 +143,11 @@ class IndexedDBCache {
 	async get<T>(key: string): Promise<T | null> {
 		if (!browser) return null;
 		try {
-			const entry = await getCache(key);
+			const entry = await getCache(key, cacheStore);
 			if (!entry) return null;
 			// Check if expired
 			if (Date.now() - entry.timestamp > entry.ttl) {
-				await delCache(key);
+				await delCache(key, cacheStore);
 				return null;
 			}
 			return entry.data;
@@ -154,7 +159,7 @@ class IndexedDBCache {
 	async delete(key: string): Promise<void> {
 		if (!browser) return;
 		try {
-			await delCache(key);
+			await delCache(key, cacheStore);
 		} catch (error) {
 			// Silent error handling
 		}
@@ -164,7 +169,7 @@ class IndexedDBCache {
 		if (!browser) return;
 		// Hapus seluruh data cache IndexedDB
 		try {
-			await clearCache();
+			await clearCache(cacheStore);
 		} catch (error) {
 			// Silent error handling
 		}

@@ -5,6 +5,8 @@ import { requireSessionBranch, requireAnyRole } from '$lib/server/apiAuth';
 import { getDb, getRawDb, payloadRows, publish, auditDataChange } from '$lib/server/dataApiHelpers';
 import { decodeDataCursor, parseDataLimit, toCursorPage } from '$lib/server/dataPagination';
 import { parseBody, sanitizeUpdatePayload, type WriteBody } from '$lib/server/resourceRouteHelpers';
+import { containsPosLedger, POS_LEDGER_ROUTE_MESSAGE } from '$lib/server/ledgerPolicy';
+import { requirePageAccess } from '$lib/server/pageAccess';
 import type { RequestHandler } from './$types';
 
 /**
@@ -19,6 +21,8 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const branch = requireSessionBranch(locals, url.searchParams.get('branch'));
+	const rawDb = getRawDb(platform, branch);
+	await requirePageAccess(rawDb, locals.authSession!, 'catat');
 	const db = getDb(platform, branch);
 	const startTime = url.searchParams.get('start');
 	const endTime = url.searchParams.get('end');
@@ -68,13 +72,15 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
-	const rows: Array<Record<string, any>> = payloadRows(body.payload, branch).map((row) => ({
+	await requirePageAccess(rawDb, session, 'catat');
+	const rows: Array<Record<string, unknown>> = payloadRows(body.payload, branch).map((row) => ({
 		...row,
 		nominal: row.nominal ?? 0
 	}));
+	if (containsPosLedger(rows)) throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
 
 	// Dedup by id: cek baris yang sudah ada, hanya insert yang baru.
-	const newRows: Array<Record<string, any>> = [];
+	const newRows: Array<Record<string, unknown>> = [];
 	for (const row of rows) {
 		const existing = await rawDb
 			.prepare('SELECT id FROM buku_kas WHERE cabang_id = ? AND id = ? LIMIT 1')
@@ -91,10 +97,18 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		id: newRows[0]?.id,
 		transaction_id: newRows[0]?.transaction_id as string | undefined
 	});
-	await auditDataChange(rawDb, branch, session, 'buku_kas', 'insert', newRows[0]?.id, {
-		count: newRows.length,
-		transaction_id: newRows[0]?.transaction_id
-	});
+	await auditDataChange(
+		rawDb,
+		branch,
+		session,
+		'buku_kas',
+		'insert',
+		newRows[0]?.id as string | number | null | undefined,
+		{
+			count: newRows.length,
+			transaction_id: newRows[0]?.transaction_id
+		}
+	);
 	return json({ ok: true, data: rows });
 };
 
@@ -104,10 +118,21 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	requireAnyRole(session.role, ['pemilik']);
 
 	const body = await parseBody<WriteBody>(request);
-	if (!body?.payload || !body.where?.id) throw kitError(400, 'Payload / id tidak valid');
+	if (!body?.payload || Array.isArray(body.payload) || !body.where?.id) {
+		throw kitError(400, 'Payload / id tidak valid');
+	}
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
+	await requirePageAccess(rawDb, session, 'catat');
+	const existing = (await rawDb
+		.prepare('SELECT id, sumber FROM buku_kas WHERE cabang_id = ? AND id = ? LIMIT 1')
+		.bind(branch, String(body.where.id))
+		.first()) as { id: string; sumber?: string } | null;
+	if (!existing) throw kitError(404, 'Entri buku kas tidak ditemukan');
+	if (containsPosLedger([existing]) || containsPosLedger([body.payload])) {
+		throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
+	}
 	await db
 		.update(bukuKas)
 		.set(sanitizeUpdatePayload(body.payload as Partial<typeof bukuKas.$inferInsert>))
@@ -130,8 +155,18 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	const db = getDb(platform, branch);
 	const rawDb = getRawDb(platform, branch);
+	await requirePageAccess(rawDb, session, 'catat');
 
 	if (transactionId) {
+		const existing = ((
+			await rawDb
+				.prepare('SELECT id, sumber FROM buku_kas WHERE cabang_id = ? AND transaction_id = ?')
+				.bind(branch, transactionId)
+				.all()
+		).results || []) as Array<{ id: string; sumber?: string }>;
+		if (existing.length === 0) throw kitError(404, 'Entri buku kas tidak ditemukan');
+		if (containsPosLedger(existing)) throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
+
 		// Bulk delete: hapus semua kas terkait satu transaksi.
 		await db
 			.delete(bukuKas)
@@ -142,6 +177,13 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 		});
 		return json({ ok: true });
 	}
+
+	const existing = (await rawDb
+		.prepare('SELECT id, sumber FROM buku_kas WHERE cabang_id = ? AND id = ? LIMIT 1')
+		.bind(branch, String(id))
+		.first()) as { id: string; sumber?: string } | null;
+	if (!existing) throw kitError(404, 'Entri buku kas tidak ditemukan');
+	if (containsPosLedger([existing])) throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
 
 	await db.delete(bukuKas).where(and(eq(bukuKas.cabang_id, branch), eq(bukuKas.id, String(id))));
 	await publish(platform, branch, 'buku_kas', 'delete', { id });

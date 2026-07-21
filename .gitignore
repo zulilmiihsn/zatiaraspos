@@ -43,3 +43,5 @@ check*.txt
 test-report.md
 code-quality-report.md
 svelte_check*.txt
+playwright-report/
+test-results/

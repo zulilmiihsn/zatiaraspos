@@ -8,6 +8,7 @@
  *   UAT_PASSWORD=xxx node scripts/loadtest-checkout.mjs [baseUrl] [branch]
  *
  * Env opsional:
+ *   ALLOW_REMOTE_UAT '1' untuk mengizinkan target selain localhost
  *   LOAD_CONCURRENCY  jumlah worker paralel (default 10)
  *   LOAD_TOTAL        total request checkout (default 30 = 1 rate window)
  *   LOAD_KASIR_USER   username kasir (default 'kasir')
@@ -21,8 +22,10 @@
  */
 import { randomUUID } from 'node:crypto';
 
-const baseUrl = (process.argv[2] || 'https://zatiaraspos.pages.dev').replace(/\/$/, '');
+const baseUrl = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const branch = process.argv[3] || 'samarinda';
+const localTarget =
+	baseUrl.startsWith('http://127.0.0.1') || baseUrl.startsWith('http://localhost');
 const password = process.env.UAT_PASSWORD;
 const concurrency = Math.max(1, Number(process.env.LOAD_CONCURRENCY || 10));
 const total = Math.max(1, Number(process.env.LOAD_TOTAL || 30));
@@ -31,6 +34,9 @@ const ownerUser = process.env.LOAD_OWNER_USER || 'pemilik';
 const productId = process.env.LOAD_PRODUCT_ID || 'uat-produk-es-teh';
 const skipCleanup = process.env.LOAD_NO_CLEANUP === '1';
 
+if (!localTarget && process.env.ALLOW_REMOTE_UAT !== '1') {
+	throw new Error('Load test hanya boleh ke localhost kecuali ALLOW_REMOTE_UAT=1');
+}
 if (!password) {
 	throw new Error('UAT_PASSWORD wajib diisi melalui environment');
 }
@@ -72,7 +78,10 @@ async function login(username) {
 		`${username} login failed: ${loginResponse.status}`
 	);
 	const sidCookie = cookiePair(getSetCookies(loginResponse.headers), 'zatiaras_sid');
-	return [csrfCookie, sidCookie].filter(Boolean).join('; ');
+	return {
+		csrfToken: csrfJson.token,
+		cookie: [csrfCookie, sidCookie].filter(Boolean).join('; ')
+	};
 }
 
 function percentile(sortedAsc, p) {
@@ -84,22 +93,49 @@ function percentile(sortedAsc, p) {
 	return sortedAsc[low] + (sortedAsc[high] - sortedAsc[low]) * (rank - low);
 }
 
-async function checkoutOnce(cookie) {
+async function checkoutOnce(auth) {
 	const idempotencyKey = `loadtest-${randomUUID()}`;
+	const items = [{ product_id: productId, jumlah: 1, add_on_ids: [] }];
 	const start = performance.now();
 	let status = 0;
 	let transactionId = null;
 	let errorBody = null;
 	try {
+		const quoteResponse = await fetch(`${baseUrl}/api/pos/quote`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-Token': auth.csrfToken,
+				Cookie: auth.cookie
+			},
+			body: JSON.stringify({ items })
+		});
+		const quotePayload = await quoteResponse.json().catch(() => null);
+		if (!quoteResponse.ok || !quotePayload?.quote_token) {
+			status = quoteResponse.status;
+			errorBody = quotePayload;
+			return {
+				status,
+				durationMs: performance.now() - start,
+				transactionId,
+				errorBody
+			};
+		}
 		const response = await fetch(`${baseUrl}/api/pos/transaction`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Cookie: cookie },
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-Token': auth.csrfToken,
+				Cookie: auth.cookie
+			},
 			body: JSON.stringify({
 				idempotency_key: idempotencyKey,
-				customer_name: 'LOADTEST',
-				payment_method: 'tunai',
+				nama_pelanggan: 'LOADTEST',
+				metode_bayar: 'tunai',
 				cash_received: 10000,
-				items: [{ product_id: productId, qty: 1, add_on_ids: [] }]
+				items,
+				mode: 'online',
+				quote_token: quotePayload.quote_token
 			})
 		});
 		status = response.status;
@@ -114,13 +150,13 @@ async function checkoutOnce(cookie) {
 	return { status, durationMs, transactionId, errorBody };
 }
 
-async function runPool(cookie) {
+async function runPool(auth) {
 	const results = [];
 	let dispatched = 0;
 	async function worker() {
 		while (dispatched < total) {
 			dispatched += 1;
-			results.push(await checkoutOnce(cookie));
+			results.push(await checkoutOnce(auth));
 		}
 	}
 	const startedAt = performance.now();
@@ -129,25 +165,22 @@ async function runPool(cookie) {
 	return { results, wallMs };
 }
 
-async function cleanup(ownerCookie, transactionIds) {
+async function cleanup(ownerAuth, transactionIds) {
 	let deleted = 0;
 	for (const transactionId of transactionIds) {
-		for (const table of ['transaksi_kasir', 'buku_kas']) {
-			const ok = await fetch(`${baseUrl}/api/data`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
-				body: JSON.stringify({
-					table,
-					action: 'delete',
-					branch,
-					payload: {},
-					where: { transaction_id: transactionId }
-				})
-			})
-				.then((r) => r.ok)
-				.catch(() => false);
-			if (ok && table === 'transaksi_kasir') deleted += 1;
-		}
+		const ok = await fetch(
+			`${baseUrl}/api/transaksi-kasir?transaction_id=${encodeURIComponent(transactionId)}`,
+			{
+				method: 'DELETE',
+				headers: {
+					'X-CSRF-Token': ownerAuth.csrfToken,
+					Cookie: ownerAuth.cookie
+				}
+			}
+		)
+			.then((response) => response.ok)
+			.catch(() => false);
+		if (ok) deleted += 1;
 	}
 	return deleted;
 }
@@ -205,14 +238,13 @@ function report({ results, wallMs }) {
 
 async function main() {
 	console.log(`Login kasir='${kasirUser}' & pemilik='${ownerUser}' @ ${baseUrl} ...`);
-	const cookie = await login(kasirUser);
-	const ownerCookie = skipCleanup ? null : await login(ownerUser);
+	const auth = await login(kasirUser);
+	const ownerAuth = skipCleanup ? null : await login(ownerUser);
 
 	// Validasi produk ada sebelum membanjiri server.
-	const probe = await fetch(
-		`${baseUrl}/api/data?table=produk&branch=${encodeURIComponent(branch)}&limit=50`,
-		{ headers: { Cookie: cookie } }
-	);
+	const probe = await fetch(`${baseUrl}/api/produk?branch=${encodeURIComponent(branch)}`, {
+		headers: { Cookie: auth.cookie }
+	});
 	const products = await probe.json().catch(() => null);
 	assert(
 		Array.isArray(products) && products.some((p) => p.id === productId),
@@ -220,14 +252,14 @@ async function main() {
 	);
 
 	console.log(`Mulai banjir checkout: ${total} request, ${concurrency} paralel ...`);
-	const run = await runPool(cookie);
+	const run = await runPool(auth);
 	const { ok, errors } = report(run);
 
-	if (!skipCleanup && ownerCookie) {
+	if (!skipCleanup && ownerAuth) {
 		const ids = [...new Set(ok.map((r) => r.transactionId).filter(Boolean))];
 		console.log(`\nCleanup ${ids.length} transaksi ...`);
-		const deleted = await cleanup(ownerCookie, ids);
-		console.log(`Terhapus: ${deleted}/${ids.length} transaksi_kasir (+ buku_kas terkait).`);
+		const deleted = await cleanup(ownerAuth, ids);
+		console.log(`Terhapus: ${deleted}/${ids.length} transaksi POS.`);
 	} else {
 		console.log('\nCleanup dilewati (LOAD_NO_CLEANUP=1). Transaksi LOADTEST tetap ada.');
 	}

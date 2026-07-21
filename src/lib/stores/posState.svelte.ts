@@ -5,6 +5,7 @@ import { throttle } from '$lib/utils/performance';
 import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 import { browser } from '$app/environment';
 import type { AddOn, Category, Product } from '$lib/types/product';
+import type { PosCatalogSource } from '$lib/types/posCatalog';
 
 export type PosProduct = Product;
 export type PosCategory = Category;
@@ -16,6 +17,10 @@ export function createPosState() {
 	let tambahanData = $state<PosAddOn[]>([]);
 	let isLoadingProducts = $state(true);
 	let posLoadError = $state('');
+	let catalogSource = $state<PosCatalogSource>('unavailable');
+	let catalogFetchedAt = $state('');
+	let catalogExpiresAt = $state('');
+	let catalogStatusMessage = $state('');
 
 	let posRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let posRefreshInFlight = false;
@@ -24,11 +29,21 @@ export function createPosState() {
 
 	async function loadPOSData() {
 		try {
-			const [nextProducts, nextCategories, nextAddons] = await Promise.all([
-				productService.getProducts(),
-				productService.getCategories(),
-				productService.getAddOns()
-			]);
+			const catalog = await productService.getPosCatalog();
+			const nextProducts = catalog.products;
+			const nextCategories = catalog.categories;
+			const nextAddons = catalog.addOns;
+			catalogSource = catalog.source;
+			catalogFetchedAt = catalog.fetched_at;
+			catalogExpiresAt = catalog.expires_at;
+			catalogStatusMessage = catalog.error || '';
+			if (browser && catalog.expires_at) {
+				localStorage.setItem('pos_catalog_expires_at', catalog.expires_at);
+			}
+			if (catalog.source === 'unavailable') {
+				posLoadError = catalog.error || 'Katalog POS belum tersedia. Coba muat ulang.';
+				return;
+			}
 
 			const nextFingerprint = [
 				(nextProducts || []).length,
@@ -143,6 +158,22 @@ export function createPosState() {
 		},
 		get posLoadError() {
 			return posLoadError;
+		},
+		get catalogSource() {
+			return catalogSource;
+		},
+		get catalogFetchedAt() {
+			return catalogFetchedAt;
+		},
+		get catalogExpiresAt() {
+			return catalogExpiresAt;
+		},
+		get catalogStatusMessage() {
+			return catalogStatusMessage;
+		},
+		get isCatalogExpired() {
+			const expiresAt = Date.parse(catalogExpiresAt);
+			return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
 		},
 		retryLoadPOSData
 	};

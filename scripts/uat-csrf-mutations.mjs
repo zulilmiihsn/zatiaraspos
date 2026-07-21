@@ -243,21 +243,28 @@ try {
 	);
 	verified.push('open-close-store');
 
+	const checkoutItems = [
+		{
+			product_id: null,
+			nama_kustom: 'UAT CSRF Custom',
+			custom_price: 15_000,
+			jumlah: 1,
+			add_on_ids: []
+		}
+	];
+	const checkoutQuote = await assertOk(
+		await writeJson('/api/pos/quote', auth, 'POST', { items: checkoutItems }),
+		'Quote checkout'
+	);
 	const checkoutPayload = await assertOk(
 		await writeJson('/api/pos/transaction', auth, 'POST', {
 			idempotency_key: `uat-csrf-checkout-${randomUUID()}`,
 			nama_pelanggan: 'UAT CSRF',
 			metode_bayar: 'tunai',
 			cash_received: 15_000,
-			items: [
-				{
-					product_id: null,
-					nama_kustom: 'UAT CSRF Custom',
-					custom_price: 15_000,
-					jumlah: 1,
-					add_on_ids: []
-				}
-			]
+			items: checkoutItems,
+			mode: 'online',
+			quote_token: checkoutQuote.quote_token
 		}),
 		'Checkout'
 	);

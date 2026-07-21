@@ -30,10 +30,7 @@ export function createKategoriState(deps: KategoriDeps) {
 			kategoriList = await kategoriCrud.load();
 		} catch (error) {
 			const e = error as Error;
-			deps.showNotif(
-				'Gagal mengambil data kategori: ' + (e?.message || 'Unknown error'),
-				'error'
-			);
+			deps.showNotif('Gagal mengambil data kategori: ' + (e?.message || 'Unknown error'), 'error');
 		}
 		isLoadingKategori = false;
 	}

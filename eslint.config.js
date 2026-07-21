@@ -27,7 +27,7 @@ export default ts.config(
 			// Downgrade to warn — type safety is enforced via pnpm check (svelte-check + tsc)
 			// Route files have been cleaned up; remaining `any` are in lib utilities and catch blocks
 			'@typescript-eslint/no-explicit-any': 'off',
-			// Common patterns: unused catch param, unused loop index, store imports used only in $effect
+			// Svelte templates need separate handling; TypeScript files are enforced below.
 			'@typescript-eslint/no-unused-vars': 'off',
 			// require() is used in config files (svelte.config.js, tailwind.config.js)
 			'@typescript-eslint/no-require-imports': 'off',
@@ -60,6 +60,21 @@ export default ts.config(
 				parser: ts.parser,
 				svelteConfig
 			}
+		}
+	},
+	{
+		files: ['**/*.ts'],
+		rules: {
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					argsIgnorePattern: '^_',
+					caughtErrors: 'none',
+					destructuredArrayIgnorePattern: '^_',
+					ignoreRestSiblings: true,
+					varsIgnorePattern: '^_'
+				}
+			]
 		}
 	}
 );

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const REQUIRED_ENV = ['CLOUDFLARE_API_TOKEN'];
+const REQUIRED_ENV = ['CLOUDFLARE_API_TOKEN', 'POS_PRICE_SIGNING_KEY'];
 const PLACEHOLDER_PATTERN = /REPLACE_WITH_|your_/i;
 const CONFIG_FILES = ['wrangler.jsonc', 'wrangler.pages.jsonc', 'wrangler.realtime.jsonc'];
 

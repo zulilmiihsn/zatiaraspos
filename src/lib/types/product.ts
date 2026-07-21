@@ -32,6 +32,7 @@ export interface Category {
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
+	price_token?: string;
 }
 
 export interface AddOn {
@@ -41,6 +42,7 @@ export interface AddOn {
 	is_active: boolean;
 	created_at?: string;
 	updated_at?: string;
+	price_token?: string;
 }
 
 export interface Ingredient {

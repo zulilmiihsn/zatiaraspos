@@ -13,6 +13,7 @@
 	let username = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
+	let hydrated = $state(false);
 	let errorMessage = $state('');
 
 	// Form validation
@@ -99,6 +100,7 @@
 	}
 
 	onMount(async () => {
+		hydrated = true;
 		const params = new URLSearchParams(window.location.search);
 		const reason = params.get('reason');
 		const reasonMessages: Record<string, string> = {
@@ -232,6 +234,7 @@
 			{/if}
 
 			<form
+				data-hydrated={hydrated}
 				onsubmit={(e) => {
 					e.preventDefault();
 					handleSubmit();
@@ -314,7 +317,7 @@
 				<button
 					type="submit"
 					class="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-500 py-3 font-bold text-white shadow-lg shadow-pink-500/10 transition-colors duration-200 hover:bg-pink-600 focus:ring-2 focus:ring-pink-300 focus:outline-none active:bg-pink-700"
-					disabled={isLoading}
+					disabled={!hydrated || isLoading}
 				>
 					{#if isLoading}
 						<svg

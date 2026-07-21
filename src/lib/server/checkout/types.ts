@@ -12,6 +12,8 @@ export interface PosTransactionItemInput {
 	gula?: string | null;
 	es?: string | null;
 	catatan?: string | null;
+	product_price_token?: string | null;
+	add_on_price_tokens?: string[];
 }
 
 export interface PosTransactionInput {
@@ -20,6 +22,10 @@ export interface PosTransactionInput {
 	metode_bayar?: string;
 	cash_received?: number | string | null;
 	items?: PosTransactionItemInput[];
+	quote_token?: string;
+	mode?: 'online' | 'offline_replay';
+	queued_at?: number;
+	store_session_id?: string | null;
 }
 
 // ── DB row types ────────────────────────────────────────────────────────────
@@ -67,6 +73,25 @@ export interface NormalizedItemInput {
 	productId: string | null;
 	addOnIds: string[];
 	jumlah: number;
+	pricingSnapshot?: {
+		product_name: string;
+		product_price: number;
+		addOns: Array<{ id: string; nama: string; harga: number }>;
+	};
+}
+
+export interface PosQuoteItem {
+	source: PosTransactionItemInput;
+	product_name: string;
+	product_price: number;
+	add_ons: Array<{ id: string; nama: string; harga: number }>;
+	line_total: number;
+}
+
+export interface PosQuoteTokenData {
+	items: PosQuoteItem[];
+	total_amount: number;
+	total_qty: number;
 }
 
 export interface ComputedTransactionItem {

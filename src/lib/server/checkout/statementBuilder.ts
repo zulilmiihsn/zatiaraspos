@@ -47,11 +47,7 @@ export function buildCheckoutStatements(params: BuildStatementsParams): D1Prepar
 		idSesiToko,
 		idempotencyKey,
 		session,
-		capabilities: {
-			idempotencyAvailable,
-			salesSummaryAvailable,
-			transactionSnapshotAvailable
-		}
+		capabilities: { idempotencyAvailable, salesSummaryAvailable, transactionSnapshotAvailable }
 	} = params;
 
 	const deskripsi = `Penjualan ${items.map((i) => i.product_name).join(', ')}`.slice(0, 240);
@@ -159,8 +155,17 @@ export function buildCheckoutStatements(params: BuildStatementsParams): D1Prepar
 						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 					)
 					.bind(
-						item.id, branch, item.buku_kas_id, item.produk_id, item.nama_kustom,
-						item.jumlah, item.nominal, item.harga, item.transaction_id, createdAt, createdAt
+						item.id,
+						branch,
+						item.buku_kas_id,
+						item.produk_id,
+						item.nama_kustom,
+						item.jumlah,
+						item.nominal,
+						item.harga,
+						item.transaction_id,
+						createdAt,
+						createdAt
 					);
 			}
 			return db
@@ -173,10 +178,26 @@ export function buildCheckoutStatements(params: BuildStatementsParams): D1Prepar
 					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				)
 				.bind(
-					item.id, branch, item.buku_kas_id, item.produk_id, item.nama_kustom,
-					item.jumlah, item.nominal, item.harga, item.product_name, item.harga_dasar,
-					item.total_tambahan, item.snapshot_tambahan, item.gula, item.es, item.catatan,
-					item.snapshot_hpp, item.nominal_hpp, item.transaction_id, createdAt, createdAt
+					item.id,
+					branch,
+					item.buku_kas_id,
+					item.produk_id,
+					item.nama_kustom,
+					item.jumlah,
+					item.nominal,
+					item.harga,
+					item.product_name,
+					item.harga_dasar,
+					item.total_tambahan,
+					item.snapshot_tambahan,
+					item.gula,
+					item.es,
+					item.catatan,
+					item.snapshot_hpp,
+					item.nominal_hpp,
+					item.transaction_id,
+					createdAt,
+					createdAt
 				);
 		}),
 

@@ -13,6 +13,7 @@ export interface CartProduct {
 	deskripsi?: string;
 	ekstra_ids?: Array<string | number>;
 	is_active?: boolean;
+	price_token?: string;
 }
 
 export interface CartAddOn {
@@ -20,6 +21,7 @@ export interface CartAddOn {
 	nama: string;
 	harga: number;
 	is_active?: boolean;
+	price_token?: string;
 }
 
 export interface CartItem {

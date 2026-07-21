@@ -1,26 +1,18 @@
 import type { BranchId } from '$lib/server/branchResolver';
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 
 /**
  * Membalik (decrement) kontribusi sebuah transaksi POS terhadap tabel ringkasan
  * harian ketika transaksi tersebut dihapus/void.
  *
- * Harus dipanggil SEBELUM baris transaksi_kasir dihapus, selagi item dan
- * buku_kas-nya masih ada (alur hapus di UI menghapus transaksi_kasir lebih dulu,
- * lalu buku_kas).
- *
- * Tanpa ini, menghapus penjualan tidak mengurangi omzet/HPP/profit di laporan —
- * angka jadi overstated seiring waktu.
- *
- * Aman dijalankan walau tabel ringkasan belum ada (gagal => di-skip diam-diam):
- * pemanggil membungkus dengan try/catch agar penghapusan tidak pernah terblok.
- * Semua decrement di-clamp di 0 supaya ringkasan tidak pernah negatif.
+ * Menghasilkan statement tanpa mengeksekusi. Pemanggil wajib memasukkan statement
+ * ini ke batch atomik yang sama dengan restore stok dan delete transaksi.
  */
-export async function reverseDailySummaryForTransaction(
+export async function buildDailySummaryReversalStatements(
 	rawDb: D1Database,
 	branch: BranchId,
 	transactionId: string
-): Promise<void> {
+): Promise<{ found: boolean; statements: D1PreparedStatement[] }> {
 	// Agregat kontribusi transaksi: tanggal WITA dari created_at item, dan
 	// metode bayar dari buku_kas induknya.
 	const header = (await rawDb
@@ -47,7 +39,7 @@ export async function reverseDailySummaryForTransaction(
 		hpp?: number;
 	} | null;
 
-	if (!header || !header.tanggal_penjualan) return;
+	if (!header || !header.tanggal_penjualan) return { found: false, statements: [] };
 
 	const salesDate = header.tanggal_penjualan;
 	const itemQty = Number(header.item_qty || 0);
@@ -71,13 +63,12 @@ export async function reverseDailySummaryForTransaction(
 			 GROUP BY COALESCE(produk_id, 'custom:' || nama_produk)`
 				)
 				.bind(branch, transactionId)
-				.all()
-				.catch(() => ({ results: [] }))) as {
+				.all()) as {
 				results?: Array<{ produk_id?: string; jumlah?: number; gross?: number }>;
 			}
 		).results || [];
 
-	const statements = [
+	const statements: D1PreparedStatement[] = [
 		rawDb
 			.prepare(
 				`UPDATE ringkasan_penjualan_harian SET
@@ -116,5 +107,5 @@ export async function reverseDailySummaryForTransaction(
 		)
 	];
 
-	await rawDb.batch(statements);
+	return { found: true, statements };
 }

@@ -8,7 +8,12 @@ import type {
 	StockDeductions,
 	IngredientDeductions
 } from '$lib/server/checkout/types';
-import { normalizeMoney, normalizeCost, roundMoney, sanitizeShortText } from '$lib/server/checkout/utils';
+import {
+	normalizeMoney,
+	normalizeCost,
+	roundMoney,
+	sanitizeShortText
+} from '$lib/server/checkout/utils';
 
 interface ComputeItemParams {
 	input: NormalizedItemInput;
@@ -38,7 +43,7 @@ export function computeItemFinancials(params: ComputeItemParams): ComputedTransa
 	} = params;
 
 	const { source: item, productId, jumlah } = input;
-	const addOns = input.addOnIds.map((id) => addOnsById.get(id)!);
+	const addOns = input.pricingSnapshot?.addOns ?? input.addOnIds.map((id) => addOnsById.get(id)!);
 	const addOnTotal = addOns.reduce((sum, addOn) => sum + normalizeMoney(addOn.harga), 0);
 	const addOnSnapshot = addOns.map((addOn) => ({
 		id: String(addOn.id),
@@ -56,8 +61,8 @@ export function computeItemFinancials(params: ComputeItemParams): ComputedTransa
 
 	if (productId) {
 		const product = productsById.get(productId)!;
-		productName = product.nama;
-		productPrice = normalizeMoney(product.harga);
+		productName = input.pricingSnapshot?.product_name ?? product.nama;
+		productPrice = normalizeMoney(input.pricingSnapshot?.product_price ?? product.harga);
 		if (stockTrackingAvailable && (product.lacak_stok === true || product.lacak_stok === 1)) {
 			const current = stockDeductions.get(productId) || { nama: productName, jumlah: 0 };
 			current.jumlah += jumlah;
