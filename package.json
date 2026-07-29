@@ -1,7 +1,7 @@
 {
 	"name": "zatiaraspos",
 	"private": true,
-	"version": "2.0.0",
+	"version": "2.0.2",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -12,6 +12,9 @@
 		"deploy:all": "pnpm deploy:check && pnpm build && pnpm deploy:realtime && pnpm deploy:pages",
 		"d1:backup": "node scripts/d1-backup.mjs",
 		"d1:restore": "node scripts/d1-restore.mjs",
+		"test:d1-backup": "node --test scripts/d1-backup.test.mjs",
+		"test:uat-live-safety": "node scripts/uat-live-realtime.mjs --self-test",
+		"test:operations": "pnpm test:d1-backup && pnpm test:uat-live-safety",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -35,7 +38,7 @@
 		"test:quality:dependencies": "tsx src/tests/code-quality-tests.ts dependencies",
 		"test:hardening": "tsx src/tests/hardening-regression-tests.ts",
 		"test:stores": "tsx src/tests/store-state-tests.ts",
-		"test:all": "pnpm test:quality && pnpm test:hardening && pnpm test:stores && pnpm test:offline && pnpm test:pos-integrity && pnpm test:features",
+		"test:all": "pnpm test:operations && pnpm test:quality && pnpm test:hardening && pnpm test:stores && pnpm test:offline && pnpm test:pos-integrity && pnpm test:features",
 		"test:offline": "tsx src/tests/offline-pos-tests.ts",
 		"test:pos-integrity": "tsx src/tests/pos-integrity-tests.ts",
 		"test:pos-integrity:local": "node scripts/uat-pos-integrity.mjs",
