@@ -4,10 +4,10 @@ _File ini adalah "memori" proyek. Update setiap kali ada perubahan signifikan._
 
 ## 📌 Status Saat Ini
 
-- **Tanggal**: 2026-06-19
+- **Tanggal**: 2026-07-30
 - **Milestone**: v2.0 — Stabilisasi & Quality
-- **Phase Aktif**: **Phase 3 AKTIF** — POS Production Polish
-- **Pekerjaan Terakhir**: Scope Phase 3 ditentukan, quality test runner diperbaiki, `pnpm test:all` lewat, dan live Cloudflare smoke check dasar selesai.
+- **Phase Aktif**: **Owner handover** — kandidat teknis siap, penerimaan manusia tertunda
+- **Pekerjaan Terakhir**: Backup production 3 shard, live UAT dengan cleanup nol residu, paket handover owner, dan kandidat `ebef6e1` sudah dipush ke `origin/dev`.
 
 ## 🎉 Milestone Tercapai
 
@@ -96,3 +96,9 @@ Saat menerima task di proyek ini:
 3. Update `STATE.md` ini setelah menyelesaikan task signifikan
 4. Gunakan Context7 MCP untuk fetch dokumentasi Svelte 5 / Supabase jika diperlukan
 5. Jangan ubah UI/UX yang sudah ada kecuali diminta secara eksplisit
+
+## Quick Tasks Completed
+
+| ID | Task | Commit | Status |
+| --- | --- | --- | --- |
+| 260730-1am | Harden production backup and owner handover | `ebef6e1` | `human_needed` — 8/8 teknis terverifikasi; owner UAT, transfer akses, rotasi credential, dan persetujuan tag masih wajib |
