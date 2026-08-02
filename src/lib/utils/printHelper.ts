@@ -6,62 +6,18 @@ export function executePrint(intentUrl: string) {
         // Fallback to standard intent link for Android devices
         window.location.href = intentUrl;
     } else {
-        // Universal no-cors HTTP POST + WebSocket print client for PCs
-        const httpEndpoints = [
-            "http://127.0.0.1:40213/print",
-            "http://localhost:40213/print"
-        ];
-        const wsEndpoints = [
-            "ws://localhost:40213/",
-            "ws://127.0.0.1:40213/"
-        ];
-
-        async function tryHttpPrint() {
-            for (const url of httpEndpoints) {
-                try {
-                    await fetch(url, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: intentUrl
-                    });
-                    return true;
-                } catch (e) {
-                    console.warn(`HTTP print attempt failed for ${url}:`, e);
-                }
-            }
-            return false;
+        // Native Windows Protocol Handler trigger (zatiaraprint://)
+        const windowsProtocolUrl = intentUrl.replace(/^intent:\/\//i, "zatiaraprint://");
+        
+        try {
+            // Trigger native Windows handler
+            window.location.href = windowsProtocolUrl;
+        } catch (e) {
+            console.warn("Failed to trigger Windows native print protocol:", e);
         }
 
-        function tryWsPrint(index = 0) {
-            if (index >= wsEndpoints.length) {
-                alert("Printer tidak dapat diakses!\nPastikan 'RawBT Print Server' sudah dijalankan di komputer ini.");
-                return;
-            }
-
-            const url = wsEndpoints[index];
-            try {
-                const socket = new WebSocket(url);
-                let sent = false;
-
-                socket.onopen = () => {
-                    sent = true;
-                    socket.send(intentUrl);
-                    socket.close(1000, "Print request sent");
-                };
-
-                socket.onerror = () => {
-                    if (!sent) tryWsPrint(index + 1);
-                };
-            } catch (e) {
-                tryWsPrint(index + 1);
-            }
-        }
-
-        // Try no-cors HTTP POST first (unrestricted by HTTPS/CORS), fallback to WebSocket
-        tryHttpPrint().then((success) => {
-            if (!success) {
-                tryWsPrint(0);
-            }
-        });
+        // Fallback attempt via HTTP POST & WebSocket for older setups
+        const httpEndpoints = ["http://127.0.0.1:40213/print", "http://localhost:40213/print"];
+        fetch(httpEndpoints[0], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {});
     }
 }
