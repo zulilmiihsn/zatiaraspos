@@ -1,24 +1,17 @@
 export function executePrint(intentUrl: string) {
     const isAndroid = /android/i.test(navigator.userAgent);
 
-    // Extract base64 payload from intent string
-    let base64 = intentUrl;
-    const match = intentUrl.match(/S\.content=([^;]+)/);
-    if (match) {
-        base64 = match[1];
-    }
-    
     if (isAndroid) {
-        // Direct RawBT protocol link for Android (bypasses Chrome async intent blocking)
-        const rawbtUrl = `rawbt:base64,${base64}`;
-        
-        // Attempt rawbt: protocol first, fallback to standard intent
-        try {
-            window.location.href = rawbtUrl;
-        } catch {
-            window.location.href = intentUrl;
-        }
+        // Standard original RawBT intent link for Android (100% original working method)
+        window.location.href = intentUrl;
     } else {
+        // Extract base64 payload from intent string for Windows
+        let base64 = intentUrl;
+        const match = intentUrl.match(/S\.content=([^;]+)/);
+        if (match) {
+            base64 = match[1];
+        }
+
         // Native Windows Protocol Handler trigger (zatiarasprint://)
         const windowsProtocolUrl = `zatiarasprint://${base64}`;
         
