@@ -14,7 +14,7 @@ export function executePrint(intentUrl: string) {
         }
 
         // Clean protocol URL without # fragment truncation
-        const windowsProtocolUrl = `zatiaraprint://${base64}`;
+        const windowsProtocolUrl = `zatiarasprint://${base64}`;
         
         try {
             // Trigger native Windows handler
