@@ -14,6 +14,7 @@
 	import ToastNotification from '$lib/components/shared/toastNotification.svelte';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
+	import { executePrint } from '$lib/utils/printHelper';
 
 	// ─── State ─────────────────────────────────────────────────────────────
 	let pengaturanStruk: any = $state(null);
@@ -205,7 +206,7 @@
 			const gzip = pako.gzip(JSON.stringify([html]));
 			const base64 = Base64.fromUint8Array(gzip);
 			const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
-			window.location.href = intentUrl;
+			executePrint(intentUrl);
 		} catch (err) {
 			ErrorHandler.logError(err as Error, 'printStruk (riwayat kasir)');
 			toastManager.showToastNotification('Gagal mencetak struk', 'error');

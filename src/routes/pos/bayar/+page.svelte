@@ -14,6 +14,7 @@
 	import { selectedBranch } from '$lib/stores/selectedBranch';
 	import * as pako from 'pako';
 	import { Base64 } from 'js-base64';
+	import { executePrint } from '$lib/utils/printHelper';
 	import { memoize } from '$lib/utils/performance';
 	import { addPendingTransaction } from '$lib/utils/offline';
 	import { ErrorHandler } from '$lib/utils/errorHandling';
@@ -471,7 +472,7 @@
 		const base64 = Base64.fromUint8Array(gzip);
 		// 3. Intent URL
 		const intentUrl = `intent://#Intent;scheme=print-intent;S.content=${base64};end`;
-		window.location.href = intentUrl;
+		executePrint(intentUrl);
 	}
 
 	function handleAddCashTemplate(t: any) {
