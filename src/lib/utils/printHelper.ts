@@ -1,29 +1,29 @@
+/**
+ * Zatiaras POS - Cross-platform print helper
+ *
+ * Android : Menggunakan intent:// standar RawBT (metode lama, sudah terbukti stabil).
+ * Windows : Menggunakan custom protocol zatiarasprint:// yang terdaftar di Registry,
+ *           diproses oleh pos_print_handler.php → print_com.ps1 → COM4.
+ */
+
 export function executePrint(intentUrl: string) {
-    const isAndroid = /android/i.test(navigator.userAgent);
+	const isAndroid = /android/i.test(navigator.userAgent);
 
-    if (isAndroid) {
-        // Standard original RawBT intent link for Android (100% original working method)
-        window.location.href = intentUrl;
-    } else {
-        // Extract base64 payload from intent string for Windows
-        let base64 = intentUrl;
-        const match = intentUrl.match(/S\.content=([^;]+)/);
-        if (match) {
-            base64 = match[1];
-        }
+	if (isAndroid) {
+		// Metode lama — langsung navigasi ke intent URL.
+		// RawBT di Android akan menangkap scheme "print-intent" dan mencetak.
+		window.location.href = intentUrl;
+		return;
+	}
 
-        // Native Windows Protocol Handler trigger (zatiarasprint://)
-        const windowsProtocolUrl = `zatiarasprint://${base64}`;
-        
-        try {
-            // Trigger native Windows handler
-            window.location.href = windowsProtocolUrl;
-        } catch (e) {
-            console.warn("Failed to trigger Windows native print protocol:", e);
-        }
+	// --- Windows / Desktop ---
+	// Ambil payload base64 dari string intent.
+	// Format intentUrl: intent://#Intent;scheme=print-intent;S.content=BASE64;end
+	const match = intentUrl.match(/S\.content=([^;]+)/);
+	const base64 = match ? match[1] : intentUrl;
 
-        // Fallback attempt via HTTP POST & WebSocket for older setups
-        const httpEndpoints = ["http://127.0.0.1:40213/print", "http://localhost:40213/print"];
-        fetch(httpEndpoints[0], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {});
-    }
+	// Kirim ke native protocol handler yang terdaftar di Windows Registry.
+	// Registry key: HKCU\Software\Classes\zatiarasprint
+	// Command     : php-win.exe pos_print_handler.php "%1"
+	window.location.href = `zatiarasprint://${base64}`;
 }
