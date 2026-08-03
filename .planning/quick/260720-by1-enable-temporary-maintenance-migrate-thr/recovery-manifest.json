@@ -1,0 +1,35 @@
+{
+	"schema_version": 1,
+	"created_at": "2026-07-20T02:31:44.272Z",
+	"retention_assumption_days": 7,
+	"restore_executed": false,
+	"entries": [
+		{
+			"database_name": "zatiaras-samarinda-group",
+			"database_id": "b6aafe5b-fd11-436d-9b9e-c007bd531c9e",
+			"version": "production",
+			"timestamp": "2026-07-20T02:30:26.677Z",
+			"bookmark": "0000008d-00000020-000050ae-34a452436605781655fcb259a58d3904",
+			"conservative_restore_deadline": "2026-07-27T02:30:26.677Z",
+			"restore_command": "rtk node D:\\Projects\\zatiaraspos\\.planning\\quick\\260720-by1-enable-temporary-maintenance-migrate-thr\\wrangler-safe-wrapper.mjs time-travel-restore --database zatiaras-samarinda-group --bookmark 0000008d-00000020-000050ae-34a452436605781655fcb259a58d3904 --confirm-bookmark 0000008d-00000020-000050ae-34a452436605781655fcb259a58d3904"
+		},
+		{
+			"database_name": "zatiaras-balikpapan-group",
+			"database_id": "312940d7-b0c0-43e5-86fd-78b762cacb6e",
+			"version": "production",
+			"timestamp": "2026-07-20T02:30:26.710Z",
+			"bookmark": "0000001e-00000002-000050ae-721dac06ca494a3b8b204973480b7a13",
+			"conservative_restore_deadline": "2026-07-27T02:30:26.710Z",
+			"restore_command": "rtk node D:\\Projects\\zatiaraspos\\.planning\\quick\\260720-by1-enable-temporary-maintenance-migrate-thr\\wrangler-safe-wrapper.mjs time-travel-restore --database zatiaras-balikpapan-group --bookmark 0000001e-00000002-000050ae-721dac06ca494a3b8b204973480b7a13 --confirm-bookmark 0000001e-00000002-000050ae-721dac06ca494a3b8b204973480b7a13"
+		},
+		{
+			"database_name": "zatiaras-berau-group",
+			"database_id": "18e2f751-5d54-4bec-b0bc-ae6e1378cdb6",
+			"version": "production",
+			"timestamp": "2026-07-20T02:30:26.710Z",
+			"bookmark": "00000020-00000002-000050ae-1564d60f834e0df8aeb63f2e3b946994",
+			"conservative_restore_deadline": "2026-07-27T02:30:26.710Z",
+			"restore_command": "rtk node D:\\Projects\\zatiaraspos\\.planning\\quick\\260720-by1-enable-temporary-maintenance-migrate-thr\\wrangler-safe-wrapper.mjs time-travel-restore --database zatiaras-berau-group --bookmark 00000020-00000002-000050ae-1564d60f834e0df8aeb63f2e3b946994 --confirm-bookmark 00000020-00000002-000050ae-1564d60f834e0df8aeb63f2e3b946994"
+		}
+	]
+}

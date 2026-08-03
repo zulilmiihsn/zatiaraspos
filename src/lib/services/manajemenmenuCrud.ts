@@ -9,6 +9,11 @@ import type {
 	ProductRecipe
 } from '$lib/types/product';
 import { fetchWithCsrfRetry } from '$lib/utils/csrf';
+import {
+	calculateEffectiveUnitCost,
+	calculateUsableQuantity,
+	normalizeYieldPercent
+} from '$lib/utils/ingredientCost';
 
 export interface HppParsedItem {
 	nama: string;
@@ -115,32 +120,45 @@ export function createHppState() {
 		},
 		async savePurchasedItem(item: HppParsedItem, existing?: Ingredient) {
 			if (existing) {
+				const yieldPercent = normalizeYieldPercent(existing.yield_persen);
+				const usableQuantity = calculateUsableQuantity(item.purchase_qty, yieldPercent);
 				await transactionService.updateRows(
 					'bahan',
 					{
 						satuan: item.satuan,
+						yield_persen: yieldPercent,
 						jumlah_beli_terakhir: item.purchase_qty,
 						biaya_beli_terakhir: item.purchase_cost,
-						biaya_per_satuan: item.biaya_per_satuan
+						biaya_per_satuan: calculateEffectiveUnitCost(
+							item.purchase_cost,
+							item.purchase_qty,
+							yieldPercent
+						)
 					},
 					{ id: String(existing.id) }
 				);
 				await transactionService.insertRows('bahan_mutasi', {
 					bahan_id: String(existing.id),
-					delta_jumlah: item.purchase_qty,
+					delta_jumlah: usableQuantity,
 					source: 'purchase',
 					catatan: `Belanja Rp ${Math.round(Number(item.purchase_cost || 0)).toLocaleString('id-ID')}`
 				});
 				return;
 			}
-			await transactionService.insertRows('hpp_purchases', {
+			const yieldPercent = 100;
+			await transactionService.insertRows('bahan', {
 				nama: item.nama,
 				satuan: item.satuan,
-				stok_saat_ini: item.purchase_qty,
+				stok_saat_ini: calculateUsableQuantity(item.purchase_qty, yieldPercent),
 				ambang_stok: 0,
+				yield_persen: yieldPercent,
 				jumlah_beli_terakhir: item.purchase_qty,
 				biaya_beli_terakhir: item.purchase_cost,
-				biaya_per_satuan: item.biaya_per_satuan
+				biaya_per_satuan: calculateEffectiveUnitCost(
+					item.purchase_cost,
+					item.purchase_qty,
+					yieldPercent
+				)
 			});
 		}
 	};

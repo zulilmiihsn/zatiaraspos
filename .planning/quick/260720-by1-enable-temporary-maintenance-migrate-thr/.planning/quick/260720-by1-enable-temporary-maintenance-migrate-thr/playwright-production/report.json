@@ -1,0 +1,150 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\Projects\\zatiaraspos\\node_modules\\.pnpm\\@playwright+test@1.61.1\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config=.planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr/playwright-production.config.ts",
+      "--list"
+    ],
+    "configFile": "D:\\Projects\\zatiaraspos\\.planning\\quick\\260720-by1-enable-temporary-maintenance-migrate-thr\\playwright-production.config.ts",
+    "rootDir": "D:/Projects/zatiaraspos/.planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/Projects/zatiaraspos/.planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr/.planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr/playwright-production/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "",
+        "name": "",
+        "testDir": "D:/Projects/zatiaraspos/.planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr",
+        "testIgnore": [],
+        "testMatch": [
+          "production-ui-smoke.spec.ts"
+        ],
+        "timeout": 180000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": ".planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr/playwright-production/report.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": ".planning/quick/260720-by1-enable-temporary-maintenance-migrate-thr/playwright-production/html",
+          "open": "never"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "production-ui-smoke.spec.ts",
+      "file": "production-ui-smoke.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "owner routes and feature surfaces render in production",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "300d0fa0f80b0ef05ec8-1491c6b605902651e093",
+          "file": "production-ui-smoke.spec.ts",
+          "line": 104,
+          "column": 1
+        },
+        {
+          "title": "cashier core surfaces render and owner page is denied",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "300d0fa0f80b0ef05ec8-ddb7959027be36127960",
+          "file": "production-ui-smoke.spec.ts",
+          "line": 126,
+          "column": 1
+        },
+        {
+          "title": "cashier checkout updates owner UI and cleanup leaves zero residue",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "300d0fa0f80b0ef05ec8-47dce66a585c75fae2f2",
+          "file": "production-ui-smoke.spec.ts",
+          "line": 135,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-20T05:39:32.767Z",
+    "duration": 434.27099999999973,
+    "expected": 0,
+    "skipped": 3,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

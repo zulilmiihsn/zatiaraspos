@@ -1,0 +1,12 @@
+{
+  "status": "cleaned",
+  "marker": "UAT-PW-1784612870002",
+  "transactionId": "6f47b030-e435-49fd-a2fe-273fe35f480c",
+  "cleaned": true,
+  "residue": {
+    "ok": true,
+    "status": 200,
+    "transactionRows": 0,
+    "ledgerRows": 0
+  }
+}
