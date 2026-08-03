@@ -281,39 +281,38 @@
                 ucapan: 'Terima kasih sudah ngejus di\\nZatiaras Juice!'
             };
             
-            let html = `<html><body style='font-family:monospace;font-size:24px;line-height:2.0;margin:0;padding:0;'>`;
-            html += `<div style='text-align:center;margin-bottom:16px;line-height:1.5;'>`;
-            html += `<div style='font-weight:bold;font-size:26px;'>${pengaturan.nama_toko}</div>`;
-            html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.alamat}</div>`;
+            let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
+            html += `<div style='text-align:center;margin-bottom:16px;'>`;
+            html += `<div style='font-weight:bold;font-size:20px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
+            html += `<div style='font-size:13px;margin-top:4px;'>${pengaturan.alamat}</div>`;
             if (pengaturan.instagram || pengaturan.telepon) {
-                html += `<div style='font-weight:bold;font-size:18px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+                html += `<div style='font-size:13px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
             }
             html += `</div>`;
-            html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+            html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
             
-            html += `<div style='text-align:center;font-weight:bold;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
-            html += `<div style='text-align:left;font-weight:normal;margin-bottom:16px;line-height:1.5;'>`;
-            html += `${selectedTransaksi.customer_name ? selectedTransaksi.customer_name + '<br/>' : ''}`;
-            html += `${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}<br/>`;
+            html += `<div style='text-align:center;font-weight:bold;font-size:14px;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
+            html += `<div style='font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
+            html += `<div>${selectedTransaksi.customer_name || ''}</div>`;
+            html += `<div>${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
             html += `</div>`;
             
-            html += `<table style='width:100%;font-size:24px;margin-bottom:16px;'><tbody>`;
+            html += `<table style='width:100%;font-size:14px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
             
             if (items.length > 0) {
                 items.forEach((item: any, idx: any) => {
                     const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-                    html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${itemName} x${item.qty}</td><td style='text-align:right;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
-                    if (idx < items.length - 1) html += `<tr><td colspan='2' style='height:20px;'></td></tr>`;
+                    html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${itemName} <span style='font-size:12px;font-weight:normal;'>x${item.qty}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
                 });
             } else {
-                html += `<tr style='line-height:1.5;'><td style='text-align:left;'>${selectedTransaksi.nama}</td><td style='text-align:right;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
+                html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${selectedTransaksi.nama}</td><td style='text-align:right;padding-bottom:4px;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
             }
             
             html += `</tbody></table>`;
-            html += `<div style='border-bottom:1px dashed #000;margin-bottom:16px;'></div>`;
+            html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
             
-            html += `<table style='width:100%;font-size:24px;margin-bottom:16px;line-height:1.5;'><tbody>`;
-            html += `<tr><td style='text-align:left;'>Total:</td><td style='text-align:right;'><b>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</b></td></tr>`;
+            html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
+            html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
             
             const methodLabels: Record<string, string> = {
                 tunai: 'Tunai',
@@ -324,10 +323,10 @@
                 'non-tunai': 'QRIS/Non-Tunai'
             };
             const methodKey = (selectedTransaksi.payment_method || '').toLowerCase();
-            html += `<tr><td style='text-align:left;'>Metode:</td><td style='text-align:right;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
+            html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
             html += `</tbody></table>`;
             
-            html += `<div style='margin-top:16px;text-align:center;white-space:pre-line;line-height:1.5;'>${pengaturan.ucapan}</div>`;
+            html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
             html += `</body></html>`;
 
             const gzip = pako.gzip(JSON.stringify([html]));
