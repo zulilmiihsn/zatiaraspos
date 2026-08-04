@@ -90,43 +90,25 @@ export function convertHtmlToReceiptText(htmlString: string, width = 32): string
 	return lines.join('\n');
 }
 
-function triggerNavigation(url: string) {
-	try {
-		const a = document.createElement('a');
-		a.href = url;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-	} catch {
-		window.location.href = url;
-	}
-}
-
 export function executePrint(intentUrl: string) {
 	const isAndroid = /android/i.test(navigator.userAgent);
 
 	if (isAndroid) {
-		// 1. Metode Intent (kadang diblokir Chrome jika dipanggil async)
-		window.location.href = intentUrl;
-
-		// 2. Metode HTTP Fallback (RawBT menjalankan local webserver di port 40213)
-		// Ini adalah rahasia kenapa dulu bisa jalan lancar sebelum dihapus!
-		const httpEndpoints = ['http://127.0.0.1:40213/print', 'http://localhost:40213/print'];
-		fetch(httpEndpoints[0], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {
-			fetch(httpEndpoints[1], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {});
+		// Metode Utama Android: Kirim langsung ke Local Webserver RawBT di background
+		// Eksekusi lebih cepat, tanpa pindah aplikasi, dan 100% kebal blokir Chrome.
+		fetch('http://127.0.0.1:40213/print', { 
+			method: 'POST', 
+			mode: 'no-cors', 
+			body: intentUrl 
 		});
-
 		return;
 	}
 
 	// --- Windows / Desktop ---
-	// Ambil payload base64 dari string intent.
-	// Format intentUrl: intent://#Intent;scheme=print-intent;S.content=BASE64;end
 	const match = intentUrl.match(/S\.content=([^;]+)/);
 	const rawBase64 = match ? match[1] : intentUrl;
 
 	try {
-		// Konversi payload HTML ke plain text terformat (32 kolom) untuk printer Windows
 		const byteArray = Base64.toUint8Array(rawBase64);
 		const uncompressed = pako.ungzip(byteArray, { to: 'string' });
 		const parsed = JSON.parse(uncompressed);
@@ -143,6 +125,5 @@ export function executePrint(intentUrl: string) {
 		console.warn('Failed to parse HTML for Windows printing, using raw base64:', e);
 	}
 
-	// Kirim ke native protocol handler yang terdaftar di Windows Registry.
 	window.location.href = `zatiarasprint://${rawBase64}`;
 }
