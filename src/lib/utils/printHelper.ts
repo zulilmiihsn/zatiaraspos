@@ -91,16 +91,17 @@ export function convertHtmlToReceiptText(htmlString: string, width = 32): string
 }
 
 export function executePrint(intentUrl: string) {
-	const isAndroid = /android/i.test(navigator.userAgent);
+	// Cek apakah ini benar-benar Windows PC
+	const isWindows = /windows/i.test(navigator.userAgent);
 
-	if (isAndroid) {
-		// Metode Murni Intent (Seperti bulan Maret/April)
-		// Membuka pop-up aplikasi RawBT langsung via URL Scheme
+	if (!isWindows) {
+		// Jika BUKAN Windows (berarti HP/Tablet Android, iPad, atau Desktop Mode di Tablet),
+		// selalu gunakan metode Intent.
 		window.location.href = intentUrl;
 		return;
 	}
 
-	// --- Windows / Desktop ---
+	// --- Khusus Windows PC / Desktop ---
 	const match = intentUrl.match(/S\.content=([^;]+)/);
 	const rawBase64 = match ? match[1] : intentUrl;
 
