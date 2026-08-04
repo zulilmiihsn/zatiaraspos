@@ -90,13 +90,33 @@ export function convertHtmlToReceiptText(htmlString: string, width = 32): string
 	return lines.join('\n');
 }
 
+function triggerNavigation(url: string) {
+	try {
+		const a = document.createElement('a');
+		a.href = url;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+	} catch {
+		window.location.href = url;
+	}
+}
+
 export function executePrint(intentUrl: string) {
 	const isAndroid = /android/i.test(navigator.userAgent);
 
 	if (isAndroid) {
-		// Metode lama — langsung navigasi ke intent URL.
-		// RawBT di Android akan menangkap scheme "print-intent" dan mencetak.
-		window.location.href = intentUrl;
+		const match = intentUrl.match(/S\.content=([^;]+)/);
+		const base64 = match ? match[1] : '';
+
+		// Coba scheme khusus RawBT terlebih dahulu untuk bypass Chrome intent blocking
+		if (base64) {
+			triggerNavigation(`rawbt:base64,${base64}`);
+		}
+		// Fallback ke intentUrl standar
+		setTimeout(() => {
+			triggerNavigation(intentUrl);
+		}, 300);
 		return;
 	}
 
@@ -117,7 +137,7 @@ export function executePrint(intentUrl: string) {
 			const plainText = convertHtmlToReceiptText(htmlContent, 32);
 			const newGzip = pako.gzip(JSON.stringify([plainText]));
 			const newBase64 = Base64.fromUint8Array(newGzip);
-			window.location.href = `zatiarasprint://${newBase64}`;
+			triggerNavigation(`zatiarasprint://${newBase64}`);
 			return;
 		}
 	} catch (e) {
@@ -125,7 +145,5 @@ export function executePrint(intentUrl: string) {
 	}
 
 	// Kirim ke native protocol handler yang terdaftar di Windows Registry.
-	// Registry key: HKCU\Software\Classes\zatiarasprint
-	// Command     : php-win.exe pos_print_handler.php "%1"
-	window.location.href = `zatiarasprint://${rawBase64}`;
+	triggerNavigation(`zatiarasprint://${rawBase64}`);
 }
