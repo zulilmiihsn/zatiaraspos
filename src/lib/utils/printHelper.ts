@@ -106,17 +106,16 @@ export function executePrint(intentUrl: string) {
 	const isAndroid = /android/i.test(navigator.userAgent);
 
 	if (isAndroid) {
-		const match = intentUrl.match(/S\.content=([^;]+)/);
-		const base64 = match ? match[1] : '';
+		// 1. Metode Intent (kadang diblokir Chrome jika dipanggil async)
+		window.location.href = intentUrl;
 
-		// Coba scheme khusus RawBT terlebih dahulu untuk bypass Chrome intent blocking
-		if (base64) {
-			triggerNavigation(`rawbt:base64,${base64}`);
-		}
-		// Fallback ke intentUrl standar
-		setTimeout(() => {
-			triggerNavigation(intentUrl);
-		}, 300);
+		// 2. Metode HTTP Fallback (RawBT menjalankan local webserver di port 40213)
+		// Ini adalah rahasia kenapa dulu bisa jalan lancar sebelum dihapus!
+		const httpEndpoints = ['http://127.0.0.1:40213/print', 'http://localhost:40213/print'];
+		fetch(httpEndpoints[0], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {
+			fetch(httpEndpoints[1], { method: 'POST', mode: 'no-cors', body: intentUrl }).catch(() => {});
+		});
+
 		return;
 	}
 
@@ -137,7 +136,7 @@ export function executePrint(intentUrl: string) {
 			const plainText = convertHtmlToReceiptText(htmlContent, 32);
 			const newGzip = pako.gzip(JSON.stringify([plainText]));
 			const newBase64 = Base64.fromUint8Array(newGzip);
-			triggerNavigation(`zatiarasprint://${newBase64}`);
+			window.location.href = `zatiarasprint://${newBase64}`;
 			return;
 		}
 	} catch (e) {
@@ -145,5 +144,5 @@ export function executePrint(intentUrl: string) {
 	}
 
 	// Kirim ke native protocol handler yang terdaftar di Windows Registry.
-	triggerNavigation(`zatiarasprint://${rawBase64}`);
+	window.location.href = `zatiarasprint://${rawBase64}`;
 }
