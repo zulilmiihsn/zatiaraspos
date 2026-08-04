@@ -94,13 +94,9 @@ export function executePrint(intentUrl: string) {
 	const isAndroid = /android/i.test(navigator.userAgent);
 
 	if (isAndroid) {
-		// Metode Utama Android: Kirim langsung ke Local Webserver RawBT di background
-		// Eksekusi lebih cepat, tanpa pindah aplikasi, dan 100% kebal blokir Chrome.
-		fetch('http://127.0.0.1:40213/print', { 
-			method: 'POST', 
-			mode: 'no-cors', 
-			body: intentUrl 
-		});
+		// Metode Murni Intent (Seperti bulan Maret/April)
+		// Membuka pop-up aplikasi RawBT langsung via URL Scheme
+		window.location.href = intentUrl;
 		return;
 	}
 
