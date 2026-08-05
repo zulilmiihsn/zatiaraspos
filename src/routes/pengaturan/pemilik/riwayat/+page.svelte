@@ -281,28 +281,28 @@
                 ucapan: 'Terima kasih sudah ngejus di\\nZatiaras Juice!'
             };
             
-            let html = `<html><body style='width:384px;font-family:monospace;color:#000;font-size:24px;line-height:1.5;margin:0;padding:0;'>`;
+            let html = `<html><body style='width:384px;font-family:monospace;color:#000;font-size:30px;line-height:1.5;margin:0;padding:0;'>`;
             html += `<div style='text-align:center;margin-bottom:16px;'>`;
-            html += `<div style='font-weight:bold;font-size:28px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
-            html += `<div style='font-size:22px;margin-top:4px;'>${pengaturan.alamat}</div>`;
+            html += `<div style='font-weight:bold;font-size:34px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
+            html += `<div style='font-size:26px;margin-top:4px;'>${pengaturan.alamat}</div>`;
             if (pengaturan.instagram || pengaturan.telepon) {
-                html += `<div style='font-size:22px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+                html += `<div style='font-size:26px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
             }
             html += `</div>`;
             html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
             
-            html += `<div style='text-align:center;font-weight:bold;font-size:24px;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
-            html += `<div style='font-size:22px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
+            html += `<div style='text-align:center;font-weight:bold;font-size:30px;margin-bottom:8px;'>*** CETAK ULANG ***</div>`;
+            html += `<div style='font-size:26px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
             html += `<div>${selectedTransaksi.customer_name || ''}</div>`;
             html += `<div>${new Date(selectedTransaksi.waktu).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
             html += `</div>`;
             
-            html += `<table style='width:100%;font-size:24px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
+            html += `<table style='width:100%;font-size:30px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
             
             if (items.length > 0) {
                 items.forEach((item: any, idx: any) => {
                     const itemName = item.custom_name || (item.produk && item.produk.name) || 'Produk Custom';
-                    html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${itemName} <span style='font-size:20px;font-weight:normal;'>x${item.qty}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
+                    html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${itemName} <span style='font-size:24px;font-weight:normal;'>x${item.qty}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${(item.price ?? 0).toLocaleString('id-ID')}</td></tr>`;
                 });
             } else {
                 html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${selectedTransaksi.nama}</td><td style='text-align:right;padding-bottom:4px;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
@@ -311,8 +311,8 @@
             html += `</tbody></table>`;
             html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
             
-            html += `<table style='width:100%;font-size:24px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
-            html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:28px;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
+            html += `<table style='width:100%;font-size:30px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
+            html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:34px;'>Rp${(selectedTransaksi.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
             
             const methodLabels: Record<string, string> = {
                 tunai: 'Tunai',
@@ -323,10 +323,10 @@
                 'non-tunai': 'QRIS/Non-Tunai'
             };
             const methodKey = (selectedTransaksi.payment_method || '').toLowerCase();
-            html += `<tr><td style='text-align:left;font-size:22px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:22px;padding-top:4px;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
+            html += `<tr><td style='text-align:left;font-size:26px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:26px;padding-top:4px;'>${methodLabels[methodKey] || methodKey}</td></tr>`;
             html += `</tbody></table>`;
             
-            html += `<div style='text-align:center;font-size:22px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
+            html += `<div style='text-align:center;font-size:26px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
             html += `</body></html>`;
 
             const gzip = pako.gzip(JSON.stringify([html]));
