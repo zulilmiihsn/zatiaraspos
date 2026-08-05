@@ -153,7 +153,7 @@
 				ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
 			};
 
-			let html = `<html><body style='font-family:monospace;color:#000;font-size:24px;line-height:1.5;margin:0;padding:0;'>`;
+			let html = `<html><body style='width:384px;font-family:monospace;color:#000;font-size:24px;line-height:1.5;margin:0;padding:0;'>`;
 			html += `<div style='text-align:center;margin-bottom:16px;'>`;
 			html += `<div style='font-weight:bold;font-size:28px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
 			html += `<div style='font-size:22px;margin-top:4px;'>${pengaturan.alamat}</div>`;
