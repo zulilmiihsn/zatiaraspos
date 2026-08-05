@@ -398,28 +398,28 @@
 			instagram: '@zatiarasjuice',
 			ucapan: 'Terima kasih sudah ngejus di\nZatiaras Juice!'
 		};
-		let html = `<html><body style='font-family:monospace;color:#000;font-size:14px;line-height:1.5;margin:0;padding:8px;'>`;
+		let html = `<html><body style='font-family:monospace;color:#000;font-size:24px;line-height:1.5;margin:0;padding:0;'>`;
 		// Header
 		html += `<div style='text-align:center;margin-bottom:16px;'>`;
-		html += `<div style='font-weight:bold;font-size:20px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
-		html += `<div style='font-size:13px;margin-top:4px;'>${pengaturan.alamat}</div>`;
+		html += `<div style='font-weight:bold;font-size:28px;text-transform:uppercase;'>${pengaturan.nama_toko}</div>`;
+		html += `<div style='font-size:22px;margin-top:4px;'>${pengaturan.alamat}</div>`;
 		if (pengaturan.instagram || pengaturan.telepon) {
-			html += `<div style='font-size:13px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
+			html += `<div style='font-size:22px;margin-top:2px;'>${pengaturan.instagram ? pengaturan.instagram : ''}${pengaturan.instagram && pengaturan.telepon ? ' | ' : ''}${pengaturan.telepon ? pengaturan.telepon : ''}</div>`;
 		}
 		html += `</div>`;
 		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
 		// Info pelanggan & waktu
-		html += `<div style='font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
+		html += `<div style='font-size:22px;margin-bottom:12px;display:flex;justify-content:space-between;'>`;
 		html += `<div>${customerName || ''}</div>`;
 		html += `<div>${new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</div>`;
 		html += `</div>`;
 		// Daftar pesanan
-		html += `<table style='width:100%;font-size:14px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
+		html += `<table style='width:100%;font-size:24px;margin-bottom:12px;border-collapse:collapse;'><tbody>`;
 		cart.forEach((item: any, idx: any) => {
-			html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${item.product.name} <span style='font-size:12px;font-weight:normal;'>x${item.qty}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr><td style='text-align:left;padding-bottom:4px;font-weight:bold;'>${item.product.name} <span style='font-size:20px;font-weight:normal;'>x${item.qty}</span></td><td style='text-align:right;padding-bottom:4px;'>Rp${(item.product.price ?? item.product.harga ?? 0).toLocaleString('id-ID')}</td></tr>`;
 			if (item.addOns && item.addOns.length > 0) {
 				item.addOns.forEach((a: any) => {
-					html += `<tr><td style='font-size:12px;padding-left:8px;color:#333;'>+ ${a.name}</td><td style='font-size:12px;text-align:right;color:#333;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
+					html += `<tr><td style='font-size:20px;padding-left:8px;color:#333;'>+ ${a.name}</td><td style='font-size:20px;text-align:right;color:#333;'>Rp${((a.price ?? a.harga ?? 0) * item.qty).toLocaleString('id-ID')}</td></tr>`;
 				});
 			}
 			const detail = [
@@ -442,13 +442,13 @@
 				.filter(Boolean)
 				.join(', ');
 			if (detail)
-				html += `<tr><td colspan='2' style='font-size:12px;padding-left:8px;padding-bottom:8px;color:#333;font-style:italic;'>${detail}</td></tr>`;
+				html += `<tr><td colspan='2' style='font-size:20px;padding-left:8px;padding-bottom:8px;color:#333;font-style:italic;'>${detail}</td></tr>`;
 		});
 		html += `</tbody></table>`;
 		html += `<div style='border-bottom:1px dashed #333;margin-bottom:12px;'></div>`;
 		// Ringkasan
-		html += `<table style='width:100%;font-size:14px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
-		html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:16px;'>Rp${totalHarga.toLocaleString('id-ID')}</td></tr>`;
+		html += `<table style='width:100%;font-size:24px;margin-bottom:24px;border-collapse:collapse;'><tbody>`;
+		html += `<tr><td style='text-align:left;padding-bottom:4px;'>Total:</td><td style='text-align:right;font-weight:bold;font-size:28px;'>Rp${totalHarga.toLocaleString('id-ID')}</td></tr>`;
 		const methodLabels: Record<string, string> = {
 			tunai: 'Tunai',
 			qris: 'QRIS',
@@ -457,14 +457,14 @@
 			card: 'Kartu',
 			'non-tunai': 'QRIS/Non-Tunai'
 		};
-		html += `<tr><td style='text-align:left;font-size:13px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:13px;padding-top:4px;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
+		html += `<tr><td style='text-align:left;font-size:22px;padding-top:4px;'>Metode:</td><td style='text-align:right;font-size:22px;padding-top:4px;'>${methodLabels[paymentMethod] || paymentMethod}</td></tr>`;
 		if (paymentMethod === 'tunai') {
-			html += `<tr><td style='text-align:left;font-size:13px;'>Dibayar:</td><td style='text-align:right;font-size:13px;'>Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</td></tr>`;
-			html += `<tr><td style='text-align:left;font-size:13px;'>Kembalian:</td><td style='text-align:right;font-size:13px;'>Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</td></tr>`;
+			html += `<tr><td style='text-align:left;font-size:22px;'>Dibayar:</td><td style='text-align:right;font-size:22px;'>Rp${(parseInt(cashReceived) || 0).toLocaleString('id-ID')}</td></tr>`;
+			html += `<tr><td style='text-align:left;font-size:22px;'>Kembalian:</td><td style='text-align:right;font-size:22px;'>Rp${kembalian >= 0 ? kembalian.toLocaleString('id-ID') : '0'}</td></tr>`;
 		}
 		html += `</tbody></table>`;
 		// Ucapan
-		html += `<div style='text-align:center;font-size:13px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
+		html += `<div style='text-align:center;font-size:22px;white-space:pre-line;'>${pengaturan.ucapan}</div>`;
 		html += `</body></html>`;
 
 		// 2. Gzip + base64 encode
