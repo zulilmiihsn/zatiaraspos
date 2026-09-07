@@ -7,9 +7,7 @@
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import X from '@lucide/svelte/icons/x';
 	import Send from '@lucide/svelte/icons/send';
-	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Trophy from '@lucide/svelte/icons/trophy';
-	import DollarSign from '@lucide/svelte/icons/dollar-sign';
 	import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Square from '@lucide/svelte/icons/square';
@@ -17,11 +15,8 @@
 	import Boxes from '@lucide/svelte/icons/boxes';
 	import Percent from '@lucide/svelte/icons/percent';
 	import Clock from '@lucide/svelte/icons/clock';
-	import Lightbulb from '@lucide/svelte/icons/lightbulb';
 	import Copy from '@lucide/svelte/icons/copy';
 	import Check from '@lucide/svelte/icons/check';
-	import ArrowRight from '@lucide/svelte/icons/arrow-right';
-	import Database from '@lucide/svelte/icons/database';
 
 	interface ChatMessageItem {
 		id: string;
@@ -41,91 +36,73 @@
 	let abortController: AbortController | null = null;
 	let copiedId = $state<string | null>(null);
 
-	// Rekomendasi terstruktur format Bento Grid
-	const suggestionCategories = [
-		{
-			id: 'keuangan',
-			name: 'Finansial & Margin',
-			badge: 'SQL D1',
-			badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-			items: [
-				{
-					id: 'performa',
-					title: 'Performa Penjualan & Laba',
-					desc: 'Ringkasan omzet, laba kotor, beban operasional, dan laba bersih riil.',
-					query: 'Bagaimana performa penjualan toko hari ini? Berapa omzet, laba kotor, potongan biaya dan laba bersihnya?',
-					icon: BarChart3,
-					tag: 'Buku Kas'
-				},
-				{
-					id: 'margin',
-					title: 'Analisis Margin Menu & HPP',
-					desc: 'Temukan produk bermargin paling tebal dan menu dengan HPP tinggi.',
-					query: 'Analisis HPP dan margin keuntungan tiap produk. Menu apa yang margin labanya paling tinggi dan mana yang tipis?',
-					icon: Percent,
-					tag: 'Profitabilitas'
+	// Action portal agar modal menempel langsung ke document.body dan tidak tertutup BottomNav
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				if (node.parentNode) {
+					node.parentNode.removeChild(node);
 				}
-			]
+			}
+		};
+	}
+
+	// Rekomendasi pertanyaan bersih, simpel & fokus kebutuhan bisnis kasir/pemilik
+	const suggestions = [
+		{
+			id: 'omzet',
+			title: 'Performa Penjualan',
+			desc: 'Omzet, laba kotor & laba bersih hari ini',
+			query: 'Bagaimana performa penjualan toko hari ini? Berapa omzet, laba kotor, potongan biaya dan laba bersihnya?',
+			icon: BarChart3
 		},
 		{
-			id: 'operasional',
-			name: 'Inventaris & Operasional',
-			badge: 'Stok D1',
-			badgeClass: 'bg-amber-50 text-amber-700 border-amber-200/80',
-			items: [
-				{
-					id: 'stok',
-					title: 'Bahan Kritis & Alert Stok',
-					desc: 'Pantau bahan baku yang menipis di bawah ambang batas aman.',
-					query: 'Cek persediaan stok bahan baku toko saat ini. Apakah ada bahan yang stoknya menipis atau kritis di bawah ambang batas?',
-					icon: Boxes,
-					tag: 'Restok'
-				},
-				{
-					id: 'jam_ramai',
-					title: 'Jam Ramai & Shift Kasir',
-					desc: 'Evaluasi jam sibuk toko dan efisiensi omzet per sesi kasir.',
-					query: 'Kapan jam paling ramai toko dan bagaimana performa transaksi per sesi kerja kasir?',
-					icon: Clock,
-					tag: 'Shift & Jam'
-				}
-			]
+			id: 'terlaris',
+			title: 'Menu Terlaris',
+			desc: 'Produk paling laris & banyak terjual',
+			query: 'Produk apa saja yang paling laris dan banyak terjual?',
+			icon: Trophy
 		},
 		{
-			id: 'strategi',
-			name: 'Riset Pasar & Strategi',
-			badge: 'Web Live',
-			badgeClass: 'bg-sky-50 text-sky-700 border-sky-200/80',
-			items: [
-				{
-					id: 'riset_web',
-					title: 'Riset Tren Minuman Viral',
-					desc: 'Browsing live internet untuk tren varian rasa dan inovasi menu baru.',
-					query: 'Lakukan riset web tentang tren minuman jus kekinian dan viral di internet, berikan ide inovasi produk baru untuk toko.',
-					icon: Globe,
-					tag: 'Web Agent'
-				},
-				{
-					id: 'psikologi_harga',
-					title: 'Psikologi Harga & Bundling',
-					desc: 'Strategi paket menu dan optimasi harga jual untuk menaikkan basket size.',
-					query: 'Analisis menu terlaris dan berikan rekomendasi strategi harga (pricing psychology) serta bundling untuk menaikkan omzet.',
-					icon: Lightbulb,
-					tag: 'Pricing'
-				}
-			]
+			id: 'stok',
+			title: 'Stok Bahan Menipis',
+			desc: 'Bahan kritis yang perlu segera restok',
+			query: 'Cek persediaan stok bahan baku toko saat ini. Apakah ada bahan yang stoknya menipis atau kritis di bawah ambang batas?',
+			icon: Boxes
+		},
+		{
+			id: 'margin',
+			title: 'Margin Laba Menu',
+			desc: 'Menu paling untung vs margin tipis',
+			query: 'Analisis HPP dan margin keuntungan tiap produk. Menu apa yang margin labanya paling tinggi dan mana yang tipis?',
+			icon: Percent
+		},
+		{
+			id: 'jam_ramai',
+			title: 'Jam Ramai Toko',
+			desc: 'Pola jam sibuk & pengunjung harian',
+			query: 'Kapan jam paling ramai toko dan bagaimana performa transaksi per sesi kerja kasir?',
+			icon: Clock
+		},
+		{
+			id: 'tren_web',
+			title: 'Riset Menu Viral',
+			desc: 'Cari ide minuman tren di internet',
+			query: 'Lakukan riset web tentang tren minuman jus kekinian dan viral di internet, berikan ide inovasi produk baru untuk toko.',
+			icon: Globe
 		}
 	];
 
-	// Rekomendasi pertanyaan cepat saat percakapan sudah berjalan
+	// Rekomendasi follow-up ringkas saat chat aktif
 	const quickFollowUps = [
-		{ label: 'Cek Bahan Kritis', query: 'Bahan apa saja yang stoknya di bawah batas aman dan perlu restok segera?' },
-		{ label: 'Menu Paling Untung', query: 'Menu mana yang margin laba kotornya paling tinggi untuk dipromosikan?' },
-		{ label: 'Jam Paling Sibuk', query: 'Jam berapa toko mencatat volume transaksi paling ramai?' },
-		{ label: 'Riset Tren Viral', query: 'Cari di web inovasi minuman jus yang sedang tren tahun ini.' }
+		{ label: 'Cek Stok Kritis', query: 'Bahan apa saja yang stoknya kritis dan mendesak dibeli?' },
+		{ label: 'Menu Paling Untung', query: 'Menu mana yang margin labanya paling besar?' },
+		{ label: 'Jam Paling Sibuk', query: 'Jam berapa toko biasanya paling ramai?' },
+		{ label: 'Riset Tren Web', query: 'Cari di web tren minuman segar yang viral saat ini.' }
 	];
 
-	// Renderer Markdown yang mendukung tabel, list, heading, dan inline code
+	// Renderer Markdown ramah tampilan dengan tabel terformat rapi
 	function renderMarkdown(md: string): string {
 		if (!md) return '';
 		const escapeHtml = (s: string) =>
@@ -140,19 +117,19 @@
 
 		const flushTable = () => {
 			if (!inTable) return;
-			html += '<div class="my-3 overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">';
+			html += '<div class="my-3 overflow-x-auto rounded-xl border border-pink-100 bg-white shadow-2xs">';
 			html += '<table class="w-full border-collapse text-left text-xs text-slate-700">';
 			if (tableHeaders.length > 0) {
-				html += '<thead class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">';
+				html += '<thead class="border-b border-pink-100 bg-pink-50/60 text-[11px] font-bold text-pink-700 uppercase tracking-wider">';
 				html += '<tr>';
 				for (const h of tableHeaders) {
-					html += `<th class="px-3 py-2.5 whitespace-nowrap font-bold">${h}</th>`;
+					html += `<th class="px-3 py-2.5 whitespace-nowrap">${h}</th>`;
 				}
 				html += '</tr></thead>';
 			}
 			html += '<tbody class="divide-y divide-slate-100">';
 			for (const row of tableRows) {
-				html += '<tr class="transition-colors hover:bg-slate-50/70">';
+				html += '<tr class="transition-colors hover:bg-pink-50/30">';
 				for (const cell of row) {
 					html += `<td class="px-3 py-2 leading-relaxed">${cell}</td>`;
 				}
@@ -176,7 +153,7 @@
 			t = t.replace(/\*(.*?)\*/g, '<em class="text-slate-600 italic">$1</em>');
 			t = t.replace(
 				/`([^`]+)`/g,
-				'<code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-800">$1</code>'
+				'<code class="rounded bg-pink-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-pink-700">$1</code>'
 			);
 			return t;
 		};
@@ -184,7 +161,6 @@
 		for (let i = 0; i < rawLines.length; i++) {
 			const line = rawLines[i].trim();
 
-			// Deteksi baris tabel markdown (| a | b |)
 			if (line.startsWith('|') && line.endsWith('|')) {
 				flushList();
 				const cells = line
@@ -193,9 +169,7 @@
 					.map((c) => inlineFormat(c.trim()));
 
 				const isDivider = cells.every((c) => /^[-:\s]+$/.test(c));
-				if (isDivider) {
-					continue;
-				}
+				if (isDivider) continue;
 
 				if (!inTable) {
 					inTable = true;
@@ -208,31 +182,28 @@
 				flushTable();
 			}
 
-			// Horizontal separator (--- atau ***)
 			if (/^---+$|^\*\*\*+$/.test(line)) {
 				flushList();
-				html += '<hr class="my-3 border-slate-200" />';
+				html += '<hr class="my-3 border-pink-100" />';
 				continue;
 			}
 
-			// Headings
 			if (/^###\s+/.test(line)) {
 				flushList();
-				html += `<h4 class="mt-3.5 mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-900">${inlineFormat(line.replace(/^###\s+/, ''))}</h4>`;
+				html += `<h4 class="mt-3 mb-1 text-xs font-black uppercase tracking-wider text-pink-700">${inlineFormat(line.replace(/^###\s+/, ''))}</h4>`;
 				continue;
 			}
 			if (/^##\s+/.test(line)) {
 				flushList();
-				html += `<h3 class="mt-4 mb-2 text-sm font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^##\s+/, ''))}</h3>`;
+				html += `<h3 class="mt-3.5 mb-1.5 text-sm font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^##\s+/, ''))}</h3>`;
 				continue;
 			}
 			if (/^#\s+/.test(line)) {
 				flushList();
-				html += `<h2 class="mt-4.5 mb-2.5 text-base font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^#\s+/, ''))}</h2>`;
+				html += `<h2 class="mt-4 mb-2 text-base font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^#\s+/, ''))}</h2>`;
 				continue;
 			}
 
-			// Unordered list items
 			if (/^-\s+/.test(line) || /^\*\s+/.test(line)) {
 				if (!inList) {
 					html += '<ul class="my-2 space-y-1 pl-4 list-disc text-xs sm:text-sm text-slate-700">';
@@ -244,12 +215,8 @@
 				flushList();
 			}
 
-			// Baris kosong
-			if (!line) {
-				continue;
-			}
+			if (!line) continue;
 
-			// Paragraf biasa
 			html += `<p class="my-1.5 text-xs sm:text-sm leading-relaxed text-slate-700">${inlineFormat(line)}</p>`;
 		}
 
@@ -459,29 +426,26 @@
 	}
 </script>
 
-<!-- ─── 1. FLOATING ACTION BUTTON (FAB) ──────────────────────────────────────── -->
-<div class="z-fab fixed right-4 bottom-22 sm:right-6 sm:bottom-24">
+<!-- ─── 1. FLOATING ACTION BUTTON (FAB) TEMA PINK RESMI ZATIARAS ─────────────── -->
+<div class="z-fab fixed right-4 bottom-20 sm:right-6 sm:bottom-24">
 	<button
 		type="button"
 		onclick={() => (showAiModal = true)}
-		class="group flex cursor-pointer items-center gap-2.5 rounded-full border border-slate-700/80 bg-slate-900/95 py-3 pr-4.5 pl-3.5 text-white shadow-xl shadow-slate-950/25 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-950/35 active:scale-95"
-		aria-label="Buka Partner Bisnis AI"
+		class="group flex cursor-pointer items-center gap-2.5 rounded-full border border-white/40 bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] py-3 pr-5 pl-4 text-white shadow-xl shadow-pink-500/30 backdrop-blur-md transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/40 active:scale-95"
+		aria-label="Buka Asisten AI"
 	>
-		<div class="relative flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 border border-slate-700/70 text-rose-400 shadow-2xs">
-			<Sparkles class="h-3.5 w-3.5 stroke-[2.4]" />
-			<span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-pulse"></span>
+		<div class="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 shadow-2xs">
+			<Sparkles class="h-4 w-4 stroke-[2.5] text-white animate-pulse" />
 		</div>
-		<div class="flex flex-col text-left">
-			<span class="text-xs font-black tracking-tight text-white">Partner Bisnis AI</span>
-			<span class="text-[9px] font-semibold text-slate-400 leading-none">SQL + Web Live</span>
-		</div>
+		<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tanya AI</span>
 	</button>
 </div>
 
-<!-- ─── 2. ASSISTANT MODAL DIALOG ────────────────────────────────────────────── -->
+<!-- ─── 2. ASSISTANT MODAL DIALOG (PORTAL KE BODY, BEBAS TUMPUKAN BOTTOMNAV) ─── -->
 {#if showAiModal}
 	<div
-		class="z-dialog fixed inset-0 flex items-end sm:items-center justify-center bg-slate-950/65 p-0 sm:p-4 backdrop-blur-xs"
+		use:portal
+		class="z-dialog fixed inset-0 flex items-center justify-center bg-black/50 p-3 sm:p-5 backdrop-blur-xs"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
 		role="dialog"
@@ -490,131 +454,92 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="flex h-[92dvh] sm:h-[680px] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] sm:rounded-[28px] bg-[#f8f9fa] shadow-2xl border border-slate-200/80 transition-all duration-200"
+			class="flex h-[90vh] sm:h-[640px] w-full max-w-lg flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl transition-all duration-200"
 			transition:scale={{ duration: 220, start: 0.95, easing: cubicOut }}
 		>
-			<!-- Header Modal Asisten -->
-			<div class="relative z-10 flex items-center justify-between border-b border-slate-800 bg-slate-950 px-5 py-3.5 text-white">
-				<div class="flex items-center gap-3">
-					<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-700/80 bg-slate-900 text-rose-400 shadow-xs">
-						<Sparkles class="h-5 w-5 stroke-[2.3]" />
-					</div>
-					<div>
-						<div class="flex items-center gap-2">
-							<h3 class="text-sm font-black tracking-tight text-white sm:text-base">Partner Bisnis & Strategi AI</h3>
-							<span class="rounded-md border border-slate-700 bg-slate-800/80 px-1.5 py-0.2 font-mono text-[9px] font-bold text-slate-300">
-								MiniMax M3
-							</span>
+			<!-- Header Modal Gradien Pink Khas Zatiaras -->
+			<div class="relative overflow-hidden bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-5 py-4 text-white shadow-sm">
+				<div class="relative z-10 flex items-center justify-between">
+					<div class="flex items-center gap-3">
+						<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 shadow-xs backdrop-blur-md">
+							<Sparkles class="h-5 w-5 stroke-[2.5] text-white" />
 						</div>
-						<div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
-							<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-							<span>Terhubung Database SQL D1 &amp; Riset Web Aktif</span>
-							<span class="text-slate-600">•</span>
-							<span class="text-slate-300 font-semibold">{selectedBranch.value || 'Cabang Aktif'}</span>
+						<div>
+							<h3 class="text-sm font-black tracking-tight text-white sm:text-base">Asisten AI Zatiaras</h3>
+							<div class="flex items-center gap-1.5 text-[11px] font-medium text-pink-100">
+								<span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
+								<span>Analisis Data Bisnis Cabang {selectedBranch.value || 'Aktif'}</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div class="flex items-center gap-1.5">
-					{#if messages.length > 0}
+					<div class="flex items-center gap-1.5">
+						{#if messages.length > 0}
+							<button
+								type="button"
+								onclick={handleResetChat}
+								class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/20 text-white transition-all hover:bg-white/30 active:scale-95"
+								title="Mulai Percakapan Baru"
+								aria-label="Reset Percakapan"
+							>
+								<RotateCcw size={15} class="stroke-[2.2]" />
+							</button>
+						{/if}
 						<button
 							type="button"
-							onclick={handleResetChat}
-							class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 transition-all hover:bg-slate-800 hover:text-white active:scale-95"
-							title="Mulai Percakapan Baru"
-							aria-label="Reset Percakapan"
+							onclick={handleAiClose}
+							class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/20 text-white transition-all hover:bg-white/30 active:scale-95"
+							aria-label="Tutup Asisten AI"
 						>
-							<RotateCcw size={14} class="stroke-[2.2]" />
+							<X size={17} class="stroke-[2.5]" />
 						</button>
-					{/if}
-					<button
-						type="button"
-						onclick={handleAiClose}
-						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 transition-all hover:bg-slate-800 hover:text-white active:scale-95"
-						aria-label="Tutup Asisten AI"
-					>
-						<X size={16} class="stroke-[2.5]" />
-					</button>
+					</div>
 				</div>
 			</div>
 
-			<!-- Body Konten Percakapan / Saran -->
+			<!-- Body Konten Percakapan / Saran Bersih -->
 			<div
 				bind:this={chatContainer}
-				class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5"
+				class="flex flex-1 flex-col gap-3.5 overflow-y-auto bg-[#faf7f8] p-4 sm:p-5"
 			>
 				{#if messages.length === 0}
-					<!-- Welcome State & Bento Grid Suggestions -->
-					<div class="flex flex-col gap-4">
-						<!-- Hero Bar -->
-						<div class="flex flex-col gap-1 rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-2xs">
-							<div class="flex items-center justify-between">
-								<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Analisis Otomatis &amp; Strategi</span>
-								<div class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
-									<Database size={11} class="text-slate-400" />
-									<span>D1 SQLite Terisolasi</span>
-								</div>
-							</div>
-							<h4 class="text-base font-black tracking-tight text-slate-900 sm:text-lg">
-								Ada yang ingin dianalisis hari ini?
-							</h4>
-							<p class="text-xs leading-relaxed text-slate-600">
-								Kueri data keuangan riil, pantau stok bahan baku kritis, bandingkan margin laba menu, atau riset tren kuliner viral via live web browsing.
-							</p>
-
-							<!-- Tips Memori Jangka Panjang -->
-							<div class="mt-2 flex items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-left">
-								<Lightbulb size={14} class="shrink-0 text-amber-600" />
-								<span class="text-[11px] leading-tight text-slate-600">
-									<strong class="font-bold text-slate-800">Tips Memori:</strong> Ketik
-									<code class="rounded bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-800 border border-slate-200/80">Ingat: [target omzet/catatan]</code>
-									agar AI selalu menjadikannya acuan analisis.
-								</span>
-							</div>
+					<!-- Welcome State Sederhana & Ramah -->
+					<div class="flex flex-col items-center py-3 text-center">
+						<div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-pink-100 bg-pink-50 text-pink-600 shadow-2xs">
+							<Sparkles size={24} class="stroke-[2.2]" />
 						</div>
+						<h4 class="text-sm font-black text-slate-900 sm:text-base">Ada yang bisa dibantu?</h4>
+						<p class="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+							Tanyakan apa saja seputar performa penjualan, laba, stok bahan, atau tren minuman tokomu.
+						</p>
 
-						<!-- Bento Grid Kategori Rekomendasi -->
-						<div class="space-y-4">
-							{#each suggestionCategories as cat}
-								<div class="space-y-2">
-									<div class="flex items-center justify-between px-1">
-										<span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">{cat.name}</span>
-										<span class="rounded-md border px-2 py-0.5 font-mono text-[9px] font-bold {cat.badgeClass}">
-											{cat.badge}
-										</span>
-									</div>
-
-									<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-										{#each cat.items as item}
-											{@const IconComponent = item.icon}
-											<button
-												type="button"
-												onclick={() => handleAiAsk(item.query)}
-												class="group flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 text-left shadow-2xs transition-all duration-150 hover:border-slate-400 hover:bg-slate-50/60 active:scale-[0.98]"
-											>
-												<div class="flex items-start justify-between gap-2">
-													<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-800 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-														<IconComponent size={16} class="stroke-[2.2]" />
-													</div>
-													<span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
-														{item.tag}
-													</span>
-												</div>
-
-												<div class="mt-2.5">
-													<div class="flex items-center justify-between">
-														<span class="text-xs font-bold text-slate-900 group-hover:text-slate-950">{item.title}</span>
-														<ArrowRight size={13} class="text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-													</div>
-													<p class="mt-0.5 text-[11px] leading-snug text-slate-500 line-clamp-2">
-														{item.desc}
-													</p>
-												</div>
-											</button>
-										{/each}
-									</div>
-								</div>
-							{/each}
+						<!-- Rekomendasi Pertanyaan Bersih -->
+						<div class="mt-5 flex w-full flex-col gap-2">
+							<span class="text-left text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+								Rekomendasi Pertanyaan
+							</span>
+							<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+								{#each suggestions as item}
+									{@const IconComponent = item.icon}
+									<button
+										type="button"
+										onclick={() => handleAiAsk(item.query)}
+										class="group flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 text-left shadow-2xs transition-all hover:border-pink-300 hover:bg-pink-50/40 active:scale-[0.98]"
+									>
+										<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 group-hover:bg-pink-100 transition-colors">
+											<IconComponent size={17} class="stroke-[2.2]" />
+										</div>
+										<div class="min-w-0 flex-1">
+											<div class="text-xs font-bold text-slate-800 group-hover:text-pink-700 transition-colors">
+												{item.title}
+											</div>
+											<div class="text-[11px] text-slate-500 truncate">
+												{item.desc}
+											</div>
+										</div>
+									</button>
+								{/each}
+							</div>
 						</div>
 					</div>
 				{:else}
@@ -623,156 +548,138 @@
 						{#if msg.role === 'user'}
 							<!-- Bubble Pertanyaan User -->
 							<div class="flex justify-end">
-								<div class="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tr-xs bg-slate-900 px-4 py-2.5 text-xs font-medium text-white shadow-2xs sm:text-sm">
+								<div class="max-w-[85%] rounded-2xl rounded-tr-xs bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm sm:text-sm">
 									{msg.content}
 								</div>
 							</div>
 						{:else}
 							<!-- Bubble Jawaban AI -->
 							<div class="flex items-start gap-2.5">
-								<div class="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-2xs">
+								<div class="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs">
 									{#if msg.isStreaming}
-										<Sparkles size={15} class="animate-spin stroke-[2.2] text-rose-400" />
+										<Sparkles size={16} class="animate-spin stroke-[2.2]" />
 									{:else}
-										<Sparkles size={15} class="stroke-[2.2] text-rose-400" />
+										<Sparkles size={16} class="stroke-[2.2]" />
 									{/if}
 								</div>
+								<div class="flex-1 rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-4 shadow-sm">
+									{#if (msg.dateRange?.start && msg.dateRange?.end) || msg.webSearch}
+										<div class="mb-2 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2">
+											<div class="flex flex-wrap items-center gap-1.5">
+												{#if msg.dateRange?.start && msg.dateRange?.end}
+													<span class="inline-flex items-center rounded-md bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-700 border border-pink-100">
+														Periode: {msg.dateRange.start} s/d {msg.dateRange.end}
+													</span>
+												{/if}
+												{#if msg.webSearch}
+													<span class="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 border border-sky-100">
+														<Globe size={11} class="stroke-[2.5]" />
+														Riset Pasar Web
+													</span>
+												{/if}
+											</div>
 
-								<div class="flex-1 rounded-2xl rounded-tl-xs border border-slate-200/90 bg-white p-4 shadow-xs sm:p-5">
-									<!-- Meta Badges Bar & Copy Action -->
-									<div class="mb-3 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2.5">
-										<div class="flex flex-wrap items-center gap-1.5">
-											<span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-700">
-												Analisis Bisnis Zatiaras
-											</span>
-											{#if msg.dateRange?.start && msg.dateRange?.end}
-												<span class="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-													📅 {msg.dateRange.start} s/d {msg.dateRange.end}
-												</span>
-											{/if}
-											{#if msg.webSearch}
-												<span class="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
-													<Globe size={11} class="stroke-[2.5]" />
-													Riset Web Live
-												</span>
+											{#if msg.content && !msg.isStreaming}
+												<button
+													type="button"
+													onclick={() => handleCopy(msg.id, msg.content)}
+													class="flex cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 active:scale-95"
+													title="Salin analisis"
+												>
+													{#if copiedId === msg.id}
+														<Check size={11} class="text-emerald-600 stroke-[2.5]" />
+														<span class="text-emerald-600">Tersalin</span>
+													{:else}
+														<Copy size={11} class="stroke-[2.2]" />
+														<span>Salin</span>
+													{/if}
+												</button>
 											{/if}
 										</div>
+									{/if}
 
-										{#if msg.content && !msg.isStreaming}
-											<button
-												type="button"
-												onclick={() => handleCopy(msg.id, msg.content)}
-												class="flex cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
-												title="Salin isi analisis"
-											>
-												{#if copiedId === msg.id}
-													<Check size={12} class="text-emerald-600 stroke-[2.5]" />
-													<span class="text-emerald-600">Tersalin!</span>
-												{:else}
-													<Copy size={12} class="stroke-[2.2]" />
-													<span>Salin</span>
-												{/if}
-											</button>
-										{/if}
-									</div>
-
-									<!-- Skeleton Loading State -->
 									{#if msg.isStreaming && !msg.content}
-										<div class="space-y-2 py-2">
-											<div class="flex items-center gap-2">
-												<div class="flex items-center gap-1">
-													<span class="h-2 w-2 animate-bounce rounded-full bg-slate-900"></span>
-													<span class="h-2 w-2 animate-bounce rounded-full bg-slate-900 [animation-delay:0.15s]"></span>
-													<span class="h-2 w-2 animate-bounce rounded-full bg-slate-900 [animation-delay:0.3s]"></span>
-												</div>
-												<span class="text-xs font-bold text-slate-700">
-													{msg.webSearch
-														? 'Menghubungkan ke web pencarian & menganalisis tren...'
-														: 'Menghitung kalkulasi SQL & merumuskan strategi bisnis...'}
-												</span>
+										<div class="flex items-center gap-2 py-1">
+											<div class="flex items-center gap-1.5">
+												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600"></span>
+												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.15s]"></span>
+												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.3s]"></span>
 											</div>
-											<div class="h-3 w-4/5 animate-pulse rounded bg-slate-100"></div>
-											<div class="h-3 w-3/5 animate-pulse rounded bg-slate-100"></div>
+											<span class="text-xs font-bold text-slate-500">
+												{msg.webSearch ? 'Mencari data tren web...' : 'Menganalisis data transaksi toko...'}
+											</span>
 										</div>
 									{:else}
-										<!-- Konten Analisis Markdown -->
 										<div class="prose prose-sm max-w-none text-slate-800">
 											{@html renderMarkdown(msg.content)}
 										</div>
 										{#if msg.isStreaming}
-											<span class="inline-block h-4 w-1.5 animate-pulse rounded-full bg-rose-500 align-middle"></span>
+											<span class="inline-block h-3.5 w-1 animate-pulse rounded-full bg-pink-500 align-middle"></span>
 										{/if}
 									{/if}
 
-									<div class="mt-3.5 border-t border-slate-100 pt-2 text-[10px] text-slate-400">
-										Data terisolasi cabang {selectedBranch.value || 'aktif'}. Kalkulasi keuangan dihitung otomatis oleh SQL D1.
+									<div class="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-400">
+										Analisis AI berbasis data cabang {selectedBranch.value || 'terpilih'}.
 									</div>
 								</div>
 							</div>
 						{/if}
 					{/each}
 
-					<!-- Saran Pertanyaan Lanjutan Ringkas -->
+					<!-- Saran Pertanyaan Lanjutan -->
 					{#if !isStreaming}
-						<div class="mt-2 space-y-1.5 pt-1">
-							<span class="px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Lanjutkan Analisis:</span>
-							<div class="flex flex-wrap gap-1.5">
-								{#each quickFollowUps as item}
-									<button
-										type="button"
-										onclick={() => handleAiAsk(item.query)}
-										class="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-700 shadow-2xs transition-all hover:border-slate-400 hover:bg-slate-50 active:scale-95"
-									>
-										{item.label}
-									</button>
-								{/each}
-							</div>
+						<div class="mt-1 flex flex-wrap gap-1.5 pt-1">
+							{#each quickFollowUps as item}
+								<button
+									type="button"
+									onclick={() => handleAiAsk(item.query)}
+									class="cursor-pointer rounded-full border border-pink-200 bg-white px-3 py-1 text-[11px] font-bold text-pink-700 shadow-2xs hover:bg-pink-50 active:scale-95"
+								>
+									{item.label}
+								</button>
+							{/each}
 						</div>
 					{/if}
 				{/if}
 			</div>
 
-			<!-- Input Bar Bawah -->
-			<div class="border-t border-slate-200/80 bg-white p-3 sm:p-4">
+			<!-- Input Bar Bawah Berwarna Tema Pink -->
+			<div class="border-t border-pink-100/80 bg-white p-3 sm:p-4">
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
 						handleAiAsk(aiQuestion);
 					}}
-					class="flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-1.5 focus-within:border-slate-800 focus-within:bg-white focus-within:ring-2 focus-within:ring-slate-900/5 transition-all"
+					class="flex items-center gap-2"
 				>
 					<input
 						type="text"
-						placeholder="Ketik pertanyaan bisnis, kalkulasi margin, atau riset web..."
+						placeholder="Ketik pertanyaan untuk asisten AI..."
 						bind:value={aiQuestion}
 						disabled={isStreaming}
-						class="flex-1 bg-transparent px-3 py-1.5 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-60 sm:text-sm"
+						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-4 py-2.5 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none disabled:opacity-60 sm:text-sm"
 					/>
 					{#if isStreaming}
 						<button
 							type="button"
 							onclick={handleStopStreaming}
-							class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-rose-600 text-white shadow-xs transition-all hover:bg-rose-700 active:scale-95"
+							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-rose-500 text-white shadow-md shadow-rose-500/25 transition-all hover:bg-rose-600 active:scale-95"
 							title="Hentikan respons"
 							aria-label="Hentikan respons"
 						>
-							<Square size={13} class="fill-current" />
+							<Square size={14} class="fill-current" />
 						</button>
 					{:else}
 						<button
 							type="submit"
 							disabled={!aiQuestion.trim() || isAiLoading}
-							class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs transition-all hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
 							aria-label="Kirim pertanyaan"
 						>
-							<Send size={15} class="stroke-[2.4]" />
+							<Send size={16} class="stroke-[2.5]" />
 						</button>
 					{/if}
 				</form>
-				<div class="mt-2 flex items-center justify-between px-1 text-[10px] text-slate-400">
-					<span>Kueri D1 SQL &bull; MiniMax M3 &bull; Web Browsing</span>
-					<span>ESC untuk tutup</span>
-				</div>
 			</div>
 		</div>
 	</div>
