@@ -215,14 +215,17 @@ async function callOpenRouterStream(
 	});
 }
 
-/** Bersihkan markdown code-fence (```json ... ```) dari output AI. */
-function stripJsonFence(content: string): string {
+/** Bersihkan markdown code-fence atau teks percakapan dan ekstrak object JSON murni. */
+function extractJsonFromText(content: string): string {
 	let clean = content.trim();
-	if (clean.startsWith('```json')) {
-		clean = clean.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+	const fenceMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+	if (fenceMatch) {
+		clean = fenceMatch[1].trim();
 	}
-	if (clean.startsWith('```')) {
-		clean = clean.replace(/^```\s*/, '').replace(/\s*```$/, '');
+	const firstBrace = clean.indexOf('{');
+	const lastBrace = clean.lastIndexOf('}');
+	if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+		clean = clean.slice(firstBrace, lastBrace + 1).trim();
 	}
 	return clean;
 }
@@ -384,7 +387,7 @@ function fastResolveRequirements(question: string, todayWita: string): DataRequi
 		};
 	}
 
-	// 9. Konsultasi Strategi Bisnis, Menu Engineering & Psikologi Harga
+	// 9. Konsultasi Strategi Bisnis, Rekomendasi, Tips & Pertumbuhan Toko
 	if (
 		q.includes('strategi') ||
 		q.includes('psikologi') ||
@@ -392,17 +395,37 @@ function fastResolveRequirements(question: string, todayWita: string): DataRequi
 		q.includes('anchoring') ||
 		q.includes('bundling') ||
 		q.includes('marketing') ||
-		q.includes('cara menaikkan') ||
-		q.includes('rekomendasi harga') ||
+		q.includes('cara') ||
+		q.includes('harus apa') ||
+		q.includes('apa yang harus') ||
+		q.includes('saran') ||
+		q.includes('rekomendasi') ||
+		q.includes('menurutmu') ||
+		q.includes('pendapatmu') ||
+		q.includes('gimana') ||
+		q.includes('bagaimana') ||
+		q.includes('maju') ||
+		q.includes('laris') ||
+		q.includes('ramai') ||
+		q.includes('sepi') ||
+		q.includes('kaya') ||
+		q.includes('sukses') ||
+		q.includes('tingkatkan') ||
+		q.includes('kembangkan') ||
+		q.includes('evaluasi') ||
+		q.includes('solusi') ||
+		q.includes('ide') ||
+		q.includes('tips') ||
+		q.includes('bantu') ||
 		q.includes('menu engineering') ||
 		q.includes('promosi')
 	) {
 		return {
 			periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
-			jenisData: ['produk_terlaris', 'transaksi_kasir', 'financial_summary'],
+			jenisData: ['produk_terlaris', 'transaksi_kasir', 'financial_summary', 'hpp_margin', 'stok_bahan'],
 			prioritas: 'strategic_consulting',
 			scope: 'market_analysis',
-			reasoning: 'Shortcut Heuristik: Konsultasi strategi bisnis FnB dan psikologi harga'
+			reasoning: 'Shortcut Heuristik: Konsultasi strategi bisnis FnB dan pertumbuhan toko'
 		};
 	}
 
@@ -479,7 +502,14 @@ function fastResolveRequirements(question: string, todayWita: string): DataRequi
 		};
 	}
 
-	return null;
+	// 14. Fallback Default untuk Pertanyaan Terbuka / Konsultasi Bebas
+	return {
+		periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
+		jenisData: ['buku_kas', 'transaksi_kasir', 'produk_terlaris', 'financial_summary', 'hpp_margin', 'stok_bahan'],
+		prioritas: 'strategic_consulting',
+		scope: 'general_analysis',
+		reasoning: 'Shortcut Heuristik: Analisis komprehensif data bisnis bulan berjalan'
+	};
 }
 
 /** Deteksi apakah pertanyaan memerlukan riset eksternal ke web/internet */
@@ -527,12 +557,31 @@ function isStrategicQuestion(question: string): boolean {
 		'bundling',
 		'charm pricing',
 		'menu engineering',
-		'cara menaikkan omzet',
-		'tingkatkan penjualan',
+		'cara',
+		'harus apa',
+		'apa yang harus',
+		'saran',
+		'menurutmu',
+		'pendapatmu',
+		'gimana',
+		'bagaimana',
+		'maju',
+		'laris',
+		'ramai',
+		'sepi',
+		'kaya',
+		'sukses',
+		'tingkatkan',
+		'kembangkan',
+		'evaluasi',
+		'solusi',
+		'ide',
+		'bantu',
 		'digital marketing',
 		'local seo',
 		'reciprocity',
-		'loss aversion'
+		'loss aversion',
+		'promosi'
 	];
 	return keywords.some((kw) => q.includes(kw));
 }
@@ -617,7 +666,7 @@ async function clearBusinessMemory(rawDb: ReturnType<typeof getRawDb>, branch: s
 		.run();
 }
 
-// [CATATAN]: AI 1: Data Requirement Analyzer (didukung konteks multi-turn)
+// [CATATAN]: AI 1: Data Requirement Analyzer (didukung konteks multi-turn & auto-fallback aman)
 async function identifyDataRequirements(
 	question: string,
 	apiKey: string,
@@ -625,32 +674,40 @@ async function identifyDataRequirements(
 ): Promise<DataRequirements> {
 	const now = new Date();
 	const todayWita = toYMDWita(now);
-
-	const messages: ChatMessage[] = [
-		{
-			role: 'system',
-			content: buildIdentifyDataRequirementsPrompt(question, todayWita, recentContext)
-		},
-		{
-			role: 'user',
-			content: question
-		}
-	];
-
-	const content =
-		(await callOpenRouter(apiKey, messages, {
-			title: 'Zatiaras POS - Data Requirement Analyzer',
-			maxTokens: 500,
-			temperature: 0.2,
-			errorLabel: 'AI 1 Error'
-		})) || '{}';
+	const currentMonthStart = `${todayWita.slice(0, 7)}-01`;
 
 	try {
-		const cleanContent = stripJsonFence(content);
+		const messages: ChatMessage[] = [
+			{
+				role: 'system',
+				content: buildIdentifyDataRequirementsPrompt(question, todayWita, recentContext)
+			},
+			{
+				role: 'user',
+				content: question
+			}
+		];
+
+		const content =
+			(await callOpenRouter(apiKey, messages, {
+				title: 'Zatiaras POS - Data Requirement Analyzer',
+				maxTokens: 500,
+				temperature: 0.2,
+				errorLabel: 'AI 1 Error'
+			})) || '{}';
+
+		const cleanContent = extractJsonFromText(content);
 		const parsed: unknown = JSON.parse(cleanContent);
 		return parseDataRequirements(parsed, todayWita);
 	} catch (error) {
-		throw new Error(`AI 1 gagal mengidentifikasi kebutuhan data: ${error}`);
+		console.warn('[AI Chat] identifyDataRequirements gagal/timeout, fallback aman:', error);
+		return {
+			periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
+			jenisData: ['buku_kas', 'transaksi_kasir', 'produk_terlaris', 'financial_summary', 'hpp_margin', 'stok_bahan'],
+			prioritas: 'strategic_consulting',
+			scope: 'general_analysis',
+			reasoning: 'Fallback otomatis: Analisis komprehensif bisnis Zatiaras'
+		};
 	}
 }
 
@@ -784,7 +841,7 @@ async function analyzeTransactionText(
 		})) || '{}';
 
 	try {
-		const cleanContent = stripJsonFence(content);
+		const cleanContent = extractJsonFromText(content);
 		const parsed = JSON.parse(cleanContent);
 		return {
 			transactions: parsed.transactions || [],
@@ -1370,10 +1427,15 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 			webSearch: shouldSearchWeb
 		});
 	} catch (error) {
+		console.error('[AI Chat 500 Error]', error);
+		const errorMsg =
+			error instanceof Error && error.message
+				? error.message
+				: 'Terjadi kesalahan saat memproses pertanyaan. Silakan coba lagi.';
 		return json(
 			{
 				success: false,
-				error: 'Terjadi kesalahan saat memproses pertanyaan. Silakan coba lagi.',
+				error: errorMsg,
 				code: 'SERVER_ERROR'
 			},
 			{ status: 500 }
