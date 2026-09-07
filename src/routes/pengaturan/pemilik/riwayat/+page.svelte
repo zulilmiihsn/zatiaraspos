@@ -111,17 +111,22 @@
 
 	async function updatePaymentMethod(newMethod: string) {
 		if (!selectedTransaksi) return;
-		const currentMethod = selectedTransaksi.metode_bayar;
-		const dbMethod = newMethod === 'qris' ? 'non-tunai' : newMethod;
-		if (currentMethod === dbMethod) return;
+		const currentNormalized =
+			selectedTransaksi.metode_bayar === 'qris' || selectedTransaksi.metode_bayar === 'non-tunai'
+				? 'non-tunai'
+				: 'tunai';
+		const targetNormalized =
+			newMethod === 'qris' || newMethod === 'non-tunai' ? 'non-tunai' : 'tunai';
+		if (currentNormalized === targetNormalized) return;
+
 		loading = true;
 		try {
 			await transactionService.updateRows(
 				'buku_kas',
-				{ metode_bayar: dbMethod },
+				{ metode_bayar: targetNormalized },
 				{ id: selectedTransaksi.id }
 			);
-			selectedTransaksi = { ...selectedTransaksi, metode_bayar: dbMethod };
+			selectedTransaksi = { ...selectedTransaksi, metode_bayar: targetNormalized };
 			toastManager.showToastNotification('Jenis pembayaran berhasil diubah.', 'success');
 			await fetchTransaksiHariIni();
 		} catch (e) {

@@ -126,13 +126,176 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	await requirePageAccess(rawDb, session, 'catat');
 	const existing = (await rawDb
-		.prepare('SELECT id, sumber FROM buku_kas WHERE cabang_id = ? AND id = ? LIMIT 1')
+		.prepare(
+			'SELECT id, sumber, transaction_id, nominal, waktu, metode_bayar FROM buku_kas WHERE cabang_id = ? AND id = ? LIMIT 1'
+		)
 		.bind(branch, String(body.where.id))
-		.first()) as { id: string; sumber?: string } | null;
+		.first()) as {
+		id: string;
+		sumber?: string;
+		transaction_id?: string;
+		nominal?: number;
+		waktu?: string;
+		metode_bayar?: string;
+	} | null;
 	if (!existing) throw kitError(404, 'Entri buku kas tidak ditemukan');
-	if (containsPosLedger([existing]) || containsPosLedger([body.payload])) {
+
+	const isPos = String(existing.sumber || '').toLowerCase() === 'pos';
+	const payloadObj = body.payload as Record<string, unknown>;
+	const payloadKeys = Object.keys(payloadObj).filter((k) => k !== 'updated_at');
+	const isOnlyUpdatingPaymentMethod =
+		payloadKeys.length === 1 && payloadKeys[0] === 'metode_bayar';
+
+	if (isPos && !isOnlyUpdatingPaymentMethod) {
 		throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
 	}
+	if (containsPosLedger([body.payload])) {
+		throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
+	}
+
+	if (isPos && isOnlyUpdatingPaymentMethod) {
+		const oldMethod =
+			String(existing.metode_bayar || '').toLowerCase() === 'tunai' ? 'tunai' : 'non-tunai';
+		const newMethod =
+			String(payloadObj.metode_bayar || '').toLowerCase() === 'tunai' ? 'tunai' : 'non-tunai';
+
+		if (oldMethod !== newMethod) {
+			const now = new Date().toISOString();
+			const statements = [];
+
+			// 1. Update buku_kas (by id atau by transaction_id jika ada)
+			if (existing.transaction_id) {
+				statements.push(
+					rawDb
+						.prepare(
+							'UPDATE buku_kas SET metode_bayar = ?, updated_at = ? WHERE cabang_id = ? AND transaction_id = ?'
+						)
+						.bind(newMethod, now, branch, existing.transaction_id)
+				);
+			} else {
+				statements.push(
+					rawDb
+						.prepare(
+							'UPDATE buku_kas SET metode_bayar = ?, updated_at = ? WHERE cabang_id = ? AND id = ?'
+						)
+						.bind(newMethod, now, branch, String(body.where.id))
+				);
+			}
+
+			// 2. Adjust ringkasan_penjualan_harian
+			const gross = Number(existing.nominal || 0);
+			const salesDateRow = (await rawDb
+				.prepare("SELECT date(datetime(?, '+8 hours')) AS tanggal_penjualan")
+				.bind(existing.waktu || now)
+				.first()) as { tanggal_penjualan?: string } | null;
+			const salesDate = salesDateRow?.tanggal_penjualan;
+
+			if (salesDate && gross > 0) {
+				if (newMethod === 'non-tunai') {
+					statements.push(
+						rawDb
+							.prepare(
+								`UPDATE ringkasan_penjualan_harian SET
+									penjualan_tunai = MAX(0, penjualan_tunai - ?),
+									penjualan_nontunai = penjualan_nontunai + ?,
+									updated_at = ?
+								WHERE cabang_id = ? AND tanggal_penjualan = ?`
+							)
+							.bind(gross, gross, now, branch, salesDate)
+					);
+				} else {
+					statements.push(
+						rawDb
+							.prepare(
+								`UPDATE ringkasan_penjualan_harian SET
+									penjualan_nontunai = MAX(0, penjualan_nontunai - ?),
+									penjualan_tunai = penjualan_tunai + ?,
+									updated_at = ?
+								WHERE cabang_id = ? AND tanggal_penjualan = ?`
+							)
+							.bind(gross, gross, now, branch, salesDate)
+					);
+				}
+
+				// 3. Adjust penjualan_produk_harian jika ada transaction_id
+				if (existing.transaction_id) {
+					const products = (
+						(await rawDb
+							.prepare(
+								`SELECT COALESCE(produk_id, 'custom:' || nama_produk) AS produk_id,
+										COALESCE(SUM(nominal), 0) AS gross
+								 FROM transaksi_kasir
+								 WHERE cabang_id = ? AND transaction_id = ?
+								 GROUP BY COALESCE(produk_id, 'custom:' || nama_produk)`
+							)
+							.bind(branch, existing.transaction_id)
+							.all()) as { results?: Array<{ produk_id?: string; gross?: number }> }
+					).results || [];
+
+					for (const p of products) {
+						if (!p.produk_id) continue;
+						const itemGross = Number(p.gross || 0);
+						if (newMethod === 'non-tunai') {
+							statements.push(
+								rawDb
+									.prepare(
+										`UPDATE penjualan_produk_harian SET
+											penjualan_tunai = MAX(0, penjualan_tunai - ?),
+											penjualan_nontunai = penjualan_nontunai + ?,
+											updated_at = ?
+										WHERE cabang_id = ? AND tanggal_penjualan = ? AND produk_id = ?`
+									)
+									.bind(itemGross, itemGross, now, branch, salesDate, p.produk_id)
+							);
+						} else {
+							statements.push(
+								rawDb
+									.prepare(
+										`UPDATE penjualan_produk_harian SET
+											penjualan_nontunai = MAX(0, penjualan_nontunai - ?),
+											penjualan_tunai = penjualan_tunai + ?,
+											updated_at = ?
+										WHERE cabang_id = ? AND tanggal_penjualan = ? AND produk_id = ?`
+									)
+									.bind(itemGross, itemGross, now, branch, salesDate, p.produk_id)
+							);
+						}
+					}
+				}
+			}
+
+			if (statements.length > 0) {
+				await rawDb.batch(statements);
+			}
+
+			await publish(platform, branch, 'buku_kas', 'update', {
+				id: body.where.id,
+				transaction_id: existing.transaction_id
+			});
+			if (existing.transaction_id) {
+				await publish(platform, branch, 'transaksi_kasir', 'update', {
+					transaction_id: existing.transaction_id
+				});
+			}
+			await auditDataChange(
+				rawDb,
+				branch,
+				session,
+				'buku_kas',
+				'update_metode_bayar',
+				body.where.id,
+				{
+					transaction_id: existing.transaction_id,
+					from: oldMethod,
+					to: newMethod
+				}
+			);
+			return json({ ok: true });
+		} else {
+			return json({ ok: true });
+		}
+	}
+
 	await db
 		.update(bukuKas)
 		.set(sanitizeUpdatePayload(body.payload as Partial<typeof bukuKas.$inferInsert>))
