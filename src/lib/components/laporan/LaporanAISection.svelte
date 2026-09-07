@@ -4,7 +4,8 @@
 	import { selectedBranch } from '$lib/stores/selectedBranch.svelte';
 	import { getApiErrorMessage, reportApiFailure } from '$lib/utils/errorHandling';
 	import { fetchWithCsrfRetry } from '$lib/utils/csrf';
-	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import Bot from '@lucide/svelte/icons/bot';
+	import BotMessageSquare from '@lucide/svelte/icons/bot-message-square';
 	import X from '@lucide/svelte/icons/x';
 	import Send from '@lucide/svelte/icons/send';
 	import Trophy from '@lucide/svelte/icons/trophy';
@@ -435,7 +436,7 @@
 		aria-label="Buka Asisten AI"
 	>
 		<div class="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 shadow-2xs">
-			<Sparkles class="h-4 w-4 stroke-[2.5] text-white animate-pulse" />
+			<BotMessageSquare class="h-4 w-4 stroke-[2.2] text-white" />
 		</div>
 		<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tanya AI</span>
 	</button>
@@ -462,7 +463,7 @@
 				<div class="relative z-10 flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 shadow-xs backdrop-blur-md">
-							<Sparkles class="h-5 w-5 stroke-[2.5] text-white" />
+							<BotMessageSquare class="h-5 w-5 stroke-[2.2] text-white" />
 						</div>
 						<div>
 							<h3 class="text-sm font-black tracking-tight text-white sm:text-base">Asisten AI Zatiaras</h3>
@@ -506,7 +507,7 @@
 					<!-- Welcome State Sederhana & Ramah -->
 					<div class="flex flex-col items-center py-3 text-center">
 						<div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-pink-100 bg-pink-50 text-pink-600 shadow-2xs">
-							<Sparkles size={24} class="stroke-[2.2]" />
+							<Bot size={24} class="stroke-[2.2]" />
 						</div>
 						<h4 class="text-sm font-black text-slate-900 sm:text-base">Ada yang bisa dibantu?</h4>
 						<p class="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
@@ -557,9 +558,9 @@
 							<div class="flex items-start gap-2 sm:gap-2.5 w-full min-w-0">
 								<div class="mt-1 flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs">
 									{#if msg.isStreaming}
-										<Sparkles size={15} class="animate-spin stroke-[2.2]" />
+										<Bot size={15} class="animate-bounce stroke-[2.2]" />
 									{:else}
-										<Sparkles size={15} class="stroke-[2.2]" />
+										<Bot size={15} class="stroke-[2.2]" />
 									{/if}
 								</div>
 								<div class="flex-1 min-w-0 rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-sm overflow-hidden">
