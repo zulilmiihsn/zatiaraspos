@@ -27,6 +27,24 @@ const DEFAULT_MODEL = 'minimax/minimax-m3:free';
 const FALLBACK_MODEL = 'google/gemma-4-31b-it:free';
 const MODEL = env.AI_MODEL || env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
+function getOpenRouterApiKey(platform: any): string | undefined {
+	return (
+		((platform?.env as Record<string, unknown> | undefined)?.OPENROUTER_API_KEY as string) ||
+		env.OPENROUTER_API_KEY
+	);
+}
+
+function getOpenRouterModel(platform: any): string {
+	const platformEnv = platform?.env as Record<string, unknown> | undefined;
+	return (
+		(platformEnv?.AI_MODEL as string) ||
+		(platformEnv?.OPENROUTER_MODEL as string) ||
+		env.AI_MODEL ||
+		env.OPENROUTER_MODEL ||
+		DEFAULT_MODEL
+	);
+}
+
 const AI_WINDOW_MS = 15 * 60 * 1000;
 const AI_MAX_REQUESTS = 40;
 const OPENROUTER_TIMEOUT_MS = 25_000;
@@ -852,7 +870,7 @@ async function handleTransactionAnalysis(event: import('./$types').RequestEvent)
 			);
 		}
 
-		const apiKey = env.OPENROUTER_API_KEY;
+		const apiKey = getOpenRouterApiKey(event.platform);
 		if (!apiKey) {
 			return json(
 				{
@@ -920,13 +938,13 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 			);
 		}
 
-		const apiKey = env.OPENROUTER_API_KEY;
+		const apiKey = getOpenRouterApiKey(event.platform);
 		if (!apiKey) {
 			return json(
 				{
 					success: false,
 					error:
-						'API key OpenRouter tidak dikonfigurasi. Silakan tambahkan OPENROUTER_API_KEY di file .env',
+						'API key OpenRouter tidak dikonfigurasi. Silakan tambahkan OPENROUTER_API_KEY di file .env atau Cloudflare Secrets',
 					code: 'SERVICE_UNAVAILABLE'
 				},
 				{ status: 500 }

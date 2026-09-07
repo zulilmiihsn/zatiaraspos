@@ -81,7 +81,7 @@ async function parseWithAi(text: string, apiKey: string): Promise<ParsedPurchase
 		.filter((item) => item.nama && item.purchase_qty > 0 && item.purchase_cost > 0);
 }
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const session = requireAuthSession(locals);
 	requireAnyRole(session.role, ['pemilik']);
 	const body = (await request.json().catch(() => null)) as { text?: string } | null;
@@ -90,7 +90,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.slice(0, 2000);
 	if (!text) return json({ ok: true, source: 'ai', items: [] });
 
-	const apiKey = env.OPENROUTER_API_KEY;
+	const apiKey =
+		((platform?.env as Record<string, unknown> | undefined)?.OPENROUTER_API_KEY as string) ||
+		env.OPENROUTER_API_KEY;
 	if (!apiKey) {
 		throw kitError(503, 'AI belum aktif. Isi OPENROUTER_API_KEY atau input bahan manual.');
 	}
