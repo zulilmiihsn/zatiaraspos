@@ -297,7 +297,13 @@
 
 	async function handleAiAsk(question: string) {
 		const cleanQ = question.trim();
-		if (!cleanQ || isAiLoading || isStreaming) return;
+		if (!cleanQ) return;
+
+		// Jika sedang streaming atau proses lama, batalkan dulu sebelum kirim pertanyaan baru
+		if (abortController) {
+			abortController.abort();
+			abortController = null;
+		}
 
 		aiQuestion = '';
 		showAiModal = true;
@@ -657,29 +663,28 @@
 						type="text"
 						placeholder="Ketik pertanyaan untuk asisten AI..."
 						bind:value={aiQuestion}
-						disabled={isStreaming}
-						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-3.5 py-2 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
+						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-3.5 py-2 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none sm:px-4 sm:py-2.5 sm:text-sm"
 					/>
 					{#if isStreaming}
 						<button
 							type="button"
 							onclick={handleStopStreaming}
 							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-rose-500 text-white shadow-md shadow-rose-500/25 transition-all hover:bg-rose-600 active:scale-95"
-							title="Hentikan respons"
-							aria-label="Hentikan respons"
+							title="Hentikan respons AI"
+							aria-label="Hentikan respons AI"
 						>
 							<Square size={14} class="fill-current" />
 						</button>
-					{:else}
-						<button
-							type="submit"
-							disabled={!aiQuestion.trim() || isAiLoading}
-							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-							aria-label="Kirim pertanyaan"
-						>
-							<Send size={16} class="stroke-[2.5]" />
-						</button>
 					{/if}
+					<button
+						type="submit"
+						disabled={!aiQuestion.trim()}
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+						title={isStreaming ? "Kirim pertanyaan baru" : "Kirim pertanyaan"}
+						aria-label="Kirim pertanyaan"
+					>
+						<Send size={16} class="stroke-[2.5]" />
+					</button>
 				</form>
 			</div>
 		</div>
