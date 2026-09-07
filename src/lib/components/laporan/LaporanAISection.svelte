@@ -117,13 +117,13 @@
 
 		const flushTable = () => {
 			if (!inTable) return;
-			html += '<div class="my-3 overflow-x-auto rounded-xl border border-pink-100 bg-white shadow-2xs">';
-			html += '<table class="w-full border-collapse text-left text-xs text-slate-700">';
+			html += '<div class="my-2.5 w-full max-w-full overflow-x-auto rounded-xl border border-pink-100 bg-white shadow-2xs">';
+			html += '<table class="min-w-full border-collapse text-left text-xs text-slate-700">';
 			if (tableHeaders.length > 0) {
-				html += '<thead class="border-b border-pink-100 bg-pink-50/60 text-[11px] font-bold text-pink-700 uppercase tracking-wider">';
+				html += '<thead class="border-b border-pink-100 bg-pink-50/70 text-[10px] sm:text-[11px] font-bold text-pink-700 uppercase tracking-wider">';
 				html += '<tr>';
 				for (const h of tableHeaders) {
-					html += `<th class="px-3 py-2.5 whitespace-nowrap">${h}</th>`;
+					html += `<th class="px-2.5 py-2 whitespace-nowrap">${h}</th>`;
 				}
 				html += '</tr></thead>';
 			}
@@ -131,7 +131,7 @@
 			for (const row of tableRows) {
 				html += '<tr class="transition-colors hover:bg-pink-50/30">';
 				for (const cell of row) {
-					html += `<td class="px-3 py-2 leading-relaxed">${cell}</td>`;
+					html += `<td class="px-2.5 py-1.5 leading-snug whitespace-nowrap sm:whitespace-normal">${cell}</td>`;
 				}
 				html += '</tr>';
 			}
@@ -153,7 +153,7 @@
 			t = t.replace(/\*(.*?)\*/g, '<em class="text-slate-600 italic">$1</em>');
 			t = t.replace(
 				/`([^`]+)`/g,
-				'<code class="rounded bg-pink-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-pink-700">$1</code>'
+				'<code class="rounded bg-pink-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-pink-700 break-all">$1</code>'
 			);
 			return t;
 		};
@@ -190,17 +190,17 @@
 
 			if (/^###\s+/.test(line)) {
 				flushList();
-				html += `<h4 class="mt-3 mb-1 text-xs font-black uppercase tracking-wider text-pink-700">${inlineFormat(line.replace(/^###\s+/, ''))}</h4>`;
+				html += `<h4 class="mt-3 mb-1 text-xs font-black uppercase tracking-wider text-pink-700 break-words">${inlineFormat(line.replace(/^###\s+/, ''))}</h4>`;
 				continue;
 			}
 			if (/^##\s+/.test(line)) {
 				flushList();
-				html += `<h3 class="mt-3.5 mb-1.5 text-sm font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^##\s+/, ''))}</h3>`;
+				html += `<h3 class="mt-3.5 mb-1.5 text-sm font-black tracking-tight text-slate-900 break-words">${inlineFormat(line.replace(/^##\s+/, ''))}</h3>`;
 				continue;
 			}
 			if (/^#\s+/.test(line)) {
 				flushList();
-				html += `<h2 class="mt-4 mb-2 text-base font-black tracking-tight text-slate-900">${inlineFormat(line.replace(/^#\s+/, ''))}</h2>`;
+				html += `<h2 class="mt-4 mb-2 text-base font-black tracking-tight text-slate-900 break-words">${inlineFormat(line.replace(/^#\s+/, ''))}</h2>`;
 				continue;
 			}
 
@@ -209,7 +209,7 @@
 					html += '<ul class="my-2 space-y-1 pl-4 list-disc text-xs sm:text-sm text-slate-700">';
 					inList = true;
 				}
-				html += `<li class="leading-relaxed">${inlineFormat(line.replace(/^[-\*]\s+/, ''))}</li>`;
+				html += `<li class="leading-relaxed break-words">${inlineFormat(line.replace(/^[-\*]\s+/, ''))}</li>`;
 				continue;
 			} else if (inList) {
 				flushList();
@@ -217,7 +217,7 @@
 
 			if (!line) continue;
 
-			html += `<p class="my-1.5 text-xs sm:text-sm leading-relaxed text-slate-700">${inlineFormat(line)}</p>`;
+			html += `<p class="my-1.5 text-xs sm:text-sm leading-relaxed text-slate-700 break-words">${inlineFormat(line)}</p>`;
 		}
 
 		flushList();
@@ -445,7 +445,7 @@
 {#if showAiModal}
 	<div
 		use:portal
-		class="z-dialog fixed inset-0 flex items-center justify-center bg-black/50 p-3 sm:p-5 backdrop-blur-xs"
+		class="z-dialog fixed inset-0 flex flex-col items-center justify-center bg-black/60 p-3 sm:p-5 backdrop-blur-xs overflow-hidden"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
 		role="dialog"
@@ -454,7 +454,7 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="flex h-[90vh] sm:h-[640px] w-full max-w-lg flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl transition-all duration-200"
+			class="flex h-[78dvh] max-h-[78dvh] sm:h-[620px] sm:max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] sm:rounded-[32px] bg-white shadow-2xl transition-all duration-200"
 			transition:scale={{ duration: 220, start: 0.95, easing: cubicOut }}
 		>
 			<!-- Header Modal Gradien Pink Khas Zatiaras -->
@@ -547,22 +547,22 @@
 					{#each messages as msg (msg.id)}
 						{#if msg.role === 'user'}
 							<!-- Bubble Pertanyaan User -->
-							<div class="flex justify-end">
-								<div class="max-w-[85%] rounded-2xl rounded-tr-xs bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm sm:text-sm">
+							<div class="flex justify-end w-full">
+								<div class="max-w-[85%] rounded-2xl rounded-tr-xs bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm sm:text-sm break-words">
 									{msg.content}
 								</div>
 							</div>
 						{:else}
 							<!-- Bubble Jawaban AI -->
-							<div class="flex items-start gap-2.5">
-								<div class="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs">
+							<div class="flex items-start gap-2 sm:gap-2.5 w-full min-w-0">
+								<div class="mt-1 flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs">
 									{#if msg.isStreaming}
-										<Sparkles size={16} class="animate-spin stroke-[2.2]" />
+										<Sparkles size={15} class="animate-spin stroke-[2.2]" />
 									{:else}
-										<Sparkles size={16} class="stroke-[2.2]" />
+										<Sparkles size={15} class="stroke-[2.2]" />
 									{/if}
 								</div>
-								<div class="flex-1 rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-4 shadow-sm">
+								<div class="flex-1 min-w-0 rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-sm overflow-hidden">
 									{#if (msg.dateRange?.start && msg.dateRange?.end) || msg.webSearch}
 										<div class="mb-2 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2">
 											<div class="flex flex-wrap items-center gap-1.5">
@@ -610,7 +610,7 @@
 											</span>
 										</div>
 									{:else}
-										<div class="prose prose-sm max-w-none text-slate-800">
+										<div class="prose prose-sm max-w-none text-slate-800 break-words [overflow-wrap:anywhere] min-w-0">
 											{@html renderMarkdown(msg.content)}
 										</div>
 										{#if msg.isStreaming}
@@ -644,7 +644,7 @@
 			</div>
 
 			<!-- Input Bar Bawah Berwarna Tema Pink -->
-			<div class="border-t border-pink-100/80 bg-white p-3 sm:p-4">
+			<div class="border-t border-pink-100/80 bg-white p-2.5 sm:p-4 pb-3 sm:pb-4">
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
@@ -657,7 +657,7 @@
 						placeholder="Ketik pertanyaan untuk asisten AI..."
 						bind:value={aiQuestion}
 						disabled={isStreaming}
-						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-4 py-2.5 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none disabled:opacity-60 sm:text-sm"
+						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-3.5 py-2 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
 					/>
 					{#if isStreaming}
 						<button
