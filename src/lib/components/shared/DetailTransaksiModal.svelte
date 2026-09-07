@@ -169,29 +169,24 @@
 
 				<!-- Metode Pembayaran (Readonly vs Editable) -->
 				<div class="rounded-2xl border border-pink-100/90 bg-[#fdf8fa] p-3 transition-colors">
-					<div class="flex items-center justify-between mb-1.5">
-						<div class="flex items-center gap-1.5 text-pink-500">
-							<CreditCard class="h-3.5 w-3.5 stroke-[2.2]" />
-							<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jenis Pembayaran</span>
-						</div>
-						{#if !readonly}
-							<span class="text-[10px] font-bold text-pink-600">Ketuk untuk ubah</span>
-						{/if}
+					<div class="flex items-center gap-1.5 text-pink-500 mb-1.5">
+						<CreditCard class="h-3.5 w-3.5 stroke-[2.2]" />
+						<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jenis Pembayaran</span>
 					</div>
 
 					{#if readonly}
 						<!-- Readonly Display -->
-						<div class="flex h-12 items-center justify-between rounded-xl border border-pink-100 bg-white px-4 shadow-2xs">
-							<span class="text-sm font-bold text-slate-800">
+						<div class="flex h-10 items-center justify-between rounded-xl border border-pink-100 bg-white px-3.5 shadow-2xs">
+							<span class="text-xs sm:text-sm font-bold text-slate-800">
 								{getNormalizedPayment(transaksi.metode_bayar)}
 							</span>
-							<span class="rounded-md border border-pink-200/70 bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-600">Terkunci</span>
+							<span class="rounded-md border border-pink-200/70 bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-600">Terkunci</span>
 						</div>
 					{:else}
 						<!-- Editable Dropdown Trigger -->
 						<button
 							type="button"
-							class="flex h-12 w-full cursor-pointer items-center justify-between rounded-xl border border-pink-200 bg-white px-4 text-left text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/40 hover:border-pink-300 active:scale-[0.99]"
+							class="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-pink-200 bg-white px-3.5 text-left text-xs sm:text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/40 hover:border-pink-300 active:scale-[0.99]"
 							onclick={() => (showDropdownPayment = true)}
 						>
 							<span>
@@ -201,7 +196,7 @@
 										(transaksi.metode_bayar === 'non-tunai' ? 'qris' : transaksi.metode_bayar)
 								)?.label || getNormalizedPayment(transaksi.metode_bayar)}
 							</span>
-							<ChevronDown class="h-4.5 w-4.5 text-pink-500 stroke-[2.5]" />
+							<ChevronDown class="h-4 w-4 text-pink-500 stroke-[2.5]" />
 						</button>
 
 						<DropdownSheet
@@ -222,16 +217,16 @@
 			<div class="flex items-center gap-2.5 border-t border-pink-100/90 bg-[#fdf8fa] p-4">
 				<button
 					type="button"
-					class="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-4 text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/60 hover:border-pink-300 disabled:opacity-50 active:scale-95"
+					class="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-3.5 text-xs sm:text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/60 hover:border-pink-300 disabled:opacity-50 active:scale-95"
 					onclick={() => onPrint?.()}
 					disabled={isPrinting}
 				>
-					<Printer class="h-4.5 w-4.5 stroke-[2.2] {isPrinting ? 'animate-spin' : ''}" />
+					<Printer class="h-4 w-4 stroke-[2.2] {isPrinting ? 'animate-spin' : ''}" />
 					<span>{isPrinting ? 'Memproses...' : 'Cetak Struk'}</span>
 				</button>
 				<button
 					type="button"
-					class="flex h-12 flex-1 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-4 text-sm font-black text-white shadow-md shadow-pink-500/20 transition-all hover:opacity-95 active:scale-95"
+					class="flex h-10 flex-1 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-3.5 text-xs sm:text-sm font-black text-white shadow-md shadow-pink-500/20 transition-all hover:opacity-95 active:scale-95"
 					onclick={() => onClose?.()}
 				>
 					Tutup
