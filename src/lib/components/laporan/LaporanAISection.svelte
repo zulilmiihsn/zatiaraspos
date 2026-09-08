@@ -696,7 +696,11 @@
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
-						handleAiAsk(aiQuestion);
+						if (isStreaming || isAiLoading) {
+							handleStopStreaming();
+						} else {
+							handleAiAsk(aiQuestion);
+						}
 					}}
 					class="flex items-center gap-2"
 				>
@@ -706,7 +710,7 @@
 						bind:value={aiQuestion}
 						class="flex-1 rounded-2xl border border-pink-200/90 bg-pink-50/40 px-3.5 py-2 text-xs font-bold text-slate-900 transition-colors focus:border-pink-500 focus:bg-white focus:outline-none sm:px-4 sm:py-2.5 sm:text-sm"
 					/>
-					{#if isStreaming}
+					{#if isStreaming || isAiLoading}
 						<button
 							type="button"
 							onclick={handleStopStreaming}
@@ -716,16 +720,17 @@
 						>
 							<Square size={14} class="fill-current" />
 						</button>
+					{:else}
+						<button
+							type="submit"
+							disabled={!aiQuestion.trim()}
+							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+							title="Kirim pertanyaan"
+							aria-label="Kirim pertanyaan"
+						>
+							<Send size={16} class="stroke-[2.5]" />
+						</button>
 					{/if}
-					<button
-						type="submit"
-						disabled={!aiQuestion.trim()}
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-						title={isStreaming ? 'Kirim pertanyaan baru' : 'Kirim pertanyaan'}
-						aria-label="Kirim pertanyaan"
-					>
-						<Send size={16} class="stroke-[2.5]" />
-					</button>
 				</form>
 			</div>
 		</div>
