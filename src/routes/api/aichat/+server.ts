@@ -20,8 +20,9 @@ import { fetchReportDataSql, buildReportContext } from './reportData';
 
 // [CATATAN]: OpenRouter / AI Model configuration
 const OPENROUTER_API_URL = env.AI_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'minimax/minimax-m3:free';
-const FALLBACK_MODEL = 'google/gemma-4-31b-it:free';
+const DEFAULT_MODEL = 'openrouter/free';
+const FALLBACK_MODEL = 'nvidia/nemotron-3.5-lightning:free';
+const SECONDARY_FALLBACK_MODEL = 'inclusionai/ling-3.0-flash-fin:free';
 const MODEL = env.AI_MODEL || env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
 function getOpenRouterApiKey(platform: any): string | undefined {
@@ -122,7 +123,10 @@ async function callOpenRouter(
 
 	if (!response.ok) {
 		// [CATATAN]: Coba model cadangan jika model utama gagal (429 atau 5xx)
-		if (targetModel !== FALLBACK_MODEL) {
+		const fallbackModels = [FALLBACK_MODEL, SECONDARY_FALLBACK_MODEL].filter(
+			(m) => m !== targetModel
+		);
+		for (const altModel of fallbackModels) {
 			try {
 				let fallbackRes = await fetch(OPENROUTER_API_URL, {
 					method: 'POST',
@@ -130,9 +134,9 @@ async function callOpenRouter(
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
 						'HTTP-Referer': 'https://zatiaraspos.com',
-						'X-Title': `${opts.title} (Fallback)`
+						'X-Title': `${opts.title} (Fallback ${altModel})`
 					},
-					body: buildPayload(FALLBACK_MODEL, Boolean(opts.tools?.length))
+					body: buildPayload(altModel, Boolean(opts.tools?.length))
 				});
 
 				if (!fallbackRes.ok && opts.tools && opts.tools.length > 0) {
@@ -142,9 +146,9 @@ async function callOpenRouter(
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
 							'HTTP-Referer': 'https://zatiaraspos.com',
-							'X-Title': `${opts.title} (Fallback No Tools)`
+							'X-Title': `${opts.title} (Fallback ${altModel} No Tools)`
 						},
-						body: buildPayload(FALLBACK_MODEL, false)
+						body: buildPayload(altModel, false)
 					});
 				}
 
@@ -1299,27 +1303,33 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 				} catch {}
 			}
 
-			if (!upstreamRes.ok && chatModel !== FALLBACK_MODEL) {
+			const streamFallbacks = [FALLBACK_MODEL, SECONDARY_FALLBACK_MODEL].filter(
+				(m) => m !== chatModel
+			);
+			for (const altModel of streamFallbacks) {
+				if (upstreamRes.ok && upstreamRes.body) break;
 				try {
 					upstreamRes = await callOpenRouterStream(apiKey, fullMessages, {
-						title: 'Zatiaras POS - Business Analyst (Fallback)',
+						title: `Zatiaras POS - Business Analyst (Fallback ${altModel})`,
 						maxTokens: 2500,
 						temperature: 0.6,
-						model: FALLBACK_MODEL,
+						model: altModel,
 						tools: webSearchTools
 					});
 					if (!upstreamRes.ok && webSearchTools) {
 						upstreamRes = await callOpenRouterStream(apiKey, fullMessages, {
-							title: 'Zatiaras POS - Business Analyst (Fallback No Tools)',
+							title: `Zatiaras POS - Business Analyst (Fallback ${altModel} No Tools)`,
 							maxTokens: 2500,
 							temperature: 0.6,
-							model: FALLBACK_MODEL
+							model: altModel
 						});
 					}
 				} catch {}
 			}
 
 			if (!upstreamRes.ok || !upstreamRes.body) {
+				const errText = await upstreamRes.text().catch(() => '');
+				console.error('[OpenRouter Stream Error]', upstreamRes.status, errText);
 				return json(
 					{
 						success: false,
