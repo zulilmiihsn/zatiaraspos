@@ -54,14 +54,7 @@ export const PUT: RequestHandler = async ({ request, url, platform, locals }) =>
 	const rawDb = getRawDb(platform, branch);
 	const rows = payloadRows(body.payload, branch);
 
-	const result = await replaceResepForProduct(
-		rawDb,
-		branch,
-		session,
-		platform,
-		productId,
-		rows
-	);
+	const result = await replaceResepForProduct(rawDb, branch, session, platform, productId, rows);
 	return json(result);
 };
 

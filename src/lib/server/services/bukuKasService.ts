@@ -137,8 +137,7 @@ export async function updateBukuKasRow(
 
 	const isPos = String(existing.sumber || '').toLowerCase() === 'pos';
 	const payloadKeys = Object.keys(payload).filter((k) => k !== 'updated_at');
-	const isOnlyUpdatingPaymentMethod =
-		payloadKeys.length === 1 && payloadKeys[0] === 'metode_bayar';
+	const isOnlyUpdatingPaymentMethod = payloadKeys.length === 1 && payloadKeys[0] === 'metode_bayar';
 
 	if (isPos && !isOnlyUpdatingPaymentMethod) {
 		throw kitError(409, POS_LEDGER_ROUTE_MESSAGE);
@@ -210,18 +209,19 @@ export async function updateBukuKasRow(
 				}
 
 				if (existing.transaction_id) {
-					const products = (
-						(await rawDb
-							.prepare(
-								`SELECT COALESCE(produk_id, 'custom:' || nama_produk) AS produk_id,
+					const products =
+						(
+							(await rawDb
+								.prepare(
+									`SELECT COALESCE(produk_id, 'custom:' || nama_produk) AS produk_id,
 										COALESCE(SUM(nominal), 0) AS gross
 								 FROM transaksi_kasir
 								 WHERE cabang_id = ? AND transaction_id = ?
 								 GROUP BY COALESCE(produk_id, 'custom:' || nama_produk)`
-							)
-							.bind(branch, existing.transaction_id)
-							.all()) as { results?: Array<{ produk_id?: string; gross?: number }> }
-					).results || [];
+								)
+								.bind(branch, existing.transaction_id)
+								.all()) as { results?: Array<{ produk_id?: string; gross?: number }> }
+						).results || [];
 
 					for (const p of products) {
 						if (!p.produk_id) continue;
@@ -268,19 +268,11 @@ export async function updateBukuKasRow(
 					transaction_id: existing.transaction_id
 				});
 			}
-			await auditDataChange(
-				rawDb,
-				branch,
-				session,
-				'buku_kas',
-				'update_metode_bayar',
-				id,
-				{
-					transaction_id: existing.transaction_id,
-					from: oldMethod,
-					to: newMethod
-				}
-			);
+			await auditDataChange(rawDb, branch, session, 'buku_kas', 'update_metode_bayar', id, {
+				transaction_id: existing.transaction_id,
+				from: oldMethod,
+				to: newMethod
+			});
 			return { ok: true };
 		}
 		return { ok: true };

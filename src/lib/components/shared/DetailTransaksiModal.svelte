@@ -78,19 +78,25 @@
 			<!-- Header Modal Bertema Pink Zatiaras -->
 			<div class="flex items-center justify-between border-b border-pink-100 px-5 py-4">
 				<div class="flex items-center gap-3">
-					<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-pink-200/80 bg-gradient-to-br from-[#db2777] via-[#ec4899] to-[#f43f5e] text-white shadow-sm shadow-pink-500/20">
+					<div
+						class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-pink-200/80 bg-gradient-to-br from-[#db2777] via-[#ec4899] to-[#f43f5e] text-white shadow-sm shadow-pink-500/20"
+					>
 						<Receipt class="h-5 w-5 stroke-[2.2] text-white" />
 					</div>
 					<div>
 						<h2 class="text-base font-black tracking-tight text-slate-900">Detail Transaksi</h2>
 						<div class="mt-0.5 flex items-center gap-1.5">
 							{#if readonly}
-								<span class="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-0.5 text-[10px] font-black text-pink-700">
+								<span
+									class="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-0.5 text-[10px] font-black text-pink-700"
+								>
 									<Eye class="h-3 w-3 stroke-[2.5]" />
 									Hanya Lihat
 								</span>
 							{:else}
-								<span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black text-emerald-700">
+								<span
+									class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black text-emerald-700"
+								>
 									<Check class="h-3 w-3 stroke-[2.5]" />
 									Dapat Diubah
 								</span>
@@ -110,22 +116,34 @@
 			</div>
 
 			<!-- Body Konten -->
-			<div class="space-y-3 p-5 overflow-y-auto max-h-[75vh]">
+			<div class="max-h-[75vh] space-y-3 overflow-y-auto p-5">
 				<!-- Kartu Utama Nominal & Deskripsi Bertema Pink -->
-				<div class="rounded-2xl border border-pink-200/80 bg-gradient-to-br from-pink-50/80 via-white to-rose-50/50 p-4.5 shadow-2xs">
+				<div
+					class="rounded-2xl border border-pink-200/80 bg-gradient-to-br from-pink-50/80 via-white to-rose-50/50 p-4.5 shadow-2xs"
+				>
 					<div class="flex items-center justify-between">
-						<span class="text-[10px] font-extrabold uppercase tracking-wider text-pink-600/80">Total Transaksi</span>
-						<span class="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider {getNormalizedPayment(transaksi.metode_bayar) === 'QRIS' ? 'bg-sky-50 text-sky-700 border border-sky-200/80' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'}">
+						<span class="text-[10px] font-extrabold tracking-wider text-pink-600/80 uppercase"
+							>Total Transaksi</span
+						>
+						<span
+							class="rounded-full px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase {getNormalizedPayment(
+								transaksi.metode_bayar
+							) === 'QRIS'
+								? 'border border-sky-200/80 bg-sky-50 text-sky-700'
+								: 'border border-emerald-200/80 bg-emerald-50 text-emerald-700'}"
+						>
 							{getNormalizedPayment(transaksi.metode_bayar)}
 						</span>
 					</div>
-					<div class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+					<div class="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
 						Rp {formatRupiah(transaksi.nominal)}
 					</div>
 
 					<div class="mt-3 border-t border-pink-100/90 pt-2.5">
-						<span class="text-[10px] font-bold uppercase tracking-wider text-pink-900/50">Deskripsi</span>
-						<p class="mt-0.5 text-xs sm:text-sm font-bold text-slate-800 break-words">
+						<span class="text-[10px] font-bold tracking-wider text-pink-900/50 uppercase"
+							>Deskripsi</span
+						>
+						<p class="mt-0.5 text-xs font-bold break-words text-slate-800 sm:text-sm">
 							{transaksi.nama || 'Transaksi Kasir'}
 						</p>
 					</div>
@@ -135,22 +153,29 @@
 				<div class="grid grid-cols-2 gap-2.5">
 					<!-- Pelanggan -->
 					<div class="rounded-2xl border border-pink-100/90 bg-[#fdf8fa] p-3 transition-colors">
-						<div class="flex items-center gap-1.5 text-pink-500 mb-1">
+						<div class="mb-1 flex items-center gap-1.5 text-pink-500">
 							<User class="h-3.5 w-3.5 stroke-[2.2]" />
-							<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pelanggan</span>
+							<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+								>Pelanggan</span
+							>
 						</div>
-						<div class="text-xs sm:text-sm font-bold text-slate-800 truncate" title={transaksi.nama_pelanggan || '-'}>
+						<div
+							class="truncate text-xs font-bold text-slate-800 sm:text-sm"
+							title={transaksi.nama_pelanggan || '-'}
+						>
 							{transaksi.nama_pelanggan || 'Pelanggan Umum'}
 						</div>
 					</div>
 
 					<!-- Sumber -->
 					<div class="rounded-2xl border border-pink-100/90 bg-[#fdf8fa] p-3 transition-colors">
-						<div class="flex items-center gap-1.5 text-pink-500 mb-1">
+						<div class="mb-1 flex items-center gap-1.5 text-pink-500">
 							<Store class="h-3.5 w-3.5 stroke-[2.2]" />
-							<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sumber</span>
+							<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+								>Sumber</span
+							>
 						</div>
-						<div class="text-xs sm:text-sm font-bold text-slate-800">
+						<div class="text-xs font-bold text-slate-800 sm:text-sm">
 							{transaksi.sumber === 'pos' ? 'POS (Kasir)' : 'Input Manual'}
 						</div>
 					</div>
@@ -158,35 +183,44 @@
 
 				<!-- Waktu Transaksi -->
 				<div class="rounded-2xl border border-pink-100/90 bg-[#fdf8fa] p-3 transition-colors">
-					<div class="flex items-center gap-1.5 text-pink-500 mb-1">
+					<div class="mb-1 flex items-center gap-1.5 text-pink-500">
 						<Calendar class="h-3.5 w-3.5 stroke-[2.2]" />
-						<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Waktu Transaksi</span>
+						<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+							>Waktu Transaksi</span
+						>
 					</div>
-					<div class="text-xs sm:text-sm font-bold text-slate-800">
+					<div class="text-xs font-bold text-slate-800 sm:text-sm">
 						{formatDateTime(transaksi.waktu)}
 					</div>
 				</div>
 
 				<!-- Metode Pembayaran (Readonly vs Editable) -->
 				<div class="rounded-2xl border border-pink-100/90 bg-[#fdf8fa] p-3 transition-colors">
-					<div class="flex items-center gap-1.5 text-pink-500 mb-1.5">
+					<div class="mb-1.5 flex items-center gap-1.5 text-pink-500">
 						<CreditCard class="h-3.5 w-3.5 stroke-[2.2]" />
-						<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jenis Pembayaran</span>
+						<span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase"
+							>Jenis Pembayaran</span
+						>
 					</div>
 
 					{#if readonly}
 						<!-- Readonly Display -->
-						<div class="flex h-10 items-center justify-between rounded-xl border border-pink-100 bg-white px-3.5 shadow-2xs">
-							<span class="text-xs sm:text-sm font-bold text-slate-800">
+						<div
+							class="flex h-10 items-center justify-between rounded-xl border border-pink-100 bg-white px-3.5 shadow-2xs"
+						>
+							<span class="text-xs font-bold text-slate-800 sm:text-sm">
 								{getNormalizedPayment(transaksi.metode_bayar)}
 							</span>
-							<span class="rounded-md border border-pink-200/70 bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-600">Terkunci</span>
+							<span
+								class="rounded-md border border-pink-200/70 bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-600"
+								>Terkunci</span
+							>
 						</div>
 					{:else}
 						<!-- Editable Dropdown Trigger -->
 						<button
 							type="button"
-							class="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-pink-200 bg-white px-3.5 text-left text-xs sm:text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/40 hover:border-pink-300 active:scale-[0.99]"
+							class="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-pink-200 bg-white px-3.5 text-left text-xs font-bold text-pink-700 shadow-2xs transition-all hover:border-pink-300 hover:bg-pink-50/40 active:scale-[0.99] sm:text-sm"
 							onclick={() => (showDropdownPayment = true)}
 						>
 							<span>
@@ -196,7 +230,7 @@
 										(transaksi.metode_bayar === 'non-tunai' ? 'qris' : transaksi.metode_bayar)
 								)?.label || getNormalizedPayment(transaksi.metode_bayar)}
 							</span>
-							<ChevronDown class="h-4 w-4 text-pink-500 stroke-[2.5]" />
+							<ChevronDown class="h-4 w-4 stroke-[2.5] text-pink-500" />
 						</button>
 
 						<DropdownSheet
@@ -217,7 +251,7 @@
 			<div class="flex items-center gap-2.5 border-t border-pink-100/90 bg-[#fdf8fa] p-4">
 				<button
 					type="button"
-					class="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-3.5 text-xs sm:text-sm font-bold text-pink-700 shadow-2xs transition-all hover:bg-pink-50/60 hover:border-pink-300 disabled:opacity-50 active:scale-95"
+					class="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-3.5 text-xs font-bold text-pink-700 shadow-2xs transition-all hover:border-pink-300 hover:bg-pink-50/60 active:scale-95 disabled:opacity-50 sm:text-sm"
 					onclick={() => onPrint?.()}
 					disabled={isPrinting}
 				>
@@ -226,7 +260,7 @@
 				</button>
 				<button
 					type="button"
-					class="flex h-10 flex-1 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-3.5 text-xs sm:text-sm font-black text-white shadow-md shadow-pink-500/20 transition-all hover:opacity-95 active:scale-95"
+					class="flex h-10 flex-1 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-3.5 text-xs font-black text-white shadow-md shadow-pink-500/20 transition-all hover:opacity-95 active:scale-95 sm:text-sm"
 					onclick={() => onClose?.()}
 				>
 					Tutup

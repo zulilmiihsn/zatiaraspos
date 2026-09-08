@@ -41,7 +41,9 @@ export async function insertPengaturanRows(
 
 	await db
 		.insert(pengaturan)
-		.values(requestedRows.map((r) => ({ ...r, cabang_id: branch }) as typeof pengaturan.$inferInsert));
+		.values(
+			requestedRows.map((r) => ({ ...r, cabang_id: branch }) as typeof pengaturan.$inferInsert)
+		);
 	await publish(platform, branch, 'pengaturan', 'insert', {
 		id: (requestedRows[0] as { id?: string | number })?.id
 	});

@@ -318,5 +318,3 @@
 		position="top"
 	/>
 {/if}
-
-

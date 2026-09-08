@@ -16,10 +16,7 @@ import {
 	parseDataRequirements,
 	type DataRequirements
 } from './prompts';
-import {
-	fetchReportDataSql,
-	buildReportContext
-} from './reportData';
+import { fetchReportDataSql, buildReportContext } from './reportData';
 
 // [CATATAN]: OpenRouter / AI Model configuration
 const OPENROUTER_API_URL = env.AI_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -422,7 +419,13 @@ function fastResolveRequirements(question: string, todayWita: string): DataRequi
 	) {
 		return {
 			periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
-			jenisData: ['produk_terlaris', 'transaksi_kasir', 'financial_summary', 'hpp_margin', 'stok_bahan'],
+			jenisData: [
+				'produk_terlaris',
+				'transaksi_kasir',
+				'financial_summary',
+				'hpp_margin',
+				'stok_bahan'
+			],
 			prioritas: 'strategic_consulting',
 			scope: 'market_analysis',
 			reasoning: 'Shortcut Heuristik: Konsultasi strategi bisnis FnB dan pertumbuhan toko'
@@ -505,7 +508,14 @@ function fastResolveRequirements(question: string, todayWita: string): DataRequi
 	// 14. Fallback Default untuk Pertanyaan Terbuka / Konsultasi Bebas
 	return {
 		periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
-		jenisData: ['buku_kas', 'transaksi_kasir', 'produk_terlaris', 'financial_summary', 'hpp_margin', 'stok_bahan'],
+		jenisData: [
+			'buku_kas',
+			'transaksi_kasir',
+			'produk_terlaris',
+			'financial_summary',
+			'hpp_margin',
+			'stok_bahan'
+		],
 		prioritas: 'strategic_consulting',
 		scope: 'general_analysis',
 		reasoning: 'Shortcut Heuristik: Analisis komprehensif data bisnis bulan berjalan'
@@ -602,10 +612,15 @@ function isInventoryQuestion(question: string): boolean {
 }
 
 /** Ambil daftar memori & target bisnis cabang dari tabel pengaturan */
-async function getBusinessMemory(rawDb: ReturnType<typeof getRawDb>, branch: string): Promise<string> {
+async function getBusinessMemory(
+	rawDb: ReturnType<typeof getRawDb>,
+	branch: string
+): Promise<string> {
 	try {
 		const row = (await rawDb
-			.prepare(`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'ai_business_memory' LIMIT 1`)
+			.prepare(
+				`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'ai_business_memory' LIMIT 1`
+			)
 			.bind(branch)
 			.first()) as { nilai?: string } | null;
 		if (row?.nilai) {
@@ -627,7 +642,9 @@ async function saveBusinessMemoryNote(
 	const currentNotes: string[] = [];
 	try {
 		const row = (await rawDb
-			.prepare(`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'ai_business_memory' LIMIT 1`)
+			.prepare(
+				`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'ai_business_memory' LIMIT 1`
+			)
 			.bind(branch)
 			.first()) as { nilai?: string } | null;
 		if (row?.nilai) {
@@ -659,7 +676,10 @@ async function saveBusinessMemoryNote(
 }
 
 /** Bersihkan semua memori bisnis cabang */
-async function clearBusinessMemory(rawDb: ReturnType<typeof getRawDb>, branch: string): Promise<void> {
+async function clearBusinessMemory(
+	rawDb: ReturnType<typeof getRawDb>,
+	branch: string
+): Promise<void> {
 	await rawDb
 		.prepare(`DELETE FROM pengaturan WHERE cabang_id = ? AND kunci = 'ai_business_memory'`)
 		.bind(branch)
@@ -703,7 +723,14 @@ async function identifyDataRequirements(
 		console.warn('[AI Chat] identifyDataRequirements gagal/timeout, fallback aman:', error);
 		return {
 			periode: { start: currentMonthStart, end: todayWita, type: 'monthly' },
-			jenisData: ['buku_kas', 'transaksi_kasir', 'produk_terlaris', 'financial_summary', 'hpp_margin', 'stok_bahan'],
+			jenisData: [
+				'buku_kas',
+				'transaksi_kasir',
+				'produk_terlaris',
+				'financial_summary',
+				'hpp_margin',
+				'stok_bahan'
+			],
 			prioritas: 'strategic_consulting',
 			scope: 'general_analysis',
 			reasoning: 'Fallback otomatis: Analisis komprehensif bisnis Zatiaras'
@@ -1085,9 +1112,7 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 					.slice(-10)
 					.filter(
 						(m) =>
-							m &&
-							(m.role === 'user' || m.role === 'assistant') &&
-							typeof m.content === 'string'
+							m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
 					)
 					.map((m) => ({
 						role: m.role as 'user' | 'assistant',
@@ -1249,16 +1274,16 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 			{ role: 'user', content: cleanQ }
 		];
 
-		const webSearchTools = shouldSearchWeb
-			? [{ type: 'openrouter:web_search' }]
-			: undefined;
+		const webSearchTools = shouldSearchWeb ? [{ type: 'openrouter:web_search' }] : undefined;
 
 		// [CATATAN]: 1. Jika streaming diaktifkan (default) -> kembalikan SSE stream
 		if (stream !== false) {
+			const chatModel = getOpenRouterModel(event.platform);
 			let upstreamRes = await callOpenRouterStream(apiKey, fullMessages, {
 				title: 'Zatiaras POS - Business Analyst',
 				maxTokens: 2500,
 				temperature: 0.6,
+				model: chatModel,
 				tools: webSearchTools
 			});
 
@@ -1268,12 +1293,13 @@ async function handleRegularChat(event: import('./$types').RequestEvent) {
 					upstreamRes = await callOpenRouterStream(apiKey, fullMessages, {
 						title: 'Zatiaras POS - Business Analyst (No Tools)',
 						maxTokens: 2500,
-						temperature: 0.6
+						temperature: 0.6,
+						model: chatModel
 					});
 				} catch {}
 			}
 
-			if (!upstreamRes.ok && MODEL !== FALLBACK_MODEL) {
+			if (!upstreamRes.ok && chatModel !== FALLBACK_MODEL) {
 				try {
 					upstreamRes = await callOpenRouterStream(apiKey, fullMessages, {
 						title: 'Zatiaras POS - Business Analyst (Fallback)',

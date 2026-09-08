@@ -109,11 +109,15 @@ export interface ReportSqlResult {
 
 // [CATATAN]: Ekspresi SQL untuk ekstrak tanggal, bulan, dan jam WITA secara konsisten
 const WITA_DATE = "date(CASE WHEN waktu LIKE '%Z' THEN datetime(waktu, '+8 hours') ELSE waktu END)";
-const WITA_MONTH = "strftime('%Y-%m', CASE WHEN waktu LIKE '%Z' THEN datetime(waktu, '+8 hours') ELSE waktu END)";
-const WITA_HOUR = "strftime('%H', CASE WHEN waktu LIKE '%Z' THEN datetime(waktu, '+8 hours') ELSE waktu END)";
+const WITA_MONTH =
+	"strftime('%Y-%m', CASE WHEN waktu LIKE '%Z' THEN datetime(waktu, '+8 hours') ELSE waktu END)";
+const WITA_HOUR =
+	"strftime('%H', CASE WHEN waktu LIKE '%Z' THEN datetime(waktu, '+8 hours') ELSE waktu END)";
 
-const BK_WITA_DATE = "date(CASE WHEN bk.waktu LIKE '%Z' THEN datetime(bk.waktu, '+8 hours') ELSE bk.waktu END)";
-const BK_WITA_MONTH = "strftime('%Y-%m', CASE WHEN bk.waktu LIKE '%Z' THEN datetime(bk.waktu, '+8 hours') ELSE bk.waktu END)";
+const BK_WITA_DATE =
+	"date(CASE WHEN bk.waktu LIKE '%Z' THEN datetime(bk.waktu, '+8 hours') ELSE bk.waktu END)";
+const BK_WITA_MONTH =
+	"strftime('%Y-%m', CASE WHEN bk.waktu LIKE '%Z' THEN datetime(bk.waktu, '+8 hours') ELSE bk.waktu END)";
 
 /**
  * Tarik data agregasi laporan langsung lewat SQL engine Cloudflare D1.
@@ -329,7 +333,9 @@ export async function fetchReportDataSql(
 
 		// 9. Pengaturan Pajak
 		rawDb
-			.prepare(`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'pajak_config' LIMIT 1`)
+			.prepare(
+				`SELECT nilai FROM pengaturan WHERE cabang_id = ? AND kunci = 'pajak_config' LIMIT 1`
+			)
 			.bind(requestedBranch)
 			.first()
 			.catch(() => null) as Promise<{ nilai?: string } | null>,
@@ -589,7 +595,10 @@ export async function fetchReportDataSql(
 	const totalTransaksi = summaryRes?.totalTransaksiPos || summaryRes?.totalTransaksi || 0;
 
 	// [CATATAN]: Format data bulanan
-	const monthlyPaymentsMap: Record<string, Record<string, { jumlah: number; nominal: number }>> = {};
+	const monthlyPaymentsMap: Record<
+		string,
+		Record<string, { jumlah: number; nominal: number }>
+	> = {};
 	for (const row of monthlyPaymentsRes?.results || []) {
 		if (!monthlyPaymentsMap[row.bulan]) monthlyPaymentsMap[row.bulan] = {};
 		monthlyPaymentsMap[row.bulan][row.metode] = {

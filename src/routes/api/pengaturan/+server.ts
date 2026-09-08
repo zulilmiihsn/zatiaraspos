@@ -33,14 +33,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const rawDb = getRawDb(platform, branch);
 	const requestedRows = Array.isArray(body.payload) ? body.payload : [body.payload];
 
-	const result = await insertPengaturanRows(
-		db,
-		rawDb,
-		branch,
-		session,
-		platform,
-		requestedRows
-	);
+	const result = await insertPengaturanRows(db, rawDb, branch, session, platform, requestedRows);
 	return json(result);
 };
 

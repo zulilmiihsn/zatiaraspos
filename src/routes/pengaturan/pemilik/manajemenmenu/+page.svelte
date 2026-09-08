@@ -183,7 +183,9 @@
 				<div class="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 shadow-2xs">
 					<Plus class="h-4 w-4 stroke-[2.8] text-white" />
 				</div>
-				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tambah Kategori</span>
+				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm"
+					>Tambah Kategori</span
+				>
 			</button>
 		</div>
 	{:else if s.activeTab === 'ekstra'}
@@ -196,7 +198,9 @@
 				<div class="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 shadow-2xs">
 					<Plus class="h-4 w-4 stroke-[2.8] text-white" />
 				</div>
-				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tambah Tambahan</span>
+				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm"
+					>Tambah Tambahan</span
+				>
 			</button>
 		</div>
 	{:else if s.activeTab === 'bahan'}
@@ -209,7 +213,8 @@
 				<div class="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 shadow-2xs">
 					<Plus class="h-4 w-4 stroke-[2.8] text-white" />
 				</div>
-				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tambah Bahan</span>
+				<span class="drop-shadow-2xs text-xs font-black tracking-wide sm:text-sm">Tambah Bahan</span
+				>
 			</button>
 		</div>
 	{/if}

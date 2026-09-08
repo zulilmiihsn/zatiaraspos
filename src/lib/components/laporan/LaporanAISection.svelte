@@ -55,7 +55,8 @@
 			id: 'omzet',
 			title: 'Performa Penjualan',
 			desc: 'Omzet, laba kotor & laba bersih hari ini',
-			query: 'Bagaimana performa penjualan toko hari ini? Berapa omzet, laba kotor, potongan biaya dan laba bersihnya?',
+			query:
+				'Bagaimana performa penjualan toko hari ini? Berapa omzet, laba kotor, potongan biaya dan laba bersihnya?',
 			icon: BarChart3
 		},
 		{
@@ -69,14 +70,16 @@
 			id: 'stok',
 			title: 'Stok Bahan Menipis',
 			desc: 'Bahan kritis yang perlu segera restok',
-			query: 'Cek persediaan stok bahan baku toko saat ini. Apakah ada bahan yang stoknya menipis atau kritis di bawah ambang batas?',
+			query:
+				'Cek persediaan stok bahan baku toko saat ini. Apakah ada bahan yang stoknya menipis atau kritis di bawah ambang batas?',
 			icon: Boxes
 		},
 		{
 			id: 'margin',
 			title: 'Margin Laba Menu',
 			desc: 'Menu paling untung vs margin tipis',
-			query: 'Analisis HPP dan margin keuntungan tiap produk. Menu apa yang margin labanya paling tinggi dan mana yang tipis?',
+			query:
+				'Analisis HPP dan margin keuntungan tiap produk. Menu apa yang margin labanya paling tinggi dan mana yang tipis?',
 			icon: Percent
 		},
 		{
@@ -90,7 +93,8 @@
 			id: 'tren_web',
 			title: 'Riset Menu Viral',
 			desc: 'Cari ide minuman tren di internet',
-			query: 'Lakukan riset web tentang tren minuman jus kekinian dan viral di internet, berikan ide inovasi produk baru untuk toko.',
+			query:
+				'Lakukan riset web tentang tren minuman jus kekinian dan viral di internet, berikan ide inovasi produk baru untuk toko.',
 			icon: Globe
 		}
 	];
@@ -118,10 +122,12 @@
 
 		const flushTable = () => {
 			if (!inTable) return;
-			html += '<div class="my-2.5 w-full max-w-full overflow-x-auto rounded-xl border border-pink-100 bg-white shadow-2xs">';
+			html +=
+				'<div class="my-2.5 w-full max-w-full overflow-x-auto rounded-xl border border-pink-100 bg-white shadow-2xs">';
 			html += '<table class="min-w-full border-collapse text-left text-xs text-slate-700">';
 			if (tableHeaders.length > 0) {
-				html += '<thead class="border-b border-pink-100 bg-pink-50/70 text-[10px] sm:text-[11px] font-bold text-pink-700 uppercase tracking-wider">';
+				html +=
+					'<thead class="border-b border-pink-100 bg-pink-50/70 text-[10px] sm:text-[11px] font-bold text-pink-700 uppercase tracking-wider">';
 				html += '<tr>';
 				for (const h of tableHeaders) {
 					html += `<th class="px-2.5 py-2 whitespace-nowrap">${h}</th>`;
@@ -210,7 +216,7 @@
 					html += '<ul class="my-2 space-y-1 pl-4 list-disc text-xs sm:text-sm text-slate-700">';
 					inList = true;
 				}
-				html += `<li class="leading-relaxed break-words">${inlineFormat(line.replace(/^[-\*]\s+/, ''))}</li>`;
+				html += `<li class="leading-relaxed break-words">${inlineFormat(line.replace(/^[-*]\s+/, ''))}</li>`;
 				continue;
 			} else if (inList) {
 				flushList();
@@ -452,7 +458,7 @@
 {#if showAiModal}
 	<div
 		use:portal
-		class="z-dialog fixed inset-0 flex flex-col items-center justify-center bg-black/60 p-3 sm:p-5 backdrop-blur-xs overflow-hidden"
+		class="z-dialog fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-black/60 p-3 backdrop-blur-xs sm:p-5"
 		onclick={(e) => e.target === e.currentTarget && handleAiClose()}
 		onkeydown={(e) => e.key === 'Escape' && handleAiClose()}
 		role="dialog"
@@ -461,18 +467,24 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="flex h-[78dvh] max-h-[78dvh] sm:h-[620px] sm:max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] sm:rounded-[32px] bg-white shadow-2xl transition-all duration-200"
+			class="flex h-[78dvh] max-h-[78dvh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl transition-all duration-200 sm:h-[620px] sm:max-h-[85dvh] sm:rounded-[32px]"
 			transition:scale={{ duration: 220, start: 0.95, easing: cubicOut }}
 		>
 			<!-- Header Modal Gradien Pink Khas Zatiaras -->
-			<div class="relative overflow-hidden bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-5 py-4 text-white shadow-sm">
+			<div
+				class="relative overflow-hidden bg-gradient-to-r from-[#db2777] via-[#ec4899] to-[#f43f5e] px-5 py-4 text-white shadow-sm"
+			>
 				<div class="relative z-10 flex items-center justify-between">
 					<div class="flex items-center gap-3">
-						<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 shadow-xs backdrop-blur-md">
+						<div
+							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 shadow-xs backdrop-blur-md"
+						>
 							<BotMessageSquare class="h-5 w-5 stroke-[2.2] text-white" />
 						</div>
 						<div>
-							<h3 class="text-sm font-black tracking-tight text-white sm:text-base">Asisten AI Zatiaras</h3>
+							<h3 class="text-sm font-black tracking-tight text-white sm:text-base">
+								Asisten AI Zatiaras
+							</h3>
 							<div class="flex items-center gap-1.5 text-[11px] font-medium text-pink-100">
 								<span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
 								<span>Analisis Data Bisnis Cabang {selectedBranch.value || 'Aktif'}</span>
@@ -512,12 +524,15 @@
 				{#if messages.length === 0}
 					<!-- Welcome State Sederhana & Ramah -->
 					<div class="flex flex-col items-center py-3 text-center">
-						<div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-pink-100 bg-pink-50 text-pink-600 shadow-2xs">
+						<div
+							class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-pink-100 bg-pink-50 text-pink-600 shadow-2xs"
+						>
 							<Bot size={24} class="stroke-[2.2]" />
 						</div>
 						<h4 class="text-sm font-black text-slate-900 sm:text-base">Ada yang bisa dibantu?</h4>
 						<p class="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
-							Tanyakan apa saja seputar performa penjualan, laba, stok bahan, atau tren minuman tokomu.
+							Tanyakan apa saja seputar performa penjualan, laba, stok bahan, atau tren minuman
+							tokomu.
 						</p>
 
 						<!-- Rekomendasi Pertanyaan Bersih -->
@@ -533,14 +548,18 @@
 										onclick={() => handleAiAsk(item.query)}
 										class="group flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 text-left shadow-2xs transition-all hover:border-pink-300 hover:bg-pink-50/40 active:scale-[0.98]"
 									>
-										<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 group-hover:bg-pink-100 transition-colors">
+										<div
+											class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 transition-colors group-hover:bg-pink-100"
+										>
 											<IconComponent size={17} class="stroke-[2.2]" />
 										</div>
 										<div class="min-w-0 flex-1">
-											<div class="text-xs font-bold text-slate-800 group-hover:text-pink-700 transition-colors">
+											<div
+												class="text-xs font-bold text-slate-800 transition-colors group-hover:text-pink-700"
+											>
 												{item.title}
 											</div>
-											<div class="text-[11px] text-slate-500 truncate">
+											<div class="truncate text-[11px] text-slate-500">
 												{item.desc}
 											</div>
 										</div>
@@ -554,32 +573,44 @@
 					{#each messages as msg (msg.id)}
 						{#if msg.role === 'user'}
 							<!-- Bubble Pertanyaan User -->
-							<div class="flex justify-end w-full">
-								<div class="max-w-[85%] rounded-2xl rounded-tr-xs bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm sm:text-sm break-words">
+							<div class="flex w-full justify-end">
+								<div
+									class="max-w-[85%] rounded-2xl rounded-tr-xs bg-gradient-to-r from-pink-600 to-rose-600 px-4 py-2.5 text-xs font-bold break-words text-white shadow-sm sm:text-sm"
+								>
 									{msg.content}
 								</div>
 							</div>
 						{:else}
 							<!-- Bubble Jawaban AI -->
-							<div class="flex items-start gap-2 sm:gap-2.5 w-full min-w-0">
-								<div class="mt-1 flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs">
+							<div class="flex w-full min-w-0 items-start gap-2 sm:gap-2.5">
+								<div
+									class="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 shadow-2xs sm:h-8 sm:w-8"
+								>
 									{#if msg.isStreaming}
 										<Bot size={15} class="animate-bounce stroke-[2.2]" />
 									{:else}
 										<Bot size={15} class="stroke-[2.2]" />
 									{/if}
 								</div>
-								<div class="flex-1 min-w-0 rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-sm overflow-hidden">
+								<div
+									class="min-w-0 flex-1 overflow-hidden rounded-2xl rounded-tl-xs border border-slate-200/80 bg-white p-3.5 shadow-sm sm:p-4"
+								>
 									{#if (msg.dateRange?.start && msg.dateRange?.end) || msg.webSearch}
-										<div class="mb-2 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2">
+										<div
+											class="mb-2 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2"
+										>
 											<div class="flex flex-wrap items-center gap-1.5">
 												{#if msg.dateRange?.start && msg.dateRange?.end}
-													<span class="inline-flex items-center rounded-md bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-700 border border-pink-100">
+													<span
+														class="inline-flex items-center rounded-md border border-pink-100 bg-pink-50 px-2 py-0.5 text-[10px] font-bold text-pink-700"
+													>
 														Periode: {msg.dateRange.start} s/d {msg.dateRange.end}
 													</span>
 												{/if}
 												{#if msg.webSearch}
-													<span class="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 border border-sky-100">
+													<span
+														class="inline-flex items-center gap-1 rounded-md border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700"
+													>
 														<Globe size={11} class="stroke-[2.5]" />
 														Riset Pasar Web
 													</span>
@@ -594,7 +625,7 @@
 													title="Salin analisis"
 												>
 													{#if copiedId === msg.id}
-														<Check size={11} class="text-emerald-600 stroke-[2.5]" />
+														<Check size={11} class="stroke-[2.5] text-emerald-600" />
 														<span class="text-emerald-600">Tersalin</span>
 													{:else}
 														<Copy size={11} class="stroke-[2.2]" />
@@ -609,19 +640,29 @@
 										<div class="flex items-center gap-2 py-1">
 											<div class="flex items-center gap-1.5">
 												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600"></span>
-												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.15s]"></span>
-												<span class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.3s]"></span>
+												<span
+													class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.15s]"
+												></span>
+												<span
+													class="h-2 w-2 animate-bounce rounded-full bg-pink-600 [animation-delay:0.3s]"
+												></span>
 											</div>
 											<span class="text-xs font-bold text-slate-500">
-												{msg.webSearch ? 'Mencari data tren web...' : 'Menganalisis data transaksi toko...'}
+												{msg.webSearch
+													? 'Mencari data tren web...'
+													: 'Menganalisis data transaksi toko...'}
 											</span>
 										</div>
 									{:else}
-										<div class="prose prose-sm max-w-none text-slate-800 break-words [overflow-wrap:anywhere] min-w-0">
+										<div
+											class="prose prose-sm max-w-none min-w-0 [overflow-wrap:anywhere] break-words text-slate-800"
+										>
 											{@html renderMarkdown(msg.content)}
 										</div>
 										{#if msg.isStreaming}
-											<span class="inline-block h-3.5 w-1 animate-pulse rounded-full bg-pink-500 align-middle"></span>
+											<span
+												class="inline-block h-3.5 w-1 animate-pulse rounded-full bg-pink-500 align-middle"
+											></span>
 										{/if}
 									{/if}
 
@@ -651,7 +692,7 @@
 			</div>
 
 			<!-- Input Bar Bawah Berwarna Tema Pink -->
-			<div class="border-t border-pink-100/80 bg-white p-2.5 sm:p-4 pb-3 sm:pb-4">
+			<div class="border-t border-pink-100/80 bg-white p-2.5 pb-3 sm:p-4 sm:pb-4">
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
@@ -680,7 +721,7 @@
 						type="submit"
 						disabled={!aiQuestion.trim()}
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-500/25 transition-all hover:opacity-95 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-						title={isStreaming ? "Kirim pertanyaan baru" : "Kirim pertanyaan"}
+						title={isStreaming ? 'Kirim pertanyaan baru' : 'Kirim pertanyaan'}
 						aria-label="Kirim pertanyaan"
 					>
 						<Send size={16} class="stroke-[2.5]" />
