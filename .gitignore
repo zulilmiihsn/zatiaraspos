@@ -43,6 +43,7 @@ check*.txt
 *.log
 test-report.md
 code-quality-report.md
+build-artifacts.json
 svelte_check*.txt
 playwright-report/
 test-results/
